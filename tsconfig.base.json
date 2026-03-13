@@ -12,7 +12,9 @@
     "baseUrl": ".",
     "paths": {
       "@ukde/contracts": ["packages/contracts/src/index.ts"],
-      "@ukde/ui": ["packages/ui/src/index.ts"]
+      "@ukde/ui": ["packages/ui/src/index.ts"],
+      "@ukde/ui/primitives": ["packages/ui/src/primitives.tsx"],
+      "@ukde/ui/primitives-logic": ["packages/ui/src/primitives-logic.ts"]
     }
   }
 }

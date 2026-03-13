@@ -165,6 +165,7 @@ export function AuthenticatedShell({
   const showAdminContext = pathname.startsWith("/admin");
   const showContextRegion =
     shellState === "Expanded" || (shellState === "Balanced" && !forceFocus);
+  const shellTitle = currentProject?.name ?? resolveShellHeading(pathname);
 
   return (
     <div className="authenticatedShell" data-shell-state={shellState}>
@@ -174,12 +175,9 @@ export function AuthenticatedShell({
 
       <header className="authenticatedShellHeader ukde-panel">
         <div className="authenticatedShellIdentity">
-          <p className="ukde-eyebrow">UKDataExtraction (UKDE)</p>
-          <p className="authenticatedShellTitle">
-            {resolveShellHeading(pathname)}
-          </p>
+          <p className="authenticatedShellTitle">{shellTitle}</p>
           {currentProject ? (
-            <p className="ukde-muted">Project: {currentProject.name}</p>
+            <p className="ukde-muted">Project workspace</p>
           ) : null}
         </div>
 
