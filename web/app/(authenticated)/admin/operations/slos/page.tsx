@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import { PageHeader } from "../../../../../components/page-header";
 import { requirePlatformRole } from "../../../../../lib/auth/session";
 import { getOperationsSlos } from "../../../../../lib/operations";
 
@@ -11,28 +10,16 @@ export default async function AdminOperationsSlosPage() {
 
   return (
     <main className="homeLayout">
-      <section
-        className="sectionCard ukde-panel"
-        aria-labelledby="operations-slos-title"
-      >
-        <p className="ukde-eyebrow">Platform operations</p>
-        <h1 id="operations-slos-title">SLO baselines</h1>
-        <p className="ukde-muted">
-          Current process-level targets used for readiness and alert
-          scaffolding.
-        </p>
-        <div className="buttonRow">
-          <Link className="secondaryButton" href="/admin/operations">
-            Overview
-          </Link>
-          <Link className="secondaryButton" href="/admin/operations/alerts">
-            Alerts
-          </Link>
-          <Link className="secondaryButton" href="/admin/operations/timelines">
-            Timelines
-          </Link>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="Platform operations"
+        secondaryActions={[
+          { href: "/admin/operations", label: "Overview" },
+          { href: "/admin/operations/alerts", label: "Alerts" },
+          { href: "/admin/operations/timelines", label: "Timelines" }
+        ]}
+        summary="Current process-level targets used for readiness and alert scaffolding."
+        title="SLO baselines"
+      />
 
       <section className="sectionCard ukde-panel">
         {!slosResult.ok || !slosResult.data ? (

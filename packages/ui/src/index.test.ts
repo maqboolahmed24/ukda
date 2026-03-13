@@ -21,9 +21,13 @@ import {
 
 describe("@ukde/ui", () => {
   it("keeps dark-first tokens available", () => {
-    expect(themeTokens.colors.background).toBe(darkThemeColorTokens.background.canvas);
+    expect(themeTokens.colors.background).toBe(
+      darkThemeColorTokens.background.canvas
+    );
     expect(themeTokens.colors.accent).toBe(darkThemeColorTokens.accent.primary);
-    expect(lightThemeColorTokens.surface.overlay).toBe("rgba(255, 255, 255, 0.97)");
+    expect(lightThemeColorTokens.surface.overlay).toBe(
+      "rgba(255, 255, 255, 0.97)"
+    );
   });
 
   it("documents each shell state", () => {

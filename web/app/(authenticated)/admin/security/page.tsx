@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import { PageHeader } from "../../../../components/page-header";
 import { SecurityPreferencesCard } from "../../../../components/security-preferences-card";
 import { requirePlatformRole } from "../../../../lib/auth/session";
 import { getSecurityStatus } from "../../../../lib/security";
@@ -13,25 +12,16 @@ export default async function AdminSecurityPage() {
 
   return (
     <main className="homeLayout">
-      <section className="sectionCard ukde-panel">
-        <p className="ukde-eyebrow">Platform security</p>
-        <h1>Security status</h1>
-        <p className="ukde-muted">
-          Controlled-environment posture, deny-by-default egress checks, and
-          export gateway state.
-        </p>
-        <div className="buttonRow">
-          <Link className="secondaryButton" href="/admin">
-            Back to admin
-          </Link>
-          <Link className="secondaryButton" href="/admin/operations">
-            Operations
-          </Link>
-          <Link className="secondaryButton" href="/admin/audit">
-            Audit viewer
-          </Link>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="Platform security"
+        secondaryActions={[
+          { href: "/admin", label: "Back to admin" },
+          { href: "/admin/operations", label: "Operations" },
+          { href: "/admin/audit", label: "Audit viewer" }
+        ]}
+        summary="Controlled-environment posture, deny-by-default egress checks, and export gateway state."
+        title="Security status"
+      />
 
       {!statusResult.ok || !statusResult.data ? (
         <section className="sectionCard ukde-panel">

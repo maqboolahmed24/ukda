@@ -1,6 +1,7 @@
 import type { AuthProviderResponse } from "@ukde/contracts";
 import { redirect } from "next/navigation";
 
+import { ThemePreferenceControl } from "../../components/theme-preference-control";
 import { resolveApiOrigins } from "../../lib/bootstrap-content";
 import { normalizeAuthProviderResponse } from "../../lib/auth/providers";
 import { resolveCurrentSession } from "../../lib/auth/session";
@@ -55,6 +56,7 @@ export default async function LoginPage() {
             Env {process.env.NEXT_PUBLIC_APP_ENV ?? "dev"}
           </span>
         </div>
+        <ThemePreferenceControl className="loginThemeControl" />
         {providers.oidcEnabled ? (
           <div className="buttonRow">
             <a className="primaryButton" href="/auth/login">
@@ -75,7 +77,7 @@ export default async function LoginPage() {
             <label className="ukde-eyebrow" htmlFor="seed_key">
               Dev sign-in identity
             </label>
-            <select className="ukde-shell-button" id="seed_key" name="seed_key">
+            <select className="ukde-select" id="seed_key" name="seed_key">
               {providers.devSeeds.map((seed) => (
                 <option key={seed.key} value={seed.key}>
                   {seed.displayName} (

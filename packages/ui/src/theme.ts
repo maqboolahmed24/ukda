@@ -91,7 +91,9 @@ function isStorageAvailable(target: unknown): target is Storage {
   );
 }
 
-export function isThemePreference(value: string | null): value is ThemePreference {
+export function isThemePreference(
+  value: string | null
+): value is ThemePreference {
   if (!value) {
     return false;
   }
@@ -149,7 +151,10 @@ export function setStoredThemePreference(
 export function readThemeMediaState(
   targetWindow: Window = window
 ): ThemeMediaState {
-  const prefersDark = resolveMediaQuery(targetWindow, MEDIA_QUERIES.prefersDark);
+  const prefersDark = resolveMediaQuery(
+    targetWindow,
+    MEDIA_QUERIES.prefersDark
+  );
   const prefersContrastMore = resolveMediaQuery(
     targetWindow,
     MEDIA_QUERIES.prefersContrastMore

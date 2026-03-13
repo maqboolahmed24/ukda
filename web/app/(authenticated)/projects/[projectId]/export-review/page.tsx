@@ -32,7 +32,7 @@ export default async function ProjectExportReviewPage({
     <main className="homeLayout">
       <section className="sectionCard ukde-panel">
         <p className="ukde-eyebrow">Export gateway (Phase 0)</p>
-        <h1>Export review queue</h1>
+        <h2>Export review queue</h2>
         <p className="ukde-muted">
           Review assignment, decisions, and release-pack delivery remain
           disabled until Phase 8 activates the single egress workflow.

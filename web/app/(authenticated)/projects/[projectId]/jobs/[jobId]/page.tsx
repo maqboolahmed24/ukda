@@ -53,7 +53,7 @@ export default async function ProjectJobDetailPage({
     <main className="homeLayout">
       <section className="sectionCard ukde-panel">
         <p className="ukde-eyebrow">Project jobs</p>
-        <h1>Job detail</h1>
+        <h2>Job detail</h2>
         <p className="ukde-muted">{job.id}</p>
         <div className="buttonRow">
           <Link

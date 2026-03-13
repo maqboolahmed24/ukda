@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import { PageHeader } from "../../../../components/page-header";
 import { requirePlatformRole } from "../../../../lib/auth/session";
 import { getOperationsOverview } from "../../../../lib/operations";
 
@@ -11,30 +10,17 @@ export default async function AdminOperationsOverviewPage() {
 
   return (
     <main className="homeLayout">
-      <section
-        className="sectionCard ukde-panel"
-        aria-labelledby="operations-title"
-      >
-        <p className="ukde-eyebrow">Platform operations</p>
-        <h1 id="operations-title">Operations overview</h1>
-        <p className="ukde-muted">
-          Privacy-safe metrics, alert posture, and telemetry export boundaries.
-        </p>
-        <div className="buttonRow">
-          <Link className="secondaryButton" href="/admin/operations/slos">
-            SLO targets
-          </Link>
-          <Link className="secondaryButton" href="/admin/operations/alerts">
-            Alerts
-          </Link>
-          <Link className="secondaryButton" href="/admin/operations/timelines">
-            Timelines
-          </Link>
-          <Link className="secondaryButton" href="/admin">
-            Back to admin
-          </Link>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="Platform operations"
+        secondaryActions={[
+          { href: "/admin/operations/slos", label: "SLO targets" },
+          { href: "/admin/operations/alerts", label: "Alerts" },
+          { href: "/admin/operations/timelines", label: "Timelines" },
+          { href: "/admin", label: "Back to admin" }
+        ]}
+        summary="Privacy-safe metrics, alert posture, and telemetry export boundaries."
+        title="Operations overview"
+      />
 
       {!overviewResult.ok || !overviewResult.data ? (
         <section className="sectionCard ukde-panel">

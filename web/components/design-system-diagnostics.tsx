@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { resolveAdaptiveShellState } from "@ukde/contracts";
 import {
   THEME_PREFERENCE_EVENT,
   readStoredThemePreference,
@@ -20,14 +21,29 @@ export function DesignSystemDiagnostics() {
   const [runtimeState, setRuntimeState] = useState<ThemeRuntimeState | null>(
     null
   );
+  const [shellSnapshot, setShellSnapshot] = useState<{
+    width: number;
+    height: number;
+    state: string;
+  } | null>(null);
 
   useEffect(() => {
     const sync = () => {
       setRuntimeState(resolveRuntimeState());
+      setShellSnapshot({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        state: resolveAdaptiveShellState({
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight,
+          taskContext: "standard"
+        })
+      });
     };
 
     sync();
     const unsubscribeMedia = subscribeThemeMediaChanges(sync);
+    window.addEventListener("resize", sync);
 
     const handlePreferenceChange = () => {
       sync();
@@ -37,6 +53,7 @@ export function DesignSystemDiagnostics() {
 
     return () => {
       unsubscribeMedia();
+      window.removeEventListener("resize", sync);
       window.removeEventListener(
         THEME_PREFERENCE_EVENT,
         handlePreferenceChange
@@ -68,7 +85,9 @@ export function DesignSystemDiagnostics() {
       </li>
       <li>
         <span>Forced colors</span>
-        <strong>{runtimeState.forcedColorsActive ? "active" : "inactive"}</strong>
+        <strong>
+          {runtimeState.forcedColorsActive ? "active" : "inactive"}
+        </strong>
       </li>
       <li>
         <span>Reduced motion</span>
@@ -78,6 +97,20 @@ export function DesignSystemDiagnostics() {
         <span>Reduced transparency</span>
         <strong>{runtimeState.reducedTransparency}</strong>
       </li>
+      {shellSnapshot ? (
+        <>
+          <li>
+            <span>Viewport</span>
+            <strong>
+              {shellSnapshot.width}×{shellSnapshot.height}
+            </strong>
+          </li>
+          <li>
+            <span>Adaptive shell state</span>
+            <strong>{shellSnapshot.state}</strong>
+          </li>
+        </>
+      ) : null}
     </ul>
   );
 }

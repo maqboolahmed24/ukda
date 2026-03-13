@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import "@ukde/ui/styles.css";
 import "./globals.css";
+import { ThemeRuntimeSync } from "../components/theme-runtime-sync";
 
 export const metadata: Metadata = {
   title: "UKDE",
@@ -15,7 +16,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <ThemeRuntimeSync />
+        {children}
+      </body>
     </html>
   );
 }

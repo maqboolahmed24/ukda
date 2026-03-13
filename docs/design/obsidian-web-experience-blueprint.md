@@ -95,5 +95,7 @@ State changes are driven by available app-window space and task context, not by 
 ## Related Documents
 
 - [`/phases/ui-premium-dark-blueprint-obsidian-folio.md`](../../phases/ui-premium-dark-blueprint-obsidian-folio.md)
+- [`/docs/design/design-system-token-architecture.md`](./design-system-token-architecture.md)
+- [`/docs/design/theming-preference-behavior.md`](./theming-preference-behavior.md)
 - [`/docs/architecture/web-first-execution-contract.md`](../architecture/web-first-execution-contract.md)
 - [`/docs/architecture/route-map-and-user-journeys.md`](../architecture/route-map-and-user-journeys.md)

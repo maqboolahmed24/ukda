@@ -429,26 +429,69 @@ export interface ShellStateBreakpoint {
   minWidth: number;
 }
 
+export type ShellTaskContext = "standard" | "dense";
+
+export interface ResolveAdaptiveShellStateInput {
+  viewportWidth: number;
+  viewportHeight: number;
+  forceFocus?: boolean;
+  taskContext?: ShellTaskContext;
+}
+
 export const shellStateBreakpoints: ShellStateBreakpoint[] = [
   { state: "Expanded", minWidth: 1360 },
   { state: "Balanced", minWidth: 1080 },
   { state: "Compact", minWidth: 820 }
 ];
 
-export function resolveShellState(
-  viewportWidth: number,
-  forceFocus: boolean = false
+export function resolveAdaptiveShellState(
+  input: ResolveAdaptiveShellStateInput
 ): ShellState {
+  const {
+    viewportWidth,
+    viewportHeight,
+    forceFocus = false,
+    taskContext = "standard"
+  } = input;
+
   if (forceFocus) {
     return "Focus";
   }
 
+  let state: ShellState = "Focus";
   for (const breakpoint of shellStateBreakpoints) {
     if (viewportWidth >= breakpoint.minWidth) {
-      return breakpoint.state;
+      state = breakpoint.state;
+      break;
     }
   }
-  return "Focus";
+
+  // Tight viewport heights reduce chrome priority before full focus takeover.
+  if (viewportHeight < 860 && state === "Expanded") {
+    state = "Balanced";
+  }
+  if (viewportHeight < 760 && state === "Balanced") {
+    state = "Compact";
+  }
+
+  // Dense work regions prefer focus sooner on constrained widths.
+  if (taskContext === "dense" && viewportWidth < 980 && state === "Compact") {
+    state = "Focus";
+  }
+
+  return state;
+}
+
+export function resolveShellState(
+  viewportWidth: number,
+  forceFocus: boolean = false
+): ShellState {
+  return resolveAdaptiveShellState({
+    viewportWidth,
+    viewportHeight: Number.POSITIVE_INFINITY,
+    forceFocus,
+    taskContext: "standard"
+  });
 }
 
 export const bootstrapSurfaces: BootstrapSurface[] = [

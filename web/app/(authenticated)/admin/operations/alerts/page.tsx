@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { OperationsAlertState } from "@ukde/contracts";
 
+import { PageHeader } from "../../../../../components/page-header";
 import { requirePlatformRole } from "../../../../../lib/auth/session";
 import { listOperationsAlerts } from "../../../../../lib/operations";
 
@@ -39,27 +40,16 @@ export default async function AdminOperationsAlertsPage({
 
   return (
     <main className="homeLayout">
-      <section
-        className="sectionCard ukde-panel"
-        aria-labelledby="operations-alerts-title"
-      >
-        <p className="ukde-eyebrow">Platform operations</p>
-        <h1 id="operations-alerts-title">Alert posture</h1>
-        <p className="ukde-muted">
-          Threshold-derived alerts only. No synthetic dashboard noise.
-        </p>
-        <div className="buttonRow">
-          <Link className="secondaryButton" href="/admin/operations">
-            Overview
-          </Link>
-          <Link className="secondaryButton" href="/admin/operations/slos">
-            SLOs
-          </Link>
-          <Link className="secondaryButton" href="/admin/operations/timelines">
-            Timelines
-          </Link>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="Platform operations"
+        secondaryActions={[
+          { href: "/admin/operations", label: "Overview" },
+          { href: "/admin/operations/slos", label: "SLOs" },
+          { href: "/admin/operations/timelines", label: "Timelines" }
+        ]}
+        summary="Threshold-derived alerts only, without synthetic dashboard noise."
+        title="Alert posture"
+      />
 
       <section
         className="sectionCard ukde-panel"

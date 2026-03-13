@@ -4,11 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import type { SessionResponse, ShellState, ThemePreference } from "@ukde/contracts";
+import type { SessionResponse, ShellState } from "@ukde/contracts";
 import { resolveShellState } from "@ukde/contracts";
-import { resolveThemeMode, themePreferenceOptions } from "@ukde/ui";
+import { ThemePreferenceControl } from "./theme-preference-control";
 
-const THEME_STORAGE_KEY = "ukde.theme.preference";
 const FOCUS_STORAGE_KEY = "ukde.shell.focus";
 
 const NAV_LINKS = [
@@ -17,10 +16,6 @@ const NAV_LINKS = [
 ];
 
 const SHELL_BRAND = "UKDATAEXTRACTION (UKDE)";
-
-function isThemePreference(value: string): value is ThemePreference {
-  return themePreferenceOptions.includes(value as ThemePreference);
-}
 
 function resolveShellHeading(pathname: string): string {
   if (pathname.startsWith("/projects/")) {
@@ -65,35 +60,15 @@ export function AppShell({
   session?: SessionResponse | null;
 }) {
   const pathname = usePathname();
-  const [themePreference, setThemePreference] =
-    useState<ThemePreference>("system");
   const [forceFocusMode, setForceFocusMode] = useState(false);
   const [shellState, setShellState] = useState<ShellState>("Expanded");
 
   useEffect(() => {
-    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (storedTheme && isThemePreference(storedTheme)) {
-      setThemePreference(storedTheme);
-    }
-
     const storedFocusMode = window.localStorage.getItem(FOCUS_STORAGE_KEY);
     if (storedFocusMode === "true") {
       setForceFocusMode(true);
     }
   }, []);
-
-  useEffect(() => {
-    const colorScheme = window.matchMedia("(prefers-color-scheme: dark)");
-
-    const syncTheme = () => {
-      const nextMode = resolveThemeMode(themePreference, colorScheme.matches);
-      document.documentElement.dataset.theme = nextMode;
-    };
-
-    syncTheme();
-    colorScheme.addEventListener("change", syncTheme);
-    return () => colorScheme.removeEventListener("change", syncTheme);
-  }, [themePreference]);
 
   useEffect(() => {
     const syncShellState = () => {
@@ -104,10 +79,6 @@ export function AppShell({
     window.addEventListener("resize", syncShellState);
     return () => window.removeEventListener("resize", syncShellState);
   }, [forceFocusMode]);
-
-  useEffect(() => {
-    window.localStorage.setItem(THEME_STORAGE_KEY, themePreference);
-  }, [themePreference]);
 
   useEffect(() => {
     window.localStorage.setItem(FOCUS_STORAGE_KEY, String(forceFocusMode));
@@ -149,26 +120,7 @@ export function AppShell({
                 ))}
               </nav>
               <div className="ukde-shell-controls">
-                <label
-                  className="ukde-visually-hidden"
-                  htmlFor="theme-preference"
-                >
-                  Theme preference
-                </label>
-                <select
-                  className="ukde-shell-button"
-                  id="theme-preference"
-                  onChange={(event) =>
-                    setThemePreference(event.target.value as ThemePreference)
-                  }
-                  value={themePreference}
-                >
-                  {themePreferenceOptions.map((option) => (
-                    <option key={option} value={option}>
-                      Theme {option}
-                    </option>
-                  ))}
-                </select>
+                <ThemePreferenceControl />
               </div>
               <div className="ukde-app-badges">
                 <span className="ukde-badge">

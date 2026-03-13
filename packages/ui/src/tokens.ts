@@ -63,8 +63,7 @@ export interface ThemeColorTokens {
 
 export const typographyTokens = {
   family: {
-    sans:
-      '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif',
+    sans: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif',
     serif:
       '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif',
     mono: '"SF Mono", "Cascadia Code", "IBM Plex Mono", Menlo, Consolas, monospace'
@@ -332,7 +331,8 @@ export const baseTokenVariables: Record<CssVariableName, string> = {
     typographyTokens.scale.shellTitle.letterSpacing,
   "--ukde-type-shell-title-weight": typographyTokens.scale.shellTitle.weight,
   "--ukde-type-page-title-size": typographyTokens.scale.pageTitle.size,
-  "--ukde-type-page-title-line-height": typographyTokens.scale.pageTitle.lineHeight,
+  "--ukde-type-page-title-line-height":
+    typographyTokens.scale.pageTitle.lineHeight,
   "--ukde-type-page-title-letter-spacing":
     typographyTokens.scale.pageTitle.letterSpacing,
   "--ukde-type-page-title-weight": typographyTokens.scale.pageTitle.weight,
@@ -341,14 +341,16 @@ export const baseTokenVariables: Record<CssVariableName, string> = {
     typographyTokens.scale.sectionTitle.lineHeight,
   "--ukde-type-section-title-letter-spacing":
     typographyTokens.scale.sectionTitle.letterSpacing,
-  "--ukde-type-section-title-weight": typographyTokens.scale.sectionTitle.weight,
+  "--ukde-type-section-title-weight":
+    typographyTokens.scale.sectionTitle.weight,
   "--ukde-type-body-size": typographyTokens.scale.body.size,
   "--ukde-type-body-line-height": typographyTokens.scale.body.lineHeight,
   "--ukde-type-body-letter-spacing": typographyTokens.scale.body.letterSpacing,
   "--ukde-type-body-weight": typographyTokens.scale.body.weight,
   "--ukde-type-meta-size": typographyTokens.scale.metadata.size,
   "--ukde-type-meta-line-height": typographyTokens.scale.metadata.lineHeight,
-  "--ukde-type-meta-letter-spacing": typographyTokens.scale.metadata.letterSpacing,
+  "--ukde-type-meta-letter-spacing":
+    typographyTokens.scale.metadata.letterSpacing,
   "--ukde-type-meta-weight": typographyTokens.scale.metadata.weight,
   "--ukde-type-micro-size": typographyTokens.scale.microcopy.size,
   "--ukde-type-micro-line-height": typographyTokens.scale.microcopy.lineHeight,

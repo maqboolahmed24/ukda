@@ -25,7 +25,7 @@ export default async function ProjectExportCandidatesPage({
     <main className="homeLayout">
       <section className="sectionCard ukde-panel">
         <p className="ukde-eyebrow">Export gateway (Phase 0)</p>
-        <h1>Export candidates</h1>
+        <h2>Export candidates</h2>
         <p className="ukde-muted">
           Candidate listing is intentionally disabled until the Phase 8
           screening workflow is implemented.

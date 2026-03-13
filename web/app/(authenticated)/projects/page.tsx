@@ -2,27 +2,21 @@ import Link from "next/link";
 
 import { accessTierLabels, projectRoleLabels } from "@ukde/ui";
 
-import { WorkspaceHeader } from "../../../components/workspace-header";
-import {
-  readCsrfToken,
-  requireCurrentSession
-} from "../../../lib/auth/session";
+import { PageHeader } from "../../../components/page-header";
 import { listMyProjects } from "../../../lib/projects";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
-  const session = await requireCurrentSession();
-  const csrfToken = await readCsrfToken();
   const projects = await listMyProjects();
 
   return (
-    <main className="workspaceRoot">
-      <WorkspaceHeader
-        currentProject={null}
-        csrfToken={csrfToken}
-        projects={projects}
-        session={session}
+    <main className="homeLayout">
+      <PageHeader
+        eyebrow="Projects"
+        meta={<span className="ukde-badge">{projects.length} memberships</span>}
+        summary="Purpose-bound project workspaces with role and access-tier boundaries."
+        title="Projects workspace"
       />
 
       <section className="projectsIndexGrid">

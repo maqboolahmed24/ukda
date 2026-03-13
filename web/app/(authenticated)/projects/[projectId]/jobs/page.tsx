@@ -45,7 +45,7 @@ export default async function ProjectJobsPage({
     <main className="homeLayout">
       <section className="sectionCard ukde-panel">
         <p className="ukde-eyebrow">Project jobs</p>
-        <h1>Job runs</h1>
+        <h2>Job runs</h2>
         <p className="ukde-muted">
           Queue state, retry lineage, and worker-executed NOOP validation runs.
         </p>

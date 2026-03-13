@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import { PageHeader } from "../../../components/page-header";
 import { listMyActivity } from "../../../lib/audit";
 
 export const dynamic = "force-dynamic";
@@ -11,25 +10,15 @@ export default async function MyActivityPage() {
 
   return (
     <main className="homeLayout">
-      <section
-        className="sectionCard ukde-panel"
-        aria-labelledby="my-activity-title"
-      >
-        <p className="ukde-eyebrow">Current user surface</p>
-        <h1 id="my-activity-title">My activity</h1>
-        <p className="ukde-muted">
-          This route shows your own recent auditable actions and remains
-          separate from project-scoped activity.
-        </p>
-        <div className="buttonRow">
-          <Link className="secondaryButton" href="/projects">
-            Back to projects
-          </Link>
-          <Link className="secondaryButton" href="/admin/audit">
-            Open admin audit
-          </Link>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="Current user surface"
+        secondaryActions={[
+          { href: "/projects", label: "Back to projects" },
+          { href: "/admin/audit", label: "Open admin audit" }
+        ]}
+        summary="Your own recent auditable actions, separate from project-scoped activity."
+        title="My activity"
+      />
 
       <section
         className="sectionCard ukde-panel"

@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev:web": "pnpm --filter @ukde/web dev",
-    "lint": "eslint . --max-warnings=0",
+    "lint": "eslint . --max-warnings=0 && pnpm run lint:design-tokens",
+    "lint:design-tokens": "node scripts/check-design-token-literals.mjs",
     "format:check": "prettier --check .",
     "typecheck": "pnpm run typecheck:packages && pnpm run typecheck:web",
     "test": "vitest run",

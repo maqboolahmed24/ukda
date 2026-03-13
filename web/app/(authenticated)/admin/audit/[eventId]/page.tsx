@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import { PageHeader } from "../../../../../components/page-header";
 import { getAuditEvent } from "../../../../../lib/audit";
 
 export const dynamic = "force-dynamic";
@@ -14,18 +13,13 @@ export default async function AdminAuditEventPage({
 
   return (
     <main className="homeLayout">
-      <section
-        className="sectionCard ukde-panel"
-        aria-labelledby="audit-detail-title"
-      >
-        <p className="ukde-eyebrow">Governance surface</p>
-        <h1 id="audit-detail-title">Audit event detail</h1>
-        <div className="buttonRow">
-          <Link className="secondaryButton" href="/admin/audit">
-            Back to audit list
-          </Link>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="Governance surface"
+        secondaryActions={[
+          { href: "/admin/audit", label: "Back to audit list" }
+        ]}
+        title="Audit event detail"
+      />
 
       {!eventResult.ok || !eventResult.data ? (
         <section className="sectionCard ukde-panel">

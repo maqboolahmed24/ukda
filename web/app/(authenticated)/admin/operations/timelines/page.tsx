@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { OperationsTimelineScope } from "@ukde/contracts";
 
+import { PageHeader } from "../../../../../components/page-header";
 import { requirePlatformRole } from "../../../../../lib/auth/session";
 import { listOperationsTimelines } from "../../../../../lib/operations";
 
@@ -45,27 +46,16 @@ export default async function AdminOperationsTimelinesPage({
 
   return (
     <main className="homeLayout">
-      <section
-        className="sectionCard ukde-panel"
-        aria-labelledby="operations-timelines-title"
-      >
-        <p className="ukde-eyebrow">Platform operations</p>
-        <h1 id="operations-timelines-title">Operational timelines</h1>
-        <p className="ukde-muted">
-          Read-only event stream for operator diagnostics and governance review.
-        </p>
-        <div className="buttonRow">
-          <Link className="secondaryButton" href="/admin/operations">
-            Overview
-          </Link>
-          <Link className="secondaryButton" href="/admin/operations/slos">
-            SLOs
-          </Link>
-          <Link className="secondaryButton" href="/admin/operations/alerts">
-            Alerts
-          </Link>
-        </div>
-      </section>
+      <PageHeader
+        eyebrow="Platform operations"
+        secondaryActions={[
+          { href: "/admin/operations", label: "Overview" },
+          { href: "/admin/operations/slos", label: "SLOs" },
+          { href: "/admin/operations/alerts", label: "Alerts" }
+        ]}
+        summary="Read-only event stream for operator diagnostics and governance review."
+        title="Operational timelines"
+      />
 
       <section
         className="sectionCard ukde-panel"

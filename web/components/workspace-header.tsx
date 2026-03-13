@@ -6,6 +6,7 @@ import {
   accessTierLabels,
   environmentLabels
 } from "@ukde/ui";
+import { ThemePreferenceControl } from "./theme-preference-control";
 
 interface WorkspaceHeaderProps {
   session: SessionResponse;
@@ -69,6 +70,8 @@ export function WorkspaceHeader({
             Tier {tier ? accessTierLabels[tier] : "Not selected"}
           </span>
         </div>
+
+        <ThemePreferenceControl className="workspaceThemeControl" />
 
         <Link className="workspaceHelpLink" href="/health">
           Help

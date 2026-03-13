@@ -4,6 +4,7 @@ import {
   type AuditEventType,
   bootstrapShellStates,
   bootstrapSurfaces,
+  resolveAdaptiveShellState,
   resolveShellState
 } from "./index";
 
@@ -93,6 +94,31 @@ describe("@ukde/contracts", () => {
     expect(resolveShellState(900)).toBe("Compact");
     expect(resolveShellState(1200)).toBe("Balanced");
     expect(resolveShellState(1500)).toBe("Expanded");
+  });
+
+  it("derives adaptive shell state from width, height, and task context", () => {
+    expect(
+      resolveAdaptiveShellState({
+        viewportWidth: 1500,
+        viewportHeight: 700,
+        taskContext: "standard"
+      })
+    ).toBe("Compact");
+    expect(
+      resolveAdaptiveShellState({
+        viewportWidth: 930,
+        viewportHeight: 820,
+        taskContext: "dense"
+      })
+    ).toBe("Focus");
+    expect(
+      resolveAdaptiveShellState({
+        viewportWidth: 1400,
+        viewportHeight: 920,
+        forceFocus: true,
+        taskContext: "standard"
+      })
+    ).toBe("Focus");
   });
 
   it("includes core audit event contracts", () => {

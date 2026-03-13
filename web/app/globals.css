@@ -1,17 +1,12 @@
 :root {
   background: transparent;
-  --ukde-font-sans:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
-    "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --ukde-font-serif:
-    -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue",
-    Helvetica, Arial, sans-serif;
+  --ukde-app-padding: var(--ukde-space-4);
 }
 
 body {
   margin: 0;
   min-height: 100dvh;
-  padding: var(--ukde-space-4);
+  padding: var(--ukde-app-padding);
 }
 
 main {
@@ -34,19 +29,27 @@ ul {
   padding: var(--ukde-space-5);
 }
 
+.sectionCard {
+  display: grid;
+  gap: var(--ukde-space-3);
+  align-content: start;
+}
+
 .healthLayout,
 .homeLayout {
   display: grid;
   gap: var(--ukde-space-4);
+  min-height: 0;
+  align-content: start;
 }
 
 .healthHeader h2,
 .sectionHeading h2,
 .loadingScreen h1 {
   max-width: 42rem;
-  font-size: clamp(1.8rem, 3.4vw, 2.8rem);
-  line-height: 1.06;
-  letter-spacing: -0.03em;
+  font-size: var(--ukde-type-page-title-size);
+  line-height: var(--ukde-type-page-title-line-height);
+  letter-spacing: var(--ukde-type-page-title-letter-spacing);
 }
 
 .statusCard {
@@ -117,8 +120,8 @@ ul {
 }
 
 .sectionHeading h2 {
-  font-size: clamp(1.5rem, 2.7vw, 2.4rem);
-  line-height: 1.08;
+  font-size: var(--ukde-type-section-title-size);
+  line-height: var(--ukde-type-section-title-line-height);
 }
 
 .statCard {
@@ -160,45 +163,59 @@ ul {
   gap: 0.65rem;
 }
 
-.primaryButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: fit-content;
-  min-height: 2.8rem;
-  padding: 0.7rem 1rem;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: linear-gradient(
-    135deg,
-    var(--ukde-accent),
-    color-mix(in srgb, var(--ukde-accent) 50%, white)
-  );
-  color: #08111d;
-  font-weight: 700;
-  text-decoration: none;
-  transition:
-    transform var(--ukde-transition),
-    box-shadow var(--ukde-transition);
-}
-
-.primaryButton:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 16px 40px rgba(33, 95, 190, 0.25);
-}
-
+.primaryButton,
 .secondaryButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  justify-self: start;
   width: fit-content;
-  min-height: 2.8rem;
-  padding: 0.7rem 1rem;
-  border: 1px solid var(--ukde-border);
+  max-width: 100%;
+  min-height: 2.35rem;
+  padding: 0.46rem 0.9rem;
   border-radius: 999px;
-  background: transparent;
-  color: var(--ukde-text);
+  border: 1px solid var(--ukde-border);
+  font-size: 0.92rem;
+  font-weight: 580;
+  letter-spacing: 0.01em;
   text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform var(--ukde-transition),
+    border-color var(--ukde-transition),
+    background var(--ukde-transition),
+    box-shadow var(--ukde-transition);
+}
+
+.primaryButton {
+  border-color: transparent;
+  background: linear-gradient(
+    135deg,
+    var(--ukde-accent),
+    color-mix(in srgb, var(--ukde-accent) 58%, white)
+  );
+  color: #07101b;
+  box-shadow: 0 10px 26px
+    color-mix(in srgb, var(--ukde-accent) 32%, transparent);
+}
+
+.secondaryButton {
+  background: color-mix(in srgb, var(--ukde-surface-strong) 88%, transparent);
+  color: var(--ukde-text);
+}
+
+.primaryButton:hover:not(:disabled),
+.secondaryButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--ukde-accent) 38%, var(--ukde-border));
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+  box-shadow: none;
 }
 
 .buttonRow {
@@ -217,9 +234,327 @@ ul {
   align-items: start;
 }
 
+.loginThemeControl {
+  justify-self: start;
+}
+
 .loadingScreen {
   min-height: 24rem;
   place-content: center;
+}
+
+.authenticatedShell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--ukde-space-3);
+  min-height: 34rem;
+  block-size: calc(100dvh - (var(--ukde-app-padding) * 2));
+  max-inline-size: 124rem;
+  margin: 0 auto;
+}
+
+.authenticatedShellHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--ukde-space-2);
+  padding: 0.6rem 0.75rem;
+  min-block-size: 4.15rem;
+  overflow: visible;
+}
+
+.authenticatedShellIdentity {
+  display: grid;
+  align-content: center;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.authenticatedShellTitle {
+  margin: 0;
+  font-size: clamp(1.03rem, 0.8vw + 0.85rem, 1.38rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  font-weight: 620;
+}
+
+.authenticatedShellActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.authenticatedShellGrid {
+  min-height: 0;
+  display: grid;
+  gap: var(--ukde-space-3);
+}
+
+.authenticatedShell[data-shell-state="Expanded"] .authenticatedShellGrid {
+  grid-template-columns: 14rem minmax(0, 1fr) 18rem;
+}
+
+.authenticatedShell[data-shell-state="Balanced"] .authenticatedShellGrid {
+  grid-template-columns: 11rem minmax(0, 1fr) 14rem;
+}
+
+.authenticatedShell[data-shell-state="Compact"] .authenticatedShellGrid {
+  grid-template-columns: 7.25rem minmax(0, 1fr);
+}
+
+.authenticatedShell[data-shell-state="Focus"] .authenticatedShellGrid {
+  grid-template-columns: 5rem minmax(0, 1fr);
+}
+
+.authenticatedShellRail {
+  padding: var(--ukde-space-3);
+  min-height: 0;
+  overflow: auto;
+  align-content: start;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.authenticatedShellRailList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.authenticatedShellRailLink {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.15rem;
+  padding: 0.42rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.72rem;
+  text-decoration: none;
+  color: var(--ukde-text-muted);
+  transition:
+    border-color var(--ukde-transition),
+    background var(--ukde-transition),
+    color var(--ukde-transition);
+}
+
+.authenticatedShellRailLinkShort {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  min-height: 1.35rem;
+  border: 1px solid var(--ukde-border);
+  border-radius: 999px;
+  font-size: 0.76rem;
+  line-height: 1;
+}
+
+.authenticatedShell[data-shell-state="Compact"] .authenticatedShellRailLink,
+.authenticatedShell[data-shell-state="Focus"] .authenticatedShellRailLink {
+  justify-content: center;
+  padding-inline: 0.3rem;
+}
+
+.authenticatedShell[data-shell-state="Compact"]
+  .authenticatedShellRailLinkLabel,
+.authenticatedShell[data-shell-state="Focus"] .authenticatedShellRailLinkLabel {
+  display: none;
+}
+
+.authenticatedShell[data-shell-state="Compact"]
+  .authenticatedShellRailLinkShort,
+.authenticatedShell[data-shell-state="Focus"] .authenticatedShellRailLinkShort {
+  display: inline-flex;
+}
+
+.authenticatedShellRailLink:hover {
+  border-color: color-mix(in srgb, var(--ukde-accent) 42%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-accent) 10%, var(--ukde-surface));
+}
+
+.authenticatedShellRailLink[aria-current="page"] {
+  border-color: var(--ukde-border);
+  color: var(--ukde-text);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 88%, transparent);
+}
+
+.authenticatedShellMain {
+  min-height: 0;
+  display: grid;
+  gap: var(--ukde-space-2);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.projectContextBar,
+.adminContextBar {
+  padding: 0.48rem 0.55rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.shellContextDrawer {
+  padding: 0.48rem 0.55rem;
+}
+
+.shellContextDrawerTrigger {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  border: 1px solid var(--ukde-border);
+  border-radius: 999px;
+  padding: 0.3rem 0.68rem;
+  list-style: none;
+  color: var(--ukde-text-muted);
+  cursor: pointer;
+}
+
+.shellContextDrawerTrigger::-webkit-details-marker {
+  display: none;
+}
+
+.shellContextDrawer[open] .shellContextDrawerTrigger {
+  border-color: color-mix(in srgb, var(--ukde-accent) 42%, var(--ukde-border));
+}
+
+.shellContextDrawer nav {
+  margin-top: 0.45rem;
+  overflow-x: auto;
+}
+
+.authenticatedShellContextList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
+}
+
+.authenticatedShellContextLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.3rem 0.68rem;
+  color: var(--ukde-text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.authenticatedShellContextLink:hover {
+  border-color: color-mix(in srgb, var(--ukde-accent) 38%, var(--ukde-border));
+}
+
+.authenticatedShellContextLink[aria-current="page"] {
+  color: var(--ukde-text);
+  border-color: var(--ukde-border);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 85%, transparent);
+}
+
+.authenticatedShellWorkRegion {
+  min-height: 0;
+  overflow: auto;
+  padding-inline: 0.2rem;
+  display: grid;
+  gap: var(--ukde-space-3);
+  align-content: start;
+}
+
+.authenticatedShellContext {
+  min-height: 0;
+  overflow: auto;
+  padding: var(--ukde-space-3);
+  display: grid;
+  gap: 0.65rem;
+  align-content: start;
+}
+
+.pageHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--ukde-space-3);
+  padding: var(--ukde-space-3);
+}
+
+.pageHeaderIdentity {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.pageHeader h1 {
+  margin: 0;
+  font-size: var(--ukde-type-page-title-size);
+  line-height: var(--ukde-type-page-title-line-height);
+  letter-spacing: var(--ukde-type-page-title-letter-spacing);
+}
+
+.pageHeaderMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pageHeaderActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.pageHeaderOverflow {
+  position: relative;
+}
+
+.pageHeaderOverflow[open] {
+  z-index: 20;
+}
+
+.pageHeaderOverflowTrigger {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.35rem;
+  border: 1px solid var(--ukde-border);
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  background: color-mix(in srgb, var(--ukde-surface-strong) 88%, transparent);
+  color: var(--ukde-text-muted);
+  cursor: pointer;
+  list-style: none;
+}
+
+.pageHeaderOverflowTrigger::-webkit-details-marker {
+  display: none;
+}
+
+.pageHeaderOverflowMenu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  min-width: 12.5rem;
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-md);
+  padding: 0.5rem;
+  background: var(--ukde-surface-strong);
+  box-shadow: var(--ukde-shadow);
+}
+
+.pageHeaderOverflowMenu a {
+  text-decoration: none;
+  border-radius: 0.6rem;
+  padding: 0.4rem 0.5rem;
+}
+
+.pageHeaderOverflowMenu a:hover {
+  background: color-mix(in srgb, var(--ukde-surface) 84%, transparent);
 }
 
 .workspaceRoot {
@@ -237,11 +572,11 @@ ul {
   position: sticky;
   top: 0;
   z-index: 11;
-  min-height: 4.75rem;
+  min-height: 3.9rem;
   margin-top: calc(var(--ukde-space-4) * -1);
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
-  padding: 0.8rem clamp(1rem, 2vw, 2rem);
+  padding: 0.45rem clamp(1rem, 2vw, 2rem);
   border-top: 0;
   border-right: 0;
   border-left: 0;
@@ -276,9 +611,9 @@ ul {
 
 .workspaceIdentity h1 {
   margin: 0;
-  font-size: clamp(1.55rem, 2.4vw, 2.45rem);
-  line-height: 0.96;
-  letter-spacing: -0.04em;
+  font-size: var(--ukde-type-shell-title-size);
+  line-height: var(--ukde-type-shell-title-line-height);
+  letter-spacing: var(--ukde-type-shell-title-letter-spacing);
   white-space: normal;
 }
 
@@ -310,20 +645,29 @@ ul {
 .workspaceMenuTrigger {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   list-style: none;
-  cursor: pointer;
-  border: 1px solid var(--ukde-border);
-  border-radius: 999px;
   min-height: 2.1rem;
   padding: 0.25rem 0.78rem;
+  border: 1px solid var(--ukde-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ukde-surface-strong) 84%, transparent);
   color: var(--ukde-text-muted);
-  background: color-mix(in srgb, var(--ukde-surface-strong) 82%, transparent);
-  white-space: nowrap;
   font-size: 0.82rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color var(--ukde-transition),
+    background var(--ukde-transition);
 }
 
 .workspaceMenuTrigger::-webkit-details-marker {
   display: none;
+}
+
+.workspaceMenuTrigger:hover {
+  border-color: color-mix(in srgb, var(--ukde-accent) 42%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-accent) 10%, var(--ukde-surface));
 }
 
 .workspaceMenuPanel {
@@ -353,27 +697,52 @@ ul {
   background: color-mix(in srgb, var(--ukde-surface) 82%, transparent);
 }
 
-.workspaceSignOutButton {
-  border: 1px solid var(--ukde-border);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--ukde-text);
-  min-height: 2.2rem;
-  padding: 0.4rem 0.8rem;
-  cursor: pointer;
-}
-
 .workspaceHelpLink {
   display: inline-flex;
   align-items: center;
-  text-decoration: none;
-  border: 1px solid var(--ukde-border);
-  border-radius: 999px;
+  justify-content: center;
   min-height: 2.1rem;
   padding: 0.25rem 0.78rem;
+  border: 1px solid var(--ukde-border);
+  border-radius: 999px;
+  text-decoration: none;
   color: var(--ukde-text-muted);
-  white-space: nowrap;
   font-size: 0.82rem;
+  white-space: nowrap;
+  transition:
+    border-color var(--ukde-transition),
+    background var(--ukde-transition);
+}
+
+.workspaceHelpLink:hover {
+  border-color: color-mix(in srgb, var(--ukde-accent) 42%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-accent) 10%, var(--ukde-surface));
+}
+
+.workspaceSignOutButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 2.2rem;
+  padding: 0.38rem 0.8rem;
+  border: 1px solid var(--ukde-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ukde-surface-strong) 88%, transparent);
+  color: var(--ukde-text);
+  cursor: pointer;
+  transition:
+    border-color var(--ukde-transition),
+    background var(--ukde-transition);
+}
+
+.workspaceSignOutButton:hover {
+  border-color: color-mix(in srgb, var(--ukde-accent) 38%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-accent) 10%, var(--ukde-surface));
+}
+
+.workspaceThemeControl {
+  min-width: 8.5rem;
 }
 
 .workspaceHeader .ukde-badge {
@@ -388,7 +757,7 @@ ul {
     grid-template-columns: minmax(0, 1fr);
     align-items: flex-start;
     margin-top: calc(var(--ukde-space-4) * -1);
-    padding: 0.85rem 1rem;
+    padding: 0.55rem 1rem;
   }
 
   .workspaceUtilities {
@@ -433,52 +802,124 @@ ul {
 
 .projectInput,
 .projectTextarea,
-.projectSelect {
+.projectSelect,
+.jobsCreateForm input:not([type="hidden"]),
+.jobsCreateForm select,
+.addMemberForm input:not([type="hidden"]),
+.addMemberForm select,
+.auditFilterForm input:not([type="hidden"]),
+.auditFilterForm select {
+  width: 100%;
+  min-height: 2.35rem;
+  padding: 0.5rem 0.7rem;
   border: 1px solid var(--ukde-border);
   border-radius: var(--ukde-radius-sm);
-  background: color-mix(in srgb, var(--ukde-surface-strong) 88%, transparent);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 86%, transparent);
   color: var(--ukde-text);
-  padding: 0.65rem 0.75rem;
+  transition:
+    border-color var(--ukde-transition),
+    background var(--ukde-transition),
+    box-shadow var(--ukde-transition);
 }
 
 .projectTextarea {
+  min-height: 5.5rem;
   resize: vertical;
+}
+
+.projectSelect,
+.jobsCreateForm select,
+.addMemberForm select,
+.auditFilterForm select {
+  appearance: none;
+  padding-inline-end: 2rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 0.95rem) calc(50% - 0.12rem),
+    calc(100% - 0.6rem) calc(50% - 0.12rem);
+  background-size:
+    0.32rem 0.32rem,
+    0.32rem 0.32rem;
+  background-repeat: no-repeat;
+  color: var(--ukde-text-muted);
+}
+
+.projectInput:focus-visible,
+.projectTextarea:focus-visible,
+.projectSelect:focus-visible,
+.jobsCreateForm input:not([type="hidden"]):focus-visible,
+.jobsCreateForm select:focus-visible,
+.addMemberForm input:not([type="hidden"]):focus-visible,
+.addMemberForm select:focus-visible,
+.auditFilterForm input:not([type="hidden"]):focus-visible,
+.auditFilterForm select:focus-visible {
+  border-color: color-mix(in srgb, var(--ukde-accent) 55%, var(--ukde-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ukde-accent) 20%, transparent);
+  outline: none;
 }
 
 .projectPrimaryButton,
 .projectSecondaryButton,
 .projectDangerButton {
-  border: 1px solid var(--ukde-border);
-  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  width: fit-content;
+  max-width: 100%;
   min-height: 2.35rem;
-  padding: 0.45rem 0.85rem;
+  padding: 0.45rem 0.88rem;
+  border-radius: 999px;
+  border: 1px solid var(--ukde-border);
+  font-size: 0.9rem;
+  font-weight: 580;
+  letter-spacing: 0.01em;
   cursor: pointer;
+  transition:
+    transform var(--ukde-transition),
+    border-color var(--ukde-transition),
+    background var(--ukde-transition),
+    box-shadow var(--ukde-transition);
 }
 
 .projectPrimaryButton {
+  border-color: transparent;
   background: linear-gradient(
     135deg,
     var(--ukde-accent),
-    color-mix(in srgb, var(--ukde-accent) 60%, white)
+    color-mix(in srgb, var(--ukde-accent) 58%, white)
   );
-  color: #07101c;
-  border-color: transparent;
-  font-weight: 650;
+  color: #07101b;
+  box-shadow: 0 10px 24px
+    color-mix(in srgb, var(--ukde-accent) 30%, transparent);
 }
 
 .projectSecondaryButton {
-  background: transparent;
+  background: color-mix(in srgb, var(--ukde-surface-strong) 88%, transparent);
   color: var(--ukde-text);
 }
 
 .projectDangerButton {
-  background: transparent;
+  background: color-mix(in srgb, var(--ukde-danger) 12%, var(--ukde-surface));
   color: var(--ukde-danger);
 }
 
+.projectPrimaryButton:hover:not(:disabled),
+.projectSecondaryButton:hover:not(:disabled),
+.projectDangerButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--ukde-accent) 40%, var(--ukde-border));
+}
+
+.projectPrimaryButton:disabled,
+.projectSecondaryButton:disabled,
 .projectDangerButton:disabled {
   cursor: not-allowed;
-  opacity: 0.45;
+  opacity: 0.5;
+  transform: none;
+  box-shadow: none;
 }
 
 .emptyProjectState {
@@ -562,6 +1003,7 @@ ul {
   display: grid;
   gap: var(--ukde-space-3);
   align-content: start;
+  min-height: 0;
 }
 
 .projectSectionHeader {
@@ -578,6 +1020,8 @@ ul {
 .projectContentHost {
   display: grid;
   gap: var(--ukde-space-3);
+  min-height: 0;
+  align-content: start;
 }
 
 .projectSectionGrid {
@@ -640,11 +1084,16 @@ ul {
 
 .memberRow {
   display: grid;
-  gap: 0.55rem;
-  border: 1px solid var(--ukde-border);
-  border-radius: var(--ukde-radius-sm);
-  padding: 0.7rem;
-  background: color-mix(in srgb, var(--ukde-surface-strong) 84%, transparent);
+  gap: 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 90%, transparent);
+  border-radius: calc(var(--ukde-radius-sm) + 0.1rem);
+  padding: 0.85rem 0.9rem;
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--ukde-surface-strong) 91%, transparent),
+    color-mix(in srgb, var(--ukde-surface) 88%, transparent)
+  );
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 8%, transparent);
 }
 
 .memberIdentity {
@@ -652,37 +1101,87 @@ ul {
   gap: 0.25rem;
 }
 
+.memberIdentity strong {
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.memberIdentity .ukde-muted {
+  font-size: 0.9rem;
+}
+
 .memberActions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.55rem;
+  padding-top: 0.38rem;
+  border-top: 1px dashed color-mix(in srgb, var(--ukde-border) 82%, transparent);
 }
 
 .memberActions form {
-  display: flex;
+  display: inline-flex;
   gap: 0.4rem;
   align-items: center;
+}
+
+.memberActions > .ukde-badge {
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+}
+
+.memberActions form:first-of-type {
+  padding: 0.2rem;
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 88%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ukde-surface-strong) 90%, transparent);
+}
+
+.memberActions form:first-of-type .projectSelect {
+  width: auto;
+  min-width: 10.75rem;
+  max-width: 13rem;
+  min-height: 2rem;
+  padding: 0.34rem 2rem 0.34rem 0.72rem;
+  border-color: transparent;
+  border-radius: 999px;
+  background-color: transparent;
+}
+
+.memberActions form:first-of-type .projectSelect:focus-visible {
+  border-color: color-mix(in srgb, var(--ukde-accent) 55%, var(--ukde-border));
+  background-color: color-mix(in srgb, var(--ukde-accent) 9%, transparent);
+}
+
+.memberActions .projectSecondaryButton {
+  min-height: 2rem;
+  padding: 0.35rem 0.82rem;
+  border-color: color-mix(in srgb, var(--ukde-accent) 34%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-accent) 11%, var(--ukde-surface));
+}
+
+.memberActions .projectDangerButton {
+  min-height: 2rem;
+  padding: 0.35rem 0.82rem;
+  border-color: color-mix(in srgb, var(--ukde-danger) 46%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-danger) 14%, var(--ukde-surface));
+}
+
+.memberActions .projectDangerButton:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--ukde-danger) 62%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-danger) 20%, var(--ukde-surface));
 }
 
 .jobsCreateForm {
   display: grid;
   gap: 0.55rem;
+  width: min(100%, 30rem);
 }
 
 .jobsCreateForm label {
   display: grid;
   gap: 0.35rem;
   color: var(--ukde-text-muted);
-}
-
-.jobsCreateForm input,
-.jobsCreateForm select {
-  border: 1px solid var(--ukde-border);
-  border-radius: var(--ukde-radius-sm);
-  background: color-mix(in srgb, var(--ukde-surface-strong) 88%, transparent);
-  color: var(--ukde-text);
-  padding: 0.55rem 0.65rem;
 }
 
 .jobsActionRow {
@@ -701,6 +1200,7 @@ ul {
   gap: 0.5rem;
   border-top: 1px solid var(--ukde-border);
   padding-top: 0.7rem;
+  width: min(100%, 30rem);
 }
 
 .auditIntegrityRow {
@@ -714,15 +1214,6 @@ ul {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem;
-}
-
-.auditFilterForm input,
-.auditFilterForm select {
-  border: 1px solid var(--ukde-border);
-  border-radius: var(--ukde-radius-sm);
-  background: color-mix(in srgb, var(--ukde-surface-strong) 88%, transparent);
-  color: var(--ukde-text);
-  padding: 0.55rem 0.65rem;
 }
 
 .auditFilterForm button {
@@ -765,6 +1256,178 @@ ul {
   gap: 0.75rem;
 }
 
+.dsPage {
+  gap: var(--ukde-space-5);
+}
+
+.dsSection {
+  display: grid;
+  gap: var(--ukde-space-4);
+}
+
+.dsSectionHeading {
+  gap: var(--ukde-space-3);
+}
+
+.dsSectionControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ukde-space-2);
+  align-items: center;
+}
+
+.dsTokenGrid {
+  display: grid;
+  gap: var(--ukde-space-3);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dsTokenCard {
+  display: grid;
+  gap: var(--ukde-space-2);
+  padding: var(--ukde-space-3);
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-md);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 84%, transparent);
+}
+
+.dsTokenCard code {
+  font-size: var(--ukde-type-micro-size);
+  color: var(--ukde-text-muted);
+}
+
+.dsTokenSwatch {
+  display: block;
+  block-size: 2.2rem;
+  border-radius: var(--ukde-radius-sm);
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 80%, transparent);
+}
+
+.dsTypeGrid {
+  display: grid;
+  gap: var(--ukde-space-3);
+}
+
+.dsTypeRow {
+  display: grid;
+  gap: var(--ukde-space-1);
+  border-bottom: 1px solid var(--ukde-border);
+  padding-bottom: var(--ukde-space-2);
+}
+
+.dsScaleColumns {
+  display: grid;
+  gap: var(--ukde-space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dsScaleList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--ukde-space-1);
+}
+
+.dsScaleList li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ukde-space-2);
+  border-bottom: 1px solid var(--ukde-border);
+  padding-bottom: var(--ukde-space-1);
+}
+
+.dsScaleList code {
+  color: var(--ukde-text-muted);
+  font-size: var(--ukde-type-micro-size);
+}
+
+.dsSurfaceStack {
+  display: grid;
+  gap: var(--ukde-space-3);
+}
+
+.dsSurfaceSample {
+  display: flex;
+  align-items: center;
+  min-height: 4rem;
+  padding: var(--ukde-space-3);
+}
+
+.dsInteractionGrid {
+  display: grid;
+  gap: var(--ukde-space-2);
+}
+
+@media (max-height: 52rem) {
+  .authenticatedShell {
+    gap: var(--ukde-space-2);
+  }
+
+  .authenticatedShellHeader {
+    min-block-size: 3.7rem;
+    padding-block: 0.45rem;
+  }
+
+  .authenticatedShellWorkRegion {
+    gap: var(--ukde-space-2);
+  }
+}
+
+@media (max-width: 78rem) {
+  .authenticatedShellHeader {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .authenticatedShellActions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 56rem) {
+  .pageHeader {
+    grid-template-columns: 1fr;
+  }
+
+  .pageHeaderActions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 52rem) {
+  .authenticatedShell {
+    block-size: auto;
+    min-height: calc(100dvh - (var(--ukde-app-padding) * 2));
+  }
+
+  .authenticatedShellGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .authenticatedShellRail {
+    padding: 0.55rem;
+  }
+
+  .authenticatedShellRailList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .authenticatedShellContext {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .authenticatedShell,
+  .authenticatedShellWorkRegion,
+  .authenticatedShellContext,
+  .workspaceMenuPanel,
+  .pageHeaderOverflowMenu {
+    forced-color-adjust: auto;
+  }
+}
+
 @media (max-width: 42rem) {
   .healthHeader,
   .sectionCard,
@@ -778,8 +1441,8 @@ ul {
 }
 
 @media (max-width: 68rem) {
-  body {
-    padding: var(--ukde-space-3);
+  :root {
+    --ukde-app-padding: var(--ukde-space-3);
   }
 
   .projectsIndexGrid,
@@ -794,6 +1457,11 @@ ul {
   .auditFilterForm,
   .auditDetailGrid,
   .auditHashGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .dsTokenGrid,
+  .dsScaleColumns {
     grid-template-columns: 1fr;
   }
 }

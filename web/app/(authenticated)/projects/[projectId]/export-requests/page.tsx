@@ -33,7 +33,7 @@ export default async function ProjectExportRequestsPage({
     <main className="homeLayout">
       <section className="sectionCard ukde-panel">
         <p className="ukde-eyebrow">Export gateway (Phase 0)</p>
-        <h1>Export requests</h1>
+        <h2>Export requests</h2>
         <p className="ukde-muted">
           Request submission and review state are reserved for Phase 8. This
           surface remains read-only and disabled by design.

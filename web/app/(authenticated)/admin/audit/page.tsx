@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { AuditEventType } from "@ukde/contracts";
 
+import { PageHeader } from "../../../../components/page-header";
 import { getAuditIntegrity, listAuditEvents } from "../../../../lib/audit";
 
 const EVENT_FILTER_OPTIONS: AuditEventType[] = [
@@ -66,21 +67,26 @@ export default async function AdminAuditPage({
 
   return (
     <main className="homeLayout">
-      <section className="sectionCard ukde-panel" aria-labelledby="audit-title">
-        <p className="ukde-eyebrow">Governance surface</p>
-        <h1 id="audit-title">Audit event viewer</h1>
-        <p className="ukde-muted">
-          Append-only event stream with request correlation and integrity-chain
-          status.
-        </p>
-        {integrityResult.ok && integrityResult.data ? (
-          <div className="auditIntegrityRow">
+      <PageHeader
+        eyebrow="Governance surface"
+        meta={
+          integrityResult.ok && integrityResult.data ? (
             <span
               className="ukde-badge"
               data-tone={integrityResult.data.isValid ? "success" : "warning"}
             >
               {integrityResult.data.isValid ? "Chain valid" : "Chain mismatch"}
             </span>
+          ) : null
+        }
+        secondaryActions={[{ href: "/activity", label: "My activity" }]}
+        summary="Append-only event stream with request correlation and integrity-chain status."
+        title="Audit event viewer"
+      />
+
+      <section className="sectionCard ukde-panel">
+        {integrityResult.ok && integrityResult.data ? (
+          <div className="auditIntegrityRow">
             <span className="ukde-muted">
               Checked rows: {integrityResult.data.checkedRows}
             </span>
@@ -203,9 +209,6 @@ export default async function AdminAuditPage({
               Next page
             </Link>
           ) : null}
-          <Link className="secondaryButton" href="/activity">
-            My activity
-          </Link>
         </div>
       </section>
     </main>
