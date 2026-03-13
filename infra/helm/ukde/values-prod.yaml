@@ -1,0 +1,20 @@
+global:
+  environment: prod
+  deploymentClass: hardened-internal
+  imageTag: prod-latest
+
+services:
+  web:
+    replicas: 3
+  api:
+    replicas: 3
+    env:
+      UKDE_API_ENVIRONMENT: prod
+  workers:
+    replicas: 3
+    env:
+      UKDE_WORKER_ENVIRONMENT: prod
+
+security:
+  networkPolicy:
+    enabled: true

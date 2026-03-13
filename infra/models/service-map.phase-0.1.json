@@ -1,0 +1,53 @@
+{
+  "version": "phase-0.1",
+  "services": {
+    "internal-vlm": {
+      "base_url": "http://127.0.0.1:8010/v1",
+      "protocol": "openai-compatible",
+      "endpoints": {
+        "health": "/health",
+        "models": "/v1/models",
+        "chat": "/v1/chat/completions"
+      }
+    },
+    "internal-llm": {
+      "base_url": "http://127.0.0.1:8011/v1",
+      "protocol": "openai-compatible",
+      "endpoints": {
+        "health": "/health",
+        "models": "/v1/models",
+        "chat": "/v1/chat/completions"
+      }
+    },
+    "internal-embedding": {
+      "base_url": "http://127.0.0.1:8012/v1",
+      "protocol": "openai-compatible",
+      "endpoints": {
+        "health": "/health",
+        "models": "/v1/models",
+        "embeddings": "/v1/embeddings"
+      }
+    },
+    "internal-ner": {
+      "base_url": "http://127.0.0.1:8020",
+      "protocol": "native",
+      "endpoints": {
+        "health": "/health"
+      }
+    },
+    "privacy-rules": {
+      "base_url": "http://127.0.0.1:8030",
+      "protocol": "rules-native",
+      "endpoints": {
+        "health": "/health"
+      }
+    },
+    "kraken": {
+      "base_url": "http://127.0.0.1:8040",
+      "protocol": "native",
+      "endpoints": {
+        "health": "/health"
+      }
+    }
+  }
+}

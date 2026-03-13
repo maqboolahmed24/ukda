@@ -1,0 +1,135 @@
+## Prompt Backlog Contract
+
+This file is a planning backlog. It is not an executable prompt by itself.
+
+If the user asks to read and implement promtps/README.md:
+- select the top unchecked task that already has a matching authored prompt file in `/prompts`
+- treat checklist titles as backlog entries, not as full implementation prompts
+- do not mark a task as complete until implementation and validation succeed
+- if a backlog item has no authored prompt file yet, treat it as planned future work and skip it unless the user explicitly asks for that missing prompt
+- if the user explicitly asks for a missing prompt file, report briefly that the prompt body has not been authored yet
+- do not read neighboring prompt files for product truth or execution context unless the selected prompt explicitly tells you to inspect them as non-canonical repo context
+- every authored prompt must stand on its own and defer to the canonical `/phases` hierarchy
+
+Executable authored prompt files are the numbered `*.md` prompt bodies currently present in `/prompts`.
+Use the matching numbered prompt file for a backlog item only when that file exists.
+
+Reference shorthand used in this backlog:
+- `README` = `/phases/README.md`
+- `Blueprint` = `/phases/blueprint-ukdataextraction.md`
+- `UI` = `/phases/ui-premium-dark-blueprint-obsidian-folio.md`
+- `Patch` = `/phases/UPDATED-SYSTEM-SMARTER-RECALL-FIRST-PATCH.md`
+- `P00` = `/phases/phase-00-foundation-release.md`
+- `P01` = `/phases/phase-01-ingest-document-viewer-v1.md`
+- `P02` = `/phases/phase-02-preprocessing-pipeline-v1.md`
+- `P03` = `/phases/phase-03-layout-segmentation-overlays-v1.md`
+- `P04` = `/phases/phase-04-handwriting-transcription-v1.md`
+- `P05` = `/phases/phase-05-privacy-redaction-workflow-v1.md`
+- `P06` = `/phases/phase-06-redaction-manifest-ledger-v1.md`
+- `P07` = `/phases/phase-07-policy-engine-v1.md`
+- `P08` = `/phases/phase-08-safe-outputs-export-gateway.md`
+- `P09` = `/phases/phase-09-provenance-proof-bundles.md`
+- `P10` = `/phases/phase-10-granular-data-products.md`
+- `P11` = `/phases/phase-11-hardening-scale-pentest-readiness.md`
+
+- [x] 01. Web-First Re-Baseline: preserve UKDE product logic while replacing desktop execution with browser-first delivery (Refs: README, Blueprint, UI, P00)
+- [x] 02. Bootstrap the secure monorepo and target topology for `/web`, `/api`, `/workers`, `/packages/ui`, `/packages/contracts`, and `/infra` (Refs: Blueprint, P00)
+- [x] 03. Stand up deterministic CI/CD, quality gates, and preview environments for the web-first stack (Refs: Blueprint, P00)
+- [x] 04. Ship the first working vertical slice: web shell, API health, environment wiring, and secure local development (Refs: README, Blueprint, UI, P00)
+- [x] 05. Implement authentication, session boundaries, and role-aware route guards for the browser app (Refs: Blueprint, P00)
+- [x] 06. Build project workspaces, memberships, and navigation boundaries that respect RBAC end to end (Refs: Blueprint, UI, P00)
+- [x] 07. Create append-only audit logging with correlation IDs and integrity guarantees across UI, API, and jobs (Refs: Blueprint, P00)
+- [x] 08. Add privacy-safe observability, metrics, traces, and operator diagnostics without weakening governance (Refs: Blueprint, P00, P11)
+- [x] 09. Build the job framework, worker runtime, retries, and orchestration backbone for every later phase (Refs: Blueprint, P00)
+- [x] 10. Enforce no-egress defaults, internal-only model calls, and export-gateway stubs from day zero (Refs: README, Blueprint, P00, P08)
+- [ ] 11. Forge the Obsidian Web design system: dark tokens, typography, surfaces, spacing, motion, and focus language (Refs: Blueprint, UI, P00)
+- [ ] 12. Build the responsive web shell with navigation rail, context bar, page header, and adaptive work regions (Refs: UI, P00)
+- [ ] 13. Create the core browser primitives: dialogs, drawers, menus, toasts, breadcrumbs, toolbars, and data tables (Refs: UI, P00)
+- [ ] 14. Lock the route-layout contract with nested layouts, deep links, URL state, suspense boundaries, and error boundaries (Refs: UI, P00)
+- [ ] 15. Design zero, empty, loading, error, and success states that make the product feel calm, exact, and trustworthy (Refs: UI, P00, P01)
+- [ ] 16. Implement keyboard-first accessibility, reduced-motion handling, and high-contrast-safe interaction across the shell (Refs: UI, P00, P11)
+- [ ] 17. Build the global command bar, project switcher, and omnibox-style navigation aids for expert users (Refs: UI, P00)
+- [ ] 18. Create the admin and audit shell surfaces for platform admins and auditors, with aligned project-scoped governance affordances for project leads (Refs: Blueprint, UI, P00)
+- [ ] 19. Establish frontend data contracts, typed API clients, cache policy, and optimistic-state rules for the web app (Refs: Blueprint, P00)
+- [ ] 20. Ship visual regression, accessibility, and interaction tests for the shell and core web primitives (Refs: UI, P00, P11)
+- [ ] 21. Stand up the ingest information architecture, routes, run models, and secure document-library skeleton (Refs: Blueprint, UI, P01)
+- [ ] 22. Build the controlled upload pipeline with validation, malware hooks, file-type checks, and quota enforcement (Refs: Blueprint, P01)
+- [ ] 23. Capture immutable source records, checksums, metadata, and ingest lineage for every uploaded document (Refs: Blueprint, P01)
+- [ ] 24. Implement page extraction jobs, thumbnail generation, and derived-asset lifecycles for imported sources (Refs: P00, P01)
+- [ ] 25. Build the document library with filters, sorting, bulk actions, details drawers, and crisp search ergonomics (Refs: UI, P01)
+- [ ] 26. Create the browser viewer baseline with zoom, pan, rotate, page jump, and filmstrip navigation (Refs: UI, P01)
+- [ ] 27. Secure image delivery with authenticated asset proxies, no raw-download paths, and safe browser caching rules (Refs: Blueprint, P01)
+- [ ] 28. Add deep-linkable viewer state, shareable internal URLs, and exact context restoration (Refs: UI, P01)
+- [ ] 29. Polish the viewer UX with skeletons, failure recovery, shortcuts, and dense but clear workspace behavior (Refs: UI, P01)
+- [ ] 30. Ship ingest and viewer quality gates for access control, performance budgets, and cross-browser stability (Refs: P01, P11)
+- [ ] 31. Stand up preprocessing routes, run state, provenance models, and review information architecture for derived page workflows (Refs: Blueprint, UI, P02)
+- [ ] 32. Build the deterministic preprocessing engine v1 with reproducible image-transform profiles (Refs: P02)
+- [ ] 33. Persist preprocessed artefacts, metrics, profiles, and upstream-to-downstream lineage with immutable versions (Refs: Blueprint, P02)
+- [ ] 34. Create the before/after compare workspace with precision inspectors and metrics-first review panels (Refs: UI, P02)
+- [ ] 35. Build document-quality triage queues, hotspot filtering, and targeted rerun flows for operators (Refs: UI, P02)
+- [ ] 36. Add advanced preprocessing controls with safe defaults, explicit risk gating, and reproducible presets (Refs: P02)
+- [ ] 37. Wire activation rules, supersession logic, and downstream invalidation for preprocessing runs (Refs: Blueprint, P02, P03, P04)
+- [ ] 38. Ship the preprocessing gold-set harness for determinism, visual regression, and quality floors (Refs: P02, P11)
+- [ ] 39. Stand up layout-analysis information architecture, run models, and segmentation-workspace routes for structured page understanding (Refs: Blueprint, UI, P03)
+- [ ] 40. Implement canonical PAGE-XML, overlay JSON, and geometry storage contracts for layout outputs (Refs: P03)
+- [ ] 41. Build the region-and-line segmentation engine v1 for complex archival page structures (Refs: P03)
+- [ ] 42. Render read-only layout overlays in a high-precision browser workspace with inspectable geometry (Refs: UI, P03)
+- [ ] 43. Materialize stable region IDs, line IDs, crops, thumbnails, and context windows for downstream use (Refs: P03, P04)
+- [ ] 44. Implement recall-first missed-text checks and rescue-candidate generation before any downstream activation (Refs: Blueprint, Patch, P03)
+- [ ] 45. Build reading-order inference with explicit uncertainty surfacing and reviewer override paths (Refs: UI, P03)
+- [ ] 46. Add audited manual correction tools for regions, lines, geometry, and reading-order edits (Refs: UI, P03)
+- [ ] 47. Lock the segmentation workspace UX: dense, minimal, keyboard-safe, and review-grade on the web (Refs: UI, P03)
+- [ ] 48. Enforce layout activation gates, no-silent-drop rules, and downstream invalidations on superseding runs (Refs: Patch, P03, P04)
+- [ ] 49. Stand up transcription information architecture, review queues, run models, and deep-linkable workspace routes (Refs: Blueprint, UI, Patch, P04)
+- [ ] 50. Build the approved internal model catalog and role map for primary, fallback, and reviewer-assist flows (Refs: Blueprint, P04)
+- [ ] 51. Implement the primary handwriting-transcription pipeline with structured output contracts and governed storage (Refs: P04)
+- [ ] 52. Add a governed fallback transcription path and multi-engine comparison hooks for recovery and validation (Refs: P04)
+- [ ] 53. Materialize token anchors, geometry, source references, and rescue provenance end to end (Refs: Patch, P03, P04)
+- [ ] 54. Persist diplomatic and normalised transcript schemas with immutable version history and lineage links (Refs: Blueprint, P04)
+- [ ] 55. Build confidence scoring, triage ranking, and reviewer routing for uncertain text (Refs: P04)
+- [ ] 56. Create the transcription workspace with source, transcript, confidence, and correction in one seamless flow (Refs: UI, P04)
+- [ ] 57. Implement manual correction, conflict control, reviewer lineage, and compare views across transcript generations (Refs: UI, P04)
+- [ ] 58. Ship recall-first rescue transcription, activation gates, and CER/WER evaluation harnesses for production confidence (Refs: Patch, P04, P11)
+- [ ] 59. Stand up privacy-review information architecture, work queues, run models, and safe-preview routes (Refs: Blueprint, UI, Patch, P05)
+- [ ] 60. Implement direct-identifier detection with rules, dictionaries, and local NER assistance inside the secure environment (Refs: Blueprint, P05)
+- [ ] 61. Build token-linked findings, bounding geometry, and conservative area-mask fallbacks for unreadable risk (Refs: Patch, P05)
+- [ ] 62. Implement the Phase 5 baseline decision engine for masking and privacy-safe defaults; keep pseudonymisation deferred to Phase 7 (Refs: P05, P07)
+- [ ] 63. Create the privacy workspace for fast resolution with approve, override, false-positive, and next-unresolved flows (Refs: UI, P05)
+- [ ] 64. Add dual-control review, immutable decision events, and compare views across redaction reruns (Refs: Blueprint, P05)
+- [ ] 65. Generate reviewed preview artefacts, redaction events, and readiness gates for downstream governed outputs (Refs: Patch, P05, P06, P08)
+- [ ] 66. Ship privacy regression packs, synthetic disclosure tests, and reviewer-safety checks before activation (Refs: P05, P11)
+- [ ] 67. Model manifests, candidate snapshots, and artefact-lineage contracts for governed downstream outputs (Refs: Blueprint, P06, P08)
+- [ ] 68. Generate screening-safe manifests with contents, hashes, policy lineage, and reviewer sign-offs (Refs: P06)
+### Planned Backlog (Prompt Files Not Yet Authored)
+- 69. Build the controlled-only evidence ledger with append-only integrity and retrieval APIs (Refs: Blueprint, P06)
+- 70. Design manifest surfaces for project leads/reviewers and evidence-ledger surfaces for auditors/admins with deep drill-down clarity (Refs: UI, P06)
+- 71. Ship manifest-to-artefact reconciliation, tamper evidence, and handoff integrity tests (Refs: P06, P08, P09, P11)
+- 72. Build the policy model, versioning scheme, activation workflow, and project-assignment rules (Refs: Blueprint, P07)
+- 73. Implement stable pseudonym registries with deterministic mapping and governed access control (Refs: P07)
+- 74. Add indirect-identifier generalisation and disclosure-safe transformation rules for higher-risk outputs (Refs: P10, P07, P08)
+- 75. Craft the policy editor as a sleek expert web tool with simulation, guardrails, and clear hierarchy (Refs: UI, P07)
+- 76. Implement policy reruns, regression packs, rollback paths, and activation gates without workflow confusion (Refs: P07, P05, P06)
+- 77. Persist policy lineage, approvals, governance events, and explainability surfaces end to end (Refs: Blueprint, P07)
+- 78. Build the export-request model, release-pack builder, and single-gateway egress foundation (Refs: Blueprint, P08)
+- 79. Create the export-review dashboard with queues, aging, SLA signals, and decision surfaces for reviewers (Refs: UI, P08)
+- 80. Enforce no-bypass egress across UI, API, workers, storage, and operational controls (Refs: Blueprint, P08, P11)
+- 81. Implement export approval workflow with dual control, rationale capture, and immutable state changes (Refs: P08)
+- 82. Add retention, resubmission, aging, and export-operations handoff hooks for long-running governed programs (Refs: UI, P08, P11)
+- 83. Ship release-pack validation, audit-completeness checks, and egress-denial regression coverage (Refs: P08, P11)
+- 84. Build the provenance graph, signed root, and cryptographic lineage backbone for approved outputs (Refs: Blueprint, P09)
+- 85. Implement deposit-ready bundle builders for safeguarded-deposit and controlled-evidence variants (Refs: P09)
+- 86. Create bundle-verification tooling and an auditor-grade proof viewer for lineage inspection (Refs: UI, P09)
+- 87. Rehearse end-to-end provenance replay with deterministic verification and failure-recovery handling (Refs: P09, P11)
+- 88. Stand up versioned discovery products, index models, and rebuild/cancel/activate pipelines (Refs: Blueprint, Patch, P10)
+- 89. Implement controlled full-text search with token-level anchors, provenance-rich hits, and safe filters (Refs: Patch, P10)
+- 90. Make search feel instant and exact with zero-state, query UX, result cards, jump-to-context, and precise highlighting (Refs: UI, Patch, P10)
+- 91. Build the controlled entity index as a governed internal data product with explicit lineage (Refs: P10)
+- 92. Implement safeguarded derivative indexes with suppressed-field contracts and disclosure gates (Refs: P10, P07, P08)
+- 93. Enforce recall-first search activation, freshness checks, rollback paths, and audit controls (Refs: Patch, P10, P11)
+- 94. Establish end-to-end observability, SLOs, and operator dashboards across web, API, workers, and storage (Refs: Blueprint, P11)
+- 95. Execute performance engineering for uploads, viewer rendering, inference pipelines, review workspaces, and search (Refs: UI, P11)
+- 96. Build resilience and recovery with degraded-mode UX, queue replay, restore drills, and evidence-backed recovery (Refs: Blueprint, UI, P11)
+- 97. Close the last security mile with findings management, secret rotation, boundary hardening, and pen-test remediation (Refs: Blueprint, P11)
+- 98. Run cross-phase production-readiness audits for accessibility, governance, privacy, provenance, and egress controls (Refs: Blueprint, UI, P11)
+- 99. Ship final release automation with deployment profiles, smoke suites, seed data, and environment-promotion gates (Refs: P00, P08, P11)
+- 100. Cut the production launch with final ship/no-ship review, operational handover, and post-launch guardrails (Refs: Blueprint, P11)

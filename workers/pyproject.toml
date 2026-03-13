@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=80", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ukde-workers"
+version = "0.1.0"
+description = "Worker runtime bootstrap for UKDE."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest==9.0.2"]
+
+[project.scripts]
+ukde-worker = "ukde_workers.cli:run_cli"
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+

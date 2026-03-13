@@ -1,0 +1,20 @@
+global:
+  environment: staging
+  deploymentClass: gated-internal
+  imageTag: staging-latest
+
+services:
+  web:
+    replicas: 2
+  api:
+    replicas: 2
+    env:
+      UKDE_API_ENVIRONMENT: staging
+  workers:
+    replicas: 2
+    env:
+      UKDE_WORKER_ENVIRONMENT: staging
+
+security:
+  networkPolicy:
+    enabled: true

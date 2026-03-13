@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels:
+    {{- include "ukde.labels" . | nindent 4 }}
+data:
+  UKDE_ENVIRONMENT: {{ .Values.global.environment | quote }}
+  UKDE_DEPLOYMENT_CLASS: {{ .Values.global.deploymentClass | quote }}
+  NEXT_PUBLIC_UKDE_API_ORIGIN: {{ .Values.services.web.env.NEXT_PUBLIC_UKDE_API_ORIGIN | quote }}
+  UKDE_API_ENVIRONMENT: {{ .Values.services.api.env.UKDE_API_ENVIRONMENT | quote }}
+  UKDE_WORKER_ENVIRONMENT: {{ .Values.services.workers.env.UKDE_WORKER_ENVIRONMENT | quote }}
+

@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-web
+  labels:
+    {{- include "ukde.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.services.web.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: web
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "ukde.labels" . | nindent 8 }}
+        app.kubernetes.io/component: web
+    spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: web
+          image: {{ include "ukde.image" (dict "root" . "service" .Values.services.web) | quote }}
+          imagePullPolicy: {{ .Values.services.web.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.services.web.containerPort }}
+              name: http
+          env:
+            - name: PORT
+              value: {{ .Values.services.web.containerPort | quote }}
+            - name: NEXT_PUBLIC_UKDE_API_ORIGIN
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-config
+                  key: NEXT_PUBLIC_UKDE_API_ORIGIN
+          resources:
+            {{- toYaml .Values.resources.web | nindent 12 }}
+

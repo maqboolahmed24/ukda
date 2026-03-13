@@ -1,0 +1,33 @@
+{{- $np := .Values.security.networkPolicy -}}
+{{- $hasCidrs := gt (len $np.allowEgressCidrs) 0 -}}
+{{- if and $np.enabled (or $np.dns.enabled $hasCidrs) }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-allow-internal-egress
+  labels:
+    {{- include "ukde.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Egress
+  egress:
+    {{- if $np.dns.enabled }}
+    - to:
+        - namespaceSelector:
+            {{- toYaml $np.dns.namespaceSelector | nindent 12 }}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- end }}
+    {{- range $cidr := $np.allowEgressCidrs }}
+    - to:
+        - ipBlock:
+            cidr: {{ $cidr | quote }}
+    {{- end }}
+{{- end }}
+

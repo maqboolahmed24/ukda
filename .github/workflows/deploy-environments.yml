@@ -1,0 +1,55 @@
+name: Deploy Environments
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      image_tag:
+        description: Internal image tag to deploy
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ vars.INTERNAL_REGISTRY != '' && vars.INTERNAL_IMAGE_NAMESPACE != '' }}
+    runs-on:
+      - self-hosted
+      - linux
+      - internal
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Verify internal deploy tooling
+        run: |
+          helm version
+          kubectl version --client=true
+
+      - name: Deploy environment
+        run: |
+          helm upgrade --install "ukde-${{ inputs.environment }}" infra/helm/ukde \
+            --namespace "ukde-${{ inputs.environment }}" \
+            --create-namespace \
+            -f infra/helm/ukde/values.yaml \
+            -f "infra/helm/ukde/values-${{ inputs.environment }}.yaml" \
+            --set global.imageTag="${{ inputs.image_tag }}" \
+            --set global.internalRegistry="${{ vars.INTERNAL_REGISTRY }}" \
+            --set services.web.image.repository="${{ vars.INTERNAL_IMAGE_NAMESPACE }}/web" \
+            --set services.api.image.repository="${{ vars.INTERNAL_IMAGE_NAMESPACE }}/api" \
+            --set services.workers.image.repository="${{ vars.INTERNAL_IMAGE_NAMESPACE }}/workers"

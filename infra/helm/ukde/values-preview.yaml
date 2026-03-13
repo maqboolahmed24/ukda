@@ -1,0 +1,21 @@
+global:
+  environment: preview
+  deploymentClass: internal-preview
+  imageTag: preview-latest
+  preview:
+    enabled: true
+
+services:
+  web:
+    env:
+      NEXT_PUBLIC_UKDE_API_ORIGIN: http://ukde-preview-api:8000
+  api:
+    env:
+      UKDE_API_ENVIRONMENT: preview
+  workers:
+    env:
+      UKDE_WORKER_ENVIRONMENT: preview
+
+security:
+  networkPolicy:
+    enabled: true

@@ -1,0 +1,10 @@
+.next
+.venv
+node_modules
+dist
+coverage
+pnpm-lock.yaml
+requirements/python-ci.lock
+infra/helm/ukde/templates
+phases
+prompts

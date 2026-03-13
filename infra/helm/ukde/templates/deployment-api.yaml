@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-api
+  labels:
+    {{- include "ukde.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.services.api.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: api
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "ukde.labels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+    spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: api
+          image: {{ include "ukde.image" (dict "root" . "service" .Values.services.api) | quote }}
+          imagePullPolicy: {{ .Values.services.api.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.services.api.containerPort }}
+              name: http
+          env:
+            - name: UKDE_API_ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-config
+                  key: UKDE_API_ENVIRONMENT
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          resources:
+            {{- toYaml .Values.resources.api | nindent 12 }}
+

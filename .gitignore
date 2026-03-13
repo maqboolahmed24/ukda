@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+
+# Node / pnpm
+node_modules
+.next
+out
+dist
+coverage
+pnpm-debug.log*
+*.tsbuildinfo
+
+# Python
+.venv
+__pycache__
+.pytest_cache
+*.pyc
+*.egg-info
+pip-wheel-metadata
+
+# Local env files
+.env
+.env.*
+!.env.example
+
+# Editors
+.idea
+.vscode

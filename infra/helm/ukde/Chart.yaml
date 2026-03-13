@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ukde
+description: Internal-only deployment skeleton for the UKDE web, API, and worker services.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

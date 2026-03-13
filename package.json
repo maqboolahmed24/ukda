@@ -1,0 +1,34 @@
+{
+  "name": "ukde",
+  "private": true,
+  "packageManager": "pnpm@10.23.0",
+  "engines": {
+    "node": ">=24.10.0",
+    "pnpm": ">=10.23.0"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter @ukde/web dev",
+    "lint": "eslint . --max-warnings=0",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm run typecheck:packages && pnpm run typecheck:web",
+    "test": "vitest run",
+    "build": "pnpm run build:web",
+    "audit:js": "pnpm audit --audit-level high --prod",
+    "ci:local": "make ci",
+    "smoke:health": "make smoke-health",
+    "build:web": "pnpm --filter @ukde/web build",
+    "typecheck:web": "pnpm --filter @ukde/web typecheck",
+    "typecheck:packages": "pnpm --filter @ukde/contracts typecheck && pnpm --filter @ukde/ui typecheck",
+    "validate:web": "pnpm run typecheck:packages && pnpm run typecheck:web && pnpm run build:web"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.0.3",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.4.0",
+    "prettier": "3.8.1",
+    "typescript-eslint": "8.57.0",
+    "vite-tsconfig-paths": "6.1.1",
+    "vitest": "4.1.0"
+  }
+}

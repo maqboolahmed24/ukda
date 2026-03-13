@@ -1,0 +1,16 @@
+global:
+  environment: dev
+  deploymentClass: internal
+  imageTag: dev-latest
+
+services:
+  api:
+    env:
+      UKDE_API_ENVIRONMENT: dev
+  workers:
+    env:
+      UKDE_WORKER_ENVIRONMENT: dev
+
+security:
+  networkPolicy:
+    enabled: false
