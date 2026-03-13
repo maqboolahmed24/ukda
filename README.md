@@ -21,6 +21,8 @@ The active build posture is web-first. Product behavior, governance rules, and l
 - Jobs lifecycle and worker runtime: [`/docs/architecture/jobs-framework-and-worker-runtime.md`](./docs/architecture/jobs-framework-and-worker-runtime.md)
 - Project workspaces and RBAC boundaries: [`/docs/architecture/project-workspaces-and-rbac.md`](./docs/architecture/project-workspaces-and-rbac.md)
 - Authenticated shell layout and adaptive-state contract: [`/docs/architecture/shell-layout-and-adaptive-state.md`](./docs/architecture/shell-layout-and-adaptive-state.md)
+- Web primitives and interaction contract: [`/docs/architecture/web-primitives-and-interaction-contract.md`](./docs/architecture/web-primitives-and-interaction-contract.md)
+- Overlay and focus-management contract: [`/docs/architecture/overlay-focus-management.md`](./docs/architecture/overlay-focus-management.md)
 - Directory ownership and boundaries: [`/docs/architecture/repo-topology-and-boundaries.md`](./docs/architecture/repo-topology-and-boundaries.md)
 - Future route and IA contract: [`/docs/architecture/route-map-and-user-journeys.md`](./docs/architecture/route-map-and-user-journeys.md)
 - Delivery automation and merge gates: [`/docs/delivery/ci-cd-quality-gates.md`](./docs/delivery/ci-cd-quality-gates.md)

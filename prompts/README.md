@@ -44,7 +44,7 @@ Reference shorthand used in this backlog:
 - [x] 10. Enforce no-egress defaults, internal-only model calls, and export-gateway stubs from day zero (Refs: README, Blueprint, P00, P08)
 - [x] 11. Forge the Obsidian Web design system: dark tokens, typography, surfaces, spacing, motion, and focus language (Refs: Blueprint, UI, P00)
 - [x] 12. Build the responsive web shell with navigation rail, context bar, page header, and adaptive work regions (Refs: UI, P00)
-- [ ] 13. Create the core browser primitives: dialogs, drawers, menus, toasts, breadcrumbs, toolbars, and data tables (Refs: UI, P00)
+- [x] 13. Create the core browser primitives: dialogs, drawers, menus, toasts, breadcrumbs, toolbars, and data tables (Refs: UI, P00)
 - [ ] 14. Lock the route-layout contract with nested layouts, deep links, URL state, suspense boundaries, and error boundaries (Refs: UI, P00)
 - [ ] 15. Design zero, empty, loading, error, and success states that make the product feel calm, exact, and trustworthy (Refs: UI, P00, P01)
 - [ ] 16. Implement keyboard-first accessibility, reduced-motion handling, and high-contrast-safe interaction across the shell (Refs: UI, P00, P11)

@@ -1,5 +1,11 @@
+"use client";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
+
+import { CommandBarOverflow, type MenuFlyoutItem } from "@ukde/ui/primitives";
 
 interface PageHeaderAction {
   href: string;
@@ -27,6 +33,19 @@ export function PageHeader({
   overflowLabel = "More actions",
   meta
 }: PageHeaderProps) {
+  const router = useRouter();
+  const overflowMenuItems = useMemo<MenuFlyoutItem[]>(
+    () =>
+      overflowActions.map((action) => ({
+        id: action.href,
+        label: action.label,
+        onSelect: () => {
+          router.push(action.href);
+        }
+      })),
+    [overflowActions, router]
+  );
+
   return (
     <section className="pageHeader ukde-panel" aria-live="polite">
       <div className="pageHeaderIdentity">
@@ -49,19 +68,11 @@ export function PageHeader({
               {action.label}
             </Link>
           ))}
-          {overflowActions.length > 0 ? (
-            <details className="pageHeaderOverflow">
-              <summary className="pageHeaderOverflowTrigger">
-                {overflowLabel}
-              </summary>
-              <div className="pageHeaderOverflowMenu">
-                {overflowActions.map((action) => (
-                  <Link href={action.href} key={action.href}>
-                    {action.label}
-                  </Link>
-                ))}
-              </div>
-            </details>
+          {overflowMenuItems.length > 0 ? (
+            <CommandBarOverflow
+              items={overflowMenuItems}
+              label={overflowLabel}
+            />
           ) : null}
           {primaryAction ? (
             <Link className="primaryButton" href={primaryAction.href}>

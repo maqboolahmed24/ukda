@@ -8,7 +8,17 @@
 - typography, spacing, radius, elevation, and motion scales
 - dark/light mode contracts with dark default
 - browser preference-aware theme runtime (`prefers-color-scheme`, contrast, forced-colors, reduced-motion, reduced-transparency)
-- foundational CSS primitives for buttons, fields, badges, surfaces, layout, and focus visibility
+- canonical browser primitives for overlays, navigation context, tabular data, and feedback:
+  - `ModalDialog`
+  - `Drawer` and `DetailsDrawer`
+  - `MenuFlyout` and `CommandBarOverflow`
+  - `Toolbar` with roving focus behavior
+  - `DataTable`
+  - `Breadcrumbs`
+  - `InlineAlert` and `BannerAlert`
+  - `ToastProvider` / `useToast`
+  - `StatusChip`
+- foundational CSS primitives for buttons, fields, badges, surfaces, layout, focus visibility, and overlay treatment
 
 ## Module Map
 
@@ -24,14 +34,19 @@
   - token-backed CSS custom properties
   - theme and accessibility preference behavior
   - low-level shared primitives consumed by `/web`
+- `src/primitives.tsx`
+  - canonical interactive browser primitives and overlay/focus lifecycle behavior
+- `src/primitives-logic.ts`
+  - deterministic pure interaction helpers (toolbar roving, stable sort, paging)
 
 ## Usage Rules
 
 1. Import `@ukde/ui/styles.css` once at app root.
 2. Use semantic classes and variables from this package instead of route-local color literals.
 3. Add token changes in `src/tokens.ts` first, then wire CSS variables in `src/styles.css`.
-4. Validate new primitives on `/admin/design-system` before broad route adoption.
-5. Keep route CSS focused on composition and layout, not new token islands.
+4. Import browser primitives from `@ukde/ui/primitives` rather than implementing route-local alternatives.
+5. Validate new primitives on `/admin/design-system` before broad route adoption.
+6. Keep route CSS focused on composition and layout, not new token islands.
 
 ## Guardrail
 

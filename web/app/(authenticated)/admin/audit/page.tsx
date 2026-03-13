@@ -1,7 +1,9 @@
 import Link from "next/link";
 
 import type { AuditEventType } from "@ukde/contracts";
+import { StatusChip } from "@ukde/ui/primitives";
 
+import { AdminAuditEventsTable } from "../../../../components/admin-audit-events-table";
 import { PageHeader } from "../../../../components/page-header";
 import { getAuditIntegrity, listAuditEvents } from "../../../../lib/audit";
 
@@ -71,12 +73,11 @@ export default async function AdminAuditPage({
         eyebrow="Governance surface"
         meta={
           integrityResult.ok && integrityResult.data ? (
-            <span
-              className="ukde-badge"
-              data-tone={integrityResult.data.isValid ? "success" : "warning"}
+            <StatusChip
+              tone={integrityResult.data.isValid ? "success" : "warning"}
             >
               {integrityResult.data.isValid ? "Chain valid" : "Chain mismatch"}
-            </span>
+            </StatusChip>
           ) : null
         }
         secondaryActions={[{ href: "/activity", label: "My activity" }]}
@@ -154,42 +155,8 @@ export default async function AdminAuditPage({
           <p className="ukde-muted">
             Audit event read failed: {eventsResult.detail ?? "unknown"}
           </p>
-        ) : events.length === 0 ? (
-          <p className="ukde-muted">No events matched the current filters.</p>
         ) : (
-          <div className="auditTableWrap">
-            <table className="auditTable">
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Event</th>
-                  <th>Actor</th>
-                  <th>Project</th>
-                  <th>Request ID</th>
-                  <th>Details</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((event) => (
-                  <tr key={event.id}>
-                    <td>{new Date(event.timestamp).toISOString()}</td>
-                    <td>{event.eventType}</td>
-                    <td>{event.actorUserId ?? "-"}</td>
-                    <td>{event.projectId ?? "-"}</td>
-                    <td>{event.requestId}</td>
-                    <td>
-                      <Link
-                        className="ukde-link"
-                        href={`/admin/audit/${event.id}`}
-                      >
-                        Open
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <AdminAuditEventsTable events={events} />
         )}
         <div className="buttonRow">
           {typeof nextCursor === "number" ? (

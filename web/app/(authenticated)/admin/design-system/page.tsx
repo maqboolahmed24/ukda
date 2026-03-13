@@ -13,6 +13,7 @@ import {
 } from "@ukde/ui";
 
 import { DesignSystemDiagnostics } from "../../../../components/design-system-diagnostics";
+import { DesignSystemPrimitivesShowcase } from "../../../../components/design-system-primitives-showcase";
 import { PageHeader } from "../../../../components/page-header";
 import { ThemePreferenceControl } from "../../../../components/theme-preference-control";
 
@@ -278,6 +279,8 @@ export default function DesignSystemPage() {
           ))}
         </ul>
       </section>
+
+      <DesignSystemPrimitivesShowcase />
     </main>
   );
 }

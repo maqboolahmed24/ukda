@@ -16,6 +16,7 @@ import {
   environmentLabels,
   shellStateNotes
 } from "@ukde/ui";
+import { StatusChip } from "@ukde/ui/primitives";
 
 import { ThemePreferenceControl } from "./theme-preference-control";
 
@@ -80,6 +81,21 @@ function resolveEnvironmentLabel(): string {
     return environmentLabels[normalized as keyof typeof environmentLabels];
   }
   return raw;
+}
+
+function resolveEnvironmentTone(): "neutral" | "warning" | "success" | "info" {
+  const raw = process.env.NEXT_PUBLIC_APP_ENV ?? process.env.APP_ENV ?? "dev";
+  const normalized = raw.toLowerCase();
+  if (normalized === "prod") {
+    return "success";
+  }
+  if (normalized === "staging") {
+    return "info";
+  }
+  if (normalized === "dev") {
+    return "warning";
+  }
+  return "neutral";
 }
 
 function resolveShellHeading(pathname: string): string {
@@ -206,20 +222,28 @@ export function AuthenticatedShell({
           <ThemePreferenceControl className="workspaceThemeControl" />
 
           <div className="workspaceBadges">
-            <span className="ukde-badge">Env {resolveEnvironmentLabel()}</span>
+            <StatusChip tone={resolveEnvironmentTone()}>
+              Env {resolveEnvironmentLabel()}
+            </StatusChip>
             {currentProject ? (
-              <span
-                className="ukde-badge"
-                data-tone={
-                  accessTierBadgeTones[currentProject.intendedAccessTier]
+              <StatusChip
+                tone={
+                  accessTierBadgeTones[currentProject.intendedAccessTier] ===
+                  "success"
+                    ? "success"
+                    : accessTierBadgeTones[
+                          currentProject.intendedAccessTier
+                        ] === "warning"
+                      ? "warning"
+                      : "neutral"
                 }
               >
                 Tier {accessTierLabels[currentProject.intendedAccessTier]}
-              </span>
+              </StatusChip>
             ) : (
-              <span className="ukde-badge">Tier CONTROLLED</span>
+              <StatusChip tone="warning">Tier CONTROLLED</StatusChip>
             )}
-            <span className="ukde-badge">{shellState}</span>
+            <StatusChip tone="info">{shellState}</StatusChip>
           </div>
 
           <details className="workspaceMenu">

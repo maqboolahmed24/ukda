@@ -2,6 +2,8 @@
 
 import { usePathname } from "next/navigation";
 
+import { Breadcrumbs } from "@ukde/ui/primitives";
+
 import { PageHeader } from "./page-header";
 
 const SECTION_MAP: Record<string, { title: string; summary: string }> = {
@@ -59,6 +61,17 @@ export function ProjectSectionHeader({ projectName }: { projectName: string }) {
   return (
     <PageHeader
       eyebrow={`Projects / ${projectName}`}
+      meta={
+        projectId ? (
+          <Breadcrumbs
+            items={[
+              { href: "/projects", label: "Projects" },
+              { href: `/projects/${projectId}/overview`, label: projectName },
+              { label: section.title }
+            ]}
+          />
+        ) : undefined
+      }
       secondaryActions={secondaryActions}
       summary={section.summary}
       title={section.title}
