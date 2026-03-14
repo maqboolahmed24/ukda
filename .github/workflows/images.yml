@@ -36,7 +36,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Verify image build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
@@ -91,7 +91,7 @@ jobs:
           echo "tags=${{ vars.INTERNAL_REGISTRY }}/${{ vars.INTERNAL_IMAGE_NAMESPACE }}/${{ matrix.service }}:${SHORT_SHA},${{ vars.INTERNAL_REGISTRY }}/${{ vars.INTERNAL_IMAGE_NAMESPACE }}/${{ matrix.service }}:${CHANNEL_TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Publish internal image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
