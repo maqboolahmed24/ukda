@@ -1,5 +1,6 @@
 import { PageHeader } from "../../../components/page-header";
 import { listMyActivity } from "../../../lib/audit";
+import { SectionState } from "@ukde/ui/primitives";
 
 export const dynamic = "force-dynamic";
 
@@ -26,11 +27,17 @@ export default async function MyActivityPage() {
       >
         <h2 id="my-activity-events-title">Recent events</h2>
         {!activityResult.ok ? (
-          <p className="ukde-muted">
-            Activity read failed: {activityResult.detail ?? "unknown"}
-          </p>
+          <SectionState
+            kind="error"
+            title="Activity read failed"
+            description={activityResult.detail ?? "Unknown failure"}
+          />
         ) : items.length === 0 ? (
-          <p className="ukde-muted">No recent events for this user.</p>
+          <SectionState
+            kind="empty"
+            title="No recent events"
+            description="No auditable events were recorded for this user in the selected window."
+          />
         ) : (
           <div className="auditTableWrap">
             <table className="auditTable">

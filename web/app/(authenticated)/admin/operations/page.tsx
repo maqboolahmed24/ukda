@@ -1,6 +1,14 @@
 import { PageHeader } from "../../../../components/page-header";
 import { requirePlatformRole } from "../../../../lib/auth/session";
 import { getOperationsOverview } from "../../../../lib/operations";
+import {
+  adminOperationsAlertsPath,
+  adminOperationsExportStatusPath,
+  adminOperationsSlosPath,
+  adminOperationsTimelinesPath,
+  adminPath
+} from "../../../../lib/routes";
+import { SectionState } from "@ukde/ui/primitives";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +21,11 @@ export default async function AdminOperationsOverviewPage() {
       <PageHeader
         eyebrow="Platform operations"
         secondaryActions={[
-          { href: "/admin/operations/slos", label: "SLO targets" },
-          { href: "/admin/operations/alerts", label: "Alerts" },
-          { href: "/admin/operations/timelines", label: "Timelines" },
-          { href: "/admin", label: "Back to admin" }
+          { href: adminOperationsSlosPath, label: "SLO targets" },
+          { href: adminOperationsAlertsPath, label: "Alerts" },
+          { href: adminOperationsTimelinesPath, label: "Timelines" },
+          { href: adminOperationsExportStatusPath, label: "Export status" },
+          { href: adminPath, label: "Back to admin" }
         ]}
         summary="Privacy-safe metrics, alert posture, and telemetry export boundaries."
         title="Operations overview"
@@ -24,10 +33,11 @@ export default async function AdminOperationsOverviewPage() {
 
       {!overviewResult.ok || !overviewResult.data ? (
         <section className="sectionCard ukde-panel">
-          <p className="ukde-muted">
-            Operations overview unavailable:{" "}
-            {overviewResult.detail ?? "unknown"}
-          </p>
+          <SectionState
+            kind="error"
+            title="Operations overview unavailable"
+            description={overviewResult.detail ?? "Unknown failure"}
+          />
         </section>
       ) : (
         <>
@@ -107,9 +117,11 @@ export default async function AdminOperationsOverviewPage() {
           <section className="sectionCard ukde-panel">
             <h2>Top routes</h2>
             {overviewResult.data.topRoutes.length === 0 ? (
-              <p className="ukde-muted">
-                No route telemetry has been collected yet.
-              </p>
+              <SectionState
+                kind="no-results"
+                title="No route telemetry yet"
+                description="Route-level telemetry has not been collected in this environment."
+              />
             ) : (
               <div className="auditTableWrap">
                 <table className="auditTable">

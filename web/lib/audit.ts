@@ -5,91 +5,29 @@ import type {
   AuditIntegrityResponse
 } from "@ukde/contracts";
 
-import { readSessionToken } from "./auth/session";
-import { resolveApiOrigins } from "./bootstrap-content";
-import { buildApiTraceHeaders, logServerDiagnostic } from "./telemetry";
+import { type ApiResult, requestServerApi } from "./data/api-client";
+import type { QueryKey } from "./data/query-keys";
+import { queryKeys } from "./data/query-keys";
 
-export interface AuditApiResult<T> {
-  ok: boolean;
-  status: number;
-  data?: T;
-  detail?: string;
-}
+export type AuditApiResult<T> = ApiResult<T>;
 
 async function requestAuditApi<T>(
   path: string,
-  init?: RequestInit
+  options?: {
+    body?: BodyInit | null;
+    headers?: HeadersInit;
+    method?: string;
+    queryKey?: QueryKey;
+  }
 ): Promise<AuditApiResult<T>> {
-  const token = await readSessionToken();
-  if (!token) {
-    return {
-      ok: false,
-      status: 401,
-      detail: "Authentication is required."
-    };
-  }
-
-  const { internalOrigin } = resolveApiOrigins();
-  const traceHeaders = await buildApiTraceHeaders();
-  let response: Response;
-  try {
-    response = await fetch(`${internalOrigin}${path}`, {
-      ...init,
-      cache: "no-store",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        ...traceHeaders,
-        ...(init?.headers ?? {})
-      }
-    });
-  } catch (error) {
-    logServerDiagnostic("audit_api_fetch_failed", {
-      path,
-      method: init?.method ?? "GET",
-      errorClass: error instanceof Error ? error.name : "unknown"
-    });
-    return {
-      ok: false,
-      status: 503,
-      detail: "Audit API is unavailable."
-    };
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = await response.json();
-  } catch {
-    parsed = undefined;
-  }
-
-  if (!response.ok) {
-    const detail =
-      typeof parsed === "object" &&
-      parsed !== null &&
-      "detail" in parsed &&
-      typeof parsed.detail === "string"
-        ? parsed.detail
-        : "Request failed.";
-    return {
-      ok: false,
-      status: response.status,
-      detail
-    };
-  }
-
-  if (response.status >= 500) {
-    logServerDiagnostic("audit_api_server_error", {
-      path,
-      method: init?.method ?? "GET",
-      status: response.status
-    });
-  }
-
-  return {
-    ok: true,
-    status: response.status,
-    data: parsed as T
-  };
+  return requestServerApi<T>({
+    path,
+    method: options?.method,
+    headers: options?.headers,
+    body: options?.body,
+    cacheClass: "governance-event",
+    queryKey: options?.queryKey
+  });
 }
 
 interface AuditFilterInput {
@@ -133,24 +71,33 @@ export async function listAuditEvents(
   filters: AuditFilterInput
 ): Promise<AuditApiResult<AuditEventListResponse>> {
   return requestAuditApi<AuditEventListResponse>(
-    `/admin/audit-events${toAuditQueryString(filters)}`
+    `/admin/audit-events${toAuditQueryString(filters)}`,
+    {
+      queryKey: queryKeys.audit.list(filters)
+    }
   );
 }
 
 export async function getAuditEvent(
   eventId: string
 ): Promise<AuditApiResult<AuditEvent>> {
-  return requestAuditApi<AuditEvent>(`/admin/audit-events/${eventId}`);
+  return requestAuditApi<AuditEvent>(`/admin/audit-events/${eventId}`, {
+    queryKey: queryKeys.audit.detail(eventId)
+  });
 }
 
 export async function getAuditIntegrity(): Promise<
   AuditApiResult<AuditIntegrityResponse>
 > {
-  return requestAuditApi<AuditIntegrityResponse>("/admin/audit-integrity");
+  return requestAuditApi<AuditIntegrityResponse>("/admin/audit-integrity", {
+    queryKey: queryKeys.audit.integrity()
+  });
 }
 
 export async function listMyActivity(
   limit: number = 50
 ): Promise<AuditApiResult<AuditEventListResponse>> {
-  return requestAuditApi<AuditEventListResponse>(`/me/activity?limit=${limit}`);
+  return requestAuditApi<AuditEventListResponse>(`/me/activity?limit=${limit}`, {
+    queryKey: queryKeys.audit.myActivity(limit)
+  });
 }

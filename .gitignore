@@ -9,11 +9,14 @@ dist
 coverage
 pnpm-debug.log*
 *.tsbuildinfo
+playwright-report
+test-results
 
 # Python
 .venv
 __pycache__
 .pytest_cache
+api/tests/.artifacts
 *.pyc
 *.egg-info
 pip-wheel-metadata

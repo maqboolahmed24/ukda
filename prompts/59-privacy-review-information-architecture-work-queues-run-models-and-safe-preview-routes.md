@@ -20,9 +20,9 @@ The actual product source of truth is the extracted `/phases` directory in repo 
 
 ## Source-of-truth rule
 - The canonical truth for this prompt is:
-  1. current repository state as the implementation reality to reconcile with
+  1. the precise `/phases` files listed above
   2. this prompt
-  3. the precise `/phases` files listed above
+  3. current repository state for reconciling implementation details
 - Any other repo files are context only.
 - Use current official docs for implementation mechanics only.
 
@@ -153,7 +153,7 @@ Implement or refine the canonical Phase 5.0 surface, including:
 
 ### Required RBAC
 - `PROJECT_LEAD`, `RESEARCHER`, `REVIEWER`, and `ADMIN` can view privacy runs and surfaces
-- `PROJECT_LEAD`, `REVIEWER`, or `ADMIN` are required to create, cancel, activate, or resolve findings
+- `PROJECT_LEAD`, `REVIEWER`, or `ADMIN` are required to create, cancel, activate, start/complete run review, resolve findings, update page reviews, and update area masks
 
 ### Required audit events
 Use or reconcile the Phase 5.0 event set, including:
@@ -325,7 +325,7 @@ Before finishing:
 1. Verify the privacy route family exists and fits the canonical shell.
 2. Verify overview, triage, runs, compare, events, and workspace routes reload safely.
 3. Verify run and page event timelines are append-only and ordered deterministically.
-4. Verify RBAC boundaries for view vs create/cancel/activate/resolve actions.
+4. Verify RBAC boundaries for view vs create/cancel/activate/start-review/complete-review/finding-resolution/page-review/area-mask actions.
 5. Verify approved runs reject later mutation paths according to the modeled locking rules.
 6. Verify safe-preview routes remain authenticated and do not leak raw object-store paths.
 7. Verify activation updates the active redaction projection coherently.
@@ -339,8 +339,8 @@ This prompt is complete only if all are true:
 - the privacy IA and route family are real
 - the run/review/projection/event models are real
 - safe-preview routes are real and controlled
-- shell surfaces are ready for detector and decision logic without IA churn
-- RBAC and audit are correct
+- shell routes expose documented extension points for detector and decision modules without route-family renaming
+- RBAC and audit tests cover privacy run create, view, and decision actions across required roles
 - `/phases` remains untouched
 
 ## Final response format

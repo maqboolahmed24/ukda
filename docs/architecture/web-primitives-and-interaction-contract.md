@@ -34,6 +34,8 @@ The canonical primitive set now includes:
 - `Toolbar` (single tab stop, roving focus)
 - `DataTable` (sorting, paging, row selection, actions slot)
 - `StatusChip`
+- `FeedbackState` + `PageState` + `SectionState` + `InlineState`
+- `SkeletonLines`
 
 ## Command Hierarchy
 
@@ -78,6 +80,13 @@ Low-frequency and destructive actions should move to labeled overflow surfaces i
 - Use `InlineAlert` or `BannerAlert` for durable route-level feedback.
 - Use toasts only for low-risk confirmations.
 - Use `StatusChip` for concise environment/access/status signals.
+- Use shared state primitives (`PageState`, `SectionState`, `InlineState`) for
+  zero/empty/loading/error/success/degraded/disabled/not-found/unauthorized
+  handling.
+- Keep feedback priority aligned with
+  [`state-feedback-language-and-priority.md`](./state-feedback-language-and-priority.md).
+- Apply copy rules from
+  [`state-copy-guidelines.md`](./state-copy-guidelines.md).
 
 ## Current Route Adoption
 

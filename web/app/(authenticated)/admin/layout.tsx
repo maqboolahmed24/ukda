@@ -1,3 +1,4 @@
+import { AdminConsoleShell } from "../../../components/admin-console-shell";
 import { requirePlatformRole } from "../../../lib/auth/session";
 
 export default async function AdminLayout({
@@ -5,6 +6,6 @@ export default async function AdminLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  await requirePlatformRole(["ADMIN", "AUDITOR"]);
-  return children;
+  const session = await requirePlatformRole(["ADMIN", "AUDITOR"]);
+  return <AdminConsoleShell session={session}>{children}</AdminConsoleShell>;
 }

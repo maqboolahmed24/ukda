@@ -1,21 +1,45 @@
 import { redirect } from "next/navigation";
 
 import { accessTierLabels, projectRoleLabels } from "@ukde/ui";
+import { InlineAlert } from "@ukde/ui/primitives";
 
 import { getProjectMembers } from "../../../../../lib/projects";
+import { normalizeOptionalTextParam } from "../../../../../lib/url-state";
 
 export const dynamic = "force-dynamic";
 
-function resolveNotice(status?: string): string | null {
+interface SettingsNotice {
+  description: string;
+  title: string;
+  tone: "success" | "danger";
+}
+
+function resolveNotice(status?: string): SettingsNotice | null {
   switch (status) {
     case "member-added":
-      return "Member added.";
+      return {
+        tone: "success",
+        title: "Member added",
+        description: "Membership was added and audit events were recorded."
+      };
     case "member-updated":
-      return "Member role updated.";
+      return {
+        tone: "success",
+        title: "Role updated",
+        description: "Member role was updated for this project."
+      };
     case "member-removed":
-      return "Member removed.";
+      return {
+        tone: "success",
+        title: "Member removed",
+        description: "Membership was removed from this project."
+      };
     case "action-failed":
-      return "Member action failed. Check permissions and retry.";
+      return {
+        tone: "danger",
+        title: "Member action failed",
+        description: "Check permissions and try the action again."
+      };
     default:
       return null;
   }
@@ -40,7 +64,7 @@ export default async function ProjectSettingsPage({
   }
 
   const response = membersResult.data;
-  const notice = resolveNotice(query.status);
+  const notice = resolveNotice(normalizeOptionalTextParam(query.status));
   const leadCount = response.items.filter(
     (member) => member.role === "PROJECT_LEAD"
   ).length;
@@ -75,8 +99,12 @@ export default async function ProjectSettingsPage({
             <p className="ukde-eyebrow">Membership management</p>
             <h3>Project members</h3>
           </div>
-          {notice ? <span className="ukde-badge">{notice}</span> : null}
         </div>
+        {notice ? (
+          <InlineAlert title={notice.title} tone={notice.tone}>
+            {notice.description}
+          </InlineAlert>
+        ) : null}
 
         <ul className="memberList">
           {response.items.map((member) => {

@@ -1,10 +1,23 @@
 import Link from "next/link";
 
 import type { OperationsAlertState } from "@ukde/contracts";
+import { SectionState } from "@ukde/ui/primitives";
 
 import { PageHeader } from "../../../../../components/page-header";
 import { requirePlatformRole } from "../../../../../lib/auth/session";
 import { listOperationsAlerts } from "../../../../../lib/operations";
+import {
+  adminOperationsAlertsPath,
+  adminOperationsExportStatusPath,
+  adminOperationsPath,
+  adminOperationsSlosPath,
+  adminOperationsTimelinesPath,
+  withQuery
+} from "../../../../../lib/routes";
+import {
+  normalizeCursorParam,
+  normalizeOptionalEnumParam
+} from "../../../../../lib/url-state";
 
 const ALERT_STATE_OPTIONS: Array<OperationsAlertState | "ALL"> = [
   "OPEN",
@@ -24,12 +37,13 @@ export default async function AdminOperationsAlertsPage({
   }>;
 }>) {
   await requirePlatformRole(["ADMIN"]);
-  const filters = await searchParams;
-  const cursor = Number(filters.cursor ?? "0");
-  const state = filters.state ?? "OPEN";
+  const rawFilters = await searchParams;
+  const cursor = normalizeCursorParam(rawFilters.cursor);
+  const state =
+    normalizeOptionalEnumParam(rawFilters.state, ALERT_STATE_OPTIONS) ?? "OPEN";
   const alertsResult = await listOperationsAlerts({
     state,
-    cursor: Number.isFinite(cursor) ? cursor : 0,
+    cursor,
     pageSize: 50
   });
 
@@ -43,9 +57,10 @@ export default async function AdminOperationsAlertsPage({
       <PageHeader
         eyebrow="Platform operations"
         secondaryActions={[
-          { href: "/admin/operations", label: "Overview" },
-          { href: "/admin/operations/slos", label: "SLOs" },
-          { href: "/admin/operations/timelines", label: "Timelines" }
+          { href: adminOperationsPath, label: "Overview" },
+          { href: adminOperationsSlosPath, label: "SLOs" },
+          { href: adminOperationsTimelinesPath, label: "Timelines" },
+          { href: adminOperationsExportStatusPath, label: "Export status" }
         ]}
         summary="Threshold-derived alerts only, without synthetic dashboard noise."
         title="Alert posture"
@@ -73,11 +88,17 @@ export default async function AdminOperationsAlertsPage({
 
       <section className="sectionCard ukde-panel">
         {!alertsResult.ok ? (
-          <p className="ukde-muted">
-            Alerts unavailable: {alertsResult.detail ?? "unknown"}
-          </p>
+          <SectionState
+            kind="error"
+            title="Alerts unavailable"
+            description={alertsResult.detail ?? "Unknown failure"}
+          />
         ) : items.length === 0 ? (
-          <p className="ukde-muted">No alerts matched the selected state.</p>
+          <SectionState
+            kind="no-results"
+            title="No alerts matched the filter"
+            description="Try a different state filter to expand the result set."
+          />
         ) : (
           <div className="auditTableWrap">
             <table className="auditTable">
@@ -111,10 +132,10 @@ export default async function AdminOperationsAlertsPage({
           <div className="buttonRow">
             <Link
               className="secondaryButton"
-              href={`/admin/operations/alerts?${new URLSearchParams({
+              href={withQuery(adminOperationsAlertsPath, {
                 state,
-                cursor: String(nextCursor)
-              }).toString()}`}
+                cursor: nextCursor
+              })}
             >
               Next page
             </Link>

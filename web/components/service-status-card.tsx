@@ -1,76 +1,9 @@
 import type {
-  ServiceHealthPayload,
   ServiceReadinessPayload,
   ServiceUnavailablePayload
 } from "@ukde/contracts";
 
-import { resolveApiOrigins } from "../lib/bootstrap-content";
-import { buildApiTraceHeaders, logServerDiagnostic } from "../lib/telemetry";
-
-const UNREACHABLE_PAYLOAD: ServiceUnavailablePayload = {
-  service: "api",
-  status: "UNREACHABLE",
-  environment: "dev",
-  version: "bootstrap",
-  timestamp: new Date(0).toISOString(),
-  detail: "API has not been contacted yet."
-};
-
-async function fetchHealth(
-  baseUrl: string
-): Promise<ServiceHealthPayload | ServiceUnavailablePayload> {
-  const traceHeaders = await buildApiTraceHeaders();
-  try {
-    const response = await fetch(`${baseUrl}/healthz`, {
-      cache: "no-store",
-      headers: traceHeaders
-    });
-    if (!response.ok) {
-      return {
-        ...UNREACHABLE_PAYLOAD,
-        detail: `Health check returned ${response.status}.`
-      };
-    }
-    return (await response.json()) as ServiceHealthPayload;
-  } catch {
-    logServerDiagnostic("health_fetch_failed", {
-      path: "/healthz",
-      baseUrl
-    });
-    return {
-      ...UNREACHABLE_PAYLOAD,
-      detail: "Could not connect to /healthz."
-    };
-  }
-}
-
-async function fetchReadiness(
-  baseUrl: string
-): Promise<ServiceReadinessPayload | ServiceUnavailablePayload> {
-  const traceHeaders = await buildApiTraceHeaders();
-  try {
-    const response = await fetch(`${baseUrl}/readyz`, {
-      cache: "no-store",
-      headers: traceHeaders
-    });
-    if (!response.ok && response.status !== 503) {
-      return {
-        ...UNREACHABLE_PAYLOAD,
-        detail: `Readiness check returned ${response.status}.`
-      };
-    }
-    return (await response.json()) as ServiceReadinessPayload;
-  } catch {
-    logServerDiagnostic("readiness_fetch_failed", {
-      path: "/readyz",
-      baseUrl
-    });
-    return {
-      ...UNREACHABLE_PAYLOAD,
-      detail: "Could not connect to /readyz."
-    };
-  }
-}
+import { getServiceHealth, getServiceReadiness } from "../lib/system";
 
 function getReadinessTone(
   status:
@@ -81,10 +14,9 @@ function getReadinessTone(
 }
 
 export async function ServiceStatusCard() {
-  const { internalOrigin } = resolveApiOrigins();
   const [health, readiness] = await Promise.all([
-    fetchHealth(internalOrigin),
-    fetchReadiness(internalOrigin)
+    getServiceHealth(),
+    getServiceReadiness()
   ]);
 
   return (

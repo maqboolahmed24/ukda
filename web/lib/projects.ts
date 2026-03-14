@@ -9,102 +9,39 @@ import type {
   ProjectRole
 } from "@ukde/contracts";
 
-import { resolveApiOrigins } from "./bootstrap-content";
-import { readSessionToken } from "./auth/session";
-import { buildApiTraceHeaders, logServerDiagnostic } from "./telemetry";
+import { type ApiResult, requestServerApi } from "./data/api-client";
+import type { QueryCacheClass } from "./data/cache-policy";
+import type { QueryKey } from "./data/query-keys";
+import { queryKeys } from "./data/query-keys";
 
-export interface ProjectApiResult<T> {
-  ok: boolean;
-  status: number;
-  data?: T;
-  detail?: string;
-}
+export type ProjectApiResult<T> = ApiResult<T>;
 
 async function requestProjectApi<T>(
   path: string,
-  init?: RequestInit
+  options?: {
+    body?: BodyInit | null;
+    cacheClass?: QueryCacheClass;
+    expectNoContent?: boolean;
+    headers?: HeadersInit;
+    method?: string;
+    queryKey?: QueryKey;
+  }
 ): Promise<ProjectApiResult<T>> {
-  const token = await readSessionToken();
-  if (!token) {
-    return {
-      ok: false,
-      status: 401,
-      detail: "Authentication is required."
-    };
-  }
-
-  const { internalOrigin } = resolveApiOrigins();
-  const traceHeaders = await buildApiTraceHeaders();
-  let response: Response;
-  try {
-    response = await fetch(`${internalOrigin}${path}`, {
-      ...init,
-      cache: "no-store",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        ...traceHeaders,
-        ...(init?.headers ?? {})
-      }
-    });
-  } catch (error) {
-    logServerDiagnostic("project_api_fetch_failed", {
-      path,
-      method: init?.method ?? "GET",
-      errorClass: error instanceof Error ? error.name : "unknown"
-    });
-    return {
-      ok: false,
-      status: 503,
-      detail: "Project API is unavailable."
-    };
-  }
-
-  if (response.status === 204) {
-    return {
-      ok: true,
-      status: response.status
-    };
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = await response.json();
-  } catch {
-    parsed = undefined;
-  }
-
-  if (!response.ok) {
-    const detail =
-      typeof parsed === "object" &&
-      parsed !== null &&
-      "detail" in parsed &&
-      typeof parsed.detail === "string"
-        ? parsed.detail
-        : "Request failed.";
-    return {
-      ok: false,
-      status: response.status,
-      detail
-    };
-  }
-
-  if (response.status >= 500) {
-    logServerDiagnostic("project_api_server_error", {
-      path,
-      method: init?.method ?? "GET",
-      status: response.status
-    });
-  }
-
-  return {
-    ok: true,
-    status: response.status,
-    data: parsed as T
-  };
+  return requestServerApi<T>({
+    path,
+    method: options?.method,
+    headers: options?.headers,
+    body: options?.body,
+    expectNoContent: options?.expectNoContent,
+    cacheClass: options?.cacheClass ?? "mutable-list",
+    queryKey: options?.queryKey
+  });
 }
 
 export async function listMyProjects(): Promise<ProjectSummary[]> {
-  const response = await requestProjectApi<ProjectListResponse>("/projects");
+  const response = await requestProjectApi<ProjectListResponse>("/projects", {
+    queryKey: queryKeys.projects.list()
+  });
   if (!response.ok || !response.data) {
     return [];
   }
@@ -130,21 +67,25 @@ export async function createProject(
 export async function getProjectSummary(
   projectId: string
 ): Promise<ProjectApiResult<ProjectSummary>> {
-  return requestProjectApi<ProjectSummary>(`/projects/${projectId}`);
+  return requestProjectApi<ProjectSummary>(`/projects/${projectId}`, {
+    queryKey: queryKeys.projects.detail(projectId)
+  });
 }
 
 export async function getProjectWorkspace(
   projectId: string
 ): Promise<ProjectApiResult<ProjectSummary>> {
-  return requestProjectApi<ProjectSummary>(`/projects/${projectId}/workspace`);
+  return requestProjectApi<ProjectSummary>(`/projects/${projectId}/workspace`, {
+    queryKey: queryKeys.projects.workspace(projectId)
+  });
 }
 
 export async function getProjectMembers(
   projectId: string
 ): Promise<ProjectApiResult<ProjectMembersResponse>> {
-  return requestProjectApi<ProjectMembersResponse>(
-    `/projects/${projectId}/members`
-  );
+  return requestProjectApi<ProjectMembersResponse>(`/projects/${projectId}/members`, {
+    queryKey: queryKeys.projects.members(projectId)
+  });
 }
 
 export async function addProjectMember(
@@ -184,12 +125,10 @@ export async function removeProjectMember(
   projectId: string,
   memberUserId: string
 ): Promise<ProjectApiResult<void>> {
-  return requestProjectApi<void>(
-    `/projects/${projectId}/members/${memberUserId}`,
-    {
-      method: "DELETE"
-    }
-  );
+  return requestProjectApi<void>(`/projects/${projectId}/members/${memberUserId}`, {
+    method: "DELETE",
+    expectNoContent: true
+  });
 }
 
 export const projectRoleOptions: ProjectRole[] = [

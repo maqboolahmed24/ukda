@@ -1,5 +1,8 @@
 import { PageHeader } from "../../../../../components/page-header";
+import { requirePlatformRole } from "../../../../../lib/auth/session";
 import { getAuditEvent } from "../../../../../lib/audit";
+import { adminAuditPath } from "../../../../../lib/routes";
+import { SectionState, StatusChip } from "@ukde/ui/primitives";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +11,8 @@ export default async function AdminAuditEventPage({
 }: Readonly<{
   params: Promise<{ eventId: string }>;
 }>) {
+  const session = await requirePlatformRole(["ADMIN", "AUDITOR"]);
+  const isAdmin = session.user.platformRoles.includes("ADMIN");
   const { eventId } = await params;
   const eventResult = await getAuditEvent(eventId);
 
@@ -15,17 +20,24 @@ export default async function AdminAuditEventPage({
     <main className="homeLayout">
       <PageHeader
         eyebrow="Governance surface"
+        meta={
+          <StatusChip tone={isAdmin ? "danger" : "warning"}>
+            {isAdmin ? "ADMIN" : "AUDITOR read-only"}
+          </StatusChip>
+        }
         secondaryActions={[
-          { href: "/admin/audit", label: "Back to audit list" }
+          { href: adminAuditPath, label: "Back to audit list" }
         ]}
         title="Audit event detail"
       />
 
       {!eventResult.ok || !eventResult.data ? (
         <section className="sectionCard ukde-panel">
-          <p className="ukde-muted">
-            Audit event read failed: {eventResult.detail ?? "unknown"}
-          </p>
+          <SectionState
+            kind="error"
+            title="Audit event read failed"
+            description={eventResult.detail ?? "Unknown failure"}
+          />
         </section>
       ) : (
         <section className="sectionCard ukde-panel">

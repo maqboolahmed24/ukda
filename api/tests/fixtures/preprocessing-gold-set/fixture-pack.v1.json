@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "fixturePackId": "ukde-preprocess-gold-set",
+  "fixturePackVersion": "v1",
+  "description": "Deterministic synthetic fixture pack for preprocessing drift gates.",
+  "fixtures": [
+    {
+      "fixtureId": "page-001-baseline",
+      "seed": 1001,
+      "scenario": "baseline",
+      "width": 720,
+      "height": 960,
+      "sourceDpi": 300,
+      "tags": ["baseline", "balanced"],
+      "notes": "Clean baseline page for canonical hash determinism."
+    },
+    {
+      "fixtureId": "page-002-skew",
+      "seed": 1002,
+      "scenario": "skew",
+      "width": 720,
+      "height": 960,
+      "sourceDpi": 300,
+      "tags": ["skew"],
+      "notes": "Moderate skew to validate deskew metrics and warning surfaces."
+    },
+    {
+      "fixtureId": "page-003-high-skew",
+      "seed": 1003,
+      "scenario": "high_skew",
+      "width": 720,
+      "height": 960,
+      "sourceDpi": 300,
+      "tags": ["skew", "warning-high-skew"],
+      "notes": "High skew fixture expected to remain review-visible."
+    },
+    {
+      "fixtureId": "page-004-blur",
+      "seed": 1004,
+      "scenario": "blur",
+      "width": 720,
+      "height": 960,
+      "sourceDpi": 300,
+      "tags": ["blur"],
+      "notes": "Blur-heavy input to guard blur-score drift."
+    },
+    {
+      "fixtureId": "page-005-low-contrast",
+      "seed": 1005,
+      "scenario": "low_contrast",
+      "width": 720,
+      "height": 960,
+      "sourceDpi": 300,
+      "tags": ["low-contrast"],
+      "notes": "Low contrast fixture used for quality-floor checks."
+    },
+    {
+      "fixtureId": "page-006-low-dpi",
+      "seed": 1006,
+      "scenario": "baseline",
+      "width": 720,
+      "height": 960,
+      "sourceDpi": 120,
+      "tags": ["low-dpi", "blocked"],
+      "notes": "Declared low DPI must remain BLOCKED."
+    },
+    {
+      "fixtureId": "page-007-unknown-dpi",
+      "seed": 1007,
+      "scenario": "baseline",
+      "width": 1400,
+      "height": 1800,
+      "sourceDpi": null,
+      "tags": ["unknown-dpi", "review-required"],
+      "notes": "Unknown DPI must remain REVIEW_REQUIRED with LOW_DPI warning."
+    },
+    {
+      "fixtureId": "page-008-binarization-helpful",
+      "seed": 1008,
+      "scenario": "binarization_help",
+      "width": 720,
+      "height": 960,
+      "sourceDpi": 300,
+      "tags": ["binarization-helpful", "advanced-profile"],
+      "notes": "Aggressive profile should keep balanced black-ratio here."
+    },
+    {
+      "fixtureId": "page-009-binarization-harmful",
+      "seed": 1009,
+      "scenario": "binarization_harm",
+      "width": 720,
+      "height": 960,
+      "sourceDpi": 300,
+      "tags": ["binarization-harmful", "advanced-profile"],
+      "notes": "Aggressive binarization should be visibly heavier on this fixture."
+    },
+    {
+      "fixtureId": "page-010-bleed-recto",
+      "seed": 1010,
+      "scenario": "bleed_recto",
+      "width": 720,
+      "height": 960,
+      "sourceDpi": 300,
+      "tags": ["bleed-through", "paired-input"],
+      "notes": "Recto page for bleed-through paired/unpaired checks."
+    },
+    {
+      "fixtureId": "page-011-bleed-verso",
+      "seed": 1011,
+      "scenario": "bleed_verso",
+      "width": 720,
+      "height": 960,
+      "sourceDpi": 300,
+      "tags": ["bleed-through", "paired-input"],
+      "notes": "Verso page used as paired input for bleed-through profile."
+    },
+    {
+      "fixtureId": "page-012-faded-ink",
+      "seed": 1012,
+      "scenario": "faded_ink",
+      "width": 720,
+      "height": 960,
+      "sourceDpi": 240,
+      "tags": ["faded-ink", "low-contrast"],
+      "notes": "Faded ink case to hold quality floors without aggressive defaults."
+    }
+  ]
+}

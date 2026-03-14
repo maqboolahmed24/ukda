@@ -18,9 +18,9 @@ The actual product source of truth is the extracted `/phases` directory in repo 
 
 ## Source-of-truth rule
 - The canonical truth for this prompt is:
-  1. current repository state as the implementation reality to reconcile with
+  1. the precise `/phases` files listed above
   2. this prompt
-  3. the precise `/phases` files listed above
+  3. current repository state for reconciling implementation details
 - Any other repo files are context only.
 - Use current official docs for implementation mechanics only.
 
@@ -68,7 +68,7 @@ From Phase 5 Iteration 5.2:
 - keep dual layers:
   - Controlled transcript source
   - safeguarded preview text
-- recompute preview hash whenever a decision changes
+- recompute preview hash only when resolved decisions change
 - persist `redaction_outputs.status = PENDING | READY | FAILED | CANCELED`
 - never store raw original text inside preview artefacts or later release artefacts
 
@@ -80,6 +80,21 @@ From Phase 5 Iteration 5.2:
   - auto-applied
   - needs review
   - overridden
+
+### Required RBAC
+- finding decision mutations are limited to `REVIEWER`, `PROJECT_LEAD`, and `ADMIN`
+- `AUDITOR` may view decision and preview state but cannot mutate findings or area masks in Phase 5
+- `RESEARCHER` does not perform Phase 5 decision mutations
+
+### Required APIs
+Use or refine:
+- `GET /projects/{projectId}/documents/{documentId}/redaction-runs/{runId}/pages/{pageId}/findings`
+- `PATCH /projects/{projectId}/documents/{documentId}/redaction-runs/{runId}/findings/{findingId}`
+- `GET /projects/{projectId}/documents/{documentId}/redaction-runs/{runId}/pages/{pageId}/preview-status`
+- `GET /projects/{projectId}/documents/{documentId}/redaction-runs/{runId}/pages/{pageId}/preview`
+
+Lock enforcement rule:
+- once run review is `APPROVED`, mutation writes are rejected and only read surfaces remain available
 
 ### Required tests
 - deterministic overlap resolution
@@ -238,7 +253,7 @@ Before finishing:
 
 ## Acceptance criteria
 This prompt is complete only if all are true:
-- the baseline mask-only decision engine is real
+- the baseline mask-only decision engine processes queued decisions and persists typed decision outcomes with timestamps
 - safeguarded preview generation is real
 - append-only decision and area-mask lineage is preserved
 - workspace and triage surfaces consume the real preview path

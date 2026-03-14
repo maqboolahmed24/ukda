@@ -9,7 +9,7 @@ This is operational guidance for local and environment wiring. Canonical product
 - `PRIVACY_NER` -> `GLiNER-small-v2.1` (or `GLiNER-medium-v2.1`)
 - `PRIVACY_RULES` -> `Presidio`
 - `TRANSCRIPTION_FALLBACK` -> `Kraken`
-- `EMBEDDING_SEARCH` -> `Qwen3-Embedding-0.6B` (optional)
+- `EMBEDDING_SEARCH` -> `bge-small-en-v1.5`
 
 Roles are fixed integration contracts. Underlying models can be swapped without changing workflow routes when the replacement keeps the same role semantics.
 

@@ -45,7 +45,7 @@ This prompt owns:
 - rescue-candidate generation
 - rescue-candidate and recall-status APIs
 - triage/workspace surfacing of recall-risk and rescue information
-- activation blocking until every page has explicit recall-status resolution
+- recall-status prerequisites that block activation until every page has explicit recall-status resolution
 - gold-set recall and rescue regression coverage
 - explicit downstream handoff preparation for Phase 4 rescue transcription
 
@@ -56,6 +56,7 @@ This prompt does not own:
 - search indexing
 - manual correction tooling
 - transcription workspace implementation
+- full layout activation-gate evaluator and downstream invalidation orchestration (owned by Prompt 48)
 
 ## Phase alignment you must preserve
 From the normative patch and Phase 3 Iteration 3.1:
@@ -158,14 +159,14 @@ Requirements:
 - candidate status starts explicitly and can be updated later by downstream flows
 - no speculative downstream transcription is attempted here
 
-### 4. Activation gate enforcement
-Harden the layout activation gate.
+### 4. Recall-status activation prerequisites
+Implement the recall-status prerequisites consumed by the canonical layout activation gate.
 
 Requirements:
 - no layout run may be activated while any page lacks resolved recall status
 - no layout run may be activated while unresolved recall work still implies missed-text risk without an explicit resolution class
 - activation failure paths are exact and actionable
-- downstream layout-to-transcription projection behavior remains accurate
+- prerequisite outputs are typed and compatible with downstream projection logic
 - no hidden override path bypasses recall gating
 
 ### 5. Triage and workspace surfacing

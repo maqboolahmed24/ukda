@@ -106,6 +106,13 @@ Rules:
 - no hidden reasoning text is shown or persisted
 - editing the active transcription run can make downstream redaction state `STALE`
 
+### Required audit events
+Emit or reconcile:
+- `TRANSCRIPTION_WORKSPACE_VIEWED`
+- `TRANSCRIPT_LINE_CORRECTED`
+- `TRANSCRIPT_EDIT_CONFLICT_DETECTED`
+- `TRANSCRIPT_ASSIST_DECISION_RECORDED` when assist support exists
+
 ## Implementation scope
 
 ### 1. Canonical transcription workspace

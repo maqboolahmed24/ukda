@@ -121,12 +121,17 @@ Implement or reconcile `training_datasets`:
 - `created_by`
 - `created_at`
 
+### Required platform-scoped routes
+- `/approved-models`
+
 ### Required project-scoped routes
 - `/projects/:projectId/model-assignments`
 - `/projects/:projectId/model-assignments/:assignmentId`
 - `/projects/:projectId/model-assignments/:assignmentId/datasets`
 
 ### Required APIs
+- `GET /approved-models`
+- `POST /approved-models`
 - `GET /projects/{projectId}/model-assignments`
 - `POST /projects/{projectId}/model-assignments`
 - `GET /projects/{projectId}/model-assignments/{assignmentId}`
@@ -135,11 +140,13 @@ Implement or reconcile `training_datasets`:
 - `POST /projects/{projectId}/model-assignments/{assignmentId}/retire`
 
 ### Required RBAC
-- `PROJECT_LEAD`, `REVIEWER`, and `ADMIN` can read assignment-list and assignment-detail surfaces
-- only `PROJECT_LEAD` and `ADMIN` can add, activate, or retire assignments
+- `PROJECT_LEAD`, `REVIEWER`, and `ADMIN` can read approved-model catalog and assignment list/detail surfaces
+- only `PROJECT_LEAD` and `ADMIN` can add approved models and add/activate/retire assignments
 
 ### Required audit events
 Emit or reconcile:
+- `APPROVED_MODEL_LIST_VIEWED`
+- `APPROVED_MODEL_CREATED`
 - `PROJECT_MODEL_ASSIGNMENT_CREATED`
 - `MODEL_ASSIGNMENT_LIST_VIEWED`
 - `MODEL_ASSIGNMENT_DETAIL_VIEWED`
@@ -297,20 +304,22 @@ Before finishing:
 1. Verify starter default models are seeded consistently into the approved catalog.
 2. Verify approved-model checksum and runtime-profile integrity checks work.
 3. Verify incompatible role assignments are rejected.
-4. Verify assignment-list and assignment-detail reads work for `PROJECT_LEAD`, `REVIEWER`, and `ADMIN`.
-5. Verify add/activate/retire actions are limited to `PROJECT_LEAD` and `ADMIN`.
-6. Verify role-map updates do not alter route or run-table semantics.
-7. Verify dataset-lineage surfaces are typed and consistent.
-8. Verify audit events are emitted through the canonical path.
-9. Verify docs match the actual catalog, role-map, and assignment behavior.
-10. Confirm `/phases/**` is untouched.
+4. Verify approved-model catalog reads work for `PROJECT_LEAD`, `REVIEWER`, and `ADMIN`.
+5. Verify catalog add actions are limited to `PROJECT_LEAD` and `ADMIN`.
+6. Verify assignment-list and assignment-detail reads work for `PROJECT_LEAD`, `REVIEWER`, and `ADMIN`.
+7. Verify assignment add/activate/retire actions are limited to `PROJECT_LEAD` and `ADMIN`.
+8. Verify role-map updates do not alter route or run-table semantics.
+9. Verify dataset-lineage surfaces are typed and consistent.
+10. Verify audit events are emitted through the canonical path.
+11. Verify docs match the actual catalog, role-map, and assignment behavior.
+12. Confirm `/phases/**` is untouched.
 
 ## Acceptance criteria
 This prompt is complete only if all are true:
-- the approved internal model catalog supports list/create/update/deactivate flows with typed contracts and audit events
+- the approved internal model catalog supports typed list/create flows, and project model assignments support add/activate/retire flows with audit events
 - role-map updates change model resolution for the mapped role without changing workflow routes, and emit audit events
-- project model assignments are persisted with typed role keys, uniqueness constraints, and role-based update permissions
-- RBAC and audit tests cover catalog read/update and project role-assignment changes
+- project model assignments are persisted with typed role keys, uniqueness constraints, and role-based assignment lifecycle permissions
+- RBAC and audit tests cover catalog read/add actions, assignment activate/retire actions, and project role-assignment changes
 - model invocation records include typed dataset lineage reference fields (nullable where not yet populated) with documented semantics
 - stable role keys and assignment fields are documented in typed contracts and validated by contract tests
 - `/phases` remains untouched

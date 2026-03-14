@@ -99,6 +99,14 @@ Filters:
 - confidence output populates DB and triage counts
 - low-confidence filters and highlights match backend counts
 
+### Required RBAC
+- `PROJECT_LEAD`, `REVIEWER`, `RESEARCHER`, and `ADMIN` can view confidence triage and workspace confidence surfaces
+- only `PROJECT_LEAD`, `REVIEWER`, and `ADMIN` can update reviewer-routing assignments
+
+### Required audit events
+- `TRANSCRIPTION_TRIAGE_VIEWED`
+- `TRANSCRIPTION_TRIAGE_ASSIGNMENT_UPDATED`
+
 ## Implementation scope
 
 ### 1. Canonical confidence computation
@@ -145,11 +153,15 @@ Requirements:
 ### 5. Triage route and APIs
 Implement or refine:
 - `GET /projects/{projectId}/documents/{documentId}/transcription/triage?status={status}&confidenceBelow={threshold}&page={pageNumber}`
+- `GET /projects/{projectId}/documents/{documentId}/transcription/metrics`
+- `PATCH /projects/{projectId}/documents/{documentId}/transcription/triage/pages/{pageId}/assignment`
 
 Requirements:
 - typed contract
 - table-first triage surface
 - filter support exactly aligned with the phase
+- typed metrics endpoint exposes aggregate confidence metrics for triage and routing
+- reviewer-routing assignment updates are explicit, typed, and auditable
 - calm empty/loading/error/no-results states
 - route-safe URL-state behavior
 - no fake confidence rows when run output does not exist
@@ -176,6 +188,8 @@ At minimum cover:
 - low-confidence filters matching backend counts
 - fallback disagreement inclusion without mutating primary text
 - workspace next-low-confidence navigation consistency
+- reviewer-routing assignment RBAC boundaries
+- reviewer-routing assignment audit emission
 
 ### 8. Documentation
 Document:
@@ -231,12 +245,16 @@ Before finishing:
 2. Verify agreement-based confidence yields deterministic `conf_line`.
 3. Verify aggregate metrics populate correctly.
 4. Verify triage counts match backend metrics.
-5. Verify triage filters behave correctly.
-6. Verify low-confidence highlighting and selected-line confidence render correctly.
-7. Verify `Next low-confidence line` navigation works consistently.
-8. Verify fallback disagreement does not mutate primary text.
-9. Verify docs match the implemented confidence and triage behavior.
-10. Confirm `/phases/**` is untouched.
+5. Verify typed metrics endpoints return the expected aggregate quality payloads.
+6. Verify triage filters behave correctly.
+7. Verify reviewer-routing assignment updates persist through typed APIs.
+8. Verify reviewer-routing assignment updates are limited to `PROJECT_LEAD`, `REVIEWER`, and `ADMIN`.
+9. Verify reviewer-routing assignment updates emit canonical audit events.
+10. Verify low-confidence highlighting and selected-line confidence render correctly.
+11. Verify `Next low-confidence line` navigation works consistently.
+12. Verify fallback disagreement does not mutate primary text.
+13. Verify docs match the implemented confidence and triage behavior.
+14. Confirm `/phases/**` is untouched.
 
 ## Acceptance criteria
 This prompt is complete only if all are true:

@@ -20,9 +20,9 @@ The actual product source of truth is the extracted `/phases` directory in repo 
 
 ## Source-of-truth rule
 - The canonical truth for this prompt is:
-  1. current repository state as the implementation reality to reconcile with
+  1. the precise `/phases` files listed above
   2. this prompt
-  3. the precise `/phases` files listed above
+  3. current repository state for reconciling implementation details
 - Any other repo files are context only.
 - Use current official docs for implementation mechanics only.
 
@@ -127,7 +127,7 @@ Add downstream handoff checks for Phase 8 compatibility.
 Requirements:
 - candidate snapshot lineage pins exact governance artefacts and hashes
 - later replacement of live governance projections does not rewrite prior candidate lineage
-- phase6 `source_artifact_kind = REDACTION_RUN_OUTPUT` remains explicit and stable
+- canonical field `source_artifact_kind = REDACTION_RUN_OUTPUT` remains explicit and stable (identifier spelling is intentional)
 - tests prove later candidate consumers can load governance lineage without inferring from mutable state
 
 ### 6. Provenance-handoff integrity

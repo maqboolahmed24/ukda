@@ -1,11 +1,23 @@
 import Link from "next/link";
 
 import type { AuditEventType } from "@ukde/contracts";
-import { StatusChip } from "@ukde/ui/primitives";
+import { SectionState, StatusChip } from "@ukde/ui/primitives";
 
 import { AdminAuditEventsTable } from "../../../../components/admin-audit-events-table";
 import { PageHeader } from "../../../../components/page-header";
+import { requirePlatformRole } from "../../../../lib/auth/session";
 import { getAuditIntegrity, listAuditEvents } from "../../../../lib/audit";
+import {
+  activityPath,
+  adminAuditPath,
+  adminPath,
+  withQuery
+} from "../../../../lib/routes";
+import {
+  normalizeCursorParam,
+  normalizeOptionalEnumParam,
+  normalizeOptionalTextParam
+} from "../../../../lib/url-state";
 
 const EVENT_FILTER_OPTIONS: AuditEventType[] = [
   "USER_LOGIN",
@@ -27,6 +39,9 @@ const EVENT_FILTER_OPTIONS: AuditEventType[] = [
   "JOB_RUN_CANCELED",
   "JOB_RUN_VIEWED",
   "JOB_RUN_STATUS_VIEWED",
+  "DOCUMENT_LIBRARY_VIEWED",
+  "DOCUMENT_DETAIL_VIEWED",
+  "DOCUMENT_TIMELINE_VIEWED",
   "OPERATIONS_OVERVIEW_VIEWED",
   "OPERATIONS_SLOS_VIEWED",
   "OPERATIONS_ALERTS_VIEWED",
@@ -47,8 +62,20 @@ export default async function AdminAuditPage({
     cursor?: string;
   }>;
 }>) {
-  const filters = await searchParams;
-  const cursor = filters.cursor ? Number(filters.cursor) : 0;
+  const session = await requirePlatformRole(["ADMIN", "AUDITOR"]);
+  const isAdmin = session.user.platformRoles.includes("ADMIN");
+  const rawFilters = await searchParams;
+  const filters = {
+    projectId: normalizeOptionalTextParam(rawFilters.projectId),
+    actorUserId: normalizeOptionalTextParam(rawFilters.actorUserId),
+    eventType: normalizeOptionalEnumParam(
+      rawFilters.eventType,
+      EVENT_FILTER_OPTIONS
+    ),
+    from: normalizeOptionalTextParam(rawFilters.from),
+    to: normalizeOptionalTextParam(rawFilters.to),
+    cursor: normalizeCursorParam(rawFilters.cursor)
+  };
   const [eventsResult, integrityResult] = await Promise.all([
     listAuditEvents({
       projectId: filters.projectId,
@@ -56,7 +83,7 @@ export default async function AdminAuditPage({
       eventType: filters.eventType,
       from: filters.from,
       to: filters.to,
-      cursor: Number.isFinite(cursor) ? cursor : 0,
+      cursor: filters.cursor,
       pageSize: 50
     }),
     getAuditIntegrity()
@@ -72,15 +99,25 @@ export default async function AdminAuditPage({
       <PageHeader
         eyebrow="Governance surface"
         meta={
-          integrityResult.ok && integrityResult.data ? (
-            <StatusChip
-              tone={integrityResult.data.isValid ? "success" : "warning"}
-            >
-              {integrityResult.data.isValid ? "Chain valid" : "Chain mismatch"}
+          <div className="auditIntegrityRow">
+            {integrityResult.ok && integrityResult.data ? (
+              <StatusChip
+                tone={integrityResult.data.isValid ? "success" : "warning"}
+              >
+                {integrityResult.data.isValid
+                  ? "Chain valid"
+                  : "Chain mismatch"}
+              </StatusChip>
+            ) : null}
+            <StatusChip tone={isAdmin ? "danger" : "warning"}>
+              {isAdmin ? "ADMIN" : "AUDITOR read-only"}
             </StatusChip>
-          ) : null
+          </div>
         }
-        secondaryActions={[{ href: "/activity", label: "My activity" }]}
+        secondaryActions={[
+          { href: adminPath, label: "Back to admin" },
+          { href: activityPath, label: "My activity" }
+        ]}
         summary="Append-only event stream with request correlation and integrity-chain status."
         title="Audit event viewer"
       />
@@ -94,9 +131,11 @@ export default async function AdminAuditPage({
             <span className="ukde-muted">{integrityResult.data.detail}</span>
           </div>
         ) : (
-          <p className="ukde-muted">
-            Integrity check unavailable: {integrityResult.detail ?? "unknown"}
-          </p>
+          <SectionState
+            kind="degraded"
+            title="Integrity check unavailable"
+            description={integrityResult.detail ?? "Unknown failure"}
+          />
         )}
       </section>
 
@@ -152,9 +191,11 @@ export default async function AdminAuditPage({
       >
         <h2 id="audit-events-title">Audit events</h2>
         {!eventsResult.ok ? (
-          <p className="ukde-muted">
-            Audit event read failed: {eventsResult.detail ?? "unknown"}
-          </p>
+          <SectionState
+            kind="error"
+            title="Audit event read failed"
+            description={eventsResult.detail ?? "Unknown failure"}
+          />
         ) : (
           <AdminAuditEventsTable events={events} />
         )}
@@ -162,16 +203,14 @@ export default async function AdminAuditPage({
           {typeof nextCursor === "number" ? (
             <Link
               className="secondaryButton"
-              href={`/admin/audit?${new URLSearchParams({
-                ...(filters.projectId ? { projectId: filters.projectId } : {}),
-                ...(filters.actorUserId
-                  ? { actorUserId: filters.actorUserId }
-                  : {}),
-                ...(filters.eventType ? { eventType: filters.eventType } : {}),
-                ...(filters.from ? { from: filters.from } : {}),
-                ...(filters.to ? { to: filters.to } : {}),
-                cursor: String(nextCursor)
-              }).toString()}`}
+              href={withQuery(adminAuditPath, {
+                projectId: filters.projectId,
+                actorUserId: filters.actorUserId,
+                eventType: filters.eventType,
+                from: filters.from,
+                to: filters.to,
+                cursor: nextCursor
+              })}
             >
               Next page
             </Link>

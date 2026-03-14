@@ -43,9 +43,9 @@ This prompt owns:
 - transcription runs and result-schema foundations
 - transcription projections
 - overview, triage, runs, artefacts, and workspace shells
-- typed transcription APIs for read/create/cancel/status flows
+- typed transcription APIs for read/create/cancel/activate/status flows
 - deep-linkable workspace route semantics
-- read-only review queues and run detail shells
+- review queues and run detail shells with role-aware action affordances
 - audit and RBAC wiring for transcription surfaces
 
 This prompt does not own:
@@ -77,6 +77,8 @@ Rules:
 ### Required information hierarchy
 - `Overview`: current state and progress
 - `Triage`: where quality issues are concentrated
+- `Runs`: run history, status, and activation/cancellation controls
+- `Artefacts`: run-linked output and provenance surfaces
 - `Workspace`: focused read/edit verification surface
 
 ### Required tables
@@ -144,8 +146,8 @@ The PATCH line-edit endpoint is reserved for later human-correction work unless 
 
 ### Required tests and gates
 - RBAC:
-  - only `PROJECT_LEAD`, `RESEARCHER`, or `REVIEWER` can view transcription surfaces
-  - run/cancel/edit-capable actions are limited to `PROJECT_LEAD`, `REVIEWER`, or `ADMIN`
+  - only `PROJECT_LEAD`, `RESEARCHER`, `REVIEWER`, or `ADMIN` can view transcription surfaces
+  - run/cancel/activate actions are limited to `PROJECT_LEAD`, `REVIEWER`, or `ADMIN`
 - projection defaults resolve through the activated transcription projection
 - in-flight progress polls the dedicated run-status endpoint instead of full run detail reload
 - audit events exist for overview, triage, run create/start/finish/fail/cancel/view/status/activate
@@ -326,9 +328,9 @@ Before finishing:
 
 ## Acceptance criteria
 This prompt is complete only if all are true:
-- the transcription route family (`overview`, `triage`, `runs`, `workspace`) is implemented and reachable for authorized users
+- the transcription route family (`overview`, `triage`, `runs`, `artefacts`, `workspace`) is implemented and reachable for authorized users
 - run and projection records are persisted with typed status fields and active projection pointers queryable by document
-- overview, triage, runs, and workspace routes each render typed data and distinct empty/not-ready/error states
+- overview, triage, runs, artefacts, and workspace routes each render typed data and distinct empty/not-ready/error states
 - workspace route restores selected run/page context from URL params (`runId`, `page`, and optional `lineId`/`tokenId`) after reload
 - RBAC and audit are correct
 - inference rollout can use existing transcription route and projection contracts without adding a second route family

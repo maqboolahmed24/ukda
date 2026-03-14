@@ -23,6 +23,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
   reactStrictMode: true,
+  devIndicators: false,
   transpilePackages: ["@ukde/contracts", "@ukde/ui"],
   async headers() {
     return [

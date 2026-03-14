@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { SectionState } from "@ukde/ui/primitives";
 
 import { listExportReviewQueue } from "../../../../../lib/exports";
 import { getProjectSummary } from "../../../../../lib/projects";
+import { normalizeOptionalTextParam } from "../../../../../lib/url-state";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +20,12 @@ export default async function ProjectExportReviewPage({
   }>;
 }>) {
   const { projectId } = await params;
-  const filters = await searchParams;
+  const rawFilters = await searchParams;
+  const filters = {
+    status: normalizeOptionalTextParam(rawFilters.status),
+    agingBucket: normalizeOptionalTextParam(rawFilters.agingBucket),
+    reviewerUserId: normalizeOptionalTextParam(rawFilters.reviewerUserId)
+  };
   const [projectResult, reviewResult] = await Promise.all([
     getProjectSummary(projectId),
     listExportReviewQueue(projectId, filters)
@@ -31,12 +38,12 @@ export default async function ProjectExportReviewPage({
   return (
     <main className="homeLayout">
       <section className="sectionCard ukde-panel">
-        <p className="ukde-eyebrow">Export gateway (Phase 0)</p>
-        <h2>Export review queue</h2>
-        <p className="ukde-muted">
-          Review assignment, decisions, and release-pack delivery remain
-          disabled until Phase 8 activates the single egress workflow.
-        </p>
+        <SectionState
+          kind="disabled"
+          eyebrow="Export gateway (Phase 0)"
+          title="Export review queue"
+          description="Review assignment, decisions, and release-pack delivery remain disabled until Phase 8 activates the single egress workflow."
+        />
         <div className="buttonRow">
           <Link
             className="secondaryButton"
@@ -55,9 +62,11 @@ export default async function ProjectExportReviewPage({
 
       <section className="sectionCard ukde-panel">
         {!reviewResult.ok || !reviewResult.data ? (
-          <p className="ukde-muted">
-            Export review stub unavailable: {reviewResult.detail ?? "unknown"}
-          </p>
+          <SectionState
+            kind="error"
+            title="Export review stub unavailable"
+            description={reviewResult.detail ?? "Unknown failure"}
+          />
         ) : (
           <>
             <div className="auditIntegrityRow">

@@ -1,0 +1,18 @@
+import { NextResponse } from "next/server";
+
+import { getProjectDocumentLayoutOverview } from "../../../../../../../../lib/documents";
+
+export async function GET(
+  _request: Request,
+  context: { params: Promise<{ projectId: string; documentId: string }> }
+) {
+  const { projectId, documentId } = await context.params;
+  const result = await getProjectDocumentLayoutOverview(projectId, documentId);
+  if (!result.ok || !result.data) {
+    return NextResponse.json(
+      { detail: result.detail ?? "Layout overview unavailable." },
+      { status: result.status }
+    );
+  }
+  return NextResponse.json(result.data, { status: result.status });
+}

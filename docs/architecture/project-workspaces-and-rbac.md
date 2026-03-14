@@ -84,7 +84,7 @@ All routes below require authentication.
 - `/projects/:projectId/export-candidates` (member-scoped disabled export candidate stub)
 - `/projects/:projectId/export-requests` (member-scoped disabled export request stub)
 - `/projects/:projectId/export-review` (member-scoped disabled export review stub)
-- `/projects/:projectId/activity` (member-scoped placeholder)
+- `/projects/:projectId/activity` (member-scoped activity/governance surface, distinct from `/admin/audit`)
 - `/projects/:projectId/settings` (lead/admin scoped)
 
 ## Shell And Navigation Contract

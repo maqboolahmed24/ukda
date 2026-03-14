@@ -18,9 +18,9 @@ The actual product source of truth is the extracted `/phases` directory in repo 
 
 ## Source-of-truth rule
 - The canonical truth for this prompt is:
-  1. current repository state as the implementation reality to reconcile with
+  1. the precise `/phases` files listed above
   2. this prompt
-  3. the precise `/phases` files listed above
+  3. current repository state for reconciling implementation details
 - Any other repo files are context only.
 - Use current official docs for implementation mechanics only.
 
@@ -65,6 +65,7 @@ From Phase 5 Iteration 5.3:
 - `Open finding` uses `?page={pageNumber}&runId={runId}&findingId={findingId}`.
 - `Open line` uses `?page={pageNumber}&runId={runId}&lineId={lineId}`.
 - `Open token` uses `?page={pageNumber}&runId={runId}&tokenId={tokenId}` when token-linked highlighting is available.
+- `page={pageNumber}` is a 1-based UI page index; API `{pageId}` must resolve deterministically from the run's canonical page ordering (`pageNumber = page_index + 1`) with no ad hoc client-only remapping.
 
 ### Interaction rules
 - toolbar uses roving focus and remains a single tab stop
@@ -259,7 +260,7 @@ This prompt is complete only if all are true:
 - next-unresolved, approve, override, and false-positive flows are real
 - page approval is properly gated
 - preview and highlight behavior are coherent
-- the workspace stays bounded, dark, dense, and keyboard-safe
+- the workspace enforces fixed panel bounds and keyboard navigation behavior verified by interaction tests
 - `/phases` remains untouched
 
 ## Final response format

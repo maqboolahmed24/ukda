@@ -132,12 +132,12 @@ export const spacingTokens = {
 } as const;
 
 export const radiusTokens = {
-  xs: "0.4rem",
-  sm: "0.65rem",
-  md: "0.95rem",
-  lg: "1.3rem",
-  xl: "1.75rem",
-  pill: "999px"
+  xs: "0.16rem",
+  sm: "0.26rem",
+  md: "0.38rem",
+  lg: "0.52rem",
+  xl: "0.68rem",
+  pill: "1.02rem"
 } as const;
 
 export const elevationTokens = {

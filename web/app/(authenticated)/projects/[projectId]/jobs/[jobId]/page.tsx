@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { InlineAlert, SectionState } from "@ukde/ui/primitives";
 
 import { JobStatusPoller } from "../../../../../../components/job-status-poller";
 import { requireCurrentSession } from "../../../../../../lib/auth/session";
@@ -9,15 +10,81 @@ import {
   listProjectJobEvents
 } from "../../../../../../lib/jobs";
 import { getProjectSummary } from "../../../../../../lib/projects";
+import {
+  projectJobPath,
+  projectJobsPath,
+  withQuery
+} from "../../../../../../lib/routes";
+import { normalizeOptionalTextParam } from "../../../../../../lib/url-state";
 
 export const dynamic = "force-dynamic";
 
+interface JobDetailNotice {
+  description: string;
+  title: string;
+  tone: "success" | "warning" | "danger";
+}
+
+function resolveJobDetailNotice(
+  status?: string | null
+): JobDetailNotice | null {
+  switch (status) {
+    case "run-queued":
+      return {
+        tone: "success",
+        title: "Job queued",
+        description: "The test job is queued and status updates are now live."
+      };
+    case "retry-created":
+      return {
+        tone: "success",
+        title: "Retry queued",
+        description: "A new retry attempt was created for this job."
+      };
+    case "retry-existing":
+      return {
+        tone: "warning",
+        title: "Retry already in progress",
+        description: "An active retry already exists for this logical job."
+      };
+    case "retry-failed":
+      return {
+        tone: "danger",
+        title: "Retry did not start",
+        description: "The retry request failed."
+      };
+    case "cancel-requested":
+      return {
+        tone: "warning",
+        title: "Cancellation requested",
+        description:
+          "Cancellation was requested and is waiting for worker acknowledgement."
+      };
+    case "canceled":
+      return {
+        tone: "success",
+        title: "Job canceled",
+        description: "The job is now in a terminal canceled state."
+      };
+    case "cancel-failed":
+      return {
+        tone: "danger",
+        title: "Cancellation did not complete",
+        description: "The cancel request failed."
+      };
+    default:
+      return null;
+  }
+}
+
 export default async function ProjectJobDetailPage({
-  params
+  params,
+  searchParams
 }: Readonly<{
   params: Promise<{ projectId: string; jobId: string }>;
+  searchParams: Promise<{ status?: string }>;
 }>) {
-  const { projectId, jobId } = await params;
+  const [{ projectId, jobId }, query] = await Promise.all([params, searchParams]);
   const [session, projectResult, jobResult, statusResult, eventsResult] =
     await Promise.all([
       requireCurrentSession(),
@@ -36,7 +103,9 @@ export default async function ProjectJobDetailPage({
     !statusResult.ok ||
     !statusResult.data
   ) {
-    redirect(`/projects/${projectId}/jobs?status=job-unavailable`);
+    redirect(
+      withQuery(projectJobsPath(projectId), { status: "job-unavailable" })
+    );
   }
 
   const project = projectResult.data;
@@ -44,10 +113,19 @@ export default async function ProjectJobDetailPage({
   const statusPayload = statusResult.data;
   const events =
     eventsResult.ok && eventsResult.data ? eventsResult.data.items : [];
+  const eventsError =
+    !eventsResult.ok && eventsResult.detail
+      ? eventsResult.detail
+      : !eventsResult.ok
+        ? "Unknown failure"
+        : null;
   const isAdmin = session.user.platformRoles.includes("ADMIN");
   const role = project.currentUserRole;
   const canMutateJobs =
     isAdmin || role === "PROJECT_LEAD" || role === "REVIEWER";
+  const notice = resolveJobDetailNotice(
+    normalizeOptionalTextParam(query.status)
+  );
 
   return (
     <main className="homeLayout">
@@ -56,14 +134,17 @@ export default async function ProjectJobDetailPage({
         <h2>Job detail</h2>
         <p className="ukde-muted">{job.id}</p>
         <div className="buttonRow">
-          <Link
-            className="secondaryButton"
-            href={`/projects/${projectId}/jobs`}
-          >
+          <Link className="secondaryButton" href={projectJobsPath(projectId)}>
             Back to jobs
           </Link>
         </div>
       </section>
+
+      {notice ? (
+        <InlineAlert title={notice.title} tone={notice.tone}>
+          {notice.description}
+        </InlineAlert>
+      ) : null}
 
       <div className="projectSectionGrid">
         <section className="projectDetailCard ukde-panel">
@@ -120,9 +201,7 @@ export default async function ProjectJobDetailPage({
             <span>Supersedes</span>
             <strong>
               {job.supersedesJobId ? (
-                <Link
-                  href={`/projects/${projectId}/jobs/${job.supersedesJobId}`}
-                >
+                <Link href={projectJobPath(projectId, job.supersedesJobId)}>
                   {job.supersedesJobId}
                 </Link>
               ) : (
@@ -134,9 +213,7 @@ export default async function ProjectJobDetailPage({
             <span>Superseded by</span>
             <strong>
               {job.supersededByJobId ? (
-                <Link
-                  href={`/projects/${projectId}/jobs/${job.supersededByJobId}`}
-                >
+                <Link href={projectJobPath(projectId, job.supersededByJobId)}>
                   {job.supersededByJobId}
                 </Link>
               ) : (
@@ -150,10 +227,10 @@ export default async function ProjectJobDetailPage({
           </li>
         </ul>
         {job.errorCode ? (
-          <p className="ukde-muted">
-            Error: {job.errorCode}
-            {job.errorMessage ? ` (${job.errorMessage})` : ""}
-          </p>
+          <InlineAlert title="Safe failure summary" tone="danger">
+            {job.errorCode}
+            {job.errorMessage ? `: ${job.errorMessage}` : ""}
+          </InlineAlert>
         ) : null}
       </section>
 
@@ -191,8 +268,18 @@ export default async function ProjectJobDetailPage({
 
       <section className="sectionCard ukde-panel">
         <h2>Append-only events</h2>
-        {events.length === 0 ? (
-          <p className="ukde-muted">No events have been recorded yet.</p>
+        {eventsError ? (
+          <SectionState
+            kind="error"
+            title="Job events unavailable"
+            description={eventsError}
+          />
+        ) : events.length === 0 ? (
+          <SectionState
+            kind="empty"
+            title="No events recorded yet"
+            description="Append-only events will appear as the job progresses."
+          />
         ) : (
           <div className="auditTableWrap">
             <table className="auditTable">

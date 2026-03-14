@@ -12,6 +12,7 @@ The active build posture is web-first. Product behavior, governance rules, and l
 - Browser experience contract: [`/docs/design/obsidian-web-experience-blueprint.md`](./docs/design/obsidian-web-experience-blueprint.md)
 - Design-system token architecture: [`/docs/design/design-system-token-architecture.md`](./docs/design/design-system-token-architecture.md)
 - Theming and preference behavior: [`/docs/design/theming-preference-behavior.md`](./docs/design/theming-preference-behavior.md)
+- Motion/transparency/contrast behavior: [`/docs/design/motion-transparency-and-contrast-behavior.md`](./docs/design/motion-transparency-and-contrast-behavior.md)
 - Auth and session boundary design: [`/docs/architecture/auth-session-boundaries.md`](./docs/architecture/auth-session-boundaries.md)
 - Audit event model and integrity baseline: [`/docs/architecture/audit-logging-and-integrity.md`](./docs/architecture/audit-logging-and-integrity.md)
 - Observability baseline and operations surfaces: [`/docs/architecture/observability-and-operations.md`](./docs/architecture/observability-and-operations.md)
@@ -21,13 +22,61 @@ The active build posture is web-first. Product behavior, governance rules, and l
 - Jobs lifecycle and worker runtime: [`/docs/architecture/jobs-framework-and-worker-runtime.md`](./docs/architecture/jobs-framework-and-worker-runtime.md)
 - Project workspaces and RBAC boundaries: [`/docs/architecture/project-workspaces-and-rbac.md`](./docs/architecture/project-workspaces-and-rbac.md)
 - Authenticated shell layout and adaptive-state contract: [`/docs/architecture/shell-layout-and-adaptive-state.md`](./docs/architecture/shell-layout-and-adaptive-state.md)
+- Admin/governance shell ownership contract: [`/docs/architecture/admin-governance-shell-contract.md`](./docs/architecture/admin-governance-shell-contract.md)
+- Admin role-to-surface matrix: [`/docs/architecture/admin-role-surface-matrix.md`](./docs/architecture/admin-role-surface-matrix.md)
+- Frontend data-layer contract: [`/docs/architecture/frontend-data-layer-contract.md`](./docs/architecture/frontend-data-layer-contract.md)
+- Frontend cache and optimistic-state policy: [`/docs/architecture/frontend-cache-and-optimistic-policy.md`](./docs/architecture/frontend-cache-and-optimistic-policy.md)
+- Shell accessibility and keyboard contract: [`/docs/architecture/shell-accessibility-and-keyboard-contract.md`](./docs/architecture/shell-accessibility-and-keyboard-contract.md)
+- Command system and omnibox contract: [`/docs/architecture/command-system-and-omnibox-contract.md`](./docs/architecture/command-system-and-omnibox-contract.md)
+- Project switcher behavior contract: [`/docs/architecture/project-switcher-behavior.md`](./docs/architecture/project-switcher-behavior.md)
+- Route layout and URL-state contract: [`/docs/architecture/route-layout-and-url-state-contract.md`](./docs/architecture/route-layout-and-url-state-contract.md)
+- Document route family and ingest IA contract: [`/docs/architecture/document-route-family-and-ingest-ia-contract.md`](./docs/architecture/document-route-family-and-ingest-ia-contract.md)
+- Document-domain baseline model: [`/docs/architecture/document-domain-baseline-model.md`](./docs/architecture/document-domain-baseline-model.md)
+- Document upload lifecycle and scanning contract: [`/docs/architecture/document-upload-lifecycle-and-scanning.md`](./docs/architecture/document-upload-lifecycle-and-scanning.md)
+- Document upload validation and quota policy: [`/docs/architecture/document-upload-validation-and-quota-policy.md`](./docs/architecture/document-upload-validation-and-quota-policy.md)
+- Document source-record and ingest-lineage contract: [`/docs/architecture/document-source-record-and-ingest-lineage.md`](./docs/architecture/document-source-record-and-ingest-lineage.md)
+- Document viewer baseline contract: [`/docs/architecture/document-viewer-baseline-contract.md`](./docs/architecture/document-viewer-baseline-contract.md)
+- Document viewer navigation and control rules: [`/docs/architecture/document-viewer-navigation-and-control-rules.md`](./docs/architecture/document-viewer-navigation-and-control-rules.md)
+- Document viewer URL-state contract: [`/docs/architecture/document-viewer-url-state-contract.md`](./docs/architecture/document-viewer-url-state-contract.md)
+- Document viewer context-restoration and share-link policy: [`/docs/architecture/document-viewer-context-restoration-and-share-link-policy.md`](./docs/architecture/document-viewer-context-restoration-and-share-link-policy.md)
+- Document ingest-status route and processing timeline contract: [`/docs/architecture/document-ingest-status-route-and-processing-timeline-contract.md`](./docs/architecture/document-ingest-status-route-and-processing-timeline-contract.md)
+- Document viewer workspace choreography and shortcuts: [`/docs/architecture/document-viewer-workspace-choreography-and-shortcuts.md`](./docs/architecture/document-viewer-workspace-choreography-and-shortcuts.md)
+- Document image-delivery contract: [`/docs/architecture/document-image-delivery-contract.md`](./docs/architecture/document-image-delivery-contract.md)
+- Document image cache and no-raw-download policy: [`/docs/architecture/document-image-cache-and-no-raw-download-policy.md`](./docs/architecture/document-image-cache-and-no-raw-download-policy.md)
+- Preprocessing run/projection model: [`/docs/architecture/preprocessing-run-and-projection-model.md`](./docs/architecture/preprocessing-run-and-projection-model.md)
+- Preprocessing artefact versioning and lineage: [`/docs/architecture/preprocessing-artefact-versioning-and-lineage.md`](./docs/architecture/preprocessing-artefact-versioning-and-lineage.md)
+- Layout-analysis route family and workspace contract: [`/docs/architecture/layout-analysis-route-family-and-segmentation-workspace-contract.md`](./docs/architecture/layout-analysis-route-family-and-segmentation-workspace-contract.md)
+- Layout run/projection model: [`/docs/architecture/layout-run-and-projection-model.md`](./docs/architecture/layout-run-and-projection-model.md)
+- Layout recall-first, rescue, and activation contract: [`/docs/architecture/layout-recall-first-rescue-and-activation-contract.md`](./docs/architecture/layout-recall-first-rescue-and-activation-contract.md)
+- Layout PAGE-XML/overlay/geometry storage contract: [`/docs/architecture/layout-pagexml-overlay-geometry-storage-contract.md`](./docs/architecture/layout-pagexml-overlay-geometry-storage-contract.md)
+- Layout stable line artifacts and downstream anchor contract: [`/docs/architecture/layout-line-artifacts-and-stable-anchor-contract.md`](./docs/architecture/layout-line-artifacts-and-stable-anchor-contract.md)
+- Layout segmentation worker flow (v1): [`/docs/architecture/layout-segmentation-engine-v1-worker-flow.md`](./docs/architecture/layout-segmentation-engine-v1-worker-flow.md)
+- Layout metrics/warnings/state-accuracy contract: [`/docs/architecture/layout-segmentation-metrics-warnings-and-state-accuracy-contract.md`](./docs/architecture/layout-segmentation-metrics-warnings-and-state-accuracy-contract.md)
+- Layout read-only workspace contract: [`/docs/architecture/layout-read-only-workspace-contract.md`](./docs/architecture/layout-read-only-workspace-contract.md)
+- Layout overlay interaction and inspector sync: [`/docs/architecture/layout-overlay-interaction-and-inspector-sync.md`](./docs/architecture/layout-overlay-interaction-and-inspector-sync.md)
+- Approved-model catalog and role-map contract: [`/docs/architecture/approved-model-catalog-and-role-map-contract.md`](./docs/architecture/approved-model-catalog-and-role-map-contract.md)
+- Transcription route family and workspace contract: [`/docs/architecture/transcription-route-family-and-workspace-contract.md`](./docs/architecture/transcription-route-family-and-workspace-contract.md)
+- Transcription workspace UX contract: [`/docs/architecture/transcription-workspace-ux-contract.md`](./docs/architecture/transcription-workspace-ux-contract.md)
+- Transcription run/projection model: [`/docs/architecture/transcription-run-and-projection-model.md`](./docs/architecture/transcription-run-and-projection-model.md)
+- Transcription diplomatic/normalised versioning contract: [`/docs/architecture/transcription-diplomatic-normalised-versioning-contract.md`](./docs/architecture/transcription-diplomatic-normalised-versioning-contract.md)
+- Transcription correction/conflict/assist flow: [`/docs/architecture/transcription-correction-conflict-and-assist-flow.md`](./docs/architecture/transcription-correction-conflict-and-assist-flow.md)
+- Transcription token-anchor and source-reference contract: [`/docs/architecture/transcription-token-anchor-and-source-reference-contract.md`](./docs/architecture/transcription-token-anchor-and-source-reference-contract.md)
+- Transcription activation token-anchor prerequisites and downstream-use contract: [`/docs/architecture/transcription-activation-token-anchor-prerequisites-and-downstream-use.md`](./docs/architecture/transcription-activation-token-anchor-prerequisites-and-downstream-use.md)
+- Transcription fallback/compare governance contract: [`/docs/architecture/transcription-fallback-and-compare-governance-contract.md`](./docs/architecture/transcription-fallback-and-compare-governance-contract.md)
+- Transcription compare decision contract: [`/docs/architecture/transcription-compare-decision-contract.md`](./docs/architecture/transcription-compare-decision-contract.md)
+- Transcription confidence and triage contract: [`/docs/architecture/transcription-confidence-and-triage-contract.md`](./docs/architecture/transcription-confidence-and-triage-contract.md)
+- Transcription reviewer routing and hotspot ranking contract: [`/docs/architecture/transcription-reviewer-routing-and-hotspot-ranking.md`](./docs/architecture/transcription-reviewer-routing-and-hotspot-ranking.md)
+- Loading/error boundary placement contract: [`/docs/architecture/loading-error-boundary-placement.md`](./docs/architecture/loading-error-boundary-placement.md)
+- State feedback language and priority contract: [`/docs/architecture/state-feedback-language-and-priority.md`](./docs/architecture/state-feedback-language-and-priority.md)
+- State copy guidelines: [`/docs/architecture/state-copy-guidelines.md`](./docs/architecture/state-copy-guidelines.md)
 - Web primitives and interaction contract: [`/docs/architecture/web-primitives-and-interaction-contract.md`](./docs/architecture/web-primitives-and-interaction-contract.md)
 - Overlay and focus-management contract: [`/docs/architecture/overlay-focus-management.md`](./docs/architecture/overlay-focus-management.md)
 - Directory ownership and boundaries: [`/docs/architecture/repo-topology-and-boundaries.md`](./docs/architecture/repo-topology-and-boundaries.md)
-- Future route and IA contract: [`/docs/architecture/route-map-and-user-journeys.md`](./docs/architecture/route-map-and-user-journeys.md)
+- Future route and IA extensions: [`/docs/architecture/route-map-and-user-journeys.md`](./docs/architecture/route-map-and-user-journeys.md)
 - Delivery automation and merge gates: [`/docs/delivery/ci-cd-quality-gates.md`](./docs/delivery/ci-cd-quality-gates.md)
 - Internal preview posture: [`/docs/delivery/preview-environments.md`](./docs/delivery/preview-environments.md)
 - Local secure development workflow: [`/docs/development/local-secure-dev.md`](./docs/development/local-secure-dev.md)
+- Browser regression workflow: [`/docs/development/browser-regression-testing.md`](./docs/development/browser-regression-testing.md)
 - Deployment and operations runbooks: [`/docs/runbooks/deployment-runbook.md`](./docs/runbooks/deployment-runbook.md), [`/docs/runbooks/key-rotation-runbook.md`](./docs/runbooks/key-rotation-runbook.md), [`/docs/runbooks/backup-restore-runbook.md`](./docs/runbooks/backup-restore-runbook.md)
 - Model service-map foundation: [`/MODEL_STACK.md`](./MODEL_STACK.md)
 
@@ -35,7 +84,7 @@ The active build posture is web-first. Product behavior, governance rules, and l
 
 - [`/web`](./web): Next.js App Router frontend
 - [`/api`](./api): FastAPI service skeleton
-- [`/workers`](./workers): queue worker runtime for Phase 0 NOOP jobs
+- [`/workers`](./workers): queue worker runtime for ingest, preprocessing, and layout-analysis jobs
 - [`/packages/ui`](./packages/ui): shared tokens and browser primitives bootstrap
 - [`/packages/contracts`](./packages/contracts): shared TypeScript contract bootstrap
 - [`/infra`](./infra): infrastructure placeholders for containerization and environment separation
@@ -50,9 +99,13 @@ The governance posture is unchanged: deny by default, internal-only model execut
 4. [`/phases/blueprint-ukdataextraction.md`](./phases/blueprint-ukdataextraction.md)
 5. [`/docs/design/obsidian-web-experience-blueprint.md`](./docs/design/obsidian-web-experience-blueprint.md)
 6. [`/docs/architecture/repo-topology-and-boundaries.md`](./docs/architecture/repo-topology-and-boundaries.md)
-7. [`/docs/architecture/route-map-and-user-journeys.md`](./docs/architecture/route-map-and-user-journeys.md)
-8. The phase file or checked prompt you are implementing
-9. [`/phases/UPDATED-SYSTEM-SMARTER-RECALL-FIRST-PATCH.md`](./phases/UPDATED-SYSTEM-SMARTER-RECALL-FIRST-PATCH.md) when work touches recall-first behavior, rescue flow, token anchors, search anchoring, conservative masking, or downstream activation
+7. [`/docs/architecture/route-layout-and-url-state-contract.md`](./docs/architecture/route-layout-and-url-state-contract.md)
+8. [`/docs/architecture/loading-error-boundary-placement.md`](./docs/architecture/loading-error-boundary-placement.md)
+9. [`/docs/architecture/state-feedback-language-and-priority.md`](./docs/architecture/state-feedback-language-and-priority.md)
+10. [`/docs/architecture/state-copy-guidelines.md`](./docs/architecture/state-copy-guidelines.md)
+11. [`/docs/architecture/route-map-and-user-journeys.md`](./docs/architecture/route-map-and-user-journeys.md)
+12. The phase file or checked prompt you are implementing
+13. [`/phases/UPDATED-SYSTEM-SMARTER-RECALL-FIRST-PATCH.md`](./phases/UPDATED-SYSTEM-SMARTER-RECALL-FIRST-PATCH.md) when work touches recall-first behavior, rescue flow, token anchors, search anchoring, conservative masking, or downstream activation
 
 ## Prerequisites
 
@@ -117,10 +170,11 @@ ukde-worker run-once
 
 The entry resolver route `/` is auth-aware: unauthenticated users go to `/login`, authenticated users go to `/projects`.
 The operational diagnostic route is `/health` and reads live status from the API.
-Project workspace routes include `/projects/:projectId/overview`, `/projects/:projectId/jobs`, `/projects/:projectId/jobs/:jobId`, `/projects/:projectId/activity`, and permission-scoped `/projects/:projectId/settings`.
+The safe error route is `/error`.
+Project workspace routes include `/projects/:projectId/overview`, `/projects/:projectId/documents`, `/projects/:projectId/documents/import`, `/projects/:projectId/documents/:documentId`, `/projects/:projectId/documents/:documentId/ingest-status`, `/projects/:projectId/documents/:documentId/viewer?page={pageNumber}`, `/projects/:projectId/documents/:documentId/preprocessing`, `/projects/:projectId/documents/:documentId/layout`, `/projects/:projectId/documents/:documentId/layout/runs/:runId`, `/projects/:projectId/documents/:documentId/layout/workspace?page={pageNumber}&runId={runId}`, `/projects/:projectId/jobs`, `/projects/:projectId/jobs/:jobId`, `/projects/:projectId/activity`, and permission-scoped `/projects/:projectId/settings`.
 Phase 0 export-gateway stubs are visible at `/projects/:projectId/export-candidates`, `/projects/:projectId/export-requests`, and `/projects/:projectId/export-review` and remain intentionally disabled.
 Audit routes include `/admin/audit`, `/admin/audit/:eventId`, and current-user `/activity`.
-Operations routes include `/admin/operations`, `/admin/operations/slos`, `/admin/operations/alerts`, and `/admin/operations/timelines`.
+Operations routes include `/admin/operations`, `/admin/operations/export-status`, `/admin/operations/slos`, `/admin/operations/alerts`, and `/admin/operations/timelines`.
 Security route includes `/admin/security`.
 The web app expects the API at `http://127.0.0.1:8000` by default.
 Use `NEXT_PUBLIC_UKDE_API_ORIGIN` for browser-visible API URLs and `UKDE_API_ORIGIN_INTERNAL` for server-side fetches (for example `http://api:8000` in containerized smoke mode).
@@ -153,6 +207,9 @@ Validate the shared packages and the web app:
 ```bash
 pnpm typecheck:packages
 pnpm typecheck:web
+pnpm test:browser
+pnpm test:browser --project=chromium --project=firefox-phase1 --project=webkit-phase1 --grep @phase1 --workers=1
+pnpm test:browser --project=chromium --grep @preprocess --workers=1
 pnpm build:web
 pnpm smoke:health
 ```
@@ -161,6 +218,7 @@ Validate the Python services:
 
 ```bash
 source .venv/bin/activate
+make test-preprocess-gold
 python -m pytest api/tests
 python -m pytest workers/tests
 ```

@@ -19,9 +19,9 @@ The actual product source of truth is the extracted `/phases` directory in repo 
 
 ## Source-of-truth rule
 - The canonical truth for this prompt is:
-  1. current repository state as the implementation reality to reconcile with
+  1. the precise `/phases` files listed above
   2. this prompt
-  3. the precise `/phases` files listed above
+  3. current repository state for reconciling implementation details
 - Any other repo files are context only.
 - Use current official docs for implementation mechanics only.
 
@@ -66,6 +66,15 @@ From the normative patch and Phase 4:
 ### Existing activation prerequisite
 - a run cannot be activated unless token anchors are materialized for the promotable basis
 - pages not yet safe for activation must block promotion explicitly
+
+### Required RBAC
+- `PROJECT_LEAD`, `REVIEWER`, `RESEARCHER`, and `ADMIN` can view rescue status and readiness surfaces
+- only `PROJECT_LEAD`, `REVIEWER`, and `ADMIN` can update rescue-resolution state or trigger activation actions
+
+### Required audit events
+- `TRANSCRIPTION_RESCUE_STATUS_VIEWED`
+- `TRANSCRIPTION_RESCUE_RESOLUTION_UPDATED`
+- `TRANSCRIPTION_RUN_ACTIVATION_BLOCKED`
 
 ### Production-confidence intent
 This prompt must add evaluation rigor:
@@ -114,10 +123,14 @@ Expose the cleanest canonical read surfaces needed for reviewers and operators.
 You may extend existing overview/run-detail/status endpoints or add the closest coherent equivalents of:
 - `GET /projects/{projectId}/documents/{documentId}/transcription-runs/{runId}/rescue-status`
 - `GET /projects/{projectId}/documents/{documentId}/transcription-runs/{runId}/pages/{pageId}/rescue-sources`
+- `PATCH /projects/{projectId}/documents/{documentId}/transcription-runs/{runId}/pages/{pageId}/rescue-resolution`
+- `POST /projects/{projectId}/documents/{documentId}/transcription-runs/{runId}/activate`
 
 Requirements:
 - typed contracts
 - explicit ready / blocked / unresolved rescue states
+- explicit manual-review resolution writes are typed and auditable
+- activation action uses the canonical run-activation endpoint; do not introduce a parallel activation route
 - no need for UI code to guess readiness from raw rows alone
 - no secret-bearing references or raw storage leakage
 
@@ -164,6 +177,7 @@ At minimum cover:
 - rescue-source scheduling
 - rescue-source provenance
 - activation blocked for unresolved rescue or missing token anchors
+- rescue-resolution updates emit canonical audit events
 - CER/WER harness runs deterministically
 - rescue and non-rescue slices are reported separately
 - no-silent-drop behavior remains preserved
@@ -222,20 +236,23 @@ Before finishing:
 1. Verify rescue transcription can run on `RESCUE_CANDIDATE` and `PAGE_WINDOW` sources.
 2. Verify rescue-derived outputs preserve correct `source_kind` and `source_ref_id`.
 3. Verify activation is blocked when rescue-required pages remain unresolved.
-4. Verify activation is blocked when token anchors are missing for the promotable basis.
-5. Verify CER/WER harness runs deterministically on the internal gold set.
-6. Verify evaluation reports separate ordinary-line and rescue slices.
-7. Verify no-silent-drop behavior remains intact.
-8. Verify docs match the implemented rescue and evaluation behavior.
-9. Confirm `/phases/**` is untouched.
+4. Verify explicit manual-review resolution updates are persisted through the typed rescue-resolution path.
+5. Verify rescue-resolution updates are limited to `PROJECT_LEAD`, `REVIEWER`, and `ADMIN`.
+6. Verify rescue-resolution and activation-block events are emitted through the canonical audit path.
+7. Verify activation is blocked when token anchors are missing for the promotable basis.
+8. Verify CER/WER harness runs deterministically on the internal gold set.
+9. Verify evaluation reports separate ordinary-line and rescue slices.
+10. Verify no-silent-drop behavior remains intact.
+11. Verify docs match the implemented rescue and evaluation behavior.
+12. Confirm `/phases/**` is untouched.
 
 ## Acceptance criteria
 This prompt is complete only if all are true:
-- rescue transcription is real
+- rescue transcription runs can be queued, executed, and persisted with typed status transitions
 - activation gates reflect rescue and anchor readiness truthfully
 - CER/WER evaluation harness is real
 - production-confidence promotion rules are explicit and enforceable
-- rescue provenance remains stable for later phases
+- rescue provenance fields are persisted in typed contracts and returned by run and detail APIs
 - `/phases` remains untouched
 
 ## Final response format

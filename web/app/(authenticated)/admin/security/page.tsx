@@ -1,33 +1,57 @@
 import { PageHeader } from "../../../../components/page-header";
 import { SecurityPreferencesCard } from "../../../../components/security-preferences-card";
+import { resolveAdminRoleMode } from "../../../../lib/admin-console";
 import { requirePlatformRole } from "../../../../lib/auth/session";
+import {
+  adminAuditPath,
+  adminOperationsExportStatusPath,
+  adminOperationsPath,
+  adminOperationsTimelinesPath,
+  adminPath
+} from "../../../../lib/routes";
 import { getSecurityStatus } from "../../../../lib/security";
+import { SectionState, StatusChip } from "@ukde/ui/primitives";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSecurityPage() {
   const session = await requirePlatformRole(["ADMIN", "AUDITOR"]);
+  const roleMode = resolveAdminRoleMode(session);
   const statusResult = await getSecurityStatus();
-  const isAdmin = session.user.platformRoles.includes("ADMIN");
+  const secondaryActions = roleMode.isAdmin
+    ? [
+        { href: adminPath, label: "Back to admin" },
+        { href: adminOperationsPath, label: "Operations overview" },
+        { href: adminAuditPath, label: "Audit viewer" }
+      ]
+    : [
+        { href: adminPath, label: "Back to admin" },
+        { href: adminOperationsExportStatusPath, label: "Export status" },
+        { href: adminOperationsTimelinesPath, label: "Timelines" },
+        { href: adminAuditPath, label: "Audit viewer" }
+      ];
 
   return (
     <main className="homeLayout">
       <PageHeader
         eyebrow="Platform security"
-        secondaryActions={[
-          { href: "/admin", label: "Back to admin" },
-          { href: "/admin/operations", label: "Operations" },
-          { href: "/admin/audit", label: "Audit viewer" }
-        ]}
+        meta={
+          <StatusChip tone={roleMode.isAdmin ? "danger" : "warning"}>
+            {roleMode.isAdmin ? "ADMIN" : "AUDITOR read-only"}
+          </StatusChip>
+        }
+        secondaryActions={secondaryActions}
         summary="Controlled-environment posture, deny-by-default egress checks, and export gateway state."
         title="Security status"
       />
 
       {!statusResult.ok || !statusResult.data ? (
         <section className="sectionCard ukde-panel">
-          <p className="ukde-muted">
-            Security status unavailable: {statusResult.detail ?? "unknown"}
-          </p>
+          <SectionState
+            kind="error"
+            title="Security status unavailable"
+            description={statusResult.detail ?? "Unknown failure"}
+          />
         </section>
       ) : (
         <section className="sectionCard ukde-panel">
@@ -63,7 +87,7 @@ export default async function AdminSecurityPage() {
             <li>
               <span>Role mode</span>
               <strong>
-                {isAdmin ? "ADMIN (full access)" : "AUDITOR (read-only)"}
+                {roleMode.isAdmin ? "ADMIN (full access)" : "AUDITOR (read-only)"}
               </strong>
             </li>
           </ul>

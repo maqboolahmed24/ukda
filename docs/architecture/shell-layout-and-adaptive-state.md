@@ -22,7 +22,7 @@ The authenticated shell has one shared frame for all authenticated routes:
 
 1. Shell header (identity, project switcher, environment and tier badges, theme control, user menu).
 2. Primary navigation rail (link-only, shallow route ownership).
-3. Context navigation bar for project routes or admin routes.
+3. Context navigation bar for project routes.
 4. Bounded work region where route content renders.
 5. Optional contextual right region for adaptive-state diagnostics in larger states.
 
@@ -73,6 +73,10 @@ Context bar rules:
 - settings link appears only when settings access is allowed
 - focus state uses an on-demand drawer (`details`) for context links
 
+Admin route note:
+
+- `/admin/**` route navigation is owned by `web/app/(authenticated)/admin/layout.tsx` through the admin console shell, not by the shared authenticated context bar.
+
 ## Page-Header Contract
 
 Feature routes should use the shared `PageHeader` primitive for top-of-page chrome.
@@ -121,6 +125,9 @@ The unified shell currently covers:
 - `/activity`
 - `/admin/**`
 - `/projects/:projectId/{overview,documents,jobs,activity,settings,export-*}`
+- `/projects/:projectId/documents/import`
+- `/projects/:projectId/documents/:documentId`
+- `/projects/:projectId/documents/:documentId/viewer?page={pageNumber}`
 
 Project routes receive a shared project header and context bar through nested layout ownership.
 

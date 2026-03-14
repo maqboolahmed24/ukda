@@ -1,8 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { SectionState } from "@ukde/ui/primitives";
 
 import { listExportRequests } from "../../../../../lib/exports";
 import { getProjectSummary } from "../../../../../lib/projects";
+import {
+  normalizeCursorParam,
+  normalizeOptionalTextParam
+} from "../../../../../lib/url-state";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +24,14 @@ export default async function ProjectExportRequestsPage({
   }>;
 }>) {
   const { projectId } = await params;
-  const filters = await searchParams;
+  const rawFilters = await searchParams;
+  const normalizedCursor = normalizeCursorParam(rawFilters.cursor);
+  const filters = {
+    status: normalizeOptionalTextParam(rawFilters.status),
+    requesterId: normalizeOptionalTextParam(rawFilters.requesterId),
+    candidateKind: normalizeOptionalTextParam(rawFilters.candidateKind),
+    cursor: normalizedCursor > 0 ? String(normalizedCursor) : undefined
+  };
   const [projectResult, exportResult] = await Promise.all([
     getProjectSummary(projectId),
     listExportRequests(projectId, filters)
@@ -32,12 +44,12 @@ export default async function ProjectExportRequestsPage({
   return (
     <main className="homeLayout">
       <section className="sectionCard ukde-panel">
-        <p className="ukde-eyebrow">Export gateway (Phase 0)</p>
-        <h2>Export requests</h2>
-        <p className="ukde-muted">
-          Request submission and review state are reserved for Phase 8. This
-          surface remains read-only and disabled by design.
-        </p>
+        <SectionState
+          kind="disabled"
+          eyebrow="Export gateway (Phase 0)"
+          title="Export requests"
+          description="Request submission and review state are reserved for Phase 8. This surface remains read-only and disabled by design."
+        />
         <div className="buttonRow">
           <Link
             className="secondaryButton"
@@ -56,9 +68,11 @@ export default async function ProjectExportRequestsPage({
 
       <section className="sectionCard ukde-panel">
         {!exportResult.ok || !exportResult.data ? (
-          <p className="ukde-muted">
-            Export request stub unavailable: {exportResult.detail ?? "unknown"}
-          </p>
+          <SectionState
+            kind="error"
+            title="Export request stub unavailable"
+            description={exportResult.detail ?? "Unknown failure"}
+          />
         ) : (
           <>
             <div className="auditIntegrityRow">

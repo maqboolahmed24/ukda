@@ -18,9 +18,9 @@ The actual product source of truth is the extracted `/phases` directory in repo 
 
 ## Source-of-truth rule
 - The canonical truth for this prompt is:
-  1. current repository state as the implementation reality to reconcile with
+  1. the precise `/phases` files listed above
   2. this prompt
-  3. the precise `/phases` files listed above
+  3. current repository state for reconciling implementation details
 - Any other repo files are context only.
 - Use current official docs for implementation mechanics only.
 
@@ -82,6 +82,10 @@ Reviewers must be able to understand:
   - compare finalization
   - normalised suggestion acceptance
 
+### Required RBAC
+- `PROJECT_LEAD`, `REVIEWER`, `RESEARCHER`, and `ADMIN` can view transcript history and compare read surfaces
+- only `PROJECT_LEAD`, `REVIEWER`, and `ADMIN` can record compare decisions or finalize `REVIEW_COMPOSED` runs
+
 ## Implementation scope
 
 ### 1. Canonical transcript-history surfaces
@@ -112,6 +116,10 @@ Requirements:
 - no silent merge behavior
 
 Where needed, you may extend the existing compare read path with optional version-aware parameters only if that keeps the route family coherent and does not create a parallel compare contract.
+
+If the repo needs explicit write endpoints, add the closest coherent equivalents of:
+- `POST /projects/{projectId}/documents/{documentId}/transcription-runs/compare/decisions`
+- `POST /projects/{projectId}/documents/{documentId}/transcription-runs/compare/finalize`
 
 ### 3. Reviewer lineage presentation
 Implement reviewer-visible lineage in the web app.
@@ -156,7 +164,7 @@ Requirements:
   - `candidateRunId`
   - compare-decision snapshot hash
   - page scope if applicable
-- finalization rebuilds PAGE-XML and token anchors from the approved decisions
+- finalization rebuilds PAGE-XML from approved decisions and either reuses existing valid token-anchor links or marks anchors stale for downstream refresh
 - source runs remain immutable
 - reviewer lineage clearly shows that the composed run came from compare decisions
 
@@ -256,18 +264,19 @@ Before finishing:
 5. Verify stale `version_etag` conflicts are handled safely.
 6. Verify workspace and compare route deep-link context remains coherent.
 7. Verify variant-layer lineage remains separate from diplomatic history.
-8. Verify no hidden reasoning text is shown or persisted.
-9. Verify docs match the implemented history, compare, and lineage behavior.
-10. Confirm `/phases/**` is untouched.
+8. Verify compare-decision and finalization RBAC boundaries are enforced.
+9. Verify no hidden reasoning text is shown or persisted.
+10. Verify docs match the implemented history, compare, and lineage behavior.
+11. Confirm `/phases/**` is untouched.
 
 ## Acceptance criteria
 This prompt is complete only if all are true:
-- reviewer-visible transcript history is real
+- reviewer-visible transcript history endpoints and UI timeline return append-only versions with actor and timestamp metadata
 - compare views across generations are real
 - compare finalization is immutable and auditable
-- conflict control is trustworthy
+- concurrent edit attempts return typed conflict responses and preserve previously committed transcript versions
 - reviewer lineage is explicit and useful
-- the repo remains ready for later evaluation and privacy work without lineage churn
+- transcript lineage contracts are versioned and backward-compatible across history and compare APIs
 - `/phases` remains untouched
 
 ## Final response format

@@ -36,6 +36,31 @@ make verify-images
 make render-manifests
 ```
 
+Browser regression gate (visual + accessibility + keyboard/focus):
+
+```bash
+pnpm test:browser:install
+pnpm test:browser
+```
+
+Phase 1 ingest/viewer matrix (Prompt 30):
+
+```bash
+pnpm test:browser --project=chromium --project=firefox-phase1 --project=webkit-phase1 --grep @phase1 --workers=1
+```
+
+Phase 2 preprocessing browser tranche (Prompt 38):
+
+```bash
+pnpm test:browser --project=chromium --grep @preprocess --workers=1
+```
+
+Canonical preprocessing determinism gate:
+
+```bash
+make test-preprocess-gold
+```
+
 ## Toolchain Pins
 
 - Node.js: [`.node-version`](../../.node-version)
@@ -70,3 +95,29 @@ Tracked waiver mechanism:
 - Preview deployments are internal dev-class environments, not public demos.
 - Publish and deploy jobs assume internal runners because public runners may not reach the internal registry or cluster.
 - The Helm skeleton does not introduce any new egress path. It deploys `web`, `api`, and `workers` with deny-by-default egress policy templates enabled in preview/staging/prod overlays.
+
+## Browser Regression Artifacts
+
+When browser regression fails in CI, the JavaScript job uploads:
+
+- `playwright-report`
+- `test-results` (includes screenshots, diffs, and traces)
+
+These artifacts are the canonical review path for visual and interaction regressions.
+
+When preprocessing gold-set regression fails in CI, the Python job uploads:
+
+- `api/tests/.artifacts/preprocessing-gold-set`
+
+This artifact contains per-record hash/metric/warning drift details for triage.
+
+## Prompt 30 Phase 1 Quality Gates
+
+Prompt 30 adds merge-blocking ingest/viewer gate coverage:
+
+- Access-control regression coverage for ingest and viewer protected paths.
+- Cross-browser stability for the Phase 1 tranche on Chromium, Firefox, and WebKit.
+- Numeric performance budgets enforced from:
+  - [`web/tests/browser/performance-budgets.ts`](../../web/tests/browser/performance-budgets.ts)
+
+Budget failures and performance measurements are attached as Playwright artifacts (`phase1-performance-metrics.json`) under `test-results`.

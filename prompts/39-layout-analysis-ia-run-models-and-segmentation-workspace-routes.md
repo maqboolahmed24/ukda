@@ -168,14 +168,14 @@ Implement or reconcile:
 - `GET /projects/{projectId}/documents/{documentId}/layout-runs/{runId}`
 - `GET /projects/{projectId}/documents/{documentId}/layout-runs/{runId}/status`
 - `GET /projects/{projectId}/documents/{documentId}/layout-runs/{runId}/pages`
-- `POST /projects/{projectId}/documents/{documentId}/layout-runs/{runId}/activate`
+- if activation scaffolding is exposed: `POST /projects/{projectId}/documents/{documentId}/layout-runs/{runId}/activate`
 - `POST /projects/{projectId}/documents/{documentId}/layout-runs/{runId}/cancel`
 
 Canonical PAGE-XML and overlay payload contracts are outside this prompt's scope.
 Do not overbuild them here beyond basic placeholder support if the workspace needs it.
 
 ### Required RBAC
-- only `PROJECT_LEAD`, `RESEARCHER`, or `REVIEWER` can view layout artefacts and routes
+- only `PROJECT_LEAD`, `RESEARCHER`, `REVIEWER`, or `ADMIN` can view layout artefacts and routes
 - only `PROJECT_LEAD`, `REVIEWER`, or `ADMIN` can create or cancel runs
 - activation follows the same write-capable role boundaries where an activation scaffold is present, unless the current repo already has a stricter pattern
 
@@ -186,6 +186,7 @@ Emit or reconcile:
 - `LAYOUT_RUNS_VIEWED`
 - `LAYOUT_ACTIVE_RUN_VIEWED`
 - `LAYOUT_RUN_CREATED`
+- `LAYOUT_RUN_ACTIVATED` (when activation scaffolding is exposed)
 - `LAYOUT_RUN_STARTED`
 - `LAYOUT_RUN_FINISHED`
 - `LAYOUT_RUN_FAILED`
@@ -256,7 +257,8 @@ Requirements:
 - runs list is consistent and typed
 - run detail route exists and fits the canonical shell
 - active run is clearly shown when an explicit active projection already exists
-- activation and cancel affordances are role-aware where the current repo exposes them
+- cancel affordances are role-aware where the current repo exposes them
+- activation affordances are role-aware where activation scaffolding is exposed
 - active runs may poll the status endpoint
 - no fake success output before the engine exists
 
@@ -348,8 +350,8 @@ Do not implement any of the following here:
 Before finishing:
 1. Verify the layout routes exist and fit the canonical shell.
 2. Verify overview, triage, runs, and workspace routes reload and deep-link safely.
-3. Verify run creation, list, detail, status, activate, and cancel scaffolding are consistent.
-4. Verify RBAC boundaries for view vs create/cancel/activate.
+3. Verify run creation, list, detail, status, and cancel scaffolding are consistent; if activation scaffolding exists, verify activate scaffolding is consistent.
+4. Verify RBAC boundaries for view vs create/cancel, and activate when activation scaffolding is exposed.
 5. If activation scaffolding exists, verify it updates the explicit layout projection without mutating history.
 6. Verify placeholder or deferred activation states remain accurate where stricter gates are not yet implemented.
 7. Verify workspace remains bounded and keyboard-safe even before full overlay payloads exist.

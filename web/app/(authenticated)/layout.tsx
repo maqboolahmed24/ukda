@@ -1,8 +1,5 @@
 import { AuthenticatedShell } from "../../components/authenticated-shell";
-import {
-  readCsrfToken,
-  requireCurrentSession
-} from "../../lib/auth/session";
+import { readCsrfToken, requireCurrentSession } from "../../lib/auth/session";
 import { listMyProjects } from "../../lib/projects";
 
 export default async function AuthenticatedLayout({
@@ -17,7 +14,11 @@ export default async function AuthenticatedLayout({
   ]);
 
   return (
-    <AuthenticatedShell csrfToken={csrfToken} projects={projects} session={session}>
+    <AuthenticatedShell
+      csrfToken={csrfToken}
+      projects={projects}
+      session={session}
+    >
       {children}
     </AuthenticatedShell>
   );

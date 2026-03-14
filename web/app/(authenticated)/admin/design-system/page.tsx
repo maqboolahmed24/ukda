@@ -11,11 +11,18 @@ import {
   themePreferenceOptions,
   typographyTokens
 } from "@ukde/ui";
+import { StatusChip } from "@ukde/ui/primitives";
 
 import { DesignSystemDiagnostics } from "../../../../components/design-system-diagnostics";
+import { DesignSystemAccessibilityDiagnostics } from "../../../../components/design-system-accessibility-diagnostics";
+import { DesignSystemCommandDiagnostics } from "../../../../components/design-system-command-diagnostics";
 import { DesignSystemPrimitivesShowcase } from "../../../../components/design-system-primitives-showcase";
+import { DesignSystemStateGallery } from "../../../../components/design-system-state-gallery";
 import { PageHeader } from "../../../../components/page-header";
 import { ThemePreferenceControl } from "../../../../components/theme-preference-control";
+import { resolveAdminRoleMode } from "../../../../lib/admin-console";
+import { requirePlatformRole } from "../../../../lib/auth/session";
+import { adminPath } from "../../../../lib/routes";
 
 const COLOR_SWATCHES = [
   ["Canvas", darkThemeColorTokens.background.canvas],
@@ -53,11 +60,25 @@ const MOTION_ENTRIES = [
   ...Object.entries(motionTokens.easing)
 ];
 
-export default function DesignSystemPage() {
+export default async function DesignSystemPage() {
+  const session = await requirePlatformRole(["ADMIN", "AUDITOR"]);
+  const roleMode = resolveAdminRoleMode(session);
   return (
     <main className="homeLayout dsPage">
       <PageHeader
         eyebrow="Internal route"
+        meta={
+          <StatusChip tone={roleMode.isAdmin ? "danger" : "warning"}>
+            {roleMode.isAdmin ? "ADMIN" : "AUDITOR read-only"}
+          </StatusChip>
+        }
+        overflowActions={[
+          { href: "/admin/operations/export-status", label: "Export status" },
+          { href: "/admin/security", label: "Security status" },
+          { href: "/health", label: "Service health" }
+        ]}
+        primaryAction={{ href: "/projects", label: "Open projects workspace" }}
+        secondaryActions={[{ href: adminPath, label: "Back to admin" }]}
         summary="Engineering validation surface for shared tokens, runtime theme behavior, focus language, and shell interaction posture."
         title="Obsidian web design-system gallery"
       />
@@ -281,6 +302,9 @@ export default function DesignSystemPage() {
       </section>
 
       <DesignSystemPrimitivesShowcase />
+      <DesignSystemStateGallery />
+      <DesignSystemAccessibilityDiagnostics />
+      <DesignSystemCommandDiagnostics />
     </main>
   );
 }

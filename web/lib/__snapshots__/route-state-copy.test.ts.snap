@@ -1,0 +1,125 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`route state copy contract > keeps route-level copy stable 1`] = `
+{
+  "error": {
+    "admin": {
+      "eyebrow": "Route boundary",
+      "retryLabel": "Retry route",
+      "summary": "Admin access controls remain in effect. Retry after the issue is resolved.",
+      "title": "Admin route failed",
+    },
+    "app": {
+      "eyebrow": "Route boundary",
+      "retryLabel": "Retry route",
+      "summary": "A safe fallback was rendered. Internal exception details stay server-side.",
+      "title": "The route hit an unexpected boundary.",
+    },
+    "authenticated": {
+      "eyebrow": "Route boundary",
+      "retryLabel": "Retry route",
+      "summary": "Authenticated shell context was preserved while this route failed.",
+      "title": "Authenticated route failed",
+    },
+    "project": {
+      "eyebrow": "Project route boundary",
+      "retryLabel": "Retry route",
+      "summary": "The project shell remains mounted. Retry this route or return to overview.",
+      "title": "Project surface failed to load",
+    },
+    "projectDocumentIngestStatus": {
+      "eyebrow": "Route boundary",
+      "retryLabel": "Retry route",
+      "summary": "Ingest timeline loading failed while project and document context stayed mounted.",
+      "title": "Ingest-status route failed",
+    },
+    "projectDocuments": {
+      "eyebrow": "Route boundary",
+      "retryLabel": "Retry route",
+      "summary": "Document route content failed while project shell context stayed mounted.",
+      "title": "Document route failed",
+    },
+    "projectViewer": {
+      "eyebrow": "Route boundary",
+      "retryLabel": "Retry route",
+      "summary": "Viewer route failed while project and document URL context were preserved.",
+      "title": "Viewer route failed",
+    },
+    "public": {
+      "eyebrow": "Route boundary",
+      "retryLabel": "Retry route",
+      "summary": "The public route could not complete. Retry or move to a known route.",
+      "title": "Public route failed to load",
+    },
+  },
+  "loading": {
+    "admin": {
+      "eyebrow": "Loading admin route",
+      "summary": "Governance and operations surfaces stream in place.",
+      "title": "Preparing admin surface",
+    },
+    "app": {
+      "eyebrow": "Loading app",
+      "summary": "The shell mounts first while route content streams.",
+      "title": "Preparing secure shell",
+    },
+    "authenticated": {
+      "eyebrow": "Loading authenticated route",
+      "summary": "Session and shell context stay mounted while content resolves.",
+      "title": "Preparing authenticated surface",
+    },
+    "project": {
+      "eyebrow": "Loading project route",
+      "summary": "Project context remains mounted while section data resolves.",
+      "title": "Preparing project workspace",
+    },
+    "projectDocument": {
+      "eyebrow": "Loading document detail",
+      "summary": "Document context loads inside the existing project shell.",
+      "title": "Preparing document details",
+    },
+    "projectDocumentIngestStatus": {
+      "eyebrow": "Loading ingest status route",
+      "summary": "Processing runs are restored before recovery actions are presented.",
+      "title": "Preparing ingest timeline",
+    },
+    "projectDocuments": {
+      "eyebrow": "Loading documents route",
+      "summary": "Document routes preserve project ancestry while data loads.",
+      "title": "Preparing document surface",
+    },
+    "projectViewer": {
+      "eyebrow": "Loading viewer route",
+      "summary": "Viewer URL state is restored before content is shown.",
+      "title": "Preparing viewer workspace",
+    },
+    "public": {
+      "eyebrow": "Loading public route",
+      "summary": "Public routes load without dropping global shell continuity.",
+      "title": "Preparing public surface",
+    },
+  },
+  "notFound": {
+    "admin": {
+      "eyebrow": "Not found",
+      "summary": "The requested admin route was not found or is not available.",
+      "title": "Admin route not found",
+    },
+    "project": {
+      "eyebrow": "Not found",
+      "summary": "The project route cannot be resolved for the current session.",
+      "title": "Project route not found",
+    },
+    "projectDocument": {
+      "eyebrow": "Not found",
+      "summary": "The selected document route is unavailable.",
+      "title": "Document not found",
+    },
+    "root": {
+      "eyebrow": "Not found",
+      "summary": "The requested route does not exist or is no longer available.",
+      "title": "Route not found",
+    },
+  },
+}
+`;

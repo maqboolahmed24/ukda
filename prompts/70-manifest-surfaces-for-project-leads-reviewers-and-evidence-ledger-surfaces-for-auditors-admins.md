@@ -18,16 +18,16 @@ The actual product source of truth is the extracted `/phases` directory in repo 
 
 ## Source-of-truth rule
 - The canonical truth for this prompt is:
-  1. current repository state as the implementation reality to reconcile with
+  1. the precise `/phases` files listed above
   2. this prompt
-  3. the precise `/phases` files listed above
+  3. current repository state for reconciling implementation details
 - Any other repo files are context only.
 - Use current official docs for implementation mechanics only.
 
 ## Conflict-resolution rule
 - `/phases` wins for manifest vs ledger access separation, tab ownership, route ownership, and acceptance logic.
 - Official docs win only for implementation mechanics.
-- Preserve the rule that manifest is screening-safe for project leads/reviewers, while evidence ledger is deeper, controlled-only, and restricted to `AUDITOR` and `ADMIN`.
+- Preserve the rule that manifest is screening-safe for project leads/reviewers, while full evidence-ledger surfaces are deeper, controlled-only, and restricted to `AUDITOR` and `ADMIN`.
 
 ## Objective
 Design manifest surfaces for project leads and reviewers, and evidence-ledger surfaces for auditors and admins with deep drill-down clarity.
@@ -57,6 +57,8 @@ From Phase 6 Iteration 6.0, 6.1, and 6.2:
     - `Runs`
     - `Manifest`
     - `Evidence ledger`
+- `GET /projects/{projectId}/documents/{documentId}/governance/overview`
+- `GET /projects/{projectId}/documents/{documentId}/governance/runs/{runId}/overview`
 - `/projects/:projectId/documents/:documentId/governance/runs/:runId/overview`
 - `/projects/:projectId/documents/:documentId/governance/runs/:runId/manifest`
 - `/projects/:projectId/documents/:documentId/governance/runs/:runId/ledger`
@@ -75,13 +77,14 @@ From Phase 6 Iteration 6.0, 6.1, and 6.2:
 - `ADMIN` can trigger re-verification through `POST .../ledger/verify`
 - explicit warning when raw evidence is restricted
 - list and timeline rows backed by `GET .../ledger/entries?view={list|timeline}...`
-- diff summary backed by `GET .../ledger/summary`
+- diff summary backed by `GET .../ledger/summary` for full ledger surfaces (`AUDITOR` and `ADMIN`)
 
 ### Access rules
 - manifest surfaces readable by `PROJECT_LEAD`, `REVIEWER`, `ADMIN`, and read-only `AUDITOR`
-- ledger surfaces limited to `AUDITOR` and `ADMIN`
-- `PROJECT_LEAD` and `REVIEWER` may see decision-history summaries but not raw ledger payloads
+- full ledger surfaces (ledger tab, entries/timeline, verification-history controls) are limited to `AUDITOR` and `ADMIN`
+- `PROJECT_LEAD` and `REVIEWER` may see decision-history safe summaries on non-ledger surfaces but not raw ledger payloads or `/ledger/**` endpoints
 - `RESEARCHER` does not access Phase 6 ledger surfaces
+- non-ledger safe summaries for `PROJECT_LEAD` and `REVIEWER` are sourced from governance overview/run-overview surfaces (`GET /projects/{projectId}/documents/{documentId}/governance/overview` and `GET /projects/{projectId}/documents/{documentId}/governance/runs/{runId}/overview`), not from ledger routes
 
 ## Implementation scope
 
@@ -126,7 +129,7 @@ Requirements:
 Harden role-specific visibility.
 
 Requirements:
-- `PROJECT_LEAD` and `REVIEWER` can use manifest and safe summary views but not raw ledger payloads
+- `PROJECT_LEAD` and `REVIEWER` can use manifest and governance-overview safe summary views but not the ledger tab or raw ledger payloads
 - `AUDITOR` and `ADMIN` can open full ledger surfaces
 - `RESEARCHER` sees no ledger entrypoint
 - unauthorized users receive calm, exact access messaging
@@ -219,17 +222,18 @@ Before finishing:
 4. Verify manifest filters and raw JSON viewer work coherently.
 5. Verify ledger timeline, summary, and verification-history views work coherently.
 6. Verify `ADMIN`-only re-verification control visibility and behavior.
-7. Verify focus, keyboard, and accessibility behavior on all covered governance surfaces.
-8. Verify docs match the implemented governance UI behavior.
-9. Confirm `/phases/**` is untouched.
+7. Verify governance drill-down preserves filter context and links to manifest and ledger records by stable IDs.
+8. Verify focus, keyboard, and accessibility behavior on all covered governance surfaces.
+9. Verify docs match the implemented governance UI behavior.
+10. Confirm `/phases/**` is untouched.
 
 ## Acceptance criteria
 This prompt is complete only if all are true:
 - manifest surfaces are clear and screening-safe
 - evidence-ledger surfaces are deep, exact, and correctly restricted
-- governance drill-down is coherent
+- governance drill-down preserves filter context and links to manifest and ledger records by stable IDs
 - role-based access messaging is accurate
-- the governance UI is bounded, dark, dense, and review-grade
+- the governance UI is bounded, dense, and review-grade
 - `/phases` remains untouched
 
 ## Final response format

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { SectionState } from "@ukde/ui/primitives";
 
 import { listExportCandidates } from "../../../../../lib/exports";
 import { getProjectSummary } from "../../../../../lib/projects";
@@ -24,12 +25,12 @@ export default async function ProjectExportCandidatesPage({
   return (
     <main className="homeLayout">
       <section className="sectionCard ukde-panel">
-        <p className="ukde-eyebrow">Export gateway (Phase 0)</p>
-        <h2>Export candidates</h2>
-        <p className="ukde-muted">
-          Candidate listing is intentionally disabled until the Phase 8
-          screening workflow is implemented.
-        </p>
+        <SectionState
+          kind="disabled"
+          eyebrow="Export gateway (Phase 0)"
+          title="Export candidates"
+          description="Candidate listing is intentionally disabled until the Phase 8 screening workflow is implemented."
+        />
         <div className="buttonRow">
           <Link
             className="secondaryButton"
@@ -48,9 +49,11 @@ export default async function ProjectExportCandidatesPage({
 
       <section className="sectionCard ukde-panel">
         {!exportResult.ok || !exportResult.data ? (
-          <p className="ukde-muted">
-            Export stub unavailable: {exportResult.detail ?? "unknown"}
-          </p>
+          <SectionState
+            kind="error"
+            title="Export stub unavailable"
+            description={exportResult.detail ?? "Unknown failure"}
+          />
         ) : (
           <>
             <div className="auditIntegrityRow">

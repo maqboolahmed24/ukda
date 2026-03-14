@@ -13,7 +13,20 @@ from app.projects.store import ProjectStore
 
 _CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]")
 _VALID_STATUSES: set[str] = {"QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELED"}
-_VALID_TYPES: set[str] = {"NOOP"}
+_VALID_TYPES: set[str] = {
+    "NOOP",
+    "EXTRACT_PAGES",
+    "RENDER_THUMBNAILS",
+    "PREPROCESS_DOCUMENT",
+    "PREPROCESS_PAGE",
+    "FINALIZE_PREPROCESS_RUN",
+    "LAYOUT_ANALYZE_DOCUMENT",
+    "LAYOUT_ANALYZE_PAGE",
+    "FINALIZE_LAYOUT_RUN",
+    "TRANSCRIBE_DOCUMENT",
+    "TRANSCRIBE_PAGE",
+    "FINALIZE_TRANSCRIPTION_RUN",
+}
 _VALID_EVENT_TYPES: set[str] = {
     "JOB_CREATED",
     "JOB_STARTED",
@@ -31,7 +44,22 @@ JOB_SCHEMA_STATEMENTS = (
       attempt_number INTEGER NOT NULL CHECK (attempt_number >= 1),
       supersedes_job_id TEXT REFERENCES jobs(id),
       superseded_by_job_id TEXT REFERENCES jobs(id),
-      type TEXT NOT NULL CHECK (type IN ('NOOP')),
+      type TEXT NOT NULL CHECK (
+        type IN (
+          'NOOP',
+          'EXTRACT_PAGES',
+          'RENDER_THUMBNAILS',
+          'PREPROCESS_DOCUMENT',
+          'PREPROCESS_PAGE',
+          'FINALIZE_PREPROCESS_RUN',
+          'LAYOUT_ANALYZE_DOCUMENT',
+          'LAYOUT_ANALYZE_PAGE',
+          'FINALIZE_LAYOUT_RUN',
+          'TRANSCRIBE_DOCUMENT',
+          'TRANSCRIBE_PAGE',
+          'FINALIZE_TRANSCRIPTION_RUN'
+        )
+      ),
       dedupe_key TEXT NOT NULL,
       status TEXT NOT NULL CHECK (
         status IN ('QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELED')
@@ -62,6 +90,29 @@ JOB_SCHEMA_STATEMENTS = (
     """
     CREATE INDEX IF NOT EXISTS idx_jobs_project_status
       ON jobs(project_id, status, created_at DESC)
+    """,
+    """
+    ALTER TABLE jobs
+    DROP CONSTRAINT IF EXISTS jobs_type_check
+    """,
+    """
+    ALTER TABLE jobs
+    ADD CONSTRAINT jobs_type_check CHECK (
+      type IN (
+        'NOOP',
+        'EXTRACT_PAGES',
+        'RENDER_THUMBNAILS',
+        'PREPROCESS_DOCUMENT',
+        'PREPROCESS_PAGE',
+        'FINALIZE_PREPROCESS_RUN',
+        'LAYOUT_ANALYZE_DOCUMENT',
+        'LAYOUT_ANALYZE_PAGE',
+        'FINALIZE_LAYOUT_RUN',
+        'TRANSCRIBE_DOCUMENT',
+        'TRANSCRIBE_PAGE',
+        'FINALIZE_TRANSCRIPTION_RUN'
+      )
+    )
     """,
     """
     CREATE INDEX IF NOT EXISTS idx_jobs_dedupe_lookup

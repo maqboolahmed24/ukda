@@ -34,8 +34,8 @@
     {
       "role": "EMBEDDING_SEARCH",
       "service": "internal-embedding",
-      "model": "Qwen3-Embedding-0.6B",
-      "artifact_path": "qwen/qwen3-embedding-0.6b"
+      "model": "bge-small-en-v1.5",
+      "artifact_path": "bge/bge-small-en-v1.5"
     }
   ]
 }

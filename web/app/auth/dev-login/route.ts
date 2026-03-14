@@ -2,6 +2,7 @@ import type { SessionIssueResponse } from "@ukde/contracts";
 import { NextRequest, NextResponse } from "next/server";
 
 import { resolveApiOrigins } from "../../../lib/bootstrap-content";
+import { revalidateAfterMutation } from "../../../lib/data/invalidation";
 import {
   getCsrfCookieName,
   getSessionCookieName,
@@ -69,6 +70,7 @@ export async function POST(request: NextRequest) {
       sameSite: "lax",
       secure
     });
+    revalidateAfterMutation("auth.login");
     return redirectResponse;
   } catch (error) {
     logServerDiagnostic("dev_login_failed", {

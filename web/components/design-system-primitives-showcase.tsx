@@ -96,6 +96,7 @@ function PrimitiveShowcaseBody() {
       <div className="dsSectionControls">
         <button
           className="ukde-button"
+          data-testid="primitives-open-dialog"
           data-variant="primary"
           onClick={() => setDialogOpen(true)}
           type="button"
@@ -104,6 +105,7 @@ function PrimitiveShowcaseBody() {
         </button>
         <button
           className="ukde-button"
+          data-testid="primitives-open-drawer"
           onClick={() => setDrawerOpen(true)}
           type="button"
         >

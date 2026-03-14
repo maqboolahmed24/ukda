@@ -19,9 +19,9 @@ The actual product source of truth is the extracted `/phases` directory in repo 
 
 ## Source-of-truth rule
 - The canonical truth for this prompt is:
-  1. current repository state as the implementation reality to reconcile with
+  1. the precise `/phases` files listed above
   2. this prompt
-  3. the precise `/phases` files listed above
+  3. current repository state for reconciling implementation details
 - Any other repo files are context only.
 - Use current official docs for implementation mechanics only.
 
@@ -120,6 +120,12 @@ Implement or refine the Phase 6.0 read surfaces:
 - `GET /projects/{projectId}/documents/{documentId}/governance/runs/{runId}/ledger`
 - `GET /projects/{projectId}/documents/{documentId}/governance/runs/{runId}/ledger/status`
 
+### Required RBAC
+- `governance/overview`, `governance/runs`, `governance/runs/{runId}/overview`, `governance/runs/{runId}/events`, and manifest reads are available to `PROJECT_LEAD`, `REVIEWER`, `ADMIN`, and read-only `AUDITOR`
+- ledger route reads (`.../ledger` and `.../ledger/status`) are limited to `AUDITOR` and `ADMIN`
+- `RESEARCHER` does not access Phase 6 ledger routes in this prompt
+- `governance/runs/{runId}/events` must provide screening-safe event projections for non-ledger roles and must not expose raw ledger payload fields
+
 This prompt may scaffold candidate-snapshot typed contracts and internal helpers, but it does not need to implement full user-facing candidate-list routes yet if that would overstep Phase 8 workflows.
 
 ### UX rules
@@ -168,6 +174,7 @@ Requirements:
 - deterministic ordering
 - system and user events represented explicitly
 - regenerate, verification, failure, and cancellation transitions can later be appended without contract changes
+- role-aware event reads are explicit: project roles and read-only auditors get screening-safe event payloads, while raw ledger payload detail stays restricted to ledger endpoints for `AUDITOR`/`ADMIN`
 - read surfaces do not reconstruct history from mutable projections
 
 ### 5. Ledger verification-run scaffolding
@@ -268,7 +275,7 @@ Before finishing:
 This prompt is complete only if all are true:
 - governance IA and route family are real
 - artefact attempt models and readiness projections are real
-- candidate-snapshot lineage contracts are prepared coherently
+- candidate-snapshot lineage fields are defined in typed contracts and covered by API schema tests
 - later manifest, ledger, and export prompts can build without contract churn
 - `/phases` remains untouched
 

@@ -21,6 +21,7 @@ The API process records:
 All operations APIs are read-only.
 
 - `GET /admin/operations/overview` (`ADMIN`)
+- `GET /admin/operations/export-status` (`ADMIN` and read-only `AUDITOR`)
 - `GET /admin/operations/slos` (`ADMIN`)
 - `GET /admin/operations/alerts?state={state}&cursor={cursor}&pageSize={pageSize}` (`ADMIN`)
 - `GET /admin/operations/timelines?scope={scope}&cursor={cursor}&pageSize={pageSize}` (`ADMIN` and read-only `AUDITOR`)
@@ -32,9 +33,12 @@ Reads are self-audited with bounded metadata:
 - `OPERATIONS_ALERTS_VIEWED`
 - `OPERATIONS_TIMELINE_VIEWED`
 
+`/admin/operations/export-status` currently reuses security posture data while the dedicated Phase 11 export-status API and event (`OPERATIONS_EXPORT_STATUS_VIEWED`) remain pending.
+
 ## Operations Web Surfaces
 
 - `/admin/operations` (`ADMIN`)
+- `/admin/operations/export-status` (`ADMIN` and read-only `AUDITOR`)
 - `/admin/operations/slos` (`ADMIN`)
 - `/admin/operations/alerts` (`ADMIN`)
 - `/admin/operations/timelines` (`ADMIN` and read-only `AUDITOR`)

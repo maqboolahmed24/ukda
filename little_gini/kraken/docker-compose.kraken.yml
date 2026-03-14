@@ -1,0 +1,21 @@
+services:
+  kraken-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile.kraken
+      args:
+        BASE_IMAGE: ${KRAKEN_BASE_IMAGE:-python:3.11-slim@sha256:d64a1009c676551d50bdd2a0f9a4a5f63423a5f070d9284e00e4cba788953f4b}
+    image: ${KRAKEN_IMAGE_NAME:-ukda/kraken:arm64}
+    platform: ${KRAKEN_PLATFORM:-linux/arm64}
+    environment:
+      KRAKEN_MODEL_DIR: /models/${KRAKEN_MODEL_SUBPATH:-kraken/default}
+      KRAKEN_MODEL_ALIAS: ${KRAKEN_MODEL_ALIAS:-Kraken}
+      KRAKEN_RECOGNITION_MODEL_FILE: ${KRAKEN_RECOGNITION_MODEL_FILE:-catmus-print-fondue-large.mlmodel}
+      KRAKEN_SEGMENTATION_MODEL_FILE: ${KRAKEN_SEGMENTATION_MODEL_FILE:-blla.mlmodel}
+      KRAKEN_DEVICE: ${KRAKEN_DEVICE:-cpu}
+      KRAKEN_OCR_TIMEOUT_SECONDS: ${KRAKEN_OCR_TIMEOUT_SECONDS:-120}
+    ports:
+      - ${KRAKEN_LISTEN_HOST:-127.0.0.1}:${KRAKEN_LISTEN_PORT:-8040}:8000
+    volumes:
+      - ${MODEL_ARTIFACT_ROOT}:/models:ro
+    restart: unless-stopped

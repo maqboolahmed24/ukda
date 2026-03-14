@@ -1,15 +1,10 @@
 import type { ExportStubDisabledResponse } from "@ukde/contracts";
 
-import { readSessionToken } from "./auth/session";
-import { resolveApiOrigins } from "./bootstrap-content";
-import { buildApiTraceHeaders, logServerDiagnostic } from "./telemetry";
+import { type ApiResult, requestServerApi } from "./data/api-client";
+import type { QueryKey } from "./data/query-keys";
+import { queryKeys } from "./data/query-keys";
 
-export interface ExportApiResult<T> {
-  ok: boolean;
-  status: number;
-  data?: T;
-  detail?: string;
-}
+export type ExportApiResult<T> = ApiResult<T>;
 
 interface ExportRequestsFilters {
   status?: string;
@@ -26,70 +21,21 @@ interface ExportReviewFilters {
 
 async function requestExportApi<T>(
   path: string,
-  init?: RequestInit
+  options?: {
+    body?: BodyInit | null;
+    headers?: HeadersInit;
+    method?: string;
+    queryKey?: QueryKey;
+  }
 ): Promise<ExportApiResult<T>> {
-  const token = await readSessionToken();
-  if (!token) {
-    return {
-      ok: false,
-      status: 401,
-      detail: "Authentication is required."
-    };
-  }
-
-  const { internalOrigin } = resolveApiOrigins();
-  const traceHeaders = await buildApiTraceHeaders();
-  let response: Response;
-  try {
-    response = await fetch(`${internalOrigin}${path}`, {
-      ...init,
-      cache: "no-store",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        ...traceHeaders,
-        ...(init?.headers ?? {})
-      }
-    });
-  } catch (error) {
-    logServerDiagnostic("export_api_fetch_failed", {
-      path,
-      method: init?.method ?? "GET",
-      errorClass: error instanceof Error ? error.name : "unknown"
-    });
-    return {
-      ok: false,
-      status: 503,
-      detail: "Export API is unavailable."
-    };
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = await response.json();
-  } catch {
-    parsed = undefined;
-  }
-
-  if (!response.ok) {
-    const detail =
-      typeof parsed === "object" &&
-      parsed !== null &&
-      "detail" in parsed &&
-      typeof parsed.detail === "string"
-        ? parsed.detail
-        : "Request failed.";
-    return {
-      ok: false,
-      status: response.status,
-      detail
-    };
-  }
-
-  return {
-    ok: true,
-    status: response.status,
-    data: parsed as T
-  };
+  return requestServerApi<T>({
+    path,
+    method: options?.method,
+    headers: options?.headers,
+    body: options?.body,
+    cacheClass: "governance-event",
+    queryKey: options?.queryKey
+  });
 }
 
 function toQueryString(params: Record<string, string | undefined>): string {
@@ -107,9 +53,9 @@ function toQueryString(params: Record<string, string | undefined>): string {
 export async function listExportCandidates(
   projectId: string
 ): Promise<ExportApiResult<ExportStubDisabledResponse>> {
-  return requestExportApi<ExportStubDisabledResponse>(
-    `/projects/${projectId}/export-candidates`
-  );
+  return requestExportApi<ExportStubDisabledResponse>(`/projects/${projectId}/export-candidates`, {
+    queryKey: queryKeys.exports.candidates(projectId)
+  });
 }
 
 export async function listExportRequests(
@@ -122,7 +68,10 @@ export async function listExportRequests(
       requesterId: filters.requesterId,
       candidateKind: filters.candidateKind,
       cursor: filters.cursor
-    })}`
+    })}`,
+    {
+      queryKey: queryKeys.exports.requests(projectId, filters)
+    }
   );
 }
 
@@ -135,6 +84,9 @@ export async function listExportReviewQueue(
       status: filters.status,
       agingBucket: filters.agingBucket,
       reviewerUserId: filters.reviewerUserId
-    })}`
+    })}`,
+    {
+      queryKey: queryKeys.exports.review(projectId, filters)
+    }
   );
 }

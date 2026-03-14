@@ -20,9 +20,9 @@ The actual product source of truth is the extracted `/phases` directory in repo 
 
 ## Source-of-truth rule
 - The canonical truth for this prompt is:
-  1. current repository state as the implementation reality to reconcile with
+  1. the precise `/phases` files listed above
   2. this prompt
-  3. the precise `/phases` files listed above
+  3. current repository state for reconciling implementation details
 - Any other repo files are context only.
 - Use current official docs for implementation mechanics only.
 
@@ -86,6 +86,26 @@ A reviewed run is downstream-ready only when:
 - `redaction_run_outputs.status = READY`
 
 This prompt must expose that readiness explicitly for later Phase 6 and Phase 8 consumers.
+
+### Required RBAC
+- reviewed output/status reads are limited to `REVIEWER`, `PROJECT_LEAD`, `ADMIN`, and read-only `AUDITOR` for approved runs
+- `AUDITOR` read access applies only to `GET .../output` and `GET .../output/status` when the run is `APPROVED`, with no trigger/cancel or mutation rights
+- trigger/cancel controls (if exposed) are restricted to `ADMIN`
+- `RESEARCHER` does not access controlled reviewed-output artefacts
+
+### Required APIs and lifecycle trigger contract
+Use or refine:
+- `GET /projects/{projectId}/documents/{documentId}/redaction-runs/{runId}/output`
+- `GET /projects/{projectId}/documents/{documentId}/redaction-runs/{runId}/output/status`
+- optional manual lifecycle controls (only if already supported by the repo) must use the same route family, with the closest coherent equivalent of:
+  - `POST /projects/{projectId}/documents/{documentId}/redaction-runs/{runId}/output/retrigger`
+  - `POST /projects/{projectId}/documents/{documentId}/redaction-runs/{runId}/output/cancel`
+
+Lifecycle trigger rule:
+- generation is system-triggered when run review transitions to `APPROVED`
+- if manual retrigger/cancel controls are present, they are `ADMIN`-only and must append new lifecycle events/attempt lineage rather than mutating prior successful outputs
+- start/success/fail/cancel transitions must be deterministic and visible through typed status plus append-only events
+- no route may expose raw storage keys or public URLs
 
 ## Implementation scope
 
@@ -245,7 +265,7 @@ This prompt is complete only if all are true:
 - reviewed preview artefacts are real
 - run-level safeguarded output manifest is real
 - downstream readiness gates are explicit and trustworthy
-- later governance/export phases have a stable Phase 5 handoff contract
+- handoff contract fields required by governance/export workflows are present in typed schemas and validated by contract tests
 - `/phases` remains untouched
 
 ## Final response format

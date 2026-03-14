@@ -1,6 +1,6 @@
 # Jobs Framework And Worker Runtime (Phase 0.4 / Prompt 09)
 
-This document defines the implemented Phase 0 jobs baseline for UKDE.
+This document defines the implemented jobs and worker runtime contract for UKDE.
 
 ## Scope
 
@@ -20,7 +20,7 @@ This document defines the implemented Phase 0 jobs baseline for UKDE.
 - `attempt_number`
 - `supersedes_job_id`
 - `superseded_by_job_id`
-- `type` (`NOOP` in Phase 0)
+- `type` (`NOOP`, ingest, preprocessing, and layout-analysis job families)
 - `dedupe_key`
 - `status` (`QUEUED | RUNNING | SUCCEEDED | FAILED | CANCELED`)
 - `attempts` (worker delivery attempts inside the row)
@@ -91,7 +91,7 @@ Implemented worker path:
 - `ukde-worker run-once`:
   - claim one queued job
   - apply heartbeat lease
-  - execute handler (`NOOP`)
+  - execute typed handler (`NOOP`, ingest, preprocessing, layout)
   - finalize state
 - `ukde-worker run`:
   - polling loop with configurable interval and iteration cap
@@ -185,4 +185,4 @@ set -a && source .env && set +a
 ukde-worker run --max-iterations 50
 ```
 
-Deliberate Phase 0 limitation: only `NOOP` is implemented as an executable job type.
+Current implementation includes executable handlers for ingest extraction/thumbnail jobs, preprocessing orchestration/page/finalize jobs, and layout analysis orchestration/page/finalize jobs.

@@ -7,16 +7,11 @@ import type {
   OperationsTimelineScope
 } from "@ukde/contracts";
 
-import { readSessionToken } from "./auth/session";
-import { resolveApiOrigins } from "./bootstrap-content";
-import { buildApiTraceHeaders, logServerDiagnostic } from "./telemetry";
+import { type ApiResult, requestServerApi } from "./data/api-client";
+import type { QueryKey } from "./data/query-keys";
+import { queryKeys } from "./data/query-keys";
 
-export interface OperationsApiResult<T> {
-  ok: boolean;
-  status: number;
-  data?: T;
-  detail?: string;
-}
+export type OperationsApiResult<T> = ApiResult<T>;
 
 interface OperationsAlertsFilters {
   state?: OperationsAlertState | "ALL";
@@ -32,70 +27,21 @@ interface OperationsTimelineFilters {
 
 async function requestOperationsApi<T>(
   path: string,
-  init?: RequestInit
+  options?: {
+    body?: BodyInit | null;
+    headers?: HeadersInit;
+    method?: string;
+    queryKey?: QueryKey;
+  }
 ): Promise<OperationsApiResult<T>> {
-  const token = await readSessionToken();
-  if (!token) {
-    return {
-      ok: false,
-      status: 401,
-      detail: "Authentication is required."
-    };
-  }
-
-  const { internalOrigin } = resolveApiOrigins();
-  const traceHeaders = await buildApiTraceHeaders();
-  let response: Response;
-  try {
-    response = await fetch(`${internalOrigin}${path}`, {
-      ...init,
-      cache: "no-store",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        ...traceHeaders,
-        ...(init?.headers ?? {})
-      }
-    });
-  } catch (error) {
-    logServerDiagnostic("operations_api_fetch_failed", {
-      path,
-      method: init?.method ?? "GET",
-      errorClass: error instanceof Error ? error.name : "unknown"
-    });
-    return {
-      ok: false,
-      status: 503,
-      detail: "Operations API is unavailable."
-    };
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = await response.json();
-  } catch {
-    parsed = undefined;
-  }
-
-  if (!response.ok) {
-    const detail =
-      typeof parsed === "object" &&
-      parsed !== null &&
-      "detail" in parsed &&
-      typeof parsed.detail === "string"
-        ? parsed.detail
-        : "Request failed.";
-    return {
-      ok: false,
-      status: response.status,
-      detail
-    };
-  }
-
-  return {
-    ok: true,
-    status: response.status,
-    data: parsed as T
-  };
+  return requestServerApi<T>({
+    path,
+    method: options?.method,
+    headers: options?.headers,
+    body: options?.body,
+    cacheClass: "operations-live",
+    queryKey: options?.queryKey
+  });
 }
 
 function toQueryString(
@@ -116,16 +62,19 @@ export async function getOperationsOverview(): Promise<
   OperationsApiResult<OperationsOverviewResponse>
 > {
   return requestOperationsApi<OperationsOverviewResponse>(
-    "/admin/operations/overview"
+    "/admin/operations/overview",
+    {
+      queryKey: queryKeys.operations.overview()
+    }
   );
 }
 
 export async function getOperationsSlos(): Promise<
   OperationsApiResult<OperationsSloListResponse>
 > {
-  return requestOperationsApi<OperationsSloListResponse>(
-    "/admin/operations/slos"
-  );
+  return requestOperationsApi<OperationsSloListResponse>("/admin/operations/slos", {
+    queryKey: queryKeys.operations.slos()
+  });
 }
 
 export async function listOperationsAlerts(
@@ -136,7 +85,10 @@ export async function listOperationsAlerts(
       state: filters.state,
       cursor: filters.cursor,
       pageSize: filters.pageSize
-    })}`
+    })}`,
+    {
+      queryKey: queryKeys.operations.alerts(filters)
+    }
   );
 }
 
@@ -148,6 +100,9 @@ export async function listOperationsTimelines(
       scope: filters.scope,
       cursor: filters.cursor,
       pageSize: filters.pageSize
-    })}`
+    })}`,
+    {
+      queryKey: queryKeys.operations.timelines(filters)
+    }
   );
 }

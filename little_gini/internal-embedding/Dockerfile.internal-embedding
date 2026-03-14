@@ -1,0 +1,17 @@
+ARG BASE_IMAGE=python:3.11-slim@sha256:d64a1009c676551d50bdd2a0f9a4a5f63423a5f070d9284e00e4cba788953f4b
+FROM ${BASE_IMAGE}
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+COPY requirements.internal-embedding.txt /app/requirements.txt
+RUN pip install --upgrade pip \
+    && pip install -r /app/requirements.txt
+
+COPY embedding_api.py /app/embedding_api.py
+
+EXPOSE 8000
+CMD ["uvicorn", "embedding_api:app", "--host", "0.0.0.0", "--port", "8000"]

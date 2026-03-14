@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type {
+  PlatformRole,
   ProjectSummary,
   SessionResponse,
   ShellState
@@ -18,6 +19,15 @@ import {
 } from "@ukde/ui";
 import { StatusChip } from "@ukde/ui/primitives";
 
+import {
+  activityPath,
+  adminPath,
+  approvedModelsPath,
+  healthPath,
+  projectModelAssignmentsPath,
+  projectsPath
+} from "../lib/routes";
+import { GlobalCommandBar } from "./global-command-bar";
 import { ThemePreferenceControl } from "./theme-preference-control";
 
 interface AuthenticatedShellProps {
@@ -30,18 +40,24 @@ interface AuthenticatedShellProps {
 interface NavLink {
   href: string;
   label: string;
+  requiresAnyPlatformRole?: PlatformRole[];
   requiresProjectMembership?: boolean;
   requiresSettingsAccess?: boolean;
 }
 
 const GLOBAL_NAV_LINKS: NavLink[] = [
-  { href: "/projects", label: "Projects" },
-  { href: "/activity", label: "My activity" }
+  { href: projectsPath, label: "Projects" },
+  { href: activityPath, label: "My activity" }
 ];
 
 const PROJECT_CONTEXT_LINKS: NavLink[] = [
   { href: "overview", label: "Overview", requiresProjectMembership: true },
   { href: "documents", label: "Documents", requiresProjectMembership: true },
+  {
+    href: "model-assignments",
+    label: "Model assignments",
+    requiresProjectMembership: true
+  },
   { href: "jobs", label: "Jobs", requiresProjectMembership: true },
   {
     href: "export-candidates",
@@ -60,14 +76,6 @@ const PROJECT_CONTEXT_LINKS: NavLink[] = [
   },
   { href: "activity", label: "Activity", requiresProjectMembership: true },
   { href: "settings", label: "Settings", requiresSettingsAccess: true }
-];
-
-const ADMIN_CONTEXT_LINKS: NavLink[] = [
-  { href: "/admin", label: "Overview" },
-  { href: "/admin/audit", label: "Audit" },
-  { href: "/admin/security", label: "Security" },
-  { href: "/admin/operations", label: "Operations" },
-  { href: "/admin/design-system", label: "Design system" }
 ];
 
 function isActiveRoute(pathname: string, href: string): boolean {
@@ -121,6 +129,14 @@ function resolveTaskContext(pathname: string): "dense" | "standard" {
   return "standard";
 }
 
+function resolveOpenDetailsLayers(): HTMLDetailsElement[] {
+  return Array.from(
+    document.querySelectorAll<HTMLDetailsElement>(
+      ".workspaceMenu[open], .shellContextDrawer[open], .pageHeaderOverflow[open]"
+    )
+  );
+}
+
 export function AuthenticatedShell({
   children,
   csrfToken,
@@ -129,10 +145,22 @@ export function AuthenticatedShell({
 }: AuthenticatedShellProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const workRegionRef = useRef<HTMLDivElement | null>(null);
+  const previousRouteKeyRef = useRef<string | null>(null);
   const [shellState, setShellState] = useState<ShellState>("Expanded");
   const isAdmin = session.user.platformRoles.includes("ADMIN");
+  const isAuditor = session.user.platformRoles.includes("AUDITOR");
+  const roleModeLabel = isAdmin ? "ADMIN" : isAuditor ? "AUDITOR" : "STANDARD";
   const hasPlatformRole = session.user.platformRoles.length > 0;
+  const canViewApprovedModels =
+    isAdmin ||
+    projects.some(
+      (project) =>
+        project.currentUserRole === "PROJECT_LEAD" ||
+        project.currentUserRole === "REVIEWER"
+    );
   const forceFocus = searchParams.get("shell") === "focus";
+  const searchKey = searchParams.toString();
 
   const currentProject = useMemo(() => {
     const pathSegments = pathname.split("/").filter(Boolean);
@@ -159,9 +187,87 @@ export function AuthenticatedShell({
     return () => window.removeEventListener("resize", syncShellState);
   }, [forceFocus, pathname]);
 
-  const globalNavLinks = hasPlatformRole
-    ? [...GLOBAL_NAV_LINKS, { href: "/admin", label: "Admin" }]
-    : GLOBAL_NAV_LINKS;
+  useEffect(() => {
+    const routeKey = `${pathname}?${searchKey}`;
+    if (previousRouteKeyRef.current === null) {
+      previousRouteKeyRef.current = routeKey;
+      return;
+    }
+    if (previousRouteKeyRef.current === routeKey) {
+      return;
+    }
+    const activeElement =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    const shouldMoveFocus = Boolean(
+      activeElement?.closest(
+        [
+          ".authenticatedShellRail",
+          ".projectContextBar",
+          ".adminContextBar",
+          ".shellContextDrawer",
+          ".workspaceMenu",
+          ".globalCommandControls"
+        ].join(",")
+      )
+    );
+    if (shouldMoveFocus) {
+      workRegionRef.current?.focus({ preventScroll: true });
+    }
+    previousRouteKeyRef.current = routeKey;
+  }, [pathname, searchKey]);
+
+  useEffect(() => {
+    const handleEscapeDismiss = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+      const layers = resolveOpenDetailsLayers();
+      if (layers.length === 0) {
+        return;
+      }
+      const topmost = layers[layers.length - 1];
+      topmost.open = false;
+      const summary = topmost.querySelector("summary");
+      if (summary instanceof HTMLElement) {
+        summary.focus({ preventScroll: true });
+      }
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const handleOutsideClick = (event: PointerEvent) => {
+      const layers = resolveOpenDetailsLayers();
+      if (layers.length === 0) {
+        return;
+      }
+      const target = event.target as Node | null;
+      if (!target) {
+        return;
+      }
+      for (const layer of layers) {
+        if (!layer.contains(target)) {
+          layer.open = false;
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleEscapeDismiss, true);
+    document.addEventListener("pointerdown", handleOutsideClick, true);
+    return () => {
+      document.removeEventListener("keydown", handleEscapeDismiss, true);
+      document.removeEventListener("pointerdown", handleOutsideClick, true);
+    };
+  }, []);
+
+  const globalNavLinks: NavLink[] = [...GLOBAL_NAV_LINKS];
+  if (canViewApprovedModels) {
+    globalNavLinks.push({ href: approvedModelsPath, label: "Approved models" });
+  }
+  if (hasPlatformRole) {
+    globalNavLinks.push({ href: adminPath, label: "Admin" });
+  }
 
   const visibleProjectLinks = PROJECT_CONTEXT_LINKS.filter((link) => {
     if (!currentProject) {
@@ -178,7 +284,6 @@ export function AuthenticatedShell({
 
   const showProjectContext =
     pathname.startsWith("/projects/") && currentProject;
-  const showAdminContext = pathname.startsWith("/admin");
   const showContextRegion =
     shellState === "Expanded" || (shellState === "Balanced" && !forceFocus);
   const shellTitle = currentProject?.name ?? resolveShellHeading(pathname);
@@ -198,28 +303,18 @@ export function AuthenticatedShell({
         </div>
 
         <div className="authenticatedShellActions">
-          <details className="workspaceMenu">
-            <summary className="workspaceMenuTrigger">Project switcher</summary>
-            <div className="workspaceMenuPanel">
-              <Link href="/projects">Projects index</Link>
-              {projects.length > 0 ? (
-                projects.map((project) => (
-                  <Link
-                    href={`/projects/${project.id}/overview`}
-                    key={project.id}
-                  >
-                    {project.name}
-                  </Link>
-                ))
-              ) : (
-                <span className="ukde-muted">
-                  No memberships yet. Create a project first.
-                </span>
-              )}
-            </div>
-          </details>
+          <GlobalCommandBar
+            currentProject={currentProject}
+            pathname={pathname}
+            projects={projects}
+            session={session}
+          />
 
           <ThemePreferenceControl className="workspaceThemeControl" />
+
+          <Link className="workspaceHelpLink" href={healthPath}>
+            Help
+          </Link>
 
           <div className="workspaceBadges">
             <StatusChip tone={resolveEnvironmentTone()}>
@@ -247,7 +342,7 @@ export function AuthenticatedShell({
           </div>
 
           <details className="workspaceMenu">
-            <summary className="workspaceMenuTrigger">
+            <summary aria-label="User menu" className="workspaceMenuTrigger">
               {session.user.displayName}
             </summary>
             <div className="workspaceMenuPanel">
@@ -257,7 +352,7 @@ export function AuthenticatedShell({
                   ? session.user.platformRoles.join(", ")
                   : "No platform-role override"}
               </span>
-              <Link href="/activity">My activity</Link>
+              <Link href={activityPath}>My activity</Link>
               <form action="/auth/logout" method="post">
                 <input
                   name="csrf_token"
@@ -311,7 +406,10 @@ export function AuthenticatedShell({
             >
               <ul className="authenticatedShellContextList">
                 {visibleProjectLinks.map((link) => {
-                  const href = `/projects/${currentProject.id}/${link.href}`;
+                  const href =
+                    link.href === "model-assignments"
+                      ? projectModelAssignmentsPath(currentProject.id)
+                      : `/projects/${currentProject.id}/${link.href}`;
                   return (
                     <li key={link.href}>
                       <Link
@@ -338,7 +436,10 @@ export function AuthenticatedShell({
               <nav aria-label="Project context">
                 <ul className="authenticatedShellContextList">
                   {visibleProjectLinks.map((link) => {
-                    const href = `/projects/${currentProject.id}/${link.href}`;
+                    const href =
+                      link.href === "model-assignments"
+                        ? projectModelAssignmentsPath(currentProject.id)
+                        : `/projects/${currentProject.id}/${link.href}`;
                     return (
                       <li key={link.href}>
                         <Link
@@ -358,59 +459,10 @@ export function AuthenticatedShell({
             </details>
           ) : null}
 
-          {showAdminContext && shellState !== "Focus" ? (
-            <nav
-              aria-label="Admin context"
-              className="adminContextBar ukde-panel"
-            >
-              <ul className="authenticatedShellContextList">
-                {ADMIN_CONTEXT_LINKS.map((link) => (
-                  <li key={link.href}>
-                    <Link
-                      aria-current={
-                        isActiveRoute(pathname, link.href) ? "page" : undefined
-                      }
-                      className="authenticatedShellContextLink"
-                      href={link.href}
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          ) : null}
-
-          {showAdminContext && shellState === "Focus" ? (
-            <details className="shellContextDrawer ukde-panel">
-              <summary className="shellContextDrawerTrigger">
-                Admin context
-              </summary>
-              <nav aria-label="Admin context">
-                <ul className="authenticatedShellContextList">
-                  {ADMIN_CONTEXT_LINKS.map((link) => (
-                    <li key={link.href}>
-                      <Link
-                        aria-current={
-                          isActiveRoute(pathname, link.href)
-                            ? "page"
-                            : undefined
-                        }
-                        className="authenticatedShellContextLink"
-                        href={link.href}
-                      >
-                        {link.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </nav>
-            </details>
-          ) : null}
-
           <div
             className="authenticatedShellWorkRegion"
             id="ukde-shell-work-region"
+            ref={workRegionRef}
             tabIndex={-1}
           >
             {children}
@@ -433,7 +485,7 @@ export function AuthenticatedShell({
               </li>
               <li>
                 <span>Role mode</span>
-                <strong>{isAdmin ? "ADMIN" : "STANDARD"}</strong>
+                <strong>{roleModeLabel}</strong>
               </li>
             </ul>
             <p className="ukde-muted">

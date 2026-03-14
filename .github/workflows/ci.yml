@@ -32,8 +32,21 @@ jobs:
       - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Playwright browser runtime
+        run: pnpm test:browser:install
+
       - name: Run JS/TS quality gates
         run: make ci-js
+
+      - name: Upload browser regression artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-regression-artifacts
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
 
   python:
     runs-on: ubuntu-latest
@@ -55,3 +68,11 @@ jobs:
 
       - name: Run Python quality gates
         run: make ci-python
+
+      - name: Upload preprocessing regression artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preprocess-gold-set-artifacts
+          path: api/tests/.artifacts/preprocessing-gold-set
+          if-no-files-found: ignore

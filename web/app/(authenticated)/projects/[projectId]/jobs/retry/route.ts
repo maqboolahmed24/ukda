@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { revalidateAfterMutation } from "../../../../../../lib/data/invalidation";
 import { retryProjectJob } from "../../../../../../lib/jobs";
 
 function redirectTo(path: string, status = 303): NextResponse {
@@ -28,6 +29,10 @@ export async function POST(
       `/projects/${projectId}/jobs/${jobId}?status=retry-failed`
     );
   }
+  revalidateAfterMutation("jobs.retry", {
+    projectId,
+    jobId: result.data.job.id
+  });
   return redirectTo(
     `/projects/${projectId}/jobs/${result.data.job.id}?status=retry-${result.data.reason.toLowerCase()}`
   );

@@ -1,79 +1,18 @@
 import type { SecurityStatusResponse } from "@ukde/contracts";
 
-import { readSessionToken } from "./auth/session";
-import { resolveApiOrigins } from "./bootstrap-content";
-import { buildApiTraceHeaders, logServerDiagnostic } from "./telemetry";
+import { type ApiResult, requestServerApi } from "./data/api-client";
+import { queryKeys } from "./data/query-keys";
 
-export interface SecurityApiResult<T> {
-  ok: boolean;
-  status: number;
-  data?: T;
-  detail?: string;
-}
+export type SecurityApiResult<T> = ApiResult<T>;
 
 async function requestSecurityApi<T>(
   path: string
 ): Promise<SecurityApiResult<T>> {
-  const token = await readSessionToken();
-  if (!token) {
-    return {
-      ok: false,
-      status: 401,
-      detail: "Authentication is required."
-    };
-  }
-
-  const { internalOrigin } = resolveApiOrigins();
-  const traceHeaders = await buildApiTraceHeaders();
-  let response: Response;
-  try {
-    response = await fetch(`${internalOrigin}${path}`, {
-      cache: "no-store",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        ...traceHeaders
-      }
-    });
-  } catch (error) {
-    logServerDiagnostic("security_api_fetch_failed", {
-      path,
-      method: "GET",
-      errorClass: error instanceof Error ? error.name : "unknown"
-    });
-    return {
-      ok: false,
-      status: 503,
-      detail: "Security API is unavailable."
-    };
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = await response.json();
-  } catch {
-    parsed = undefined;
-  }
-
-  if (!response.ok) {
-    const detail =
-      typeof parsed === "object" &&
-      parsed !== null &&
-      "detail" in parsed &&
-      typeof parsed.detail === "string"
-        ? parsed.detail
-        : "Request failed.";
-    return {
-      ok: false,
-      status: response.status,
-      detail
-    };
-  }
-
-  return {
-    ok: true,
-    status: response.status,
-    data: parsed as T
-  };
+  return requestServerApi<T>({
+    path,
+    cacheClass: "governance-event",
+    queryKey: queryKeys.security.status()
+  });
 }
 
 export async function getSecurityStatus(): Promise<

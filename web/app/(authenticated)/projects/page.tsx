@@ -1,14 +1,63 @@
 import Link from "next/link";
 
 import { accessTierLabels, projectRoleLabels } from "@ukde/ui";
+import { InlineAlert, SectionState } from "@ukde/ui/primitives";
 
 import { PageHeader } from "../../../components/page-header";
 import { listMyProjects } from "../../../lib/projects";
+import { normalizeOptionalTextParam } from "../../../lib/url-state";
+
+interface ProjectsNotice {
+  description: string;
+  title: string;
+  tone: "danger" | "warning";
+}
+
+function resolveProjectsNotice(error?: string): ProjectsNotice | null {
+  switch (error) {
+    case "create-invalid":
+      return {
+        tone: "warning",
+        title: "Project details are incomplete",
+        description:
+          "Provide a project name, a clear purpose, and an intended access tier."
+      };
+    case "create-failed":
+      return {
+        tone: "danger",
+        title: "Project creation did not complete",
+        description:
+          "No project was created. Check required fields and try again."
+      };
+    case "member-route":
+    case "project-access":
+      return {
+        tone: "warning",
+        title: "Project access unavailable",
+        description:
+          "That project is not available for the current session. Choose a project from this list."
+      };
+    case "settings-route":
+      return {
+        tone: "warning",
+        title: "Project settings unavailable",
+        description:
+          "The requested settings route could not be opened for this session."
+      };
+    default:
+      return null;
+  }
+}
 
 export const dynamic = "force-dynamic";
 
-export default async function ProjectsPage() {
-  const projects = await listMyProjects();
+export default async function ProjectsPage({
+  searchParams
+}: Readonly<{
+  searchParams: Promise<{ error?: string }>;
+}>) {
+  const [projects, query] = await Promise.all([listMyProjects(), searchParams]);
+  const notice = resolveProjectsNotice(normalizeOptionalTextParam(query.error));
 
   return (
     <main className="homeLayout">
@@ -18,6 +67,11 @@ export default async function ProjectsPage() {
         summary="Purpose-bound project workspaces with role and access-tier boundaries."
         title="Projects workspace"
       />
+      {notice ? (
+        <InlineAlert title={notice.title} tone={notice.tone}>
+          {notice.description}
+        </InlineAlert>
+      ) : null}
 
       <section className="projectsIndexGrid">
         <article
@@ -85,12 +139,12 @@ export default async function ProjectsPage() {
           </div>
 
           {projects.length === 0 ? (
-            <div className="emptyProjectState">
-              <h3>No project memberships yet.</h3>
-              <p className="ukde-muted">
-                Create the first project to start the workspace lifecycle.
-              </p>
-            </div>
+            <SectionState
+              className="emptyProjectState"
+              kind="zero"
+              title="No project memberships yet"
+              description="Create the first project to start the workspace lifecycle."
+            />
           ) : (
             <ul className="projectList">
               {projects.map((project) => (

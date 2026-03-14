@@ -1,0 +1,18 @@
+services:
+  internal-embedding-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile.internal-embedding
+      args:
+        BASE_IMAGE: ${INTERNAL_EMBEDDING_BASE_IMAGE:-python:3.11-slim@sha256:d64a1009c676551d50bdd2a0f9a4a5f63423a5f070d9284e00e4cba788953f4b}
+    image: ${INTERNAL_EMBEDDING_IMAGE_NAME:-ukda/internal-embedding:arm64}
+    platform: ${INTERNAL_EMBEDDING_PLATFORM:-linux/arm64}
+    environment:
+      EMBED_MODEL_DIR: /models/${INTERNAL_EMBEDDING_MODEL_SUBPATH:-bge/bge-small-en-v1.5}
+      EMBED_MODEL_ALIAS: ${INTERNAL_EMBEDDING_MODEL_ALIAS:-bge-small-en-v1.5}
+      EMBED_MAX_SEQ_LENGTH: ${INTERNAL_EMBEDDING_MAX_SEQ_LENGTH:-512}
+    ports:
+      - ${INTERNAL_EMBEDDING_LISTEN_HOST:-127.0.0.1}:${INTERNAL_EMBEDDING_LISTEN_PORT:-8012}:8000
+    volumes:
+      - ${MODEL_ARTIFACT_ROOT}:/models:ro
+    restart: unless-stopped

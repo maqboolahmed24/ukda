@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { revalidateAfterMutation } from "../../../../lib/data/invalidation";
 import { createProject } from "../../../../lib/projects";
 
 function redirectTo(path: string, status = 303): NextResponse {
@@ -39,6 +40,10 @@ export async function POST(request: NextRequest) {
   if (!result.ok || !result.data) {
     return redirectTo("/projects?error=create-failed");
   }
+
+  revalidateAfterMutation("projects.create", {
+    createdProjectId: result.data.id
+  });
 
   return redirectTo(`/projects/${result.data.id}/overview?created=1`);
 }

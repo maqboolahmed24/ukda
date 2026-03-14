@@ -19,9 +19,9 @@ The actual product source of truth is the extracted `/phases` directory in repo 
 
 ## Source-of-truth rule
 - The canonical truth for this prompt is:
-  1. current repository state as the implementation reality to reconcile with
+  1. the precise `/phases` files listed above
   2. this prompt
-  3. the precise `/phases` files listed above
+  3. current repository state for reconciling implementation details
 - Any other repo files are context only.
 - Use current official docs for implementation mechanics only.
 
@@ -80,9 +80,9 @@ Optional assist:
 - later Phase 8 and Phase 10 consumers must be able to read the resulting transformed outputs and lineage without reinterpretation
 
 ### Required web behavior
-- policy controls for granularity by category
+- policy-driven granularity read surfaces by category (no policy-authoring controls in this prompt)
 - reviewer-facing explanation of why a generalisation rule fired
-- run comparison view showing masked vs pseudonymized vs generalized output
+- run comparison view showing masked vs pseudonymized vs generalized output when rerender compare is live; otherwise explicit not-yet-rerun/not-yet-available state
 
 ### Required tests
 - date, place, and age banding rules are deterministic

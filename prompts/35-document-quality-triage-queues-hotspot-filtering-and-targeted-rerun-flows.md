@@ -104,7 +104,7 @@ Rule:
 - compare reads emit `PREPROCESS_COMPARE_VIEWED`
 
 ### Phase role boundaries to preserve
-- `PROJECT_LEAD`, `RESEARCHER`, `REVIEWER` can view quality and runs
+- `PROJECT_LEAD`, `RESEARCHER`, `REVIEWER`, `ADMIN` can view quality and runs
 - only `PROJECT_LEAD`, `REVIEWER`, and `ADMIN` can create, rerun, or cancel preprocessing runs
 
 ### Required tests

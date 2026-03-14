@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { revalidateAfterMutation } from "../../../../../../lib/data/invalidation";
 import { enqueueNoopProjectJob } from "../../../../../../lib/jobs";
 
 function redirectTo(path: string, status = 303): NextResponse {
@@ -43,6 +44,10 @@ export async function POST(
   if (!result.ok) {
     return redirectTo(`/projects/${projectId}/jobs?status=run-failed`);
   }
+  revalidateAfterMutation("jobs.enqueue", {
+    projectId,
+    jobId: result.data?.job.id ?? undefined
+  });
   return redirectTo(
     `/projects/${projectId}/jobs/${result.data?.job.id ?? ""}?status=run-queued`
   );

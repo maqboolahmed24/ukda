@@ -92,7 +92,13 @@ Implement or refine:
   - leaves engine output immutable
   - returns the newly active version
 - `GET /projects/{projectId}/documents/{documentId}/transcription-runs/{runId}/pages/{pageId}/variant-layers`
-- `POST /projects/{projectId}/documents/{documentId}/transcription-runs/{runId}/pages/{pageId}/variant-layers/{variantKind}/suggestions/{suggestionId}/decision`
+- `POST /projects/{projectId}/documents/{documentId}/transcription-runs/{runId}/pages/{pageId}/variant-layers/NORMALISED/suggestions/{suggestionId}/decision`
+
+For this prompt, variant-layer decisioning is scoped to `NORMALISED` only.
+
+### Required RBAC
+- `PROJECT_LEAD`, `REVIEWER`, `RESEARCHER`, and `ADMIN` can read transcript version and variant-layer surfaces
+- only `PROJECT_LEAD`, `REVIEWER`, and `ADMIN` can save diplomatic corrections or record normalised suggestion decisions
 
 ### Required audit events
 - `TRANSCRIPT_LINE_CORRECTED`
@@ -245,10 +251,11 @@ Before finishing:
 5. Verify token refresh or stale-marker behavior is explicit and accurate.
 6. Verify normalised layers are pinned to exact base transcript versions.
 7. Verify suggestion decisions append event rows and do not mutate diplomatic text.
-8. Verify editing the active transcription run marks downstream redaction state `STALE`.
-9. Verify no hidden reasoning text is persisted.
-10. Verify docs match the implemented versioning and lineage behavior.
-11. Confirm `/phases/**` is untouched.
+8. Verify correction and suggestion-decision RBAC boundaries are enforced.
+9. Verify editing the active transcription run marks downstream redaction state `STALE`.
+10. Verify no hidden reasoning text is persisted.
+11. Verify docs match the implemented versioning and lineage behavior.
+12. Confirm `/phases/**` is untouched.
 
 ## Acceptance criteria
 This prompt is complete only if all are true:

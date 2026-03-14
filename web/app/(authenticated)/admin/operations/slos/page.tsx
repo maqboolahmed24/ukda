@@ -1,6 +1,13 @@
 import { PageHeader } from "../../../../../components/page-header";
 import { requirePlatformRole } from "../../../../../lib/auth/session";
 import { getOperationsSlos } from "../../../../../lib/operations";
+import {
+  adminOperationsAlertsPath,
+  adminOperationsExportStatusPath,
+  adminOperationsPath,
+  adminOperationsTimelinesPath
+} from "../../../../../lib/routes";
+import { SectionState } from "@ukde/ui/primitives";
 
 export const dynamic = "force-dynamic";
 
@@ -13,9 +20,10 @@ export default async function AdminOperationsSlosPage() {
       <PageHeader
         eyebrow="Platform operations"
         secondaryActions={[
-          { href: "/admin/operations", label: "Overview" },
-          { href: "/admin/operations/alerts", label: "Alerts" },
-          { href: "/admin/operations/timelines", label: "Timelines" }
+          { href: adminOperationsPath, label: "Overview" },
+          { href: adminOperationsAlertsPath, label: "Alerts" },
+          { href: adminOperationsTimelinesPath, label: "Timelines" },
+          { href: adminOperationsExportStatusPath, label: "Export status" }
         ]}
         summary="Current process-level targets used for readiness and alert scaffolding."
         title="SLO baselines"
@@ -23,9 +31,11 @@ export default async function AdminOperationsSlosPage() {
 
       <section className="sectionCard ukde-panel">
         {!slosResult.ok || !slosResult.data ? (
-          <p className="ukde-muted">
-            SLO data unavailable: {slosResult.detail ?? "unknown"}
-          </p>
+          <SectionState
+            kind="error"
+            title="SLO data unavailable"
+            description={slosResult.detail ?? "Unknown failure"}
+          />
         ) : (
           <div className="auditTableWrap">
             <table className="auditTable">

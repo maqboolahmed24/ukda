@@ -18,9 +18,9 @@ The actual product source of truth is the extracted `/phases` directory in repo 
 
 ## Source-of-truth rule
 - The canonical truth for this prompt is:
-  1. current repository state as the implementation reality to reconcile with
+  1. the precise `/phases` files listed above
   2. this prompt
-  3. the precise `/phases` files listed above
+  3. current repository state for reconciling implementation details
 - Any other repo files are context only.
 - Use current official docs for implementation mechanics only.
 
@@ -82,6 +82,7 @@ Optional local LLM assistance:
 ### Output rules
 - populate `redaction_findings`
 - auto-apply only when `basis_primary` evidence is above the pinned baseline policy-snapshot threshold
+- findings already classified as `NEEDS_REVIEW` due to detector conflict are never auto-applied, regardless of confidence threshold
 - optional assist output may enrich `basis_secondary_json` or `assist_explanation_key`, but it can never become the sole basis for `AUTO_APPLIED`
 - default low-confidence findings to `NEEDS_REVIEW`
 
@@ -91,6 +92,7 @@ Optional local LLM assistance:
 - NER wrapper timeout and empty-output handling
 - local LLM assistance timeout falls back cleanly to rules plus NER only
 - synthetic PII pack maintains near-100% recall for direct identifiers
+- `DIRECT_IDENTIFIER_RECALL_FLOOR` is sourced from the versioned policy snapshot or pinned config used by the run, not an ad hoc hardcoded constant
 - build fails if recall drops below `DIRECT_IDENTIFIER_RECALL_FLOOR`
 
 ## Implementation scope
@@ -247,7 +249,7 @@ This prompt is complete only if all are true:
 - local NER support is real
 - bounded assist is real and safely constrained
 - fusion rules are real
-- triage/workspace surfaces show detector results coherently
+- triage and workspace views render detector findings with typed status, confidence, and source fields from API responses
 - recall-floor gates protect regression
 - `/phases` remains untouched
 

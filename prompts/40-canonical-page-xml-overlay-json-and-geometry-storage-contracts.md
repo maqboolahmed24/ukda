@@ -65,6 +65,10 @@ Preserve or reconcile:
 - `controlled/derived/{project_id}/{document_id}/layout/{run_id}/page/{page_index}.json`
 - `controlled/derived/{project_id}/{document_id}/layout/{run_id}/manifest.json`
 
+Deterministic page identifier mapping rule:
+- for a given `run_id`, API `{pageId}` resolves to exactly one manifest page entry and exactly one `{page_index}` storage key
+- the mapping is deterministic and stable for that run (no fallback, fuzzy, or position-shifting lookup)
+
 Later prompts own:
 - page thumbnails
 - line crops

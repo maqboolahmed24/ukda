@@ -3,6 +3,10 @@
 > Status: Future-facing browser IA contract
 > Scope: Stable route design for the secure web product
 
+Current implemented baseline route ownership is defined in:
+
+- [`/docs/architecture/route-layout-and-url-state-contract.md`](./route-layout-and-url-state-contract.md)
+
 ## Route Design Principles
 
 1. Every durable object gets a stable URL anchored by object identity.
@@ -21,8 +25,8 @@
 | `/`                                | Lightweight entry resolver                                    | In Phase 0.1, redirects to `/login`; later becomes auth-aware |
 | `/health`                          | Live operational diagnostics                                  | Public route for browser-to-API liveness/readiness visibility |
 | `/projects`                        | Project list, filters, and quick resume                       | Primary landing surface for most authenticated users          |
-| `/projects/new`                    | Create-project flow                                           | Requires the right project-creation capability                |
-| `/projects/:projectId`             | Project home with recent activity, status, and next actions   | Stable project anchor route                                   |
+| `/approved-models`                 | Platform-approved model catalog for transcription-facing roles | Read: lead/reviewer/admin, mutate: lead/admin                 |
+| `/projects/:projectId/overview`    | Project home with recent activity, status, and next actions   | Stable project anchor route                                   |
 | `/projects/:projectId/jobs`        | Project job queue, retry controls, and run status             | Member-scoped read; mutation controls are role-gated          |
 | `/projects/:projectId/jobs/:jobId` | Job attempt detail, append-only events, and lineage links     | Status polling uses the lightweight status endpoint contract  |
 | `/projects/:projectId/members`     | Membership and role management                                | Project lead and admin surface                                |
@@ -30,23 +34,32 @@
 
 ## Ingest And Viewer Routes
 
-| Route                                               | Purpose                                                          | URL-state expectations                                                        |
-| --------------------------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `/projects/:projectId/ingest`                       | Controlled upload, intake status, and import feedback            | Preserve queue filter and selected batch                                      |
-| `/projects/:projectId/documents`                    | Document library with search, sorting, filters, and bulk actions | Filters, sort, and selection belong in the query string                       |
-| `/projects/:projectId/documents/:documentId`        | Document summary, run history, and metadata                      | Stable document anchor                                                        |
-| `/projects/:projectId/documents/:documentId/viewer` | Browser viewer workspace                                         | Preserve `page`, `zoom`, `rotation`, `panel`, and selected annotation context |
+| Route                                               | Purpose                                                          | URL-state expectations                                                                                |
+| --------------------------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `/projects/:projectId/ingest`                       | Controlled upload, intake status, and import feedback            | Preserve queue filter and selected batch                                                              |
+| `/projects/:projectId/documents`                    | Document library with search, sorting, filters, and bulk actions | Filters, sort, and selection belong in the query string                                               |
+| `/projects/:projectId/documents/:documentId`        | Document summary, run history, and metadata                      | Stable document anchor                                                                                |
+| `/projects/:projectId/documents/:documentId/ingest-status` | Dedicated processing timeline and recovery handoff               | Optional viewer handoff hints (`page`, `zoom`) may be carried for return navigation                  |
+| `/projects/:projectId/documents/:documentId/viewer` | Browser viewer workspace                                         | Baseline preserves `page`; later phases add shareable `zoom`, `rotation`, `panel`, and review context |
 
 ## Processing Workspace Routes
 
 | Route                                                                                | Purpose                                           | URL-state expectations                                                                 |
 | ------------------------------------------------------------------------------------ | ------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `/projects/:projectId/preprocessing`                                                 | Preprocessing queues, run list, and triage entry  | Preserve queue, severity filter, and selected run                                      |
-| `/projects/:projectId/preprocessing/runs/:runId/documents/:documentId/pages/:pageId` | Before/after compare workspace                    | Preserve compare mode, inspector tab, and hotspot selection                            |
-| `/projects/:projectId/layout`                                                        | Layout-analysis queue and run overview            | Preserve run filter and selected page                                                  |
-| `/projects/:projectId/layout/runs/:runId/documents/:documentId/pages/:pageId`        | Segmentation review workspace                     | Preserve overlay mode, reading-order selection, and inspector tab                      |
-| `/projects/:projectId/transcription`                                                 | Transcription queue and run overview              | Preserve queue slice, reviewer filter, and selected page                               |
-| `/projects/:projectId/transcription/runs/:runId/documents/:documentId/pages/:pageId` | Source-plus-transcript review workspace           | Preserve active pane, selected line or token, compare mode, and confidence filter      |
+| `/projects/:projectId/documents/:documentId/preprocessing`                          | Preprocessing overview, tabs, and run entrypoint | Preserve internal tab (`pages`, `runs`, `metadata`)                                   |
+| `/projects/:projectId/documents/:documentId/preprocessing/quality`                  | Preprocessing quality diagnostics                 | Preserve `runId`, `warning`, `status`, and cursor filters                             |
+| `/projects/:projectId/documents/:documentId/preprocessing/runs/:runId`              | Preprocessing run detail                          | Preserve selected run and linked compare context                                       |
+| `/projects/:projectId/documents/:documentId/preprocessing/compare?baseRunId={baseRunId}&candidateRunId={candidateRunId}` | Canonical preprocessing run comparison diagnostics | Preserve base/candidate run IDs and compare inspector context                          |
+| `/projects/:projectId/documents/:documentId/layout`                                  | Layout overview, triage, and run tabs            | Preserve selected tab and optional `runId` focus                                       |
+| `/projects/:projectId/documents/:documentId/layout/runs/:runId`                      | Layout run detail                                 | Preserve selected run context and workspace handoff                                    |
+| `/projects/:projectId/documents/:documentId/layout/workspace?page={page}&runId={runId}` | Segmentation workspace shell                      | Preserve 1-based `page`, selected `runId`, overlay mode, and inspector context        |
+| `/projects/:projectId/documents/:documentId/transcription`                            | Transcription overview, triage, runs, artefacts   | Preserve selected tab and optional `runId` focus                                       |
+| `/projects/:projectId/documents/:documentId/transcription/runs/:runId`                | Transcription run detail                           | Preserve selected run context and workspace handoff                                    |
+| `/projects/:projectId/documents/:documentId/transcription/compare?baseRunId={baseRunId}&candidateRunId={candidateRunId}&page={page}&lineId={lineId}&tokenId={tokenId}` | Transcription compare mode for governed base-vs-candidate review | Preserve base/candidate run IDs and optional page/line/token focus for deterministic decision context |
+| `/projects/:projectId/documents/:documentId/transcription/workspace?page={page}&runId={runId}&mode={mode}&lineId={lineId}&tokenId={tokenId}&sourceKind={sourceKind}&sourceRefId={sourceRefId}` | Editable transcription workspace                   | Preserve page/run/mode, optional line/token anchors, source provenance, and correction context |
+| `/projects/:projectId/model-assignments`                                               | Project role-map assignment list and lifecycle actions | Preserve selected role filters or status context when added                            |
+| `/projects/:projectId/model-assignments/:assignmentId`                                 | Assignment detail, lifecycle metadata, and role compatibility | Stable assignment anchor                                                                |
+| `/projects/:projectId/model-assignments/:assignmentId/datasets`                        | Training dataset lineage for one assignment          | Stable dataset lineage view anchored by assignment                                      |
 | `/projects/:projectId/privacy`                                                       | Privacy-review queue and unresolved findings list | Preserve queue filter, severity, and selected document/page                            |
 | `/projects/:projectId/privacy/runs/:runId/documents/:documentId/pages/:pageId`       | Privacy review workspace                          | Preserve findings filter, selected token or area mask, compare mode, and inspector tab |
 
@@ -68,19 +81,20 @@
 
 ## Platform-Level Admin And Audit Routes
 
-| Route                         | Purpose                                                   | Notes                                     |
-| ----------------------------- | --------------------------------------------------------- | ----------------------------------------- |
-| `/admin`                      | Platform operations home                                  | Admin-only summary surface                |
-| `/admin/security`             | Security posture summary and deny-egress diagnostics      | Admin and read-only auditor               |
-| `/admin/operations`           | Operations overview and telemetry posture                 | Admin-only                                |
-| `/admin/operations/slos`      | SLO baselines and threshold state                         | Admin-only                                |
-| `/admin/operations/alerts`    | Alert scaffold with filterable state                      | Admin-only                                |
-| `/admin/operations/timelines` | Read-only operational timelines and trace correlation     | Admin and read-only auditor               |
-| `/admin/audit`                | Audit event exploration and correlation search            | Auditor and admin route                   |
-| `/admin/evidence-ledger`      | Controlled evidence ledger exploration                    | Auditor and admin route                   |
-| `/admin/model-catalog`        | Approved internal model catalog and service-map oversight | Admin-only                                |
-| `/admin/runs`                 | Cross-project run operations and failure triage           | Admin-only                                |
-| `/admin/design-system`        | Internal component gallery and shell-state test surface   | Internal-only non-public production route |
+| Route                             | Purpose                                                   | Notes                                     |
+| --------------------------------- | --------------------------------------------------------- | ----------------------------------------- |
+| `/admin`                          | Platform governance home                                  | Admin and read-only auditor               |
+| `/admin/security`                 | Security posture summary and deny-egress diagnostics      | Admin and read-only auditor               |
+| `/admin/operations`               | Operations overview and telemetry posture                 | Admin-only                                |
+| `/admin/operations/export-status` | Export gateway posture and queue-readiness summary        | Admin and read-only auditor               |
+| `/admin/operations/slos`          | SLO baselines and threshold state                         | Admin-only                                |
+| `/admin/operations/alerts`        | Alert scaffold with filterable state                      | Admin-only                                |
+| `/admin/operations/timelines`     | Read-only operational timelines and trace correlation     | Admin and read-only auditor               |
+| `/admin/audit`                    | Audit event exploration and correlation search            | Auditor and admin route                   |
+| `/admin/evidence-ledger`          | Controlled evidence ledger exploration                    | Auditor and admin route                   |
+| `/admin/model-catalog`            | Approved internal model catalog and service-map oversight | Admin-only                                |
+| `/admin/runs`                     | Cross-project run operations and failure triage           | Admin-only                                |
+| `/admin/design-system`            | Internal component gallery and shell-state test surface   | Internal-only non-public production route |
 
 ## URL-State Discipline
 
@@ -96,22 +110,23 @@
 1. User logs in at `/login`.
 2. In Phase 0.1, `/` redirects to `/login` as a lightweight entry resolver.
 3. After auth-aware redirects are added, `/` sends users to the correct next route (`/login` or `/projects`).
-4. Once inside a project, `/projects/:projectId` becomes the project anchor for every later workflow.
+4. Once inside a project, `/projects/:projectId/overview` is the stable project anchor for later workflow routes.
 
 ### Researcher Journey
 
-1. Enter project home.
-2. Upload and monitor intake through `/projects/:projectId/ingest`.
+1. Enter project home at `/projects/:projectId/overview`.
+2. Upload and monitor intake through `/projects/:projectId/documents/import`.
 3. Review library state in `/projects/:projectId/documents`.
 4. Open source context in `/projects/:projectId/documents/:documentId/viewer`.
 5. Consume approved downstream outputs through the later workflow routes without losing project or document context.
 
 ### Reviewer Journey
 
-1. Enter the relevant queue route for preprocessing, layout, transcription, or privacy.
-2. Open the deep-linkable page workspace for the assigned run.
-3. Resolve uncertainty with source, findings, confidence, and inspector context visible together.
-4. Move back to the queue without losing filters or place in line.
+1. Enter the relevant route for preprocessing, layout, transcription, or privacy.
+2. For preprocessing diagnostics, start from `/projects/:projectId/documents/:documentId/preprocessing` and open `/preprocessing/compare` for run analysis.
+3. Open the deep-linkable page workspace for the assigned run.
+4. Resolve uncertainty with source, findings, confidence, and inspector context visible together.
+5. Move back to the queue without losing filters or place in line.
 
 ### Project Lead Journey
 

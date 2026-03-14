@@ -148,8 +148,8 @@ Add if missing:
 - `GET /projects/{projectId}/documents/{documentId}/preprocess-runs/compare?baseRunId={baseRunId}&candidateRunId={candidateRunId}`
 
 ### Required RBAC
-- `PROJECT_LEAD`, `RESEARCHER`, `REVIEWER` can view quality and runs
-- only `PROJECT_LEAD`, `REVIEWER`, and `ADMIN` can create, rerun, or cancel preprocessing runs
+- `PROJECT_LEAD`, `RESEARCHER`, `REVIEWER`, `ADMIN` can view quality and runs
+- only `PROJECT_LEAD`, `REVIEWER`, and `ADMIN` can create, rerun, cancel, or activate preprocessing runs
 
 ### Required audit events
 Emit or reconcile:
@@ -294,6 +294,7 @@ Document:
 - quality route
 - runs list/detail surfaces
 - compare route shell
+- metadata surface
 - shell/navigation/breadcrumb integration
 
 ### Docs
@@ -337,7 +338,7 @@ Before finishing:
 
 ## Acceptance criteria
 This prompt is complete only if all are true:
-- preprocessing overview/triage/runs/workspace routes are implemented, navigable, and deep-linkable via the documented route contract
+- preprocessing overview/quality/runs/compare routes are implemented, navigable, and deep-linkable via the documented route contract
 - run records and active-projection pointers are persisted with typed status/provenance fields and document-scoped queries
 - compare surface ownership is clear
 - RBAC and audit tests cover run create, rerun, cancel, and activate actions

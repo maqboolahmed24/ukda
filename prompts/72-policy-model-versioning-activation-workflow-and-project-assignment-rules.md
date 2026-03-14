@@ -18,9 +18,9 @@ The actual product source of truth is the extracted `/phases` directory in repo 
 
 ## Source-of-truth rule
 - The canonical truth for this prompt is:
-  1. current repository state as the implementation reality to reconcile with
+  1. the precise `/phases` files listed above
   2. this prompt
-  3. the precise `/phases` files listed above
+  3. current repository state for reconciling implementation details
 - Any other repo files are context only.
 - Use current official docs for implementation mechanics only.
 
@@ -105,6 +105,9 @@ Implement or reconcile:
   - target revision is still `DRAFT`
   - `validation_status = VALID`
   - `validated_rules_sha256` still matches the current `rules_json`
+- retirement is rejected unless:
+  - target revision is currently `ACTIVE`
+  - target revision is the project projection `active_policy_id`
 
 ### Rules-json support
 Policy rules must support:
@@ -169,6 +172,7 @@ Requirements:
 - validation persists `validation_status`, `validated_rules_sha256`, and actor/timestamp
 - activation is blocked unless validation still matches the exact current rules
 - activating a revision retires prior active revision in the same project
+- retire action is blocked unless the target is the currently projected `ACTIVE` policy for that project
 - activation updates `project_policy_projections`
 - historical runs are not rewritten
 
@@ -264,19 +268,20 @@ Before finishing:
 1. Verify one active policy lineage per project.
 2. Verify draft edits require current `version_etag` and invalidate prior validation.
 3. Verify activation is blocked unless validation matches current rules exactly.
-4. Verify historical Phase 5 runs remain pinned to baseline snapshots and are not rewritten.
-5. Verify compare routes accept exactly one target and reject ambiguous input.
-6. Verify policy history is reconstructable from append-only events.
-7. Verify RBAC boundaries for read vs mutate actions.
-8. Verify docs match the implemented policy model and activation behavior.
-9. Confirm `/phases/**` is untouched.
+4. Verify retire is blocked unless the target is the currently projected `ACTIVE` policy revision.
+5. Verify historical Phase 5 runs remain pinned to baseline snapshots and are not rewritten.
+6. Verify compare routes accept exactly one target and reject ambiguous input.
+7. Verify policy history is reconstructable from append-only events.
+8. Verify RBAC boundaries for read vs mutate actions.
+9. Verify docs match the implemented policy model and activation behavior.
+10. Confirm `/phases/**` is untouched.
 
 ## Acceptance criteria
 This prompt is complete only if all are true:
 - the explicit Phase 7 policy model is real
 - policy versioning and activation are real
 - baseline-seeded lineage is real
-- compare behavior is real and safe
+- policy compare endpoints return deterministic diffs and enforce role-based access controls
 - policy history is append-only and auditable
 - `/phases` remains untouched
 

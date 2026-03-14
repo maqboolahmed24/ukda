@@ -111,8 +111,8 @@ Implement or refine:
 Requirements:
 - only `SUCCEEDED` runs may be activated
 - role boundaries stay correct:
-  - view: `PROJECT_LEAD`, `RESEARCHER`, `REVIEWER`
-  - activate: only roles already allowed to create/rerun/cancel preprocessing runs in the current phase contract
+  - view: `PROJECT_LEAD`, `RESEARCHER`, `REVIEWER`, `ADMIN`
+  - activate: `PROJECT_LEAD`, `REVIEWER`, `ADMIN`
 - activating a run updates only the canonical projection
 - no historical preprocess run row is rewritten to pretend it became the new truth
 - activating an already-active run is handled safely and idempotently

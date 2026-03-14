@@ -83,6 +83,10 @@ For each target page:
 - `controlled/derived/{project_id}/{document_id}/transcription/{run_id}/page/{page_index}.response.json`
 - `controlled/derived/{project_id}/{document_id}/transcription/{run_id}/page/{page_index}.hocr` only when a fallback engine later emits it; do not fake hOCR here
 
+Deterministic mapping rule:
+- worker and API `page_id` values must resolve through the canonical document-page mapping to one stable `page_index` (zero-based physical order) before storage keys are written
+- storage and read paths must use that resolved `page_index` consistently; do not derive independent per-worker numbering
+
 ### Required schema contracts
 Use or reconcile the canonical Phase 4 tables:
 - `transcription_runs`
@@ -100,6 +104,10 @@ Do not fake token completeness just to mark runs as promotable.
 - PAGE-XML parse success with expected `TextLine/TextEquiv`
 - every persisted line maps back to a valid `line_id` or rescue source anchor
 - no-egress remains enforced
+
+### Required RBAC
+- `PROJECT_LEAD`, `REVIEWER`, `RESEARCHER`, and `ADMIN` can view transcription run status and output-read surfaces
+- only `PROJECT_LEAD`, `REVIEWER`, and `ADMIN` can create primary transcription runs
 
 ## Implementation scope
 
@@ -264,9 +272,10 @@ Before finishing:
 5. Verify PAGE-XML parses successfully and contains expected `TextLine/TextEquiv` content.
 6. Verify raw model responses persist only in controlled storage.
 7. Verify no-egress enforcement remains active.
-8. Verify web surfaces show accurate run progress and output availability.
-9. Verify docs match the implemented pipeline and storage behavior.
-10. Confirm `/phases/**` is untouched.
+8. Verify run-creation RBAC boundaries are enforced.
+9. Verify web surfaces show accurate run progress and output availability.
+10. Verify docs match the implemented pipeline and storage behavior.
+11. Confirm `/phases/**` is untouched.
 
 ## Acceptance criteria
 This prompt is complete only if all are true:

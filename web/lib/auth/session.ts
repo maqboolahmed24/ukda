@@ -1,39 +1,17 @@
 import type { PlatformRole, SessionResponse } from "@ukde/contracts";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { resolveApiOrigins } from "../bootstrap-content";
+import { resolveBrowserRegressionFixtureSession } from "../data/browser-regression-fixtures";
 import { buildApiTraceHeaders, logServerDiagnostic } from "../telemetry";
-
-const FALLBACK_SESSION_COOKIE = "ukde_session";
-const FALLBACK_CSRF_COOKIE = "ukde_csrf";
-
-export function getSessionCookieName(): string {
-  return process.env.AUTH_COOKIE_NAME?.trim() || FALLBACK_SESSION_COOKIE;
-}
-
-export function getCsrfCookieName(): string {
-  return process.env.AUTH_CSRF_COOKIE_NAME?.trim() || FALLBACK_CSRF_COOKIE;
-}
-
-export function shouldUseSecureCookies(): boolean {
-  const appEnv = (
-    process.env.APP_ENV ||
-    process.env.NEXT_PUBLIC_APP_ENV ||
-    "dev"
-  ).toLowerCase();
-  return appEnv === "staging" || appEnv === "prod";
-}
-
-export async function readSessionToken(): Promise<string | null> {
-  const cookieStore = await cookies();
-  return cookieStore.get(getSessionCookieName())?.value ?? null;
-}
-
-export async function readCsrfToken(): Promise<string | null> {
-  const cookieStore = await cookies();
-  return cookieStore.get(getCsrfCookieName())?.value ?? null;
-}
+export {
+  getCsrfCookieName,
+  getSessionCookieName,
+  readCsrfToken,
+  readSessionToken,
+  shouldUseSecureCookies
+} from "./cookies";
+import { readSessionToken } from "./cookies";
 
 export async function resolveCurrentSession(
   tokenOverride?: string
@@ -41,6 +19,11 @@ export async function resolveCurrentSession(
   const token = tokenOverride ?? (await readSessionToken());
   if (!token) {
     return null;
+  }
+
+  const fixtureSession = resolveBrowserRegressionFixtureSession(token);
+  if (fixtureSession) {
+    return fixtureSession;
   }
 
   const { internalOrigin } = resolveApiOrigins();

@@ -1,10 +1,27 @@
 import Link from "next/link";
 
 import type { OperationsTimelineScope } from "@ukde/contracts";
+import { SectionState, StatusChip } from "@ukde/ui/primitives";
 
 import { PageHeader } from "../../../../../components/page-header";
+import { resolveAdminRoleMode } from "../../../../../lib/admin-console";
 import { requirePlatformRole } from "../../../../../lib/auth/session";
 import { listOperationsTimelines } from "../../../../../lib/operations";
+import {
+  adminAuditPath,
+  adminOperationsAlertsPath,
+  adminOperationsExportStatusPath,
+  adminOperationsPath,
+  adminOperationsSlosPath,
+  adminOperationsTimelinesPath,
+  adminPath,
+  adminSecurityPath,
+  withQuery
+} from "../../../../../lib/routes";
+import {
+  normalizeCursorParam,
+  normalizeOptionalEnumParam
+} from "../../../../../lib/url-state";
 
 const TIMELINE_SCOPE_OPTIONS: Array<OperationsTimelineScope | "all"> = [
   "all",
@@ -27,13 +44,16 @@ export default async function AdminOperationsTimelinesPage({
     cursor?: string;
   }>;
 }>) {
-  await requirePlatformRole(["ADMIN", "AUDITOR"]);
-  const filters = await searchParams;
-  const cursor = Number(filters.cursor ?? "0");
-  const scope = filters.scope ?? "all";
+  const session = await requirePlatformRole(["ADMIN", "AUDITOR"]);
+  const roleMode = resolveAdminRoleMode(session);
+  const rawFilters = await searchParams;
+  const cursor = normalizeCursorParam(rawFilters.cursor);
+  const scope =
+    normalizeOptionalEnumParam(rawFilters.scope, TIMELINE_SCOPE_OPTIONS) ??
+    "all";
   const timelineResult = await listOperationsTimelines({
     scope,
-    cursor: Number.isFinite(cursor) ? cursor : 0,
+    cursor,
     pageSize: 60
   });
 
@@ -43,16 +63,30 @@ export default async function AdminOperationsTimelinesPage({
     timelineResult.ok && timelineResult.data
       ? timelineResult.data.nextCursor
       : null;
+  const secondaryActions = roleMode.isAdmin
+    ? [
+        { href: adminOperationsPath, label: "Overview" },
+        { href: adminOperationsSlosPath, label: "SLOs" },
+        { href: adminOperationsAlertsPath, label: "Alerts" },
+        { href: adminOperationsExportStatusPath, label: "Export status" }
+      ]
+    : [
+        { href: adminPath, label: "Back to admin" },
+        { href: adminOperationsExportStatusPath, label: "Export status" },
+        { href: adminSecurityPath, label: "Security status" },
+        { href: adminAuditPath, label: "Audit viewer" }
+      ];
 
   return (
     <main className="homeLayout">
       <PageHeader
         eyebrow="Platform operations"
-        secondaryActions={[
-          { href: "/admin/operations", label: "Overview" },
-          { href: "/admin/operations/slos", label: "SLOs" },
-          { href: "/admin/operations/alerts", label: "Alerts" }
-        ]}
+        meta={
+          <StatusChip tone={roleMode.isAdmin ? "danger" : "warning"}>
+            {roleMode.isAdmin ? "ADMIN" : "AUDITOR read-only"}
+          </StatusChip>
+        }
+        secondaryActions={secondaryActions}
         summary="Read-only event stream for operator diagnostics and governance review."
         title="Operational timelines"
       />
@@ -79,13 +113,17 @@ export default async function AdminOperationsTimelinesPage({
 
       <section className="sectionCard ukde-panel">
         {!timelineResult.ok ? (
-          <p className="ukde-muted">
-            Timeline unavailable: {timelineResult.detail ?? "unknown"}
-          </p>
+          <SectionState
+            kind="error"
+            title="Timeline unavailable"
+            description={timelineResult.detail ?? "Unknown failure"}
+          />
         ) : items.length === 0 ? (
-          <p className="ukde-muted">
-            No timeline events for the current filter.
-          </p>
+          <SectionState
+            kind="no-results"
+            title="No timeline events"
+            description="No timeline events matched the current scope filter."
+          />
         ) : (
           <div className="auditTableWrap">
             <table className="auditTable">
@@ -119,10 +157,10 @@ export default async function AdminOperationsTimelinesPage({
           <div className="buttonRow">
             <Link
               className="secondaryButton"
-              href={`/admin/operations/timelines?${new URLSearchParams({
+              href={withQuery(adminOperationsTimelinesPath, {
                 scope,
-                cursor: String(nextCursor)
-              }).toString()}`}
+                cursor: nextCursor
+              })}
             >
               Next page
             </Link>

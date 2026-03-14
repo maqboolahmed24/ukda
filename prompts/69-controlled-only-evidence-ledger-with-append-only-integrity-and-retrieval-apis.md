@@ -18,16 +18,16 @@ The actual product source of truth is the extracted `/phases` directory in repo 
 
 ## Source-of-truth rule
 - The canonical truth for this prompt is:
-  1. current repository state as the implementation reality to reconcile with
+  1. the precise `/phases` files listed above
   2. this prompt
-  3. the precise `/phases` files listed above
+  3. current repository state for reconciling implementation details
 - Any other repo files are context only.
 - Use current official docs for implementation mechanics only.
 
 ## Conflict-resolution rule
 - `/phases` wins for evidence-ledger content, RBAC, append-only integrity rules, verification behavior, and acceptance logic.
 - Official docs win only for implementation mechanics.
-- Preserve the rule that the evidence ledger is Controlled-only, append-only, hash-chained, and never widened into a broader access surface.
+- Preserve the rule that the full ledger API family is Controlled-only, append-only, hash-chained, and never widened beyond `AUDITOR` and `ADMIN`; project-role safe summaries, when needed, must come from non-ledger governance surfaces.
 
 ## Objective
 Build the controlled-only evidence ledger with append-only integrity and retrieval APIs.
@@ -38,9 +38,9 @@ This prompt owns:
 - hash-chain integrity (`prev_hash`, `row_hash` or equivalent canonical structure)
 - ledger attempt lineage and regeneration behavior
 - ledger verification runs and status APIs
-- controlled-only retrieval APIs for raw ledger, entries, summary, and verification history
+- controlled-only retrieval APIs for the ledger API family (`/ledger`, `/ledger/status`, `/ledger/entries`, `/ledger/summary`, `/ledger/verify*`)
 - readiness projection updates tied to ledger validity
-- role-locked access for `AUDITOR` and `ADMIN`
+- role-locked access to ledger APIs for `AUDITOR` and `ADMIN`
 
 This prompt does not own:
 - screening-safe manifest generation
@@ -95,8 +95,8 @@ Phase 6 table contract to preserve:
   - timestamps / cancel / failure fields
 
 ### Required RBAC
-- ledger access limited to `AUDITOR` and `ADMIN`
-- `PROJECT_LEAD` and `REVIEWER` can see decision-history summaries but not raw ledger payloads
+- full ledger API family access (`/ledger`, `/ledger/status`, `/ledger/entries`, `/ledger/summary`, and `/ledger/verify*`) is limited to `AUDITOR` and `ADMIN`
+- `PROJECT_LEAD` and `REVIEWER` can see decision-history safe summaries only on non-ledger governance surfaces, not through ledger endpoints
 - `RESEARCHER` does not access Phase 6 ledger surfaces
 
 ### Required APIs
@@ -104,7 +104,7 @@ Implement or refine:
 - `GET /projects/{projectId}/documents/{documentId}/governance/runs/{runId}/ledger`
 - `GET /projects/{projectId}/documents/{documentId}/governance/runs/{runId}/ledger/status`
 - `GET /projects/{projectId}/documents/{documentId}/governance/runs/{runId}/ledger/entries?view={list|timeline}&cursor={cursor}&limit={limit}`
-- `GET /projects/{projectId}/documents/{documentId}/governance/runs/{runId}/ledger/summary`
+- `GET /projects/{projectId}/documents/{documentId}/governance/runs/{runId}/ledger/summary` (screening-safe response; endpoint remains in the restricted ledger API family)
 - `POST /projects/{projectId}/documents/{documentId}/governance/runs/{runId}/ledger/verify`
 - `GET /projects/{projectId}/documents/{documentId}/governance/runs/{runId}/ledger/verify/status`
 - `GET /projects/{projectId}/documents/{documentId}/governance/runs/{runId}/ledger/verify/runs`
@@ -185,6 +185,10 @@ Requirements:
   - `EVIDENCE_LEDGER_VIEWED`
   - `LEDGER_VERIFICATION_VIEWED`
   - `LEDGER_VERIFY_REQUESTED`
+  - `LEDGER_VERIFY_STARTED`
+  - `LEDGER_VERIFY_FINISHED`
+  - `LEDGER_VERIFY_FAILED`
+  - `LEDGER_VERIFY_CANCELED`
 - append-only `governance_run_events` remain the governance history source of truth
 - do not create a second event subsystem
 
@@ -237,7 +241,7 @@ Do not implement any of the following here:
 - export candidate registration
 - public or external ledger delivery
 - a second evidence-ledger format
-- widening ledger access beyond `AUDITOR` and `ADMIN`
+- widening ledger API family access beyond `AUDITOR` and `ADMIN`
 
 ## Testing and validation
 Before finishing:

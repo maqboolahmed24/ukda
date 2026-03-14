@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { revalidateAfterMutation } from "../../../../../../lib/data/invalidation";
 import { changeProjectMemberRole } from "../../../../../../lib/projects";
 
 function redirectTo(path: string, status = 303): NextResponse {
@@ -34,5 +35,7 @@ export async function POST(
   if (!result.ok) {
     return redirectTo(`/projects/${projectId}/settings?status=action-failed`);
   }
+
+  revalidateAfterMutation("projects.members.change-role", { projectId });
   return redirectTo(`/projects/${projectId}/settings?status=member-updated`);
 }

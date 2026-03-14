@@ -65,8 +65,121 @@ describe("@ukde/contracts", () => {
       )
     ).toBe(true);
     expect(
+      bootstrapSurfaces.some((surface) => surface.route === "/approved-models")
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/projects/:projectId/model-assignments"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/model-assignments/:assignmentId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/model-assignments/:assignmentId/datasets"
+      )
+    ).toBe(true);
+    expect(
       bootstrapSurfaces.some(
         (surface) => surface.route === "/projects/:projectId/jobs/:jobId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/projects/:projectId/documents"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/projects/:projectId/documents/import"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/projects/:projectId/documents/:documentId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/documents/:documentId/ingest-status"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/documents/:documentId/preprocessing"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/documents/:documentId/preprocessing/quality"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/documents/:documentId/preprocessing/runs/:runId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/documents/:documentId/preprocessing/compare"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route === "/projects/:projectId/documents/:documentId/layout"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/documents/:documentId/layout/runs/:runId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/documents/:documentId/layout/workspace"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/documents/:documentId/transcription"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/documents/:documentId/transcription/runs/:runId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/documents/:documentId/transcription/workspace"
       )
     ).toBe(true);
     expect(
@@ -127,8 +240,21 @@ describe("@ukde/contracts", () => {
       "PROJECT_CREATED",
       "PROJECT_MEMBER_ADDED",
       "AUDIT_LOG_VIEWED",
-      "MY_ACTIVITY_VIEWED"
+      "MY_ACTIVITY_VIEWED",
+      "DOCUMENT_LIBRARY_VIEWED",
+      "DOCUMENT_DETAIL_VIEWED",
+      "DOCUMENT_TIMELINE_VIEWED",
+      "DOCUMENT_UPLOAD_STARTED",
+      "DOCUMENT_SCAN_STARTED",
+      "DOCUMENT_IMPORT_FAILED",
+      "PREPROCESS_RUN_CREATED",
+      "LAYOUT_RUN_CREATED",
+      "TRANSCRIPTION_RUN_CREATED",
+      "APPROVED_MODEL_CREATED",
+      "PROJECT_MODEL_ASSIGNMENT_CREATED",
+      "PROJECT_MODEL_ACTIVATED",
+      "PROJECT_MODEL_RETIRED"
     ];
-    expect(required.length).toBe(5);
+    expect(required.length).toBe(18);
   });
 });

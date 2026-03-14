@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { revalidateAfterMutation } from "../../../../../../lib/data/invalidation";
 import { cancelProjectJob } from "../../../../../../lib/jobs";
 
 function redirectTo(path: string, status = 303): NextResponse {
@@ -28,6 +29,10 @@ export async function POST(
       `/projects/${projectId}/jobs/${jobId}?status=cancel-failed`
     );
   }
+  revalidateAfterMutation("jobs.cancel", {
+    projectId,
+    jobId: result.data.job.id
+  });
   return redirectTo(
     `/projects/${projectId}/jobs/${result.data.job.id}?status=${
       result.data.terminal ? "canceled" : "cancel-requested"

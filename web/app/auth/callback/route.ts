@@ -11,6 +11,7 @@ import {
   buildApiTraceHeaders,
   logServerDiagnostic
 } from "../../../lib/telemetry";
+import { revalidateAfterMutation } from "../../../lib/data/invalidation";
 import {
   getCsrfCookieName,
   getSessionCookieName,
@@ -86,6 +87,7 @@ export async function GET(request: NextRequest) {
     redirectResponse.cookies.delete(getOidcStateCookieName());
     redirectResponse.cookies.delete(getOidcNonceCookieName());
     redirectResponse.cookies.delete(getOidcCodeVerifierCookieName());
+    revalidateAfterMutation("auth.login");
     return redirectResponse;
   } catch (error) {
     logServerDiagnostic("oidc_exchange_failed", {

@@ -2,7 +2,20 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
-JobType = Literal["NOOP"]
+JobType = Literal[
+    "NOOP",
+    "EXTRACT_PAGES",
+    "RENDER_THUMBNAILS",
+    "PREPROCESS_DOCUMENT",
+    "PREPROCESS_PAGE",
+    "FINALIZE_PREPROCESS_RUN",
+    "LAYOUT_ANALYZE_DOCUMENT",
+    "LAYOUT_ANALYZE_PAGE",
+    "FINALIZE_LAYOUT_RUN",
+    "TRANSCRIBE_DOCUMENT",
+    "TRANSCRIBE_PAGE",
+    "FINALIZE_TRANSCRIPTION_RUN",
+]
 JobStatus = Literal["QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELED"]
 JobEventType = Literal[
     "JOB_CREATED",

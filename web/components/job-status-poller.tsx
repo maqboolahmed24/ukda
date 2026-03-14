@@ -3,8 +3,29 @@
 import { useEffect, useState } from "react";
 
 import type { ProjectJobStatusResponse } from "@ukde/contracts";
+import { InlineAlert, InlineState, StatusChip } from "@ukde/ui/primitives";
+
+import { queryCachePolicy } from "../lib/data/cache-policy";
+import { requestBrowserApi } from "../lib/data/browser-api-client";
 
 const TERMINAL_STATUSES = new Set(["SUCCEEDED", "FAILED", "CANCELED"]);
+
+function resolveStatusTone(
+  status: ProjectJobStatusResponse["status"]
+): "success" | "warning" | "danger" | "info" {
+  switch (status) {
+    case "SUCCEEDED":
+      return "success";
+    case "FAILED":
+      return "danger";
+    case "CANCELED":
+      return "warning";
+    case "RUNNING":
+      return "info";
+    default:
+      return "warning";
+  }
+}
 
 interface JobStatusPollerProps {
   statusUrl: string;
@@ -15,37 +36,43 @@ interface JobStatusPollerProps {
 export function JobStatusPoller({
   statusUrl,
   initialStatus,
-  pollMs = 4000
+  pollMs = queryCachePolicy["operations-live"].pollIntervalMs ?? 4000
 }: JobStatusPollerProps) {
   const [status, setStatus] = useState<ProjectJobStatusResponse>(initialStatus);
   const [error, setError] = useState<string | null>(null);
+  const isTerminal = TERMINAL_STATUSES.has(status.status);
 
   useEffect(() => {
-    if (TERMINAL_STATUSES.has(status.status)) {
+    if (isTerminal) {
       return;
     }
     let active = true;
     const interval = window.setInterval(async () => {
+      const controller = new AbortController();
       try {
-        const response = await fetch(statusUrl, {
-          cache: "no-store",
-          credentials: "same-origin"
+        const result = await requestBrowserApi<ProjectJobStatusResponse>({
+          cacheClass: "operations-live",
+          path: statusUrl,
+          signal: controller.signal
         });
-        if (!response.ok) {
+        if (!result.ok || !result.data) {
           if (active) {
-            setError(`status endpoint returned ${response.status}`);
+            setError(
+              result.detail ?? `status endpoint returned ${result.status}`
+            );
           }
           return;
         }
-        const parsed = (await response.json()) as ProjectJobStatusResponse;
         if (active) {
-          setStatus(parsed);
+          setStatus(result.data);
           setError(null);
         }
       } catch {
         if (active) {
           setError("status polling failed");
         }
+      } finally {
+        controller.abort();
       }
     }, pollMs);
 
@@ -53,14 +80,23 @@ export function JobStatusPoller({
       active = false;
       window.clearInterval(interval);
     };
-  }, [pollMs, status.status, statusUrl]);
+  }, [isTerminal, pollMs, status.status, statusUrl]);
 
   return (
     <section className="settingsCard ukde-panel" aria-live="polite">
       <p className="ukde-eyebrow">Live status</p>
-      <h3>{status.status}</h3>
+      <div className="auditIntegrityRow">
+        <StatusChip tone={resolveStatusTone(status.status)}>
+          {status.status}
+        </StatusChip>
+        <span className="ukde-muted">
+          delivery attempts: {status.attempts}/{status.maxAttempts}
+        </span>
+      </div>
       <p className="ukde-muted">
-        delivery attempts: {status.attempts}/{status.maxAttempts}
+        {isTerminal
+          ? "Run reached a terminal state."
+          : "Polling status endpoint for active updates."}
       </p>
       {status.cancelRequested ? (
         <p className="ukde-muted">
@@ -68,12 +104,18 @@ export function JobStatusPoller({
         </p>
       ) : null}
       {status.errorCode ? (
-        <p className="ukde-muted">
+        <InlineAlert title="Safe failure summary" tone="danger">
           {status.errorCode}
           {status.errorMessage ? `: ${status.errorMessage}` : ""}
-        </p>
+        </InlineAlert>
       ) : null}
-      {error ? <p className="ukde-muted">Polling: {error}</p> : null}
+      {error ? (
+        <InlineState
+          kind="degraded"
+          title="Status polling degraded"
+          description={error}
+        />
+      ) : null}
     </section>
   );
 }

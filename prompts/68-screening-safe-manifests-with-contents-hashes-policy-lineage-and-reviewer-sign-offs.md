@@ -18,9 +18,9 @@ The actual product source of truth is the extracted `/phases` directory in repo 
 
 ## Source-of-truth rule
 - The canonical truth for this prompt is:
-  1. current repository state as the implementation reality to reconcile with
+  1. the precise `/phases` files listed above
   2. this prompt
-  3. the precise `/phases` files listed above
+  3. current repository state for reconciling implementation details
 - Any other repo files are context only.
 - Use current official docs for implementation mechanics only.
 
@@ -247,7 +247,7 @@ This prompt is complete only if all are true:
 - manifest hashes and storage are real
 - manifest entries and raw JSON views are real
 - no raw sensitive content leaks
-- later governance/export prompts can consume a stable manifest contract
+- manifest contract version and required fields are documented and validated by manifest schema tests
 - `/phases` remains untouched
 
 ## Final response format

@@ -1,0 +1,18 @@
+services:
+  privacy-rules-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile.privacy-rules
+      args:
+        BASE_IMAGE: ${PRIVACY_RULES_BASE_IMAGE:-python:3.11-slim@sha256:d64a1009c676551d50bdd2a0f9a4a5f63423a5f070d9284e00e4cba788953f4b}
+    image: ${PRIVACY_RULES_IMAGE_NAME:-ukda/privacy-rules:arm64}
+    platform: ${PRIVACY_RULES_PLATFORM:-linux/arm64}
+    environment:
+      PRIVACY_RULES_SERVICE_NAME: ${PRIVACY_RULES_SERVICE_NAME:-Presidio}
+      PRIVACY_RULES_LANGUAGE: ${PRIVACY_RULES_LANGUAGE:-en}
+      PRIVACY_RULES_SPACY_MODEL_DIR: /models/${PRIVACY_RULES_MODEL_SUBPATH:-presidio/default}/${PRIVACY_RULES_SPACY_MODEL_REL_PATH:-en_core_web_sm/en_core_web_sm-3.8.0}
+    ports:
+      - ${PRIVACY_RULES_LISTEN_HOST:-127.0.0.1}:${PRIVACY_RULES_LISTEN_PORT:-8030}:8000
+    volumes:
+      - ${MODEL_ARTIFACT_ROOT}:/models:ro
+    restart: unless-stopped

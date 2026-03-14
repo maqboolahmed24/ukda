@@ -70,6 +70,16 @@ Rules:
 - outputs must be normalised into the existing transcription run/result schema
 - no ad hoc engine-specific schema fork
 
+### Fallback run lifecycle APIs
+Implement or refine:
+- `POST /projects/{projectId}/documents/{documentId}/transcription-runs/fallback`
+- `GET /projects/{projectId}/documents/{documentId}/transcription-runs/{runId}/status`
+- `POST /projects/{projectId}/documents/{documentId}/transcription-runs/{runId}/cancel`
+
+Rules:
+- fallback run lifecycle remains on the canonical transcription-runs family
+- status transitions are typed and auditable
+
 ### Comparison API
 Implement or refine:
 - `GET /projects/{projectId}/documents/{documentId}/transcription-runs/compare?baseRunId={baseRunId}&candidateRunId={candidateRunId}`
@@ -87,8 +97,15 @@ Implement or refine:
 - no automatic merge or silent promotion
 
 ### Audit events
+- `TRANSCRIPTION_FALLBACK_RUN_CREATED`
+- `TRANSCRIPTION_FALLBACK_RUN_CANCELED`
+- `TRANSCRIPTION_FALLBACK_RUN_STATUS_VIEWED`
 - `TRANSCRIPTION_RUN_COMPARE_VIEWED`
 - `TRANSCRIPTION_COMPARE_DECISION_RECORDED`
+
+### Required RBAC
+- `PROJECT_LEAD`, `REVIEWER`, `RESEARCHER`, and `ADMIN` can view fallback runs, compare reads, and compare status surfaces
+- only `PROJECT_LEAD`, `REVIEWER`, and `ADMIN` can create/cancel fallback candidate runs or record compare keep-or-promote decisions
 
 ## Implementation scope
 
@@ -146,7 +163,7 @@ Requirements:
 - base/candidate run context is explicit
 - line-level or token-level diff shells are present
 - safe empty/not-ready/error states
-- explicit decision affordances only for allowed roles
+- explicit decision affordances only for `PROJECT_LEAD`, `REVIEWER`, and `ADMIN`
 - no giant polished compare workspace yet if the repo is not ready; keep it minimal and explicit
 
 ### 6. Role-map and governance alignment
@@ -185,7 +202,7 @@ Document:
 
 ### Web
 - compare route shell
-- explicit decision affordances for allowed roles
+- explicit decision affordances for `PROJECT_LEAD`, `REVIEWER`, and `ADMIN`
 - accurate compare-state handling
 
 ### Docs
@@ -218,15 +235,18 @@ Do not implement any of the following here:
 
 ## Testing and validation
 Before finishing:
-1. Verify fallback can be invoked on schema failure, anchor failure, or confidence below threshold.
-2. Verify the original VLM output remains immutable when fallback runs.
-3. Verify fallback outputs normalize into the canonical run/result schema.
-4. Verify comparison diffs are returned for base and candidate runs.
-5. Verify compare decisions persist append-only and do not mutate source runs.
-6. Verify only approved, assigned fallback engines can be used.
-7. Verify compare views and decisions are audited.
-8. Verify docs match the implemented fallback and compare behavior.
-9. Confirm `/phases/**` is untouched.
+1. Verify fallback run create/status/cancel lifecycle APIs are real, typed, and coherent.
+2. Verify fallback can be invoked on schema failure, anchor failure, or confidence below threshold.
+3. Verify the original VLM output remains immutable when fallback runs.
+4. Verify fallback outputs normalize into the canonical run/result schema.
+5. Verify comparison diffs are returned for base and candidate runs.
+6. Verify compare decisions persist append-only and do not mutate source runs.
+7. Verify only approved, assigned fallback engines can be used.
+8. Verify fallback run create/cancel actions are limited to `PROJECT_LEAD`, `REVIEWER`, and `ADMIN`, with `RESEARCHER` read-only.
+9. Verify compare decision actions are limited to `PROJECT_LEAD`, `REVIEWER`, and `ADMIN`, with `RESEARCHER` read-only.
+10. Verify fallback lifecycle and compare events are audited.
+11. Verify docs match the implemented fallback and compare behavior.
+12. Confirm `/phases/**` is untouched.
 
 ## Acceptance criteria
 This prompt is complete only if all are true:

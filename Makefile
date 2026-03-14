@@ -4,7 +4,7 @@ PIP ?= $(PYTHON) -m pip
 HELM_IMAGE ?= alpine/helm:3.17.3
 ROOT_DIR := $(CURDIR)
 
-.PHONY: install-js install-python lint format-check typecheck test build audit ci ci-js ci-python verify-images render-manifests dev-db-up dev-db-down dev-stack-up dev-stack-down smoke-health clean
+.PHONY: install-js install-python lint format-check typecheck test test-browser test-preprocess-gold update-preprocess-gold-baseline build audit ci ci-js ci-python verify-images render-manifests dev-db-up dev-db-down dev-stack-up dev-stack-down smoke-health clean
 
 install-js:
 	pnpm install --frozen-lockfile
@@ -30,6 +30,22 @@ test:
 	$(PYTHON) -m pytest api/tests
 	$(PYTHON) -m pytest workers/tests
 
+test-browser:
+	pnpm test:browser
+
+test-preprocess-gold:
+	$(PYTHON) -m pytest api/tests/test_preprocessing_gold_set.py
+
+APPROVED_BY ?= local
+APPROVAL_REFERENCE ?= local
+APPROVAL_SUMMARY ?= Local preprocessing baseline refresh
+
+update-preprocess-gold-baseline:
+	$(PYTHON) scripts/update_preprocessing_gold_set_baseline.py \
+		--approved-by "$(APPROVED_BY)" \
+		--approval-reference "$(APPROVAL_REFERENCE)" \
+		--approval-summary "$(APPROVAL_SUMMARY)"
+
 build:
 	pnpm build
 
@@ -42,6 +58,7 @@ ci-js:
 	pnpm format:check
 	pnpm typecheck
 	pnpm test
+	pnpm test:browser
 	pnpm build
 
 ci-python:
@@ -49,7 +66,8 @@ ci-python:
 	$(PYTHON) -m ruff format --check api workers
 	$(PYTHON) -c "import app.main"
 	$(PYTHON) -c "import ukde_workers.runtime"
-	$(PYTHON) -m pytest api/tests
+	$(MAKE) test-preprocess-gold PYTHON=$(PYTHON)
+	$(PYTHON) -m pytest api/tests --ignore=api/tests/test_preprocessing_gold_set.py
 	$(PYTHON) -m pytest workers/tests
 	$(PYTHON) -m pip_audit -r requirements/python-ci.lock --strict
 

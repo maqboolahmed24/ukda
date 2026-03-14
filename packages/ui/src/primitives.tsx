@@ -4,6 +4,7 @@ import {
   createContext,
   type KeyboardEvent,
   type MutableRefObject,
+  type RefCallback,
   type ReactNode,
   useCallback,
   useContext,
@@ -29,12 +30,46 @@ export type PrimitiveTone =
   | "danger"
   | "info";
 
+export type FeedbackStateKind =
+  | "zero"
+  | "empty"
+  | "loading"
+  | "error"
+  | "success"
+  | "degraded"
+  | "disabled"
+  | "no-results"
+  | "not-found"
+  | "unauthorized";
+
+export type FeedbackStateLevel = "page" | "section" | "inline" | "table";
+
 interface ClassNameProps {
   className?: string;
 }
 
 function cx(...tokens: Array<string | false | undefined>): string {
   return tokens.filter(Boolean).join(" ");
+}
+
+function resolveFeedbackTone(kind: FeedbackStateKind): PrimitiveTone {
+  switch (kind) {
+    case "success":
+      return "success";
+    case "error":
+      return "danger";
+    case "degraded":
+    case "unauthorized":
+      return "warning";
+    case "loading":
+      return "info";
+    default:
+      return "neutral";
+  }
+}
+
+function resolveFeedbackRole(kind: FeedbackStateKind): "alert" | "status" {
+  return kind === "error" ? "alert" : "status";
 }
 
 function resolveFocusableElements(target: HTMLElement): HTMLElement[] {
@@ -107,11 +142,16 @@ function useLayerInteraction({
   open,
   returnFocusRef,
   trapFocus = false
-}: LayerInteractionOptions): MutableRefObject<HTMLDivElement | null> {
+}: LayerInteractionOptions): RefCallback<HTMLDivElement> {
   const layerRef = useRef<HTMLDivElement | null>(null);
+  const [layerRefVersion, setLayerRefVersion] = useState(0);
   const layerId = useId();
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const setLayerRef = useCallback((node: HTMLDivElement | null) => {
+    layerRef.current = node;
+    setLayerRefVersion((version) => version + 1);
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -133,7 +173,15 @@ function useLayerInteraction({
     }
 
     const focusableElements = resolveFocusableElements(layerElement);
-    const initialTarget = focusableElements[0] ?? layerElement;
+    const autoFocusTarget = layerElement.querySelector<HTMLElement>(
+      "[data-ukde-initial-focus='true'], [autofocus]"
+    );
+    const initialTarget =
+      autoFocusTarget &&
+      !autoFocusTarget.hasAttribute("disabled") &&
+      autoFocusTarget.getAttribute("aria-hidden") !== "true"
+        ? autoFocusTarget
+        : (focusableElements[0] ?? layerElement);
     initialTarget.focus({ preventScroll: true });
 
     const handleKeyDown = (event: KeyboardEvent | globalThis.KeyboardEvent) => {
@@ -201,13 +249,14 @@ function useLayerInteraction({
     closeOnEscape,
     closeOnOutsideClick,
     layerId,
+    layerRefVersion,
     lockScroll,
     open,
     returnFocusRef,
     trapFocus
   ]);
 
-  return layerRef;
+  return setLayerRef;
 }
 
 function resolveOverlayRoot(): HTMLElement {
@@ -293,6 +342,86 @@ export function BannerAlert(props: InlineAlertProps) {
   );
 }
 
+export interface SkeletonLinesProps extends ClassNameProps {
+  lines?: number;
+}
+
+export function SkeletonLines({ className, lines = 3 }: SkeletonLinesProps) {
+  return (
+    <div aria-hidden className={cx("ukde-skeleton-lines", className)}>
+      {Array.from({ length: Math.max(1, lines) }).map((_, index) => (
+        <span className="ukde-skeleton-line" key={`ukde-skeleton-${index}`} />
+      ))}
+    </div>
+  );
+}
+
+export interface FeedbackStateProps extends ClassNameProps {
+  actions?: ReactNode;
+  children?: ReactNode;
+  description?: ReactNode;
+  eyebrow?: string;
+  kind?: FeedbackStateKind;
+  level?: FeedbackStateLevel;
+  title: string;
+}
+
+export function FeedbackState({
+  actions,
+  children,
+  className,
+  description,
+  eyebrow,
+  kind = "empty",
+  level = "section",
+  title
+}: FeedbackStateProps) {
+  const tone = resolveFeedbackTone(kind);
+  const role = resolveFeedbackRole(kind);
+
+  return (
+    <section
+      aria-busy={kind === "loading" ? "true" : undefined}
+      aria-live={kind === "error" ? "assertive" : "polite"}
+      className={cx("ukde-feedback-state", className)}
+      data-kind={kind}
+      data-level={level}
+      data-tone={tone}
+      role={role}
+    >
+      <div className="ukde-feedback-state-head">
+        {eyebrow ? <p className="ukde-eyebrow">{eyebrow}</p> : null}
+        <h2>{title}</h2>
+      </div>
+      {description ? (
+        <p className="ukde-feedback-state-description">{description}</p>
+      ) : null}
+      {children ? (
+        <div className="ukde-feedback-state-details">{children}</div>
+      ) : null}
+      {actions ? (
+        <div className="ukde-feedback-state-actions">{actions}</div>
+      ) : null}
+    </section>
+  );
+}
+
+export type PageStateProps = Omit<FeedbackStateProps, "level">;
+export type SectionStateProps = Omit<FeedbackStateProps, "level">;
+export type InlineStateProps = Omit<FeedbackStateProps, "level">;
+
+export function PageState(props: PageStateProps) {
+  return <FeedbackState {...props} level="page" />;
+}
+
+export function SectionState(props: SectionStateProps) {
+  return <FeedbackState {...props} level="section" />;
+}
+
+export function InlineState(props: InlineStateProps) {
+  return <FeedbackState {...props} level="inline" />;
+}
+
 export interface BreadcrumbItem {
   href?: string;
   label: string;
@@ -340,6 +469,7 @@ export interface ModalDialogProps extends ClassNameProps {
   footer?: ReactNode;
   onClose: () => void;
   open: boolean;
+  returnFocusRef?: MutableRefObject<HTMLElement | null>;
   title: string;
 }
 
@@ -351,6 +481,7 @@ export function ModalDialog({
   footer,
   onClose,
   open,
+  returnFocusRef,
   title
 }: ModalDialogProps) {
   const titleId = useId();
@@ -359,6 +490,7 @@ export function ModalDialog({
     lockScroll: true,
     onClose,
     open,
+    returnFocusRef,
     trapFocus: true
   });
 
@@ -378,7 +510,7 @@ export function ModalDialog({
           role="dialog"
           tabIndex={-1}
         >
-          <header className="ukde-dialog-head">
+          <div className="ukde-dialog-head">
             <h2 id={titleId}>{title}</h2>
             <button
               aria-label={closeLabel}
@@ -388,7 +520,7 @@ export function ModalDialog({
             >
               Close
             </button>
-          </header>
+          </div>
           {description ? (
             <p className="ukde-muted" id={descriptionId}>
               {description}
@@ -450,7 +582,7 @@ export function Drawer({
           role="dialog"
           tabIndex={-1}
         >
-          <header className="ukde-drawer-head">
+          <div className="ukde-drawer-head">
             <div>
               <h2 id={titleId}>{title}</h2>
               {description ? (
@@ -467,7 +599,7 @@ export function Drawer({
             >
               Close
             </button>
-          </header>
+          </div>
           <div className="ukde-drawer-body">{children}</div>
         </div>
       </div>
@@ -525,6 +657,7 @@ export function MenuFlyout({
   items,
   label
 }: MenuFlyoutProps) {
+  const menuId = useId();
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -586,6 +719,7 @@ export function MenuFlyout({
       data-open={open ? "yes" : "no"}
     >
       <button
+        aria-controls={open ? menuId : undefined}
         aria-expanded={open}
         aria-haspopup="menu"
         className="ukde-button"
@@ -597,6 +731,7 @@ export function MenuFlyout({
       </button>
       {open ? (
         <div
+          id={menuId}
           className="ukde-menu-surface"
           data-align={align}
           onKeyDown={handleMenuKeyDown}
@@ -780,9 +915,13 @@ export interface DataTableProps<T> extends ClassNameProps {
   caption: string;
   columns: DataTableColumn<T>[];
   emptyMessage?: string;
+  emptyTitle?: string;
   errorMessage?: string | null;
+  errorTitle?: string;
   getRowId: (row: T) => string;
   loading?: boolean;
+  loadingMessage?: string;
+  loadingTitle?: string;
   onRowSelect?: (row: T | null) => void;
   pageSize?: number;
   renderRowActions?: (row: T) => ReactNode;
@@ -794,9 +933,13 @@ export function DataTable<T>({
   className,
   columns,
   emptyMessage = "No rows to display.",
+  emptyTitle = "No rows",
   errorMessage = null,
+  errorTitle = "Rows unavailable",
   getRowId,
   loading = false,
+  loadingMessage = "Row data is loading.",
+  loadingTitle = "Loading rows",
   onRowSelect,
   pageSize = 15,
   renderRowActions,
@@ -897,21 +1040,31 @@ export function DataTable<T>({
         </thead>
         <tbody>
           {loading ? (
-            <tr>
+            <tr className="ukde-table-state-row">
               <td colSpan={columns.length + (renderRowActions ? 1 : 0)}>
-                <p className="ukde-muted">Loading rows…</p>
+                <div className="ukde-table-state" data-kind="loading">
+                  <strong>{loadingTitle}</strong>
+                  <p>{loadingMessage}</p>
+                  <SkeletonLines lines={2} />
+                </div>
               </td>
             </tr>
           ) : errorMessage ? (
-            <tr>
+            <tr className="ukde-table-state-row">
               <td colSpan={columns.length + (renderRowActions ? 1 : 0)}>
-                <p className="ukde-muted">{errorMessage}</p>
+                <div className="ukde-table-state" data-kind="error">
+                  <strong>{errorTitle}</strong>
+                  <p>{errorMessage}</p>
+                </div>
               </td>
             </tr>
           ) : pagedRows.length === 0 ? (
-            <tr>
+            <tr className="ukde-table-state-row">
               <td colSpan={columns.length + (renderRowActions ? 1 : 0)}>
-                <p className="ukde-muted">{emptyMessage}</p>
+                <div className="ukde-table-state" data-kind="empty">
+                  <strong>{emptyTitle}</strong>
+                  <p>{emptyMessage}</p>
+                </div>
               </td>
             </tr>
           ) : (

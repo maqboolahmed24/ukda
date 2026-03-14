@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ProjectSectionHeader } from "../../../../components/project-section-header";
 import { requireCurrentSession } from "../../../../lib/auth/session";
 import { getProjectWorkspace } from "../../../../lib/projects";
+import { loginPath, projectsPath, withQuery } from "../../../../lib/routes";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +20,9 @@ export default async function ProjectWorkspaceLayout({
 
   if (!workspaceResult.ok || !workspaceResult.data) {
     if (workspaceResult.status === 401) {
-      redirect("/login");
+      redirect(loginPath);
     }
-    redirect("/projects?error=project-access");
+    redirect(withQuery(projectsPath, { error: "project-access" }));
   }
 
   const workspace = workspaceResult.data;

@@ -67,6 +67,8 @@ Preserve or reconcile:
 - `controlled/derived/{project_id}/{document_id}/layout/{run_id}/page/{page_index}/context/{line_id}.json`
 - `controlled/derived/{project_id}/{document_id}/layout/{run_id}/manifest.json`
 
+Region-crop path requirements apply when optional region crops are generated.
+
 ### Required derived artefact table
 Implement or reconcile `layout_line_artifacts`:
 - `run_id`
@@ -253,7 +255,7 @@ Before finishing:
 ## Acceptance criteria
 This prompt is complete only if all are true:
 - stable line and region IDs are real
-- page thumbnails, line crops, and context windows are real
+- page thumbnails, line crops, context windows, and optional region crops (when generated) are real
 - `layout_line_artifacts` is real
 - downstream consumers can resolve artefacts by `layout_run_id`, `page_number`, and `line_id` through a documented typed contract
 - the controlled secure-environment posture remains intact

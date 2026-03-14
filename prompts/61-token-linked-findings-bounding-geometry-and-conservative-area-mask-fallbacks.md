@@ -18,9 +18,9 @@ The actual product source of truth is the extracted `/phases` directory in repo 
 
 ## Source-of-truth rule
 - The canonical truth for this prompt is:
-  1. current repository state as the implementation reality to reconcile with
+  1. the precise `/phases` files listed above
   2. this prompt
-  3. the precise `/phases` files listed above
+  3. current repository state for reconciling implementation details
 - Any other repo files are context only.
 - Use current official docs for implementation mechanics only.
 
@@ -83,6 +83,18 @@ Rules:
 - when tokenization cannot be trusted for a sensitive handwritten area, conservative area masking is allowed with explicit geometry and rationale
 - no downstream system may assume exact token references exist when the system has explicitly fallen back to area-mask geometry
 
+### Required RBAC
+- area-mask create/revise actions are limited to `REVIEWER`, `PROJECT_LEAD`, and `ADMIN`
+- `AUDITOR` is read-only in this phase and cannot create or revise area masks
+- `RESEARCHER` does not perform area-mask writes in this phase
+
+### Required APIs
+Use or refine:
+- `GET /projects/{projectId}/documents/{documentId}/redaction-runs/{runId}/pages/{pageId}/findings`
+- `GET /projects/{projectId}/documents/{documentId}/redaction-runs/{runId}/pages/{pageId}/findings/{findingId}`
+- `POST /projects/{projectId}/documents/{documentId}/redaction-runs/{runId}/pages/{pageId}/area-masks`
+- `PATCH /projects/{projectId}/documents/{documentId}/redaction-runs/{runId}/area-masks/{areaMaskId}` (append-only revision semantics; no in-place geometry mutation)
+
 ## Implementation scope
 
 ### 1. Canonical token-linked finding geometry
@@ -125,8 +137,8 @@ Requirements:
 - finding projection moves to the new active mask revision
 - previous masks remain readable and auditable
 
-### 5. Finding-detail and page-level read APIs
-Implement or refine the canonical read surfaces needed for privacy workspace review.
+### 5. Finding-detail, page-level reads, and area-mask-write APIs
+Implement or refine the canonical read and area-mask-write surfaces needed for privacy workspace review.
 
 Prefer extending existing page-finding reads. At minimum ensure the canonical APIs expose:
 - token refs
@@ -135,8 +147,7 @@ Prefer extending existing page-finding reads. At minimum ensure the canonical AP
 - provenance showing whether the finding is token-linked or area-mask-backed
 - typed geometry payloads that the workspace can consume directly
 
-If needed, add the closest coherent equivalent of:
-- `GET /projects/{projectId}/documents/{documentId}/redaction-runs/{runId}/pages/{pageId}/findings/{findingId}`
+The finding-detail endpoint above is required and must not be treated as optional.
 
 ### 6. Workspace integration
 Refine the privacy workspace to surface the new geometry truth.
@@ -237,7 +248,7 @@ This prompt is complete only if all are true:
 - conservative area-mask fallback is real
 - area-mask revisions are append-only
 - the privacy workspace can present these findings truthfully
-- the repo is ready for the masking engine without geometry-contract churn
+- geometry and area-mask contracts are documented and validated by contract tests used by masking pipeline consumers
 - `/phases` remains untouched
 
 ## Final response format

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { resolveApiOrigins } from "../../../lib/bootstrap-content";
+import { revalidateAfterMutation } from "../../../lib/data/invalidation";
 import {
   getCsrfCookieName,
   getSessionCookieName
@@ -65,5 +66,6 @@ export async function POST(request: NextRequest) {
     return redirectResponse;
   }
 
+  revalidateAfterMutation("auth.logout");
   return redirectResponse;
 }
