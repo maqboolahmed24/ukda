@@ -91,11 +91,24 @@ export async function buildApiTraceHeaders(): Promise<Record<string, string>> {
 
 export function logServerDiagnostic(
   event: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  options?: {
+    level?: "error" | "warn" | "info";
+  }
 ): void {
   const message = {
     event,
     payload: sanitizeLogPayload(payload)
   };
-  console.error(`[ukde.telemetry] ${JSON.stringify(message)}`);
+  const serialized = `[ukde.telemetry] ${JSON.stringify(message)}`;
+  switch (options?.level ?? "error") {
+    case "info":
+      console.info(serialized);
+      return;
+    case "warn":
+      console.warn(serialized);
+      return;
+    default:
+      console.error(serialized);
+  }
 }

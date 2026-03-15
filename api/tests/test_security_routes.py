@@ -34,7 +34,7 @@ class FakeSecurityStatusService:
             last_backup_at="2026-03-12T02:00:00+00:00",
             reduced_motion_preference_state="UNAVAILABLE_SERVER_SIDE",
             reduced_transparency_preference_state="UNAVAILABLE_SERVER_SIDE",
-            export_gateway_state="DISABLED_PHASE0_STUB",
+            export_gateway_state="ENFORCED_GATEWAY_ONLY",
         )
 
 
@@ -86,4 +86,3 @@ def test_security_status_denies_researcher() -> None:
 
     assert response.status_code == 403
     assert any(event.get("event_type") == "ACCESS_DENIED" for event in spy.recorded)
-

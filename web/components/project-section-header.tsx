@@ -16,9 +16,23 @@ import {
   projectDocumentPreprocessingQualityPath,
   projectDocumentPreprocessingRunPath,
   projectDocumentViewerPath,
+  projectDerivativeIndexPath,
+  projectEntitiesPath,
+  projectEntityPath,
+  projectEntityIndexPath,
+  projectIndexesPath,
   projectModelAssignmentDatasetsPath,
   projectModelAssignmentPath,
   projectModelAssignmentsPath,
+  projectPoliciesActivePath,
+  projectPoliciesPath,
+  projectPolicyComparePath,
+  projectPolicyPath,
+  projectPseudonymRegistryEntryEventsPath,
+  projectPseudonymRegistryEntryPath,
+  projectPseudonymRegistryPath,
+  projectSearchPath,
+  projectSearchIndexPath,
   projectDocumentsPath,
   projectJobsPath,
   projectOverviewPath
@@ -47,6 +61,31 @@ const SECTION_MAP: Record<string, { title: string; summary: string }> = {
     title: "Model assignments",
     summary:
       "Stable role-map assignments for transcription primary, fallback, and assist model flows."
+  },
+  policies: {
+    title: "Policies",
+    summary:
+      "Phase 7 policy lineage, validation, activation, and append-only policy-event history."
+  },
+  "pseudonym-registry": {
+    title: "Pseudonym registry",
+    summary:
+      "Controlled-only deterministic alias registry with append-only lineage and reuse events."
+  },
+  indexes: {
+    title: "Indexes",
+    summary:
+      "Versioned search, entity, and derivative index lineage with explicit active project pointers."
+  },
+  search: {
+    title: "Search",
+    summary:
+      "Controlled full-text search with token-anchored provenance and exact fallback context."
+  },
+  entities: {
+    title: "Entities",
+    summary:
+      "Controlled entity discovery with active-index lineage, confidence summaries, and occurrence provenance."
   },
   "export-candidates": {
     title: "Export candidates",
@@ -90,6 +129,9 @@ export function ProjectSectionHeader({ projectName }: { projectName: string }) {
   ).value;
   const compareBaseRunId = searchParams.get("baseRunId") ?? undefined;
   const compareCandidateRunId = searchParams.get("candidateRunId") ?? undefined;
+  const policyCompareAgainst = searchParams.get("against") ?? undefined;
+  const policyCompareAgainstBaseline =
+    searchParams.get("againstBaselineSnapshotId") ?? undefined;
   const layoutRunId = searchParams.get("runId") ?? undefined;
   const layoutPageRaw = searchParams.get("page");
   const layoutPage =
@@ -340,6 +382,130 @@ export function ProjectSectionHeader({ projectName }: { projectName: string }) {
         });
       }
     }
+  } else if (sectionKey === "policies") {
+    breadcrumbs.push({
+      href: projectPoliciesPath(projectId),
+      label: SECTION_MAP.policies.title
+    });
+    if (sectionDetail === "active") {
+      title = "Active policy";
+      summary =
+        "Projected ACTIVE policy for this project from project_policy_projections.";
+      breadcrumbs.push({
+        href: projectPoliciesActivePath(projectId),
+        label: "Active"
+      });
+    } else if (sectionDetail) {
+      title = `Policy ${sectionDetail}`;
+      summary =
+        "Policy revision metadata, validation state, and lifecycle actions.";
+      breadcrumbs.push({
+        href: projectPolicyPath(projectId, sectionDetail),
+        label: `Policy ${sectionDetail}`
+      });
+      if (sectionLeaf === "compare") {
+        title = "Policy compare";
+        summary =
+          "Deterministic rule diff against exactly one comparison target.";
+        breadcrumbs.push({
+          href: projectPolicyComparePath(projectId, sectionDetail, {
+            against: policyCompareAgainst,
+            againstBaselineSnapshotId: policyCompareAgainstBaseline
+          }),
+          label: "Compare"
+        });
+      }
+    }
+  } else if (sectionKey === "pseudonym-registry") {
+    breadcrumbs.push({
+      href: projectPseudonymRegistryPath(projectId),
+      label: SECTION_MAP["pseudonym-registry"].title
+    });
+    if (sectionDetail) {
+      title = `Registry entry ${sectionDetail}`;
+      summary =
+        "Entry detail for alias lineage, fingerprint scope, and controlled-only governance context.";
+      breadcrumbs.push({
+        href: projectPseudonymRegistryEntryPath(projectId, sectionDetail),
+        label: `Entry ${sectionDetail}`
+      });
+      if (sectionLeaf === "events") {
+        title = "Registry entry events";
+        summary =
+          "Append-only ENTRY_CREATED/ENTRY_REUSED/ENTRY_RETIRED timeline for this alias lineage.";
+        breadcrumbs.push({
+          href: projectPseudonymRegistryEntryEventsPath(projectId, sectionDetail),
+          label: "Events"
+        });
+      }
+    }
+  } else if (sectionKey === "indexes") {
+    breadcrumbs.push({
+      href: projectIndexesPath(projectId),
+      label: SECTION_MAP.indexes.title
+    });
+    if (sectionDetail === "search" && sectionLeaf) {
+      title = `Search index ${sectionLeaf}`;
+      summary =
+        "Lifecycle state, dedupe lineage, and activation metadata for one search index generation.";
+      breadcrumbs.push({
+        href: projectSearchIndexPath(projectId, sectionLeaf),
+        label: `Search ${sectionLeaf}`
+      });
+    } else if (sectionDetail === "entity" && sectionLeaf) {
+      title = `Entity index ${sectionLeaf}`;
+      summary =
+        "Lifecycle state, dedupe lineage, and activation metadata for one entity index generation.";
+      breadcrumbs.push({
+        href: projectEntityIndexPath(projectId, sectionLeaf),
+        label: `Entity ${sectionLeaf}`
+      });
+    } else if (sectionDetail === "derivative" && sectionLeaf) {
+      title = `Derivative index ${sectionLeaf}`;
+      summary =
+        "Lifecycle state, dedupe lineage, and activation metadata for one derivative index generation.";
+      breadcrumbs.push({
+        href: projectDerivativeIndexPath(projectId, sectionLeaf),
+        label: `Derivative ${sectionLeaf}`
+      });
+    }
+    secondaryActions = [
+      {
+        href: projectIndexesPath(projectId),
+        label: "Back to indexes"
+      }
+    ];
+  } else if (sectionKey === "search") {
+    breadcrumbs.push({
+      href: projectSearchPath(projectId),
+      label: SECTION_MAP.search.title
+    });
+    secondaryActions = [
+      {
+        href: projectSearchPath(projectId),
+        label: "Back to search"
+      }
+    ];
+  } else if (sectionKey === "entities") {
+    breadcrumbs.push({
+      href: projectEntitiesPath(projectId),
+      label: SECTION_MAP.entities.title
+    });
+    if (sectionDetail) {
+      title = `Entity ${sectionDetail}`;
+      summary =
+        "Entity detail with canonical value, confidence summary, and provenance-rich occurrence links.";
+      breadcrumbs.push({
+        href: projectEntityPath(projectId, sectionDetail),
+        label: `Entity ${sectionDetail}`
+      });
+    }
+    secondaryActions = [
+      {
+        href: projectEntitiesPath(projectId),
+        label: "Back to entities"
+      }
+    ];
   } else if (sectionKey === "settings") {
     breadcrumbs.push({ label: section.title });
   } else {

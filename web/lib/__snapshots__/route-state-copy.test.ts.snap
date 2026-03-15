@@ -39,6 +39,12 @@ exports[`route state copy contract > keeps route-level copy stable 1`] = `
       "summary": "Document route content failed while project shell context stayed mounted.",
       "title": "Document route failed",
     },
+    "projectEntities": {
+      "eyebrow": "Route boundary",
+      "retryLabel": "Retry route",
+      "summary": "Entity discovery content failed while project shell context stayed mounted.",
+      "title": "Entity discovery route failed",
+    },
     "projectViewer": {
       "eyebrow": "Route boundary",
       "retryLabel": "Retry route",
@@ -87,6 +93,16 @@ exports[`route state copy contract > keeps route-level copy stable 1`] = `
       "eyebrow": "Loading documents route",
       "summary": "Document routes preserve project ancestry while data loads.",
       "title": "Preparing document surface",
+    },
+    "projectEntities": {
+      "eyebrow": "Loading entities route",
+      "summary": "Entity list, filters, and occurrence context remain stable while active index data resolves.",
+      "title": "Preparing entity discovery",
+    },
+    "projectSearch": {
+      "eyebrow": "Loading search route",
+      "summary": "Search filters and result regions remain stable while query data resolves.",
+      "title": "Preparing project search",
     },
     "projectViewer": {
       "eyebrow": "Loading viewer route",

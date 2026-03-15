@@ -85,7 +85,7 @@ class SecurityStatusService:
                 last_backup_at=self._settings.security_last_backup_at,
                 reduced_motion_preference_state="UNAVAILABLE_SERVER_SIDE",
                 reduced_transparency_preference_state="UNAVAILABLE_SERVER_SIDE",
-                export_gateway_state="DISABLED_PHASE0_STUB",
+                export_gateway_state="ENFORCED_GATEWAY_ONLY",
             )
 
 

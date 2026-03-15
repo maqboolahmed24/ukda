@@ -17,7 +17,15 @@ The active build posture is web-first. Product behavior, governance rules, and l
 - Audit event model and integrity baseline: [`/docs/architecture/audit-logging-and-integrity.md`](./docs/architecture/audit-logging-and-integrity.md)
 - Observability baseline and operations surfaces: [`/docs/architecture/observability-and-operations.md`](./docs/architecture/observability-and-operations.md)
 - Secure-setting enforcement baseline: [`/docs/architecture/secure-setting-enforcement-baseline.md`](./docs/architecture/secure-setting-enforcement-baseline.md)
-- Export gateway stub and no-egress posture: [`/docs/architecture/export-gateway-stub-and-no-egress-posture.md`](./docs/architecture/export-gateway-stub-and-no-egress-posture.md)
+- Export request/release-pack/revision lineage contract: [`/docs/architecture/export-request-release-pack-and-lineage-contract.md`](./docs/architecture/export-request-release-pack-and-lineage-contract.md)
+- Export review dashboard/SLA/decision workflow contract: [`/docs/architecture/export-review-dashboard-sla-and-decision-workflow-contract.md`](./docs/architecture/export-review-dashboard-sla-and-decision-workflow-contract.md)
+- Export operations, retention, and resubmission handoff contract: [`/docs/architecture/export-operations-retention-and-resubmission-handoff-contract.md`](./docs/architecture/export-operations-retention-and-resubmission-handoff-contract.md)
+- Export approval dual-control/rationale/immutable-history contract: [`/docs/architecture/export-approval-dual-control-rationale-and-immutable-history-contract.md`](./docs/architecture/export-approval-dual-control-rationale-and-immutable-history-contract.md)
+- Export gateway no-bypass and receipt-lineage contract: [`/docs/architecture/export-gateway-no-bypass-and-receipt-lineage-contract.md`](./docs/architecture/export-gateway-no-bypass-and-receipt-lineage-contract.md)
+- Export release-pack validation/audit completeness/egress hardening contract: [`/docs/architecture/export-release-pack-validation-audit-completeness-and-egress-hardening-contract.md`](./docs/architecture/export-release-pack-validation-audit-completeness-and-egress-hardening-contract.md)
+- Bundle verification tooling and proof viewer contract: [`/docs/architecture/bundle-verification-tooling-and-proof-viewer-contract.md`](./docs/architecture/bundle-verification-tooling-and-proof-viewer-contract.md)
+- Provenance replay and bundle validation recovery contract: [`/docs/architecture/provenance-replay-and-bundle-validation-recovery-contract.md`](./docs/architecture/provenance-replay-and-bundle-validation-recovery-contract.md)
+- Export gateway Phase 0 stub historical note: [`/docs/architecture/export-gateway-stub-and-no-egress-posture.md`](./docs/architecture/export-gateway-stub-and-no-egress-posture.md)
 - Telemetry privacy rules: [`/docs/architecture/telemetry-privacy-rules.md`](./docs/architecture/telemetry-privacy-rules.md)
 - Jobs lifecycle and worker runtime: [`/docs/architecture/jobs-framework-and-worker-runtime.md`](./docs/architecture/jobs-framework-and-worker-runtime.md)
 - Project workspaces and RBAC boundaries: [`/docs/architecture/project-workspaces-and-rbac.md`](./docs/architecture/project-workspaces-and-rbac.md)
@@ -54,7 +62,19 @@ The active build posture is web-first. Product behavior, governance rules, and l
 - Layout metrics/warnings/state-accuracy contract: [`/docs/architecture/layout-segmentation-metrics-warnings-and-state-accuracy-contract.md`](./docs/architecture/layout-segmentation-metrics-warnings-and-state-accuracy-contract.md)
 - Layout read-only workspace contract: [`/docs/architecture/layout-read-only-workspace-contract.md`](./docs/architecture/layout-read-only-workspace-contract.md)
 - Layout overlay interaction and inspector sync: [`/docs/architecture/layout-overlay-interaction-and-inspector-sync.md`](./docs/architecture/layout-overlay-interaction-and-inspector-sync.md)
+- Privacy regression and activation-blocker contract: [`/docs/architecture/privacy-regression-and-activation-blockers.md`](./docs/architecture/privacy-regression-and-activation-blockers.md)
+- Governance artefact readiness and event model: [`/docs/architecture/governance-artefact-readiness-and-event-model.md`](./docs/architecture/governance-artefact-readiness-and-event-model.md)
+- Export candidate pinned-lineage contract: [`/docs/architecture/export-candidate-snapshot-pinned-lineage-contract.md`](./docs/architecture/export-candidate-snapshot-pinned-lineage-contract.md)
 - Approved-model catalog and role-map contract: [`/docs/architecture/approved-model-catalog-and-role-map-contract.md`](./docs/architecture/approved-model-catalog-and-role-map-contract.md)
+- Policy model versioning and activation contract: [`/docs/architecture/policy-model-versioning-and-activation-contract.md`](./docs/architecture/policy-model-versioning-and-activation-contract.md)
+- Policy compare and baseline-seeding contract: [`/docs/architecture/policy-compare-and-baseline-seeding-contract.md`](./docs/architecture/policy-compare-and-baseline-seeding-contract.md)
+- Policy reruns, rollback, and activation gates contract: [`/docs/architecture/policy-reruns-rollback-and-activation-gates-contract.md`](./docs/architecture/policy-reruns-rollback-and-activation-gates-contract.md)
+- Policy lineage, usage, and explainability contract: [`/docs/architecture/policy-lineage-usage-and-explainability-contract.md`](./docs/architecture/policy-lineage-usage-and-explainability-contract.md)
+- Discovery index model and rebuild lifecycle contract: [`/docs/architecture/discovery-index-model-and-rebuild-lifecycle-contract.md`](./docs/architecture/discovery-index-model-and-rebuild-lifecycle-contract.md)
+- Controlled full-text search and hit provenance contract: [`/docs/architecture/controlled-full-text-search-and-hit-provenance-contract.md`](./docs/architecture/controlled-full-text-search-and-hit-provenance-contract.md)
+- Search UX, result cards, jump, and highlight contract: [`/docs/architecture/search-ux-result-cards-jump-and-highlight-contract.md`](./docs/architecture/search-ux-result-cards-jump-and-highlight-contract.md)
+- Pseudonym registry schema and event model: [`/docs/architecture/pseudonym-registry-schema-and-event-model.md`](./docs/architecture/pseudonym-registry-schema-and-event-model.md)
+- Pseudonym registry controlled-access and lineage contract: [`/docs/architecture/pseudonym-registry-controlled-access-and-lineage-contract.md`](./docs/architecture/pseudonym-registry-controlled-access-and-lineage-contract.md)
 - Transcription route family and workspace contract: [`/docs/architecture/transcription-route-family-and-workspace-contract.md`](./docs/architecture/transcription-route-family-and-workspace-contract.md)
 - Transcription workspace UX contract: [`/docs/architecture/transcription-workspace-ux-contract.md`](./docs/architecture/transcription-workspace-ux-contract.md)
 - Transcription run/projection model: [`/docs/architecture/transcription-run-and-projection-model.md`](./docs/architecture/transcription-run-and-projection-model.md)
@@ -78,6 +98,8 @@ The active build posture is web-first. Product behavior, governance rules, and l
 - Local secure development workflow: [`/docs/development/local-secure-dev.md`](./docs/development/local-secure-dev.md)
 - Browser regression workflow: [`/docs/development/browser-regression-testing.md`](./docs/development/browser-regression-testing.md)
 - Deployment and operations runbooks: [`/docs/runbooks/deployment-runbook.md`](./docs/runbooks/deployment-runbook.md), [`/docs/runbooks/key-rotation-runbook.md`](./docs/runbooks/key-rotation-runbook.md), [`/docs/runbooks/backup-restore-runbook.md`](./docs/runbooks/backup-restore-runbook.md)
+- Privacy regression triage runbook: [`/docs/runbooks/privacy-regression-triage.md`](./docs/runbooks/privacy-regression-triage.md)
+- Provenance replay drill and recovery runbook: [`/docs/runbooks/provenance-replay-drill-and-bundle-validation-recovery.md`](./docs/runbooks/provenance-replay-drill-and-bundle-validation-recovery.md)
 - Model service-map foundation: [`/MODEL_STACK.md`](./MODEL_STACK.md)
 
 ## Current Topology
@@ -168,11 +190,25 @@ source .venv/bin/activate
 ukde-worker run-once
 ```
 
+Run offline bundle verification from bundled proof material:
+
+```bash
+source .venv/bin/activate
+python -m app.exports.bundle_verify_cli /path/to/deposit_bundle.zip --expected-sha256 <bundle_sha256>
+```
+
+Run deterministic provenance replay drill from pinned bundle lineage:
+
+```bash
+source .venv/bin/activate
+ukde-provenance-replay <project_id> <export_request_id> <bundle_id> --profile <profile_id>
+```
+
 The entry resolver route `/` is auth-aware: unauthenticated users go to `/login`, authenticated users go to `/projects`.
 The operational diagnostic route is `/health` and reads live status from the API.
 The safe error route is `/error`.
-Project workspace routes include `/projects/:projectId/overview`, `/projects/:projectId/documents`, `/projects/:projectId/documents/import`, `/projects/:projectId/documents/:documentId`, `/projects/:projectId/documents/:documentId/ingest-status`, `/projects/:projectId/documents/:documentId/viewer?page={pageNumber}`, `/projects/:projectId/documents/:documentId/preprocessing`, `/projects/:projectId/documents/:documentId/layout`, `/projects/:projectId/documents/:documentId/layout/runs/:runId`, `/projects/:projectId/documents/:documentId/layout/workspace?page={pageNumber}&runId={runId}`, `/projects/:projectId/jobs`, `/projects/:projectId/jobs/:jobId`, `/projects/:projectId/activity`, and permission-scoped `/projects/:projectId/settings`.
-Phase 0 export-gateway stubs are visible at `/projects/:projectId/export-candidates`, `/projects/:projectId/export-requests`, and `/projects/:projectId/export-review` and remain intentionally disabled.
+Project workspace routes include `/projects/:projectId/overview`, `/projects/:projectId/documents`, `/projects/:projectId/documents/import`, `/projects/:projectId/documents/:documentId`, `/projects/:projectId/documents/:documentId/ingest-status`, `/projects/:projectId/documents/:documentId/viewer?page={pageNumber}`, `/projects/:projectId/documents/:documentId/preprocessing`, `/projects/:projectId/documents/:documentId/layout`, `/projects/:projectId/documents/:documentId/layout/runs/:runId`, `/projects/:projectId/documents/:documentId/layout/workspace?page={pageNumber}&runId={runId}`, `/projects/:projectId/search`, `/projects/:projectId/policies`, `/projects/:projectId/policies/active`, `/projects/:projectId/policies/:policyId`, `/projects/:projectId/policies/:policyId/compare?against={otherPolicyId}`, `/projects/:projectId/policies/:policyId/compare?againstBaselineSnapshotId={baselineSnapshotId}`, `/projects/:projectId/indexes`, `/projects/:projectId/indexes/search/:indexId`, `/projects/:projectId/indexes/entity/:indexId`, `/projects/:projectId/indexes/derivative/:indexId`, `/projects/:projectId/pseudonym-registry`, `/projects/:projectId/pseudonym-registry/:entryId`, `/projects/:projectId/pseudonym-registry/:entryId/events`, `/projects/:projectId/jobs`, `/projects/:projectId/jobs/:jobId`, `/projects/:projectId/activity`, and permission-scoped `/projects/:projectId/settings`.
+Phase 8/9 requester and reviewer routes include `/projects/:projectId/export-candidates`, `/projects/:projectId/export-requests`, `/projects/:projectId/export-review`, receipt read surfaces under `/projects/:projectId/export-requests/:exportRequestId/{receipt|receipts}`, provenance surfaces under `/projects/:projectId/export-requests/:exportRequestId/provenance` plus `/projects/:projectId/export-requests/:exportRequestId/provenance/{proof|proofs}`, and deposit-bundle surfaces under `/projects/:projectId/export-requests/:exportRequestId/bundles` with detail/status/events/verification/validation by `bundleId` (`/verification`, `/verification/status`, `/verification-runs`, `/verification/{verificationRunId}`, `/verification/{verificationRunId}/status`, `/validation`, `/validation-status?profile=...`, `/validation-runs?profile=...`, `/validation-runs/{validationRunId}`, `/validation-runs/{validationRunId}/status`). Review-stage mutations remain optimistic-lock protected, receipt attachment remains internal gateway-only, provenance-proof regeneration is `ADMIN`-only, bundle verification start/cancel is `ADMIN`-only, bundle validation start/cancel is `ADMIN`-only, and `CONTROLLED_EVIDENCE` bundle build/read plus verification/validation reads are restricted to `ADMIN` and read-only `AUDITOR`.
 Audit routes include `/admin/audit`, `/admin/audit/:eventId`, and current-user `/activity`.
 Operations routes include `/admin/operations`, `/admin/operations/export-status`, `/admin/operations/slos`, `/admin/operations/alerts`, and `/admin/operations/timelines`.
 Security route includes `/admin/security`.
@@ -210,6 +246,7 @@ pnpm typecheck:web
 pnpm test:browser
 pnpm test:browser --project=chromium --project=firefox-phase1 --project=webkit-phase1 --grep @phase1 --workers=1
 pnpm test:browser --project=chromium --grep @preprocess --workers=1
+pnpm test:browser --project=chromium --grep @privacy --workers=1
 pnpm build:web
 pnpm smoke:health
 ```
@@ -219,6 +256,9 @@ Validate the Python services:
 ```bash
 source .venv/bin/activate
 make test-preprocess-gold
+make test-privacy-regression
+make test-governance-integrity
+make test-export-hardening
 python -m pytest api/tests
 python -m pytest workers/tests
 ```

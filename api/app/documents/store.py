@@ -1,6 +1,7 @@
 import hashlib
 import json
 from datetime import datetime, timezone
+from typing import Mapping, Sequence
 
 import psycopg
 from psycopg.rows import dict_row
@@ -21,6 +22,8 @@ from app.documents.models import (
     LineTranscriptionResultRecord,
     PageTranscriptionResultRecord,
     TokenAnchorStatus,
+    TranscriptionRescueResolutionRecord,
+    TranscriptionRescueResolutionStatus,
     TranscriptionCompareDecision,
     TranscriptionCompareDecisionEventRecord,
     TranscriptionCompareDecisionRecord,
@@ -34,6 +37,32 @@ from app.documents.models import (
     TranscriptionRunRecord,
     TranscriptionRunStatus,
     TranscriptionTokenSourceKind,
+    RedactionAreaMaskRecord,
+    RedactionDecisionActionType,
+    RedactionDecisionEventRecord,
+    RedactionDecisionStatus,
+    RedactionFindingBasisPrimary,
+    RedactionFindingRecord,
+    RedactionFindingSpanBasisKind,
+    RedactionOutputRecord,
+    RedactionOutputStatus,
+    RedactionOverrideRiskClassification,
+    RedactionPageReviewEventRecord,
+    RedactionPageReviewEventType,
+    RedactionPageReviewRecord,
+    RedactionPageReviewStatus,
+    RedactionRunKind,
+    RedactionRunOutputEventRecord,
+    RedactionRunOutputEventType,
+    RedactionRunOutputRecord,
+    RedactionRunRecord,
+    RedactionRunReviewEventRecord,
+    RedactionRunReviewEventType,
+    RedactionRunReviewRecord,
+    RedactionRunReviewStatus,
+    RedactionRunStatus,
+    RedactionSecondReviewStatus,
+    DocumentRedactionProjectionRecord,
     TranscriptVersionRecord,
     TranscriptVariantKind,
     TranscriptVariantLayerRecord,
@@ -88,6 +117,12 @@ from app.documents.preprocessing import (
     list_preprocess_profile_definitions,
     serialize_params_canonical,
 )
+from app.documents.redaction_geometry import (
+    RedactionGeometryValidationError,
+    normalize_area_mask_geometry,
+    normalize_token_refs_and_bbox_refs,
+)
+from app.documents.redaction_preview import canonical_preview_manifest_sha256
 from app.projects.store import ProjectStore
 
 DOCUMENT_SCHEMA_STATEMENTS = (
@@ -807,6 +842,311 @@ DOCUMENT_SCHEMA_STATEMENTS = (
       ON document_transcription_projections(project_id, document_id)
     """,
     """
+    CREATE TABLE IF NOT EXISTS redaction_runs (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+      input_transcription_run_id TEXT NOT NULL REFERENCES transcription_runs(id),
+      input_layout_run_id TEXT REFERENCES layout_runs(id),
+      run_kind TEXT NOT NULL CHECK (
+        run_kind IN ('BASELINE', 'POLICY_RERUN')
+      ),
+      supersedes_redaction_run_id TEXT REFERENCES redaction_runs(id),
+      superseded_by_redaction_run_id TEXT REFERENCES redaction_runs(id),
+      policy_snapshot_id TEXT NOT NULL,
+      policy_snapshot_json JSONB NOT NULL,
+      policy_snapshot_hash TEXT NOT NULL,
+      policy_id TEXT,
+      policy_family_id TEXT,
+      policy_version TEXT,
+      detectors_version TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (
+        status IN ('QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELED')
+      ),
+      created_by TEXT NOT NULL REFERENCES users(id),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      started_at TIMESTAMPTZ,
+      finished_at TIMESTAMPTZ,
+      failure_reason TEXT
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_redaction_runs_scope_created
+      ON redaction_runs(project_id, document_id, created_at DESC, id DESC)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS redaction_findings (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL REFERENCES redaction_runs(id) ON DELETE CASCADE,
+      page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+      line_id TEXT,
+      category TEXT NOT NULL,
+      span_start INTEGER,
+      span_end INTEGER,
+      span_basis_kind TEXT NOT NULL CHECK (
+        span_basis_kind IN ('LINE_TEXT', 'PAGE_WINDOW_TEXT', 'NONE')
+      ),
+      span_basis_ref TEXT,
+      confidence DOUBLE PRECISION CHECK (
+        confidence IS NULL OR (confidence >= 0 AND confidence <= 1)
+      ),
+      basis_primary TEXT NOT NULL CHECK (
+        basis_primary IN ('RULE', 'NER', 'HEURISTIC')
+      ),
+      basis_secondary_json JSONB,
+      assist_explanation_key TEXT,
+      assist_explanation_sha256 TEXT,
+      bbox_refs JSONB NOT NULL DEFAULT '{}'::jsonb,
+      token_refs_json JSONB,
+      area_mask_id TEXT,
+      decision_status TEXT NOT NULL CHECK (
+        decision_status IN (
+          'AUTO_APPLIED',
+          'NEEDS_REVIEW',
+          'APPROVED',
+          'OVERRIDDEN',
+          'FALSE_POSITIVE'
+        )
+      ),
+      override_risk_classification TEXT CHECK (
+        override_risk_classification IS NULL
+        OR override_risk_classification IN ('STANDARD', 'HIGH')
+      ),
+      override_risk_reason_codes_json JSONB,
+      decision_by TEXT REFERENCES users(id),
+      decision_at TIMESTAMPTZ,
+      decision_reason TEXT,
+      decision_etag TEXT NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_redaction_findings_run_page
+      ON redaction_findings(run_id, page_id, category, decision_status)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS redaction_area_masks (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL REFERENCES redaction_runs(id) ON DELETE CASCADE,
+      page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+      geometry_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+      mask_reason TEXT NOT NULL,
+      version_etag TEXT NOT NULL,
+      supersedes_area_mask_id TEXT REFERENCES redaction_area_masks(id),
+      superseded_by_area_mask_id TEXT REFERENCES redaction_area_masks(id),
+      created_by TEXT NOT NULL REFERENCES users(id),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_redaction_area_masks_run_page
+      ON redaction_area_masks(run_id, page_id, created_at DESC)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS redaction_decision_events (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL REFERENCES redaction_runs(id) ON DELETE CASCADE,
+      page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+      finding_id TEXT NOT NULL REFERENCES redaction_findings(id) ON DELETE CASCADE,
+      from_decision_status TEXT CHECK (
+        from_decision_status IS NULL
+        OR from_decision_status IN (
+          'AUTO_APPLIED',
+          'NEEDS_REVIEW',
+          'APPROVED',
+          'OVERRIDDEN',
+          'FALSE_POSITIVE'
+        )
+      ),
+      to_decision_status TEXT NOT NULL CHECK (
+        to_decision_status IN (
+          'AUTO_APPLIED',
+          'NEEDS_REVIEW',
+          'APPROVED',
+          'OVERRIDDEN',
+          'FALSE_POSITIVE'
+        )
+      ),
+      action_type TEXT NOT NULL CHECK (
+        action_type IN ('MASK', 'PSEUDONYMIZE', 'GENERALIZE')
+      ),
+      area_mask_id TEXT REFERENCES redaction_area_masks(id),
+      actor_user_id TEXT NOT NULL REFERENCES users(id),
+      reason TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_redaction_decision_events_scope
+      ON redaction_decision_events(run_id, page_id, created_at DESC, id DESC)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS redaction_page_reviews (
+      run_id TEXT NOT NULL REFERENCES redaction_runs(id) ON DELETE CASCADE,
+      page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+      review_status TEXT NOT NULL CHECK (
+        review_status IN ('NOT_STARTED', 'IN_REVIEW', 'APPROVED', 'CHANGES_REQUESTED')
+      ),
+      review_etag TEXT NOT NULL,
+      first_reviewed_by TEXT REFERENCES users(id),
+      first_reviewed_at TIMESTAMPTZ,
+      requires_second_review BOOLEAN NOT NULL DEFAULT FALSE,
+      second_review_status TEXT NOT NULL CHECK (
+        second_review_status IN ('NOT_REQUIRED', 'PENDING', 'APPROVED', 'CHANGES_REQUESTED')
+      ),
+      second_reviewed_by TEXT REFERENCES users(id),
+      second_reviewed_at TIMESTAMPTZ,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (run_id, page_id)
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_redaction_page_reviews_scope
+      ON redaction_page_reviews(run_id, review_status, updated_at DESC)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS redaction_page_review_events (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL REFERENCES redaction_runs(id) ON DELETE CASCADE,
+      page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+      event_type TEXT NOT NULL CHECK (
+        event_type IN (
+          'PAGE_OPENED',
+          'PAGE_REVIEW_STARTED',
+          'PAGE_APPROVED',
+          'CHANGES_REQUESTED',
+          'SECOND_REVIEW_REQUIRED',
+          'SECOND_REVIEW_APPROVED',
+          'SECOND_REVIEW_CHANGES_REQUESTED'
+        )
+      ),
+      actor_user_id TEXT NOT NULL REFERENCES users(id),
+      reason TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_redaction_page_review_events_scope
+      ON redaction_page_review_events(run_id, page_id, created_at DESC, id DESC)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS redaction_run_reviews (
+      run_id TEXT PRIMARY KEY REFERENCES redaction_runs(id) ON DELETE CASCADE,
+      review_status TEXT NOT NULL CHECK (
+        review_status IN ('NOT_READY', 'IN_REVIEW', 'APPROVED', 'CHANGES_REQUESTED')
+      ),
+      review_started_by TEXT REFERENCES users(id),
+      review_started_at TIMESTAMPTZ,
+      approved_by TEXT REFERENCES users(id),
+      approved_at TIMESTAMPTZ,
+      approved_snapshot_key TEXT,
+      approved_snapshot_sha256 TEXT,
+      locked_at TIMESTAMPTZ,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS redaction_run_review_events (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL REFERENCES redaction_runs(id) ON DELETE CASCADE,
+      event_type TEXT NOT NULL CHECK (
+        event_type IN ('RUN_REVIEW_OPENED', 'RUN_APPROVED', 'RUN_CHANGES_REQUESTED')
+      ),
+      actor_user_id TEXT NOT NULL REFERENCES users(id),
+      reason TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_redaction_run_review_events_scope
+      ON redaction_run_review_events(run_id, created_at DESC, id DESC)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS document_redaction_projections (
+      document_id TEXT PRIMARY KEY REFERENCES documents(id) ON DELETE CASCADE,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      active_redaction_run_id TEXT REFERENCES redaction_runs(id),
+      active_transcription_run_id TEXT REFERENCES transcription_runs(id),
+      active_layout_run_id TEXT REFERENCES layout_runs(id),
+      active_policy_snapshot_id TEXT,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_document_redaction_projections_scope
+      ON document_redaction_projections(project_id, document_id)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS redaction_outputs (
+      run_id TEXT NOT NULL REFERENCES redaction_runs(id) ON DELETE CASCADE,
+      page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+      status TEXT NOT NULL CHECK (
+        status IN ('PENDING', 'READY', 'FAILED', 'CANCELED')
+      ),
+      safeguarded_preview_key TEXT,
+      preview_sha256 TEXT,
+      started_at TIMESTAMPTZ,
+      generated_at TIMESTAMPTZ,
+      canceled_by TEXT REFERENCES users(id),
+      canceled_at TIMESTAMPTZ,
+      failure_reason TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (run_id, page_id)
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_redaction_outputs_scope
+      ON redaction_outputs(run_id, status, updated_at DESC)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS redaction_run_outputs (
+      run_id TEXT PRIMARY KEY REFERENCES redaction_runs(id) ON DELETE CASCADE,
+      status TEXT NOT NULL CHECK (
+        status IN ('PENDING', 'READY', 'FAILED', 'CANCELED')
+      ),
+      output_manifest_key TEXT,
+      output_manifest_sha256 TEXT,
+      page_count INTEGER NOT NULL DEFAULT 0 CHECK (page_count >= 0),
+      started_at TIMESTAMPTZ,
+      generated_at TIMESTAMPTZ,
+      canceled_by TEXT REFERENCES users(id),
+      canceled_at TIMESTAMPTZ,
+      failure_reason TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS redaction_run_output_events (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL REFERENCES redaction_runs(id) ON DELETE CASCADE,
+      event_type TEXT NOT NULL CHECK (
+        event_type IN (
+          'RUN_OUTPUT_GENERATION_STARTED',
+          'RUN_OUTPUT_GENERATION_SUCCEEDED',
+          'RUN_OUTPUT_GENERATION_FAILED',
+          'RUN_OUTPUT_GENERATION_CANCELED'
+        )
+      ),
+      from_status TEXT CHECK (
+        from_status IS NULL OR from_status IN ('PENDING', 'READY', 'FAILED', 'CANCELED')
+      ),
+      to_status TEXT NOT NULL CHECK (
+        to_status IN ('PENDING', 'READY', 'FAILED', 'CANCELED')
+      ),
+      reason TEXT,
+      actor_user_id TEXT REFERENCES users(id),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_redaction_run_output_events_scope
+      ON redaction_run_output_events(run_id, created_at DESC, id DESC)
+    """,
+    """
     CREATE TABLE IF NOT EXISTS approved_models (
       id TEXT PRIMARY KEY,
       model_type TEXT NOT NULL CHECK (
@@ -1209,6 +1549,23 @@ DOCUMENT_SCHEMA_STATEMENTS = (
       ON transcription_output_projections(document_id, page_id, updated_at DESC)
     """,
     """
+    CREATE TABLE IF NOT EXISTS transcription_rescue_resolutions (
+      run_id TEXT NOT NULL REFERENCES transcription_runs(id) ON DELETE CASCADE,
+      page_id TEXT NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+      resolution_status TEXT NOT NULL CHECK (
+        resolution_status IN ('RESCUE_VERIFIED', 'MANUAL_REVIEW_RESOLVED')
+      ),
+      resolution_reason TEXT,
+      updated_by TEXT NOT NULL REFERENCES users(id),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (run_id, page_id)
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_transcription_rescue_resolutions_run
+      ON transcription_rescue_resolutions(run_id, page_id, updated_at DESC)
+    """,
+    """
     CREATE TABLE IF NOT EXISTS transcript_variant_layers (
       id TEXT PRIMARY KEY,
       run_id TEXT NOT NULL REFERENCES transcription_runs(id) ON DELETE CASCADE,
@@ -1406,6 +1763,10 @@ class DocumentTranscriptionRunConflictError(RuntimeError):
     """Transcription-run mutation conflicted with lineage or state constraints."""
 
 
+class DocumentRedactionRunConflictError(RuntimeError):
+    """Redaction-run mutation conflicted with lineage or state constraints."""
+
+
 class DocumentModelCatalogConflictError(RuntimeError):
     """Approved-model catalog mutation violated validation or integrity rules."""
 
@@ -1523,6 +1884,257 @@ class DocumentStore:
         return value  # type: ignore[return-value]
 
     @staticmethod
+    def _assert_redaction_run_kind(value: str) -> RedactionRunKind:
+        if value not in {"BASELINE", "POLICY_RERUN"}:
+            raise DocumentStoreUnavailableError("Unexpected redaction run kind persisted.")
+        return value  # type: ignore[return-value]
+
+    @staticmethod
+    def _assert_redaction_run_status(value: str) -> RedactionRunStatus:
+        if value not in {"QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELED"}:
+            raise DocumentStoreUnavailableError("Unexpected redaction run status persisted.")
+        return value  # type: ignore[return-value]
+
+    @staticmethod
+    def _assert_redaction_finding_span_basis_kind(
+        value: str,
+    ) -> RedactionFindingSpanBasisKind:
+        if value not in {"LINE_TEXT", "PAGE_WINDOW_TEXT", "NONE"}:
+            raise DocumentStoreUnavailableError(
+                "Unexpected redaction finding span basis kind persisted."
+            )
+        return value  # type: ignore[return-value]
+
+    @staticmethod
+    def _assert_redaction_finding_basis_primary(
+        value: str,
+    ) -> RedactionFindingBasisPrimary:
+        if value not in {"RULE", "NER", "HEURISTIC"}:
+            raise DocumentStoreUnavailableError(
+                "Unexpected redaction finding basis primary persisted."
+            )
+        return value  # type: ignore[return-value]
+
+    @staticmethod
+    def _assert_redaction_decision_status(value: str) -> RedactionDecisionStatus:
+        if value not in {
+            "AUTO_APPLIED",
+            "NEEDS_REVIEW",
+            "APPROVED",
+            "OVERRIDDEN",
+            "FALSE_POSITIVE",
+        }:
+            raise DocumentStoreUnavailableError(
+                "Unexpected redaction decision status persisted."
+            )
+        return value  # type: ignore[return-value]
+
+    @staticmethod
+    def _assert_redaction_override_risk_classification(
+        value: str,
+    ) -> RedactionOverrideRiskClassification:
+        if value not in {"STANDARD", "HIGH"}:
+            raise DocumentStoreUnavailableError(
+                "Unexpected redaction override risk classification persisted."
+            )
+        return value  # type: ignore[return-value]
+
+    @staticmethod
+    def _assert_redaction_decision_action_type(
+        value: str,
+    ) -> RedactionDecisionActionType:
+        if value not in {"MASK", "PSEUDONYMIZE", "GENERALIZE"}:
+            raise DocumentStoreUnavailableError(
+                "Unexpected redaction decision action type persisted."
+            )
+        return value  # type: ignore[return-value]
+
+    @staticmethod
+    def _assert_redaction_page_review_status(value: str) -> RedactionPageReviewStatus:
+        if value not in {"NOT_STARTED", "IN_REVIEW", "APPROVED", "CHANGES_REQUESTED"}:
+            raise DocumentStoreUnavailableError(
+                "Unexpected redaction page-review status persisted."
+            )
+        return value  # type: ignore[return-value]
+
+    @staticmethod
+    def _assert_redaction_second_review_status(
+        value: str,
+    ) -> RedactionSecondReviewStatus:
+        if value not in {"NOT_REQUIRED", "PENDING", "APPROVED", "CHANGES_REQUESTED"}:
+            raise DocumentStoreUnavailableError(
+                "Unexpected redaction second-review status persisted."
+            )
+        return value  # type: ignore[return-value]
+
+    @staticmethod
+    def _assert_redaction_page_review_event_type(
+        value: str,
+    ) -> RedactionPageReviewEventType:
+        if value not in {
+            "PAGE_OPENED",
+            "PAGE_REVIEW_STARTED",
+            "PAGE_APPROVED",
+            "CHANGES_REQUESTED",
+            "SECOND_REVIEW_REQUIRED",
+            "SECOND_REVIEW_APPROVED",
+            "SECOND_REVIEW_CHANGES_REQUESTED",
+        }:
+            raise DocumentStoreUnavailableError(
+                "Unexpected redaction page-review event type persisted."
+            )
+        return value  # type: ignore[return-value]
+
+    @staticmethod
+    def _assert_redaction_run_review_status(value: str) -> RedactionRunReviewStatus:
+        if value not in {"NOT_READY", "IN_REVIEW", "APPROVED", "CHANGES_REQUESTED"}:
+            raise DocumentStoreUnavailableError(
+                "Unexpected redaction run-review status persisted."
+            )
+        return value  # type: ignore[return-value]
+
+    @staticmethod
+    def _assert_redaction_run_review_event_type(
+        value: str,
+    ) -> RedactionRunReviewEventType:
+        if value not in {"RUN_REVIEW_OPENED", "RUN_APPROVED", "RUN_CHANGES_REQUESTED"}:
+            raise DocumentStoreUnavailableError(
+                "Unexpected redaction run-review event type persisted."
+            )
+        return value  # type: ignore[return-value]
+
+    @staticmethod
+    def _assert_redaction_output_status(value: str) -> RedactionOutputStatus:
+        if value not in {"PENDING", "READY", "FAILED", "CANCELED"}:
+            raise DocumentStoreUnavailableError(
+                "Unexpected redaction output status persisted."
+            )
+        return value  # type: ignore[return-value]
+
+    @staticmethod
+    def _assert_redaction_run_output_event_type(
+        value: str,
+    ) -> RedactionRunOutputEventType:
+        if value not in {
+            "RUN_OUTPUT_GENERATION_STARTED",
+            "RUN_OUTPUT_GENERATION_SUCCEEDED",
+            "RUN_OUTPUT_GENERATION_FAILED",
+            "RUN_OUTPUT_GENERATION_CANCELED",
+        }:
+            raise DocumentStoreUnavailableError(
+                "Unexpected redaction run-output event type persisted."
+            )
+        return value  # type: ignore[return-value]
+
+    @staticmethod
+    def _redaction_truthy(value: object) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return value != 0
+        if isinstance(value, str):
+            return value.strip().lower() in {"true", "1", "yes", "y"}
+        return False
+
+    @classmethod
+    def _extract_redaction_dual_review_categories(
+        cls,
+        policy_snapshot_json: object,
+    ) -> set[str]:
+        categories: set[str] = set()
+        queue: list[object] = [policy_snapshot_json]
+        while queue:
+            value = queue.pop(0)
+            if isinstance(value, list):
+                queue.extend(value)
+                continue
+            if not isinstance(value, Mapping):
+                continue
+            for raw_key, nested in value.items():
+                if not isinstance(raw_key, str):
+                    queue.append(nested)
+                    continue
+                normalized_key = raw_key.strip().lower()
+                dual_key = (
+                    "dual" in normalized_key
+                    or "second_review" in normalized_key
+                    or "secondreview" in normalized_key
+                )
+                if dual_key and isinstance(nested, list):
+                    for item in nested:
+                        if isinstance(item, str) and item.strip():
+                            categories.add(item.strip().upper())
+                    continue
+                if dual_key and isinstance(nested, Mapping):
+                    for category, required in nested.items():
+                        if not isinstance(category, str) or not category.strip():
+                            continue
+                        if cls._redaction_truthy(required):
+                            categories.add(category.strip().upper())
+                    continue
+                queue.append(nested)
+        return categories
+
+    @classmethod
+    def _redaction_has_disagreement_markers(
+        cls,
+        basis_secondary_json: object,
+    ) -> bool:
+        if not isinstance(basis_secondary_json, Mapping):
+            return False
+        queue: list[object] = [basis_secondary_json]
+        while queue:
+            value = queue.pop(0)
+            if isinstance(value, list):
+                queue.extend(value)
+                continue
+            if not isinstance(value, Mapping):
+                continue
+            for raw_key, nested in value.items():
+                key = raw_key.strip().lower() if isinstance(raw_key, str) else ""
+                if key and (
+                    "detector_disagreement" in key
+                    or "detectordisagreement" in key
+                    or "ambiguous_overlap" in key
+                    or "ambiguousoverlap" in key
+                    or "overlap_ambiguous" in key
+                    or "disagreement" in key
+                    or "ambiguous" in key
+                ):
+                    if cls._redaction_truthy(nested):
+                        return True
+                queue.append(nested)
+        return False
+
+    @classmethod
+    def _derive_redaction_override_risk(
+        cls,
+        *,
+        to_decision_status: RedactionDecisionStatus,
+        category: str,
+        area_mask_id: str | None,
+        basis_secondary_json: object,
+        policy_snapshot_json: object,
+    ) -> tuple[RedactionOverrideRiskClassification | None, list[str] | None]:
+        if to_decision_status not in {"OVERRIDDEN", "FALSE_POSITIVE"}:
+            return None, None
+        reason_codes: list[str] = []
+        if to_decision_status == "FALSE_POSITIVE":
+            reason_codes.append("FALSE_POSITIVE_OVERRIDE")
+        if isinstance(area_mask_id, str) and area_mask_id.strip():
+            reason_codes.append("AREA_MASK_OVERRIDE")
+        category_key = category.strip().upper()
+        if category_key and category_key in cls._extract_redaction_dual_review_categories(
+            policy_snapshot_json
+        ):
+            reason_codes.append("POLICY_DUAL_REVIEW_CATEGORY")
+        if cls._redaction_has_disagreement_markers(basis_secondary_json):
+            reason_codes.append("DETECTOR_DISAGREEMENT_OR_AMBIGUOUS_OVERLAP")
+        if reason_codes:
+            return "HIGH", reason_codes
+        return "STANDARD", None
+
+    @staticmethod
     def _assert_transcription_run_engine(value: str) -> TranscriptionRunEngine:
         if value not in {
             "VLM_LINE_CONTEXT",
@@ -1591,6 +2203,16 @@ class DocumentStore:
         if value not in {"ENGINE_OUTPUT", "REVIEW_CORRECTED"}:
             raise DocumentStoreUnavailableError(
                 "Unexpected transcription projection basis persisted."
+            )
+        return value  # type: ignore[return-value]
+
+    @staticmethod
+    def _assert_transcription_rescue_resolution_status(
+        value: str,
+    ) -> TranscriptionRescueResolutionStatus:
+        if value not in {"RESCUE_VERIFIED", "MANUAL_REVIEW_RESOLVED"}:
+            raise DocumentStoreUnavailableError(
+                "Unexpected transcription rescue-resolution status persisted."
             )
         return value  # type: ignore[return-value]
 
@@ -2279,6 +2901,419 @@ class DocumentStore:
         )
 
     @classmethod
+    def _as_redaction_run_record(
+        cls,
+        row: dict[str, object],
+    ) -> RedactionRunRecord:
+        return RedactionRunRecord(
+            id=str(row["id"]),
+            project_id=str(row["project_id"]),
+            document_id=str(row["document_id"]),
+            input_transcription_run_id=str(row["input_transcription_run_id"]),
+            input_layout_run_id=(
+                str(row["input_layout_run_id"])
+                if isinstance(row.get("input_layout_run_id"), str)
+                else None
+            ),
+            run_kind=cls._assert_redaction_run_kind(str(row["run_kind"])),
+            supersedes_redaction_run_id=(
+                str(row["supersedes_redaction_run_id"])
+                if isinstance(row.get("supersedes_redaction_run_id"), str)
+                else None
+            ),
+            superseded_by_redaction_run_id=(
+                str(row["superseded_by_redaction_run_id"])
+                if isinstance(row.get("superseded_by_redaction_run_id"), str)
+                else None
+            ),
+            policy_snapshot_id=str(row["policy_snapshot_id"]),
+            policy_snapshot_json=(
+                dict(row["policy_snapshot_json"])
+                if isinstance(row.get("policy_snapshot_json"), dict)
+                else {}
+            ),
+            policy_snapshot_hash=str(row["policy_snapshot_hash"]),
+            policy_id=str(row["policy_id"]) if isinstance(row.get("policy_id"), str) else None,
+            policy_family_id=(
+                str(row["policy_family_id"])
+                if isinstance(row.get("policy_family_id"), str)
+                else None
+            ),
+            policy_version=(
+                str(row["policy_version"]) if isinstance(row.get("policy_version"), str) else None
+            ),
+            detectors_version=str(row["detectors_version"]),
+            status=cls._assert_redaction_run_status(str(row["status"])),
+            created_by=str(row["created_by"]),
+            created_at=row["created_at"],  # type: ignore[arg-type]
+            started_at=row.get("started_at"),  # type: ignore[arg-type]
+            finished_at=row.get("finished_at"),  # type: ignore[arg-type]
+            failure_reason=(
+                str(row["failure_reason"])
+                if isinstance(row.get("failure_reason"), str)
+                else None
+            ),
+        )
+
+    @classmethod
+    def _as_redaction_finding_record(
+        cls,
+        row: dict[str, object],
+    ) -> RedactionFindingRecord:
+        return RedactionFindingRecord(
+            id=str(row["id"]),
+            run_id=str(row["run_id"]),
+            page_id=str(row["page_id"]),
+            line_id=str(row["line_id"]) if isinstance(row.get("line_id"), str) else None,
+            category=str(row["category"]),
+            span_start=(
+                int(row["span_start"]) if isinstance(row.get("span_start"), int) else None
+            ),
+            span_end=int(row["span_end"]) if isinstance(row.get("span_end"), int) else None,
+            span_basis_kind=cls._assert_redaction_finding_span_basis_kind(
+                str(row["span_basis_kind"])
+            ),
+            span_basis_ref=(
+                str(row["span_basis_ref"])
+                if isinstance(row.get("span_basis_ref"), str)
+                else None
+            ),
+            confidence=(
+                float(row["confidence"])
+                if isinstance(row.get("confidence"), (int, float))
+                else None
+            ),
+            basis_primary=cls._assert_redaction_finding_basis_primary(str(row["basis_primary"])),
+            basis_secondary_json=(
+                dict(row["basis_secondary_json"])
+                if isinstance(row.get("basis_secondary_json"), dict)
+                else None
+            ),
+            assist_explanation_key=(
+                str(row["assist_explanation_key"])
+                if isinstance(row.get("assist_explanation_key"), str)
+                else None
+            ),
+            assist_explanation_sha256=(
+                str(row["assist_explanation_sha256"])
+                if isinstance(row.get("assist_explanation_sha256"), str)
+                else None
+            ),
+            bbox_refs=dict(row["bbox_refs"]) if isinstance(row.get("bbox_refs"), dict) else {},
+            token_refs_json=(
+                [
+                    dict(item)
+                    for item in row["token_refs_json"]
+                    if isinstance(item, dict)
+                ]
+                if isinstance(row.get("token_refs_json"), list)
+                else None
+            ),
+            area_mask_id=(
+                str(row["area_mask_id"]) if isinstance(row.get("area_mask_id"), str) else None
+            ),
+            decision_status=cls._assert_redaction_decision_status(str(row["decision_status"])),
+            override_risk_classification=(
+                cls._assert_redaction_override_risk_classification(
+                    str(row["override_risk_classification"])
+                )
+                if isinstance(row.get("override_risk_classification"), str)
+                else None
+            ),
+            override_risk_reason_codes_json=(
+                [str(item) for item in row["override_risk_reason_codes_json"]]
+                if isinstance(row.get("override_risk_reason_codes_json"), list)
+                else None
+            ),
+            decision_by=(
+                str(row["decision_by"]) if isinstance(row.get("decision_by"), str) else None
+            ),
+            decision_at=row.get("decision_at"),  # type: ignore[arg-type]
+            decision_reason=(
+                str(row["decision_reason"])
+                if isinstance(row.get("decision_reason"), str)
+                else None
+            ),
+            decision_etag=str(row["decision_etag"]),
+            updated_at=row["updated_at"],  # type: ignore[arg-type]
+            created_at=row["created_at"],  # type: ignore[arg-type]
+            action_type=cls._assert_redaction_decision_action_type(
+                str(row.get("action_type") or "MASK")
+            ),
+        )
+
+    @classmethod
+    def _as_redaction_area_mask_record(
+        cls,
+        row: dict[str, object],
+    ) -> RedactionAreaMaskRecord:
+        return RedactionAreaMaskRecord(
+            id=str(row["id"]),
+            run_id=str(row["run_id"]),
+            page_id=str(row["page_id"]),
+            geometry_json=(
+                dict(row["geometry_json"])
+                if isinstance(row.get("geometry_json"), dict)
+                else {}
+            ),
+            mask_reason=str(row.get("mask_reason") or ""),
+            version_etag=str(row["version_etag"]),
+            supersedes_area_mask_id=(
+                str(row["supersedes_area_mask_id"])
+                if isinstance(row.get("supersedes_area_mask_id"), str)
+                else None
+            ),
+            superseded_by_area_mask_id=(
+                str(row["superseded_by_area_mask_id"])
+                if isinstance(row.get("superseded_by_area_mask_id"), str)
+                else None
+            ),
+            created_by=str(row["created_by"]),
+            created_at=row["created_at"],  # type: ignore[arg-type]
+            updated_at=row["updated_at"],  # type: ignore[arg-type]
+        )
+
+    @classmethod
+    def _as_redaction_decision_event_record(
+        cls,
+        row: dict[str, object],
+    ) -> RedactionDecisionEventRecord:
+        return RedactionDecisionEventRecord(
+            id=str(row["id"]),
+            run_id=str(row["run_id"]),
+            page_id=str(row["page_id"]),
+            finding_id=str(row["finding_id"]),
+            from_decision_status=(
+                cls._assert_redaction_decision_status(str(row["from_decision_status"]))
+                if isinstance(row.get("from_decision_status"), str)
+                else None
+            ),
+            to_decision_status=cls._assert_redaction_decision_status(
+                str(row["to_decision_status"])
+            ),
+            action_type=cls._assert_redaction_decision_action_type(str(row["action_type"])),
+            area_mask_id=(
+                str(row["area_mask_id"]) if isinstance(row.get("area_mask_id"), str) else None
+            ),
+            actor_user_id=str(row["actor_user_id"]),
+            reason=str(row["reason"]) if isinstance(row.get("reason"), str) else None,
+            created_at=row["created_at"],  # type: ignore[arg-type]
+        )
+
+    @classmethod
+    def _as_redaction_page_review_record(
+        cls,
+        row: dict[str, object],
+    ) -> RedactionPageReviewRecord:
+        return RedactionPageReviewRecord(
+            run_id=str(row["run_id"]),
+            page_id=str(row["page_id"]),
+            review_status=cls._assert_redaction_page_review_status(str(row["review_status"])),
+            review_etag=str(row["review_etag"]),
+            first_reviewed_by=(
+                str(row["first_reviewed_by"])
+                if isinstance(row.get("first_reviewed_by"), str)
+                else None
+            ),
+            first_reviewed_at=row.get("first_reviewed_at"),  # type: ignore[arg-type]
+            requires_second_review=bool(row.get("requires_second_review", False)),
+            second_review_status=cls._assert_redaction_second_review_status(
+                str(row.get("second_review_status") or "NOT_REQUIRED")
+            ),
+            second_reviewed_by=(
+                str(row["second_reviewed_by"])
+                if isinstance(row.get("second_reviewed_by"), str)
+                else None
+            ),
+            second_reviewed_at=row.get("second_reviewed_at"),  # type: ignore[arg-type]
+            updated_at=row["updated_at"],  # type: ignore[arg-type]
+        )
+
+    @classmethod
+    def _as_redaction_page_review_event_record(
+        cls,
+        row: dict[str, object],
+    ) -> RedactionPageReviewEventRecord:
+        return RedactionPageReviewEventRecord(
+            id=str(row["id"]),
+            run_id=str(row["run_id"]),
+            page_id=str(row["page_id"]),
+            event_type=cls._assert_redaction_page_review_event_type(str(row["event_type"])),
+            actor_user_id=str(row["actor_user_id"]),
+            reason=str(row["reason"]) if isinstance(row.get("reason"), str) else None,
+            created_at=row["created_at"],  # type: ignore[arg-type]
+        )
+
+    @classmethod
+    def _as_redaction_run_review_record(
+        cls,
+        row: dict[str, object],
+    ) -> RedactionRunReviewRecord:
+        return RedactionRunReviewRecord(
+            run_id=str(row["run_id"]),
+            review_status=cls._assert_redaction_run_review_status(str(row["review_status"])),
+            review_started_by=(
+                str(row["review_started_by"])
+                if isinstance(row.get("review_started_by"), str)
+                else None
+            ),
+            review_started_at=row.get("review_started_at"),  # type: ignore[arg-type]
+            approved_by=(
+                str(row["approved_by"]) if isinstance(row.get("approved_by"), str) else None
+            ),
+            approved_at=row.get("approved_at"),  # type: ignore[arg-type]
+            approved_snapshot_key=(
+                str(row["approved_snapshot_key"])
+                if isinstance(row.get("approved_snapshot_key"), str)
+                else None
+            ),
+            approved_snapshot_sha256=(
+                str(row["approved_snapshot_sha256"])
+                if isinstance(row.get("approved_snapshot_sha256"), str)
+                else None
+            ),
+            locked_at=row.get("locked_at"),  # type: ignore[arg-type]
+            updated_at=row["updated_at"],  # type: ignore[arg-type]
+        )
+
+    @classmethod
+    def _as_redaction_run_review_event_record(
+        cls,
+        row: dict[str, object],
+    ) -> RedactionRunReviewEventRecord:
+        return RedactionRunReviewEventRecord(
+            id=str(row["id"]),
+            run_id=str(row["run_id"]),
+            event_type=cls._assert_redaction_run_review_event_type(str(row["event_type"])),
+            actor_user_id=str(row["actor_user_id"]),
+            reason=str(row["reason"]) if isinstance(row.get("reason"), str) else None,
+            created_at=row["created_at"],  # type: ignore[arg-type]
+        )
+
+    @classmethod
+    def _as_redaction_projection_record(
+        cls,
+        row: dict[str, object],
+    ) -> DocumentRedactionProjectionRecord:
+        return DocumentRedactionProjectionRecord(
+            document_id=str(row["document_id"]),
+            project_id=str(row["project_id"]),
+            active_redaction_run_id=(
+                str(row["active_redaction_run_id"])
+                if isinstance(row.get("active_redaction_run_id"), str)
+                else None
+            ),
+            active_transcription_run_id=(
+                str(row["active_transcription_run_id"])
+                if isinstance(row.get("active_transcription_run_id"), str)
+                else None
+            ),
+            active_layout_run_id=(
+                str(row["active_layout_run_id"])
+                if isinstance(row.get("active_layout_run_id"), str)
+                else None
+            ),
+            active_policy_snapshot_id=(
+                str(row["active_policy_snapshot_id"])
+                if isinstance(row.get("active_policy_snapshot_id"), str)
+                else None
+            ),
+            updated_at=row["updated_at"],  # type: ignore[arg-type]
+        )
+
+    @classmethod
+    def _as_redaction_output_record(
+        cls,
+        row: dict[str, object],
+    ) -> RedactionOutputRecord:
+        return RedactionOutputRecord(
+            run_id=str(row["run_id"]),
+            page_id=str(row["page_id"]),
+            status=cls._assert_redaction_output_status(str(row["status"])),
+            safeguarded_preview_key=(
+                str(row["safeguarded_preview_key"])
+                if isinstance(row.get("safeguarded_preview_key"), str)
+                else None
+            ),
+            preview_sha256=(
+                str(row["preview_sha256"])
+                if isinstance(row.get("preview_sha256"), str)
+                else None
+            ),
+            started_at=row.get("started_at"),  # type: ignore[arg-type]
+            generated_at=row.get("generated_at"),  # type: ignore[arg-type]
+            canceled_by=(
+                str(row["canceled_by"]) if isinstance(row.get("canceled_by"), str) else None
+            ),
+            canceled_at=row.get("canceled_at"),  # type: ignore[arg-type]
+            failure_reason=(
+                str(row["failure_reason"])
+                if isinstance(row.get("failure_reason"), str)
+                else None
+            ),
+            created_at=row["created_at"],  # type: ignore[arg-type]
+            updated_at=row["updated_at"],  # type: ignore[arg-type]
+        )
+
+    @classmethod
+    def _as_redaction_run_output_record(
+        cls,
+        row: dict[str, object],
+    ) -> RedactionRunOutputRecord:
+        return RedactionRunOutputRecord(
+            run_id=str(row["run_id"]),
+            status=cls._assert_redaction_output_status(str(row["status"])),
+            output_manifest_key=(
+                str(row["output_manifest_key"])
+                if isinstance(row.get("output_manifest_key"), str)
+                else None
+            ),
+            output_manifest_sha256=(
+                str(row["output_manifest_sha256"])
+                if isinstance(row.get("output_manifest_sha256"), str)
+                else None
+            ),
+            page_count=int(row.get("page_count") or 0),
+            started_at=row.get("started_at"),  # type: ignore[arg-type]
+            generated_at=row.get("generated_at"),  # type: ignore[arg-type]
+            canceled_by=(
+                str(row["canceled_by"]) if isinstance(row.get("canceled_by"), str) else None
+            ),
+            canceled_at=row.get("canceled_at"),  # type: ignore[arg-type]
+            failure_reason=(
+                str(row["failure_reason"])
+                if isinstance(row.get("failure_reason"), str)
+                else None
+            ),
+            created_at=row["created_at"],  # type: ignore[arg-type]
+            updated_at=row["updated_at"],  # type: ignore[arg-type]
+        )
+
+    @classmethod
+    def _as_redaction_run_output_event_record(
+        cls,
+        row: dict[str, object],
+    ) -> RedactionRunOutputEventRecord:
+        return RedactionRunOutputEventRecord(
+            id=str(row["id"]),
+            run_id=str(row["run_id"]),
+            event_type=cls._assert_redaction_run_output_event_type(str(row["event_type"])),
+            from_status=(
+                cls._assert_redaction_output_status(str(row["from_status"]))
+                if isinstance(row.get("from_status"), str)
+                else None
+            ),
+            to_status=cls._assert_redaction_output_status(str(row["to_status"])),
+            reason=str(row["reason"]) if isinstance(row.get("reason"), str) else None,
+            actor_user_id=(
+                str(row["actor_user_id"])
+                if isinstance(row.get("actor_user_id"), str)
+                else None
+            ),
+            created_at=row["created_at"],  # type: ignore[arg-type]
+        )
+
+    @classmethod
     def _as_page_transcription_result_record(
         cls,
         row: dict[str, object],
@@ -2432,6 +3467,26 @@ class DocumentStore:
                 str(row.get("projection_basis") or "ENGINE_OUTPUT")
             ),
             created_at=row["created_at"],  # type: ignore[arg-type]
+            updated_at=row["updated_at"],  # type: ignore[arg-type]
+        )
+
+    @classmethod
+    def _as_transcription_rescue_resolution_record(
+        cls,
+        row: dict[str, object],
+    ) -> TranscriptionRescueResolutionRecord:
+        return TranscriptionRescueResolutionRecord(
+            run_id=str(row["run_id"]),
+            page_id=str(row["page_id"]),
+            resolution_status=cls._assert_transcription_rescue_resolution_status(
+                str(row["resolution_status"])
+            ),
+            resolution_reason=(
+                str(row["resolution_reason"])
+                if isinstance(row.get("resolution_reason"), str)
+                else None
+            ),
+            updated_by=str(row["updated_by"]),
             updated_at=row["updated_at"],  # type: ignore[arg-type]
         )
 
@@ -8615,6 +9670,255 @@ class DocumentStore:
             ) from error
         return [self._as_token_transcription_result_record(row) for row in rows]
 
+    def get_transcription_rescue_resolution(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+    ) -> TranscriptionRescueResolutionRecord | None:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          trr.run_id,
+                          trr.page_id,
+                          trr.resolution_status,
+                          trr.resolution_reason,
+                          trr.updated_by,
+                          trr.updated_at
+                        FROM transcription_rescue_resolutions AS trr
+                        INNER JOIN transcription_runs AS tr
+                          ON tr.id = trr.run_id
+                        WHERE trr.run_id = %(run_id)s
+                          AND trr.page_id = %(page_id)s
+                          AND tr.project_id = %(project_id)s
+                          AND tr.document_id = %(document_id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "run_id": run_id,
+                            "page_id": page_id,
+                            "project_id": project_id,
+                            "document_id": document_id,
+                        },
+                    )
+                    row = cursor.fetchone()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Transcription rescue-resolution read failed."
+            ) from error
+        if row is None:
+            return None
+        return self._as_transcription_rescue_resolution_record(row)
+
+    def list_transcription_rescue_resolutions(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_ids: Sequence[str] | None = None,
+    ) -> list[TranscriptionRescueResolutionRecord]:
+        self.ensure_schema()
+        normalized_page_ids = sorted(
+            {
+                item.strip()
+                for item in (page_ids or ())
+                if isinstance(item, str) and item.strip()
+            }
+        )
+        if page_ids is not None and not normalized_page_ids:
+            return []
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    if normalized_page_ids:
+                        cursor.execute(
+                            """
+                            SELECT
+                              trr.run_id,
+                              trr.page_id,
+                              trr.resolution_status,
+                              trr.resolution_reason,
+                              trr.updated_by,
+                              trr.updated_at
+                            FROM transcription_rescue_resolutions AS trr
+                            INNER JOIN transcription_runs AS tr
+                              ON tr.id = trr.run_id
+                            WHERE trr.run_id = %(run_id)s
+                              AND trr.page_id = ANY(%(page_ids)s)
+                              AND tr.project_id = %(project_id)s
+                              AND tr.document_id = %(document_id)s
+                            ORDER BY trr.page_id ASC
+                            """,
+                            {
+                                "run_id": run_id,
+                                "page_ids": normalized_page_ids,
+                                "project_id": project_id,
+                                "document_id": document_id,
+                            },
+                        )
+                    else:
+                        cursor.execute(
+                            """
+                            SELECT
+                              trr.run_id,
+                              trr.page_id,
+                              trr.resolution_status,
+                              trr.resolution_reason,
+                              trr.updated_by,
+                              trr.updated_at
+                            FROM transcription_rescue_resolutions AS trr
+                            INNER JOIN transcription_runs AS tr
+                              ON tr.id = trr.run_id
+                            WHERE trr.run_id = %(run_id)s
+                              AND tr.project_id = %(project_id)s
+                              AND tr.document_id = %(document_id)s
+                            ORDER BY trr.page_id ASC
+                            """,
+                            {
+                                "run_id": run_id,
+                                "project_id": project_id,
+                                "document_id": document_id,
+                            },
+                        )
+                    rows = cursor.fetchall()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Transcription rescue-resolution listing failed."
+            ) from error
+        return [self._as_transcription_rescue_resolution_record(row) for row in rows]
+
+    def upsert_transcription_rescue_resolution(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        resolution_status: TranscriptionRescueResolutionStatus,
+        resolution_reason: str | None,
+        updated_by: str,
+    ) -> TranscriptionRescueResolutionRecord:
+        self.ensure_schema()
+        safe_status = self._assert_transcription_rescue_resolution_status(
+            str(resolution_status)
+        )
+        safe_reason = (
+            resolution_reason.strip()
+            if isinstance(resolution_reason, str) and resolution_reason.strip()
+            else None
+        )
+        if safe_reason is not None and len(safe_reason) > 600:
+            raise DocumentStoreUnavailableError(
+                "Transcription rescue-resolution reason must be 600 characters or fewer."
+            )
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          tr.id,
+                          tr.input_layout_run_id
+                        FROM transcription_runs AS tr
+                        WHERE tr.id = %(run_id)s
+                          AND tr.project_id = %(project_id)s
+                          AND tr.document_id = %(document_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {
+                            "run_id": run_id,
+                            "project_id": project_id,
+                            "document_id": document_id,
+                        },
+                    )
+                    run_row = cursor.fetchone()
+                    if run_row is None:
+                        raise DocumentNotFoundError("Transcription run not found.")
+                    input_layout_run_id = str(run_row["input_layout_run_id"])
+
+                    cursor.execute(
+                        """
+                        SELECT
+                          plr.page_id
+                        FROM page_layout_results AS plr
+                        WHERE plr.run_id = %(layout_run_id)s
+                          AND plr.page_id = %(page_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {
+                            "layout_run_id": input_layout_run_id,
+                            "page_id": page_id,
+                        },
+                    )
+                    page_row = cursor.fetchone()
+                    if page_row is None:
+                        raise DocumentNotFoundError(
+                            "Transcription rescue-resolution page target not found."
+                        )
+
+                    cursor.execute(
+                        """
+                        INSERT INTO transcription_rescue_resolutions (
+                          run_id,
+                          page_id,
+                          resolution_status,
+                          resolution_reason,
+                          updated_by,
+                          updated_at
+                        )
+                        VALUES (
+                          %(run_id)s,
+                          %(page_id)s,
+                          %(resolution_status)s,
+                          %(resolution_reason)s,
+                          %(updated_by)s,
+                          NOW()
+                        )
+                        ON CONFLICT (run_id, page_id) DO UPDATE
+                        SET
+                          resolution_status = EXCLUDED.resolution_status,
+                          resolution_reason = EXCLUDED.resolution_reason,
+                          updated_by = EXCLUDED.updated_by,
+                          updated_at = NOW()
+                        RETURNING
+                          run_id,
+                          page_id,
+                          resolution_status,
+                          resolution_reason,
+                          updated_by,
+                          updated_at
+                        """,
+                        {
+                            "run_id": run_id,
+                            "page_id": page_id,
+                            "resolution_status": safe_status,
+                            "resolution_reason": safe_reason,
+                            "updated_by": updated_by,
+                        },
+                    )
+                    row = cursor.fetchone()
+                connection.commit()
+        except DocumentNotFoundError:
+            raise
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Transcription rescue-resolution update failed."
+            ) from error
+        if row is None:
+            raise DocumentStoreUnavailableError(
+                "Transcription rescue-resolution update failed."
+            )
+        return self._as_transcription_rescue_resolution_record(row)
+
     def list_transcript_versions(
         self,
         *,
@@ -8666,6 +9970,63 @@ class DocumentStore:
                 "Transcript version listing failed."
             ) from error
         return [self._as_transcript_version_record(row) for row in rows]
+
+    def get_transcript_version(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        line_id: str,
+        version_id: str,
+    ) -> TranscriptVersionRecord | None:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          tv.id,
+                          tv.run_id,
+                          tv.page_id,
+                          tv.line_id,
+                          tv.base_version_id,
+                          tv.superseded_by_version_id,
+                          tv.version_etag,
+                          tv.text_diplomatic,
+                          tv.editor_user_id,
+                          tv.edit_reason,
+                          tv.created_at
+                        FROM transcript_versions AS tv
+                        INNER JOIN transcription_runs AS tr
+                          ON tr.id = tv.run_id
+                        WHERE tv.id = %(version_id)s
+                          AND tv.run_id = %(run_id)s
+                          AND tv.page_id = %(page_id)s
+                          AND tv.line_id = %(line_id)s
+                          AND tr.project_id = %(project_id)s
+                          AND tr.document_id = %(document_id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "version_id": version_id,
+                            "run_id": run_id,
+                            "page_id": page_id,
+                            "line_id": line_id,
+                            "project_id": project_id,
+                            "document_id": document_id,
+                        },
+                    )
+                    row = cursor.fetchone()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Transcript version read failed."
+            ) from error
+        if row is None:
+            return None
+        return self._as_transcript_version_record(row)
 
     def append_transcript_line_version(
         self,
@@ -8989,6 +10350,78 @@ class DocumentStore:
                 "Transcription compare decision listing failed."
             ) from error
         return [self._as_transcription_compare_decision_record(row) for row in rows]
+
+    def list_transcription_compare_decision_events(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        base_run_id: str,
+        candidate_run_id: str,
+        page_ids: Sequence[str] | None = None,
+    ) -> list[TranscriptionCompareDecisionEventRecord]:
+        self.ensure_schema()
+        params: dict[str, object] = {
+            "project_id": project_id,
+            "document_id": document_id,
+            "base_run_id": base_run_id,
+            "candidate_run_id": candidate_run_id,
+        }
+        where_clauses = [
+            "tcde.document_id = %(document_id)s",
+            "tcde.base_run_id = %(base_run_id)s",
+            "tcde.candidate_run_id = %(candidate_run_id)s",
+            "base_run.project_id = %(project_id)s",
+            "base_run.document_id = %(document_id)s",
+            "candidate_run.project_id = %(project_id)s",
+            "candidate_run.document_id = %(document_id)s",
+        ]
+        normalized_page_ids = sorted(
+            {
+                item.strip()
+                for item in (page_ids or ())
+                if isinstance(item, str) and item.strip()
+            }
+        )
+        if normalized_page_ids:
+            params["page_ids"] = normalized_page_ids
+            where_clauses.append("tcde.page_id = ANY(%(page_ids)s)")
+        where_clause = " AND ".join(where_clauses)
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        f"""
+                        SELECT
+                          tcde.id,
+                          tcde.decision_id,
+                          tcde.document_id,
+                          tcde.base_run_id,
+                          tcde.candidate_run_id,
+                          tcde.page_id,
+                          tcde.line_id,
+                          tcde.token_id,
+                          tcde.from_decision,
+                          tcde.to_decision,
+                          tcde.actor_user_id,
+                          tcde.reason,
+                          tcde.created_at
+                        FROM transcription_compare_decision_events AS tcde
+                        INNER JOIN transcription_runs AS base_run
+                          ON base_run.id = tcde.base_run_id
+                        INNER JOIN transcription_runs AS candidate_run
+                          ON candidate_run.id = tcde.candidate_run_id
+                        WHERE {where_clause}
+                        ORDER BY tcde.created_at ASC, tcde.id ASC
+                        """,
+                        params,
+                    )
+                    rows = cursor.fetchall()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Transcription compare decision-event listing failed."
+            ) from error
+        return [self._as_transcription_compare_decision_event_record(row) for row in rows]
 
     def record_transcription_compare_decision(
         self,
@@ -9891,10 +11324,15 @@ class DocumentStore:
                 with connection.cursor(row_factory=dict_row) as cursor:
                     cursor.execute(
                         """
-                        SELECT ptr.page_id
+                        SELECT
+                          ptr.page_id,
+                          p.width,
+                          p.height
                         FROM page_transcription_results AS ptr
                         INNER JOIN transcription_runs AS tr
                           ON tr.id = ptr.run_id
+                        INNER JOIN pages AS p
+                          ON p.id = ptr.page_id
                         WHERE ptr.run_id = %(run_id)s
                           AND ptr.page_id = %(page_id)s
                           AND tr.project_id = %(project_id)s
@@ -14286,3 +15724,5428 @@ class DocumentStore:
         if projection is None:
             raise DocumentStoreUnavailableError("Preprocess run activation failed.")
         return self._as_preprocess_projection_record(projection)
+
+    @staticmethod
+    def _compute_redaction_etag(*parts: str) -> str:
+        seed = "|".join(parts)
+        return hashlib.sha256(seed.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _derive_redaction_run_output_event_type(
+        *,
+        to_status: RedactionOutputStatus,
+    ) -> RedactionRunOutputEventType:
+        if to_status == "READY":
+            return "RUN_OUTPUT_GENERATION_SUCCEEDED"
+        if to_status == "FAILED":
+            return "RUN_OUTPUT_GENERATION_FAILED"
+        if to_status == "CANCELED":
+            return "RUN_OUTPUT_GENERATION_CANCELED"
+        return "RUN_OUTPUT_GENERATION_STARTED"
+
+    def _append_redaction_run_output_event(
+        self,
+        *,
+        cursor: psycopg.Cursor,
+        run_id: str,
+        from_status: RedactionOutputStatus | None,
+        to_status: RedactionOutputStatus,
+        reason: str | None = None,
+        actor_user_id: str | None = None,
+        created_at: datetime | None = None,
+    ) -> None:
+        event_id = str(uuid4())
+        event_time = created_at or datetime.now(timezone.utc)
+        cursor.execute(
+            """
+            INSERT INTO redaction_run_output_events (
+              id,
+              run_id,
+              event_type,
+              from_status,
+              to_status,
+              reason,
+              actor_user_id,
+              created_at
+            )
+            VALUES (
+              %(id)s,
+              %(run_id)s,
+              %(event_type)s,
+              %(from_status)s,
+              %(to_status)s,
+              %(reason)s,
+              %(actor_user_id)s,
+              %(created_at)s
+            )
+            """,
+            {
+                "id": event_id,
+                "run_id": run_id,
+                "event_type": self._derive_redaction_run_output_event_type(to_status=to_status),
+                "from_status": from_status,
+                "to_status": to_status,
+                "reason": reason,
+                "actor_user_id": actor_user_id,
+                "created_at": event_time,
+            },
+        )
+
+    def _build_redaction_approval_snapshot_bytes(
+        self,
+        *,
+        cursor: psycopg.Cursor,
+        run_id: str,
+        captured_at: datetime,
+    ) -> tuple[bytes, str]:
+        cursor.execute(
+            """
+            SELECT
+              id,
+              project_id,
+              document_id,
+              input_transcription_run_id,
+              input_layout_run_id,
+              run_kind,
+              policy_snapshot_hash,
+              policy_id,
+              policy_family_id,
+              policy_version,
+              status,
+              created_at,
+              started_at,
+              finished_at
+            FROM redaction_runs
+            WHERE id = %(run_id)s
+            LIMIT 1
+            """,
+            {"run_id": run_id},
+        )
+        run_row = cursor.fetchone()
+        if run_row is None:
+            raise DocumentNotFoundError("Redaction run not found.")
+
+        cursor.execute(
+            """
+            SELECT
+              review_status,
+              review_started_by,
+              review_started_at,
+              approved_by,
+              approved_at,
+              approved_snapshot_sha256,
+              locked_at
+            FROM redaction_run_reviews
+            WHERE run_id = %(run_id)s
+            LIMIT 1
+            """,
+            {"run_id": run_id},
+        )
+        review_row = cursor.fetchone()
+        if review_row is None:
+            raise DocumentNotFoundError("Redaction run review not found.")
+
+        cursor.execute(
+            """
+            SELECT
+              status,
+              output_manifest_key,
+              output_manifest_sha256,
+              page_count
+            FROM redaction_run_outputs
+            WHERE run_id = %(run_id)s
+            LIMIT 1
+            """,
+            {"run_id": run_id},
+        )
+        run_output_row = cursor.fetchone()
+        if run_output_row is None:
+            raise DocumentNotFoundError("Redaction run output not found.")
+
+        cursor.execute(
+            """
+            SELECT
+              rf.id,
+              rf.page_id,
+              p.page_index,
+              rf.line_id,
+              rf.category,
+              rf.span_start,
+              rf.span_end,
+              rf.span_basis_kind,
+              rf.span_basis_ref,
+              rf.token_refs_json,
+              rf.bbox_refs,
+              rf.confidence,
+              rf.basis_primary,
+              rf.basis_secondary_json,
+              rf.decision_status,
+              rf.area_mask_id,
+              rf.decision_by,
+              rf.decision_at,
+              rf.decision_etag,
+              rf.updated_at,
+              latest_decision.action_type AS action_type
+            FROM redaction_findings AS rf
+            INNER JOIN pages AS p
+              ON p.id = rf.page_id
+            LEFT JOIN LATERAL (
+              SELECT action_type
+              FROM redaction_decision_events
+              WHERE finding_id = rf.id
+              ORDER BY created_at DESC, id DESC
+              LIMIT 1
+            ) AS latest_decision
+              ON TRUE
+            WHERE rf.run_id = %(run_id)s
+            ORDER BY p.page_index ASC, rf.page_id ASC, rf.id ASC
+            """,
+            {"run_id": run_id},
+        )
+        finding_rows = cursor.fetchall()
+
+        cursor.execute(
+            """
+            SELECT
+              id,
+              page_id,
+              version_etag,
+              supersedes_area_mask_id,
+              superseded_by_area_mask_id,
+              updated_at
+            FROM redaction_area_masks
+            WHERE run_id = %(run_id)s
+            ORDER BY page_id ASC, created_at ASC, id ASC
+            """,
+            {"run_id": run_id},
+        )
+        mask_rows = cursor.fetchall()
+
+        cursor.execute(
+            """
+            SELECT
+              pr.page_id,
+              p.page_index,
+              pr.review_status,
+              pr.review_etag,
+              pr.first_reviewed_by,
+              pr.first_reviewed_at,
+              pr.requires_second_review,
+              pr.second_review_status,
+              pr.second_reviewed_by,
+              pr.second_reviewed_at,
+              pr.updated_at
+            FROM redaction_page_reviews AS pr
+            INNER JOIN pages AS p
+              ON p.id = pr.page_id
+            WHERE pr.run_id = %(run_id)s
+            ORDER BY p.page_index ASC, pr.page_id ASC
+            """,
+            {"run_id": run_id},
+        )
+        page_review_rows = cursor.fetchall()
+
+        cursor.execute(
+            """
+            SELECT
+              ro.page_id,
+              p.page_index,
+              ro.status,
+              ro.safeguarded_preview_key,
+              ro.preview_sha256,
+              ro.generated_at
+            FROM redaction_outputs AS ro
+            INNER JOIN pages AS p
+              ON p.id = ro.page_id
+            WHERE ro.run_id = %(run_id)s
+            ORDER BY p.page_index ASC, ro.page_id ASC
+            """,
+            {"run_id": run_id},
+        )
+        output_rows = cursor.fetchall()
+
+        snapshot_payload = {
+            "schemaVersion": 3,
+            "runId": run_id,
+            "capturedAt": captured_at.isoformat(),
+            "review": {
+                "reviewStatus": str(review_row["review_status"]),
+                "reviewStartedBy": (
+                    str(review_row["review_started_by"])
+                    if isinstance(review_row.get("review_started_by"), str)
+                    else None
+                ),
+                "reviewStartedAt": (
+                    review_row["review_started_at"].isoformat()
+                    if isinstance(review_row.get("review_started_at"), datetime)
+                    else None
+                ),
+                "approvedBy": (
+                    str(review_row["approved_by"])
+                    if isinstance(review_row.get("approved_by"), str)
+                    else None
+                ),
+                "approvedAt": (
+                    review_row["approved_at"].isoformat()
+                    if isinstance(review_row.get("approved_at"), datetime)
+                    else None
+                ),
+                "approvedSnapshotSha256": (
+                    str(review_row["approved_snapshot_sha256"])
+                    if isinstance(review_row.get("approved_snapshot_sha256"), str)
+                    else None
+                ),
+                "lockedAt": (
+                    review_row["locked_at"].isoformat()
+                    if isinstance(review_row.get("locked_at"), datetime)
+                    else None
+                ),
+            },
+            "run": {
+                "projectId": str(run_row["project_id"]),
+                "documentId": str(run_row["document_id"]),
+                "inputTranscriptionRunId": str(run_row["input_transcription_run_id"]),
+                "inputLayoutRunId": (
+                    str(run_row["input_layout_run_id"])
+                    if isinstance(run_row.get("input_layout_run_id"), str)
+                    else None
+                ),
+                "runKind": str(run_row["run_kind"]),
+                "policySnapshotHash": str(run_row["policy_snapshot_hash"]),
+                "policyId": (
+                    str(run_row["policy_id"])
+                    if isinstance(run_row.get("policy_id"), str)
+                    else None
+                ),
+                "policyFamilyId": (
+                    str(run_row["policy_family_id"])
+                    if isinstance(run_row.get("policy_family_id"), str)
+                    else None
+                ),
+                "policyVersion": (
+                    str(run_row["policy_version"])
+                    if isinstance(run_row.get("policy_version"), str)
+                    else None
+                ),
+                "runStatus": str(run_row["status"]),
+                "runCreatedAt": (
+                    run_row["created_at"].isoformat()
+                    if isinstance(run_row.get("created_at"), datetime)
+                    else None
+                ),
+                "runStartedAt": (
+                    run_row["started_at"].isoformat()
+                    if isinstance(run_row.get("started_at"), datetime)
+                    else None
+                ),
+                "runFinishedAt": (
+                    run_row["finished_at"].isoformat()
+                    if isinstance(run_row.get("finished_at"), datetime)
+                    else None
+                ),
+            },
+            "runOutput": {
+                "status": str(run_output_row["status"]),
+                "outputManifestKey": (
+                    str(run_output_row["output_manifest_key"])
+                    if isinstance(run_output_row.get("output_manifest_key"), str)
+                    else None
+                ),
+                "outputManifestSha256": (
+                    str(run_output_row["output_manifest_sha256"])
+                    if isinstance(run_output_row.get("output_manifest_sha256"), str)
+                    else None
+                ),
+                "pageCount": int(run_output_row.get("page_count") or 0),
+            },
+            "findings": [
+                {
+                    "id": str(item["id"]),
+                    "pageId": str(item["page_id"]),
+                    "pageIndex": int(item["page_index"]),
+                    "lineId": (
+                        str(item["line_id"])
+                        if isinstance(item.get("line_id"), str)
+                        else None
+                    ),
+                    "category": str(item["category"]),
+                    "spanStart": (
+                        int(item["span_start"])
+                        if isinstance(item.get("span_start"), int)
+                        else None
+                    ),
+                    "spanEnd": (
+                        int(item["span_end"])
+                        if isinstance(item.get("span_end"), int)
+                        else None
+                    ),
+                    "spanBasisKind": (
+                        str(item["span_basis_kind"])
+                        if isinstance(item.get("span_basis_kind"), str)
+                        else None
+                    ),
+                    "spanBasisRef": (
+                        str(item["span_basis_ref"])
+                        if isinstance(item.get("span_basis_ref"), str)
+                        else None
+                    ),
+                    "tokenRefsJson": (
+                        [
+                            dict(entry)
+                            for entry in item["token_refs_json"]
+                            if isinstance(entry, Mapping)
+                        ]
+                        if isinstance(item.get("token_refs_json"), list)
+                        else None
+                    ),
+                    "bboxRefs": (
+                        dict(item["bbox_refs"])
+                        if isinstance(item.get("bbox_refs"), Mapping)
+                        else {}
+                    ),
+                    "confidence": (
+                        float(item["confidence"])
+                        if isinstance(item.get("confidence"), (int, float))
+                        else None
+                    ),
+                    "basisPrimary": (
+                        str(item["basis_primary"])
+                        if isinstance(item.get("basis_primary"), str)
+                        else None
+                    ),
+                    "basisSecondaryJson": (
+                        dict(item["basis_secondary_json"])
+                        if isinstance(item.get("basis_secondary_json"), Mapping)
+                        else None
+                    ),
+                    "decisionStatus": str(item["decision_status"]),
+                    "actionType": (
+                        str(item["action_type"])
+                        if isinstance(item.get("action_type"), str)
+                        else "MASK"
+                    ),
+                    "areaMaskId": (
+                        str(item["area_mask_id"])
+                        if isinstance(item.get("area_mask_id"), str)
+                        else None
+                    ),
+                    "decisionBy": (
+                        str(item["decision_by"])
+                        if isinstance(item.get("decision_by"), str)
+                        else None
+                    ),
+                    "decisionAt": (
+                        item["decision_at"].isoformat()
+                        if isinstance(item.get("decision_at"), datetime)
+                        else None
+                    ),
+                    "decisionEtag": str(item["decision_etag"]),
+                    "updatedAt": (
+                        item["updated_at"].isoformat()
+                        if isinstance(item.get("updated_at"), datetime)
+                        else None
+                    ),
+                }
+                for item in finding_rows
+            ],
+            "areaMasks": [
+                {
+                    "id": str(item["id"]),
+                    "pageId": str(item["page_id"]),
+                    "versionEtag": str(item["version_etag"]),
+                    "supersedesAreaMaskId": (
+                        str(item["supersedes_area_mask_id"])
+                        if isinstance(item.get("supersedes_area_mask_id"), str)
+                        else None
+                    ),
+                    "supersededByAreaMaskId": (
+                        str(item["superseded_by_area_mask_id"])
+                        if isinstance(item.get("superseded_by_area_mask_id"), str)
+                        else None
+                    ),
+                }
+                for item in mask_rows
+            ],
+            "pageReviews": [
+                {
+                    "pageId": str(item["page_id"]),
+                    "pageIndex": int(item["page_index"]),
+                    "reviewStatus": str(item["review_status"]),
+                    "reviewEtag": str(item["review_etag"]),
+                    "firstReviewedBy": (
+                        str(item["first_reviewed_by"])
+                        if isinstance(item.get("first_reviewed_by"), str)
+                        else None
+                    ),
+                    "firstReviewedAt": (
+                        item["first_reviewed_at"].isoformat()
+                        if isinstance(item.get("first_reviewed_at"), datetime)
+                        else None
+                    ),
+                    "requiresSecondReview": bool(item.get("requires_second_review", False)),
+                    "secondReviewStatus": str(item["second_review_status"]),
+                    "secondReviewedBy": (
+                        str(item["second_reviewed_by"])
+                        if isinstance(item.get("second_reviewed_by"), str)
+                        else None
+                    ),
+                    "secondReviewedAt": (
+                        item["second_reviewed_at"].isoformat()
+                        if isinstance(item.get("second_reviewed_at"), datetime)
+                        else None
+                    ),
+                    "updatedAt": (
+                        item["updated_at"].isoformat()
+                        if isinstance(item.get("updated_at"), datetime)
+                        else None
+                    ),
+                }
+                for item in page_review_rows
+            ],
+            "outputs": [
+                {
+                    "pageId": str(item["page_id"]),
+                    "pageIndex": int(item["page_index"]),
+                    "status": str(item["status"]),
+                    "safeguardedPreviewKey": (
+                        str(item["safeguarded_preview_key"])
+                        if isinstance(item.get("safeguarded_preview_key"), str)
+                        else None
+                    ),
+                    "previewSha256": (
+                        str(item["preview_sha256"])
+                        if isinstance(item.get("preview_sha256"), str)
+                        else None
+                    ),
+                    "generatedAt": (
+                        item["generated_at"].isoformat()
+                        if isinstance(item.get("generated_at"), datetime)
+                        else None
+                    ),
+                }
+                for item in output_rows
+            ],
+        }
+        snapshot_bytes = json.dumps(
+            snapshot_payload,
+            ensure_ascii=True,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+        snapshot_sha256 = hashlib.sha256(snapshot_bytes).hexdigest()
+        return snapshot_bytes, snapshot_sha256
+
+    def _refresh_redaction_run_output_status(
+        self,
+        *,
+        cursor: psycopg.Cursor,
+        run_id: str,
+    ) -> None:
+        cursor.execute(
+            """
+            SELECT
+              rro.status,
+              rro.started_at,
+              rr.project_id,
+              rr.document_id,
+              rrv.approved_snapshot_sha256,
+              rrv.locked_at
+            FROM redaction_run_outputs AS rro
+            INNER JOIN redaction_runs AS rr
+              ON rr.id = rro.run_id
+            LEFT JOIN redaction_run_reviews AS rrv
+              ON rrv.run_id = rr.id
+            WHERE rro.run_id = %(run_id)s
+            LIMIT 1
+            FOR UPDATE
+            """,
+            {"run_id": run_id},
+        )
+        run_output_row = cursor.fetchone()
+        if run_output_row is None:
+            return
+        previous_status = self._assert_redaction_output_status(str(run_output_row["status"]))
+        previous_started_at = run_output_row.get("started_at")
+        project_id = str(run_output_row["project_id"])
+        document_id = str(run_output_row["document_id"])
+        approved_snapshot_sha256 = (
+            str(run_output_row["approved_snapshot_sha256"])
+            if isinstance(run_output_row.get("approved_snapshot_sha256"), str)
+            and str(run_output_row["approved_snapshot_sha256"]).strip()
+            else None
+        )
+        locked_at = (
+            run_output_row.get("locked_at")
+            if isinstance(run_output_row.get("locked_at"), datetime)
+            else None
+        )
+
+        cursor.execute(
+            """
+            SELECT
+              ro.page_id,
+              ro.status,
+              ro.safeguarded_preview_key,
+              ro.failure_reason,
+              ro.preview_sha256
+            FROM redaction_outputs AS ro
+            INNER JOIN pages AS p
+              ON p.id = ro.page_id
+            WHERE ro.run_id = %(run_id)s
+            ORDER BY p.page_index ASC, ro.page_id ASC
+            """,
+            {"run_id": run_id},
+        )
+        output_rows = cursor.fetchall()
+        total_count = len(output_rows)
+        ready_count = 0
+        failed_count = 0
+        canceled_count = 0
+        ready_manifest_rows: list[tuple[str, str]] = []
+        failure_reasons: list[str] = []
+        for row in output_rows:
+            status = self._assert_redaction_output_status(str(row["status"]))
+            preview_sha256 = (
+                str(row["preview_sha256"])
+                if isinstance(row.get("preview_sha256"), str) and str(row["preview_sha256"]).strip()
+                else None
+            )
+            if status == "READY":
+                ready_count += 1
+                if preview_sha256 is not None and isinstance(row.get("page_id"), str):
+                    page_id = str(row["page_id"])
+                    ready_manifest_rows.append((page_id, preview_sha256))
+            elif status == "FAILED":
+                failed_count += 1
+                if isinstance(row.get("failure_reason"), str) and str(row["failure_reason"]).strip():
+                    failure_reasons.append(str(row["failure_reason"]).strip())
+            elif status == "CANCELED":
+                canceled_count += 1
+        next_status: RedactionOutputStatus = "PENDING"
+        if failed_count > 0:
+            next_status = "FAILED"
+        elif total_count > 0 and ready_count >= total_count:
+            next_status = "READY"
+        elif total_count > 0 and canceled_count >= total_count:
+            next_status = "CANCELED"
+
+        output_manifest_key: str | None = None
+        output_manifest_sha256: str | None = None
+        if (
+            next_status == "READY"
+            and ready_manifest_rows
+            and len(ready_manifest_rows) == total_count
+        ):
+            approved_snapshot_payload: dict[str, object] | None = None
+            if approved_snapshot_sha256 is not None and locked_at is not None:
+                snapshot_bytes, snapshot_sha256 = self._build_redaction_approval_snapshot_bytes(
+                    cursor=cursor,
+                    run_id=run_id,
+                    captured_at=locked_at,
+                )
+                if snapshot_sha256 != approved_snapshot_sha256:
+                    raise DocumentStoreUnavailableError(
+                        "Approved snapshot hash changed unexpectedly."
+                    )
+                try:
+                    parsed_snapshot = json.loads(snapshot_bytes.decode("utf-8"))
+                except (UnicodeDecodeError, json.JSONDecodeError) as error:
+                    raise DocumentStoreUnavailableError(
+                        "Approved snapshot artifact payload is invalid JSON."
+                    ) from error
+                if not isinstance(parsed_snapshot, dict):
+                    raise DocumentStoreUnavailableError("Approved snapshot payload is invalid.")
+                approved_snapshot_payload = parsed_snapshot
+
+            output_manifest_sha256 = canonical_preview_manifest_sha256(
+                run_id=run_id,
+                page_rows=ready_manifest_rows,
+                approved_snapshot_sha256=approved_snapshot_sha256,
+                approved_snapshot_payload=approved_snapshot_payload,
+            )
+            derived_prefix = self._settings.storage_controlled_derived_prefix.strip("/ ")
+            output_manifest_key = (
+                f"{derived_prefix}/{project_id}/{document_id}/redaction/{run_id}/output-manifest/"
+                f"{output_manifest_sha256}.json"
+            )
+        failure_reason: str | None = None
+        if next_status == "FAILED" and failure_reasons:
+            failure_reason = failure_reasons[0][:600]
+
+        started_at: datetime | None
+        if next_status == "PENDING":
+            if previous_status == "PENDING" and isinstance(previous_started_at, datetime):
+                started_at = previous_started_at
+            else:
+                started_at = datetime.now(timezone.utc)
+        elif isinstance(previous_started_at, datetime):
+            started_at = previous_started_at
+        else:
+            started_at = datetime.now(timezone.utc)
+
+        cursor.execute(
+            """
+            UPDATE redaction_run_outputs
+            SET
+              status = %(status)s,
+              output_manifest_key = %(output_manifest_key)s,
+              output_manifest_sha256 = %(output_manifest_sha256)s,
+              page_count = %(page_count)s,
+              started_at = %(started_at)s,
+              generated_at = CASE
+                WHEN %(status)s = 'READY' THEN NOW()
+                ELSE NULL
+              END,
+              failure_reason = %(failure_reason)s,
+              updated_at = NOW()
+            WHERE run_id = %(run_id)s
+            """,
+            {
+                "run_id": run_id,
+                "status": next_status,
+                "output_manifest_key": output_manifest_key,
+                "output_manifest_sha256": output_manifest_sha256,
+                "page_count": total_count,
+                "started_at": started_at,
+                "failure_reason": failure_reason,
+            },
+        )
+
+        if previous_status != next_status:
+            self._append_redaction_run_output_event(
+                cursor=cursor,
+                run_id=run_id,
+                from_status=previous_status,
+                to_status=next_status,
+                reason=failure_reason,
+            )
+
+    def _refresh_redaction_page_second_review_requirement(
+        self,
+        *,
+        cursor: psycopg.Cursor,
+        run_id: str,
+        page_id: str,
+        actor_user_id: str,
+    ) -> None:
+        cursor.execute(
+            """
+            SELECT
+              run_id,
+              page_id,
+              review_status,
+              review_etag,
+              first_reviewed_by,
+              first_reviewed_at,
+              requires_second_review,
+              second_review_status,
+              second_reviewed_by,
+              second_reviewed_at,
+              updated_at
+            FROM redaction_page_reviews
+            WHERE run_id = %(run_id)s
+              AND page_id = %(page_id)s
+            LIMIT 1
+            FOR UPDATE
+            """,
+            {"run_id": run_id, "page_id": page_id},
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return
+        current_review = self._as_redaction_page_review_record(row)
+
+        cursor.execute(
+            """
+            SELECT
+              id,
+              override_risk_reason_codes_json
+            FROM redaction_findings
+            WHERE run_id = %(run_id)s
+              AND page_id = %(page_id)s
+              AND decision_status IN ('OVERRIDDEN', 'FALSE_POSITIVE')
+              AND override_risk_classification = 'HIGH'
+            ORDER BY updated_at DESC, id DESC
+            LIMIT 1
+            """,
+            {"run_id": run_id, "page_id": page_id},
+        )
+        high_risk_row = cursor.fetchone()
+        requires_second_review = high_risk_row is not None
+
+        next_second_review_status: RedactionSecondReviewStatus
+        next_second_reviewed_by: str | None
+        next_second_reviewed_at: datetime | None
+        if requires_second_review:
+            has_valid_second_reviewer = (
+                isinstance(current_review.first_reviewed_by, str)
+                and bool(current_review.first_reviewed_by.strip())
+                and isinstance(current_review.second_reviewed_by, str)
+                and bool(current_review.second_reviewed_by.strip())
+                and current_review.second_reviewed_by != current_review.first_reviewed_by
+            )
+            if (
+                current_review.second_review_status in {"APPROVED", "CHANGES_REQUESTED"}
+                and has_valid_second_reviewer
+            ):
+                next_second_review_status = current_review.second_review_status
+                next_second_reviewed_by = current_review.second_reviewed_by
+                next_second_reviewed_at = current_review.second_reviewed_at
+            else:
+                next_second_review_status = "PENDING"
+                next_second_reviewed_by = None
+                next_second_reviewed_at = None
+        else:
+            next_second_review_status = "NOT_REQUIRED"
+            next_second_reviewed_by = None
+            next_second_reviewed_at = None
+
+        if (
+            current_review.requires_second_review == requires_second_review
+            and current_review.second_review_status == next_second_review_status
+            and current_review.second_reviewed_by == next_second_reviewed_by
+            and current_review.second_reviewed_at == next_second_reviewed_at
+        ):
+            return
+
+        now = datetime.now(timezone.utc)
+        next_review_etag = self._compute_redaction_etag(
+            run_id,
+            page_id,
+            current_review.review_status,
+            "SECOND_REVIEW_REQUIREMENT_REFRESH",
+            str(requires_second_review),
+            str(next_second_review_status),
+            now.isoformat(),
+        )
+        cursor.execute(
+            """
+            UPDATE redaction_page_reviews
+            SET
+              requires_second_review = %(requires_second_review)s,
+              second_review_status = %(second_review_status)s,
+              second_reviewed_by = %(second_reviewed_by)s,
+              second_reviewed_at = %(second_reviewed_at)s,
+              review_etag = %(review_etag)s,
+              updated_at = NOW()
+            WHERE run_id = %(run_id)s
+              AND page_id = %(page_id)s
+            """,
+            {
+                "run_id": run_id,
+                "page_id": page_id,
+                "requires_second_review": requires_second_review,
+                "second_review_status": next_second_review_status,
+                "second_reviewed_by": next_second_reviewed_by,
+                "second_reviewed_at": next_second_reviewed_at,
+                "review_etag": next_review_etag,
+            },
+        )
+
+        if requires_second_review and not current_review.requires_second_review:
+            reason_codes = (
+                [
+                    str(item)
+                    for item in (high_risk_row.get("override_risk_reason_codes_json") or [])
+                    if isinstance(item, str)
+                ]
+                if isinstance(high_risk_row, Mapping)
+                else []
+            )
+            reason = (
+                "Second review required due to high-risk override conditions"
+                + (f": {', '.join(reason_codes)}" if reason_codes else ".")
+            )
+            cursor.execute(
+                """
+                INSERT INTO redaction_page_review_events (
+                  id,
+                  run_id,
+                  page_id,
+                  event_type,
+                  actor_user_id,
+                  reason,
+                  created_at
+                )
+                VALUES (
+                  %(id)s,
+                  %(run_id)s,
+                  %(page_id)s,
+                  'SECOND_REVIEW_REQUIRED',
+                  %(actor_user_id)s,
+                  %(reason)s,
+                  %(created_at)s
+                )
+                """,
+                {
+                    "id": str(uuid4()),
+                    "run_id": run_id,
+                    "page_id": page_id,
+                    "actor_user_id": actor_user_id,
+                    "reason": reason,
+                    "created_at": now,
+                },
+            )
+
+    def get_redaction_projection(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+    ) -> DocumentRedactionProjectionRecord | None:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          document_id,
+                          project_id,
+                          active_redaction_run_id,
+                          active_transcription_run_id,
+                          active_layout_run_id,
+                          active_policy_snapshot_id,
+                          updated_at
+                        FROM document_redaction_projections
+                        WHERE project_id = %(project_id)s
+                          AND document_id = %(document_id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                        },
+                    )
+                    row = cursor.fetchone()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction projection lookup failed."
+            ) from error
+        if row is None:
+            return None
+        return self._as_redaction_projection_record(row)
+
+    def list_redaction_runs(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        cursor: int = 0,
+        page_size: int = 50,
+    ) -> tuple[list[RedactionRunRecord], int | None]:
+        self.ensure_schema()
+        safe_cursor = max(0, cursor)
+        safe_page_size = max(1, min(page_size, 200))
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as db_cursor:
+                    db_cursor.execute(
+                        """
+                        SELECT
+                          id,
+                          project_id,
+                          document_id,
+                          input_transcription_run_id,
+                          input_layout_run_id,
+                          run_kind,
+                          supersedes_redaction_run_id,
+                          superseded_by_redaction_run_id,
+                          policy_snapshot_id,
+                          policy_snapshot_json,
+                          policy_snapshot_hash,
+                          policy_id,
+                          policy_family_id,
+                          policy_version,
+                          detectors_version,
+                          status,
+                          created_by,
+                          created_at,
+                          started_at,
+                          finished_at,
+                          failure_reason
+                        FROM redaction_runs
+                        WHERE project_id = %(project_id)s
+                          AND document_id = %(document_id)s
+                        ORDER BY created_at DESC, id DESC
+                        OFFSET %(cursor)s
+                        LIMIT %(limit)s
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "cursor": safe_cursor,
+                            "limit": safe_page_size + 1,
+                        },
+                    )
+                    rows = db_cursor.fetchall()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError("Redaction run listing failed.") from error
+        items = [self._as_redaction_run_record(row) for row in rows[:safe_page_size]]
+        next_cursor = (
+            safe_cursor + safe_page_size if len(rows) > safe_page_size else None
+        )
+        return items, next_cursor
+
+    def get_redaction_run(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> RedactionRunRecord | None:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          id,
+                          project_id,
+                          document_id,
+                          input_transcription_run_id,
+                          input_layout_run_id,
+                          run_kind,
+                          supersedes_redaction_run_id,
+                          superseded_by_redaction_run_id,
+                          policy_snapshot_id,
+                          policy_snapshot_json,
+                          policy_snapshot_hash,
+                          policy_id,
+                          policy_family_id,
+                          policy_version,
+                          detectors_version,
+                          status,
+                          created_by,
+                          created_at,
+                          started_at,
+                          finished_at,
+                          failure_reason
+                        FROM redaction_runs
+                        WHERE project_id = %(project_id)s
+                          AND document_id = %(document_id)s
+                          AND id = %(run_id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                        },
+                    )
+                    row = cursor.fetchone()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError("Redaction run lookup failed.") from error
+        if row is None:
+            return None
+        return self._as_redaction_run_record(row)
+
+    def get_active_redaction_run(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+    ) -> RedactionRunRecord | None:
+        projection = self.get_redaction_projection(
+            project_id=project_id,
+            document_id=document_id,
+        )
+        if projection is None or projection.active_redaction_run_id is None:
+            return None
+        return self.get_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=projection.active_redaction_run_id,
+        )
+
+    def create_redaction_run(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        created_by: str,
+        input_transcription_run_id: str | None = None,
+        input_layout_run_id: str | None = None,
+        run_kind: RedactionRunKind = "BASELINE",
+        supersedes_redaction_run_id: str | None = None,
+        detectors_version: str = "phase-5.0-scaffold",
+        policy_snapshot_id: str | None = None,
+        policy_snapshot_json: Mapping[str, object] | None = None,
+        policy_snapshot_hash: str | None = None,
+        policy_id: str | None = None,
+        policy_family_id: str | None = None,
+        policy_version: str | None = None,
+    ) -> RedactionRunRecord:
+        self.ensure_schema()
+        now = datetime.now(timezone.utc)
+        run_id = str(uuid4())
+        normalized_detectors_version = detectors_version.strip() or "phase-5.0-scaffold"
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          d.id AS document_id,
+                          d.project_id,
+                          p.baseline_policy_snapshot_id,
+                          b.rules_json AS policy_snapshot_json,
+                          b.snapshot_hash AS policy_snapshot_hash
+                        FROM documents AS d
+                        INNER JOIN projects AS p
+                          ON p.id = d.project_id
+                        LEFT JOIN baseline_policy_snapshots AS b
+                          ON b.id = p.baseline_policy_snapshot_id
+                        WHERE d.project_id = %(project_id)s
+                          AND d.id = %(document_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                        },
+                    )
+                    document_row = cursor.fetchone()
+                    if document_row is None:
+                        raise DocumentNotFoundError("Document not found.")
+
+                    resolved_transcription_run_id: str | None = (
+                        input_transcription_run_id.strip()
+                        if isinstance(input_transcription_run_id, str)
+                        and input_transcription_run_id.strip()
+                        else None
+                    )
+                    if resolved_transcription_run_id is None:
+                        cursor.execute(
+                            """
+                            SELECT active_transcription_run_id
+                            FROM document_transcription_projections
+                            WHERE project_id = %(project_id)s
+                              AND document_id = %(document_id)s
+                            LIMIT 1
+                            """,
+                            {
+                                "project_id": project_id,
+                                "document_id": document_id,
+                            },
+                        )
+                        projection_row = cursor.fetchone()
+                        if (
+                            projection_row is not None
+                            and isinstance(
+                                projection_row.get("active_transcription_run_id"),
+                                str,
+                            )
+                        ):
+                            resolved_transcription_run_id = str(
+                                projection_row["active_transcription_run_id"]
+                            )
+                    if resolved_transcription_run_id is None:
+                        cursor.execute(
+                            """
+                            SELECT id
+                            FROM transcription_runs
+                            WHERE project_id = %(project_id)s
+                              AND document_id = %(document_id)s
+                              AND status = 'SUCCEEDED'
+                            ORDER BY created_at DESC, id DESC
+                            LIMIT 1
+                            """,
+                            {
+                                "project_id": project_id,
+                                "document_id": document_id,
+                            },
+                        )
+                        row = cursor.fetchone()
+                        if row is not None:
+                            resolved_transcription_run_id = str(row["id"])
+                    if resolved_transcription_run_id is None:
+                        raise DocumentRedactionRunConflictError(
+                            "Redaction run creation requires a transcription basis."
+                        )
+
+                    cursor.execute(
+                        """
+                        SELECT
+                          id,
+                          input_layout_run_id,
+                          status
+                        FROM transcription_runs
+                        WHERE project_id = %(project_id)s
+                          AND document_id = %(document_id)s
+                          AND id = %(run_id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": resolved_transcription_run_id,
+                        },
+                    )
+                    transcription_row = cursor.fetchone()
+                    if transcription_row is None:
+                        raise DocumentRedactionRunConflictError(
+                            "Input transcription run was not found."
+                        )
+                    transcription_status = self._assert_transcription_run_status(
+                        str(transcription_row["status"])
+                    )
+                    if transcription_status != "SUCCEEDED":
+                        raise DocumentRedactionRunConflictError(
+                            "Input transcription run must be SUCCEEDED."
+                        )
+
+                    resolved_layout_run_id: str | None = (
+                        input_layout_run_id.strip()
+                        if isinstance(input_layout_run_id, str)
+                        and input_layout_run_id.strip()
+                        else (
+                            str(transcription_row["input_layout_run_id"])
+                            if isinstance(transcription_row.get("input_layout_run_id"), str)
+                            else None
+                        )
+                    )
+
+                    normalized_supersedes_run_id = (
+                        supersedes_redaction_run_id.strip()
+                        if isinstance(supersedes_redaction_run_id, str)
+                        and supersedes_redaction_run_id.strip()
+                        else None
+                    )
+                    if normalized_supersedes_run_id is not None:
+                        cursor.execute(
+                            """
+                            SELECT id
+                            FROM redaction_runs
+                            WHERE id = %(run_id)s
+                              AND project_id = %(project_id)s
+                              AND document_id = %(document_id)s
+                            LIMIT 1
+                            """,
+                            {
+                                "run_id": normalized_supersedes_run_id,
+                                "project_id": project_id,
+                                "document_id": document_id,
+                            },
+                        )
+                        if cursor.fetchone() is None:
+                            raise DocumentRedactionRunConflictError(
+                                "supersedesRedactionRunId was not found."
+                            )
+
+                    normalized_policy_snapshot_id = (
+                        policy_snapshot_id.strip()
+                        if isinstance(policy_snapshot_id, str)
+                        and policy_snapshot_id.strip()
+                        else None
+                    )
+                    normalized_policy_snapshot_hash = (
+                        policy_snapshot_hash.strip()
+                        if isinstance(policy_snapshot_hash, str)
+                        and policy_snapshot_hash.strip()
+                        else None
+                    )
+                    normalized_policy_snapshot_json = (
+                        dict(policy_snapshot_json)
+                        if isinstance(policy_snapshot_json, Mapping)
+                        else None
+                    )
+                    has_explicit_policy_snapshot = any(
+                        value is not None
+                        for value in (
+                            normalized_policy_snapshot_id,
+                            normalized_policy_snapshot_hash,
+                            normalized_policy_snapshot_json,
+                        )
+                    )
+                    if has_explicit_policy_snapshot and (
+                        normalized_policy_snapshot_id is None
+                        or normalized_policy_snapshot_hash is None
+                        or normalized_policy_snapshot_json is None
+                    ):
+                        raise DocumentRedactionRunConflictError(
+                            "Policy rerun creation requires policy snapshot id, payload, and hash."
+                        )
+
+                    resolved_policy_snapshot_id: str
+                    resolved_policy_snapshot_hash: str
+                    resolved_policy_snapshot_json: dict[str, object]
+                    if has_explicit_policy_snapshot:
+                        assert normalized_policy_snapshot_id is not None
+                        assert normalized_policy_snapshot_hash is not None
+                        assert normalized_policy_snapshot_json is not None
+                        resolved_policy_snapshot_id = normalized_policy_snapshot_id
+                        resolved_policy_snapshot_hash = normalized_policy_snapshot_hash
+                        resolved_policy_snapshot_json = normalized_policy_snapshot_json
+                    else:
+                        baseline_snapshot_id = (
+                            str(document_row["baseline_policy_snapshot_id"])
+                            if isinstance(document_row.get("baseline_policy_snapshot_id"), str)
+                            else None
+                        )
+                        baseline_snapshot_hash = (
+                            str(document_row["policy_snapshot_hash"])
+                            if isinstance(document_row.get("policy_snapshot_hash"), str)
+                            else None
+                        )
+                        baseline_snapshot_json = (
+                            dict(document_row["policy_snapshot_json"])
+                            if isinstance(document_row.get("policy_snapshot_json"), Mapping)
+                            else None
+                        )
+                        if (
+                            baseline_snapshot_id is None
+                            or baseline_snapshot_hash is None
+                            or baseline_snapshot_json is None
+                        ):
+                            raise DocumentRedactionRunConflictError(
+                                "Redaction run creation requires a baseline policy snapshot."
+                            )
+                        resolved_policy_snapshot_id = baseline_snapshot_id
+                        resolved_policy_snapshot_hash = baseline_snapshot_hash
+                        resolved_policy_snapshot_json = baseline_snapshot_json
+
+                    normalized_policy_id = (
+                        policy_id.strip()
+                        if isinstance(policy_id, str) and policy_id.strip()
+                        else None
+                    )
+                    normalized_policy_family_id = (
+                        policy_family_id.strip()
+                        if isinstance(policy_family_id, str) and policy_family_id.strip()
+                        else None
+                    )
+                    normalized_policy_version = (
+                        policy_version.strip()
+                        if isinstance(policy_version, str) and policy_version.strip()
+                        else None
+                    )
+
+                    cursor.execute(
+                        """
+                        INSERT INTO redaction_runs (
+                          id,
+                          project_id,
+                          document_id,
+                          input_transcription_run_id,
+                          input_layout_run_id,
+                          run_kind,
+                          supersedes_redaction_run_id,
+                          superseded_by_redaction_run_id,
+                          policy_snapshot_id,
+                          policy_snapshot_json,
+                          policy_snapshot_hash,
+                          policy_id,
+                          policy_family_id,
+                          policy_version,
+                          detectors_version,
+                          status,
+                          created_by,
+                          created_at,
+                          started_at,
+                          finished_at,
+                          failure_reason
+                        )
+                        VALUES (
+                          %(id)s,
+                          %(project_id)s,
+                          %(document_id)s,
+                          %(input_transcription_run_id)s,
+                          %(input_layout_run_id)s,
+                          %(run_kind)s,
+                          %(supersedes_redaction_run_id)s,
+                          NULL,
+                          %(policy_snapshot_id)s,
+                          %(policy_snapshot_json)s::jsonb,
+                          %(policy_snapshot_hash)s,
+                          %(policy_id)s,
+                          %(policy_family_id)s,
+                          %(policy_version)s,
+                          %(detectors_version)s,
+                          'SUCCEEDED',
+                          %(created_by)s,
+                          %(created_at)s,
+                          %(started_at)s,
+                          %(finished_at)s,
+                          NULL
+                        )
+                        """,
+                        {
+                            "id": run_id,
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "input_transcription_run_id": resolved_transcription_run_id,
+                            "input_layout_run_id": resolved_layout_run_id,
+                            "run_kind": run_kind,
+                            "supersedes_redaction_run_id": normalized_supersedes_run_id,
+                            "policy_snapshot_id": resolved_policy_snapshot_id,
+                            "policy_snapshot_json": json.dumps(
+                                resolved_policy_snapshot_json,
+                                ensure_ascii=True,
+                                separators=(",", ":"),
+                                sort_keys=True,
+                            ),
+                            "policy_snapshot_hash": resolved_policy_snapshot_hash,
+                            "policy_id": normalized_policy_id,
+                            "policy_family_id": normalized_policy_family_id,
+                            "policy_version": normalized_policy_version,
+                            "detectors_version": normalized_detectors_version,
+                            "created_by": created_by,
+                            "created_at": now,
+                            "started_at": now,
+                            "finished_at": now,
+                        },
+                    )
+                    if normalized_supersedes_run_id is not None:
+                        cursor.execute(
+                            """
+                            UPDATE redaction_runs
+                            SET superseded_by_redaction_run_id = %(run_id)s
+                            WHERE id = %(supersedes_run_id)s
+                              AND superseded_by_redaction_run_id IS NULL
+                            """,
+                            {
+                                "run_id": run_id,
+                                "supersedes_run_id": normalized_supersedes_run_id,
+                            },
+                        )
+
+                    cursor.execute(
+                        """
+                        INSERT INTO redaction_run_reviews (
+                          run_id,
+                          review_status,
+                          review_started_by,
+                          review_started_at,
+                          approved_by,
+                          approved_at,
+                          approved_snapshot_key,
+                          approved_snapshot_sha256,
+                          locked_at,
+                          updated_at
+                        )
+                        VALUES (
+                          %(run_id)s,
+                          'NOT_READY',
+                          NULL,
+                          NULL,
+                          NULL,
+                          NULL,
+                          NULL,
+                          NULL,
+                          NULL,
+                          NOW()
+                        )
+                        ON CONFLICT (run_id) DO NOTHING
+                        """,
+                        {"run_id": run_id},
+                    )
+
+                    cursor.execute(
+                        """
+                        SELECT id, page_index
+                        FROM pages
+                        WHERE document_id = %(document_id)s
+                        ORDER BY page_index ASC, id ASC
+                        """,
+                        {"document_id": document_id},
+                    )
+                    page_rows = cursor.fetchall()
+                    for page_row in page_rows:
+                        page_id = str(page_row["id"])
+                        review_etag = self._compute_redaction_etag(
+                            run_id,
+                            page_id,
+                            "NOT_STARTED",
+                            now.isoformat(),
+                        )
+                        cursor.execute(
+                            """
+                            INSERT INTO redaction_page_reviews (
+                              run_id,
+                              page_id,
+                              review_status,
+                              review_etag,
+                              first_reviewed_by,
+                              first_reviewed_at,
+                              requires_second_review,
+                              second_review_status,
+                              second_reviewed_by,
+                              second_reviewed_at,
+                              updated_at
+                            )
+                            VALUES (
+                              %(run_id)s,
+                              %(page_id)s,
+                              'NOT_STARTED',
+                              %(review_etag)s,
+                              NULL,
+                              NULL,
+                              FALSE,
+                              'NOT_REQUIRED',
+                              NULL,
+                              NULL,
+                              NOW()
+                            )
+                            ON CONFLICT (run_id, page_id) DO NOTHING
+                            """,
+                            {
+                                "run_id": run_id,
+                                "page_id": page_id,
+                                "review_etag": review_etag,
+                            },
+                        )
+                        cursor.execute(
+                            """
+                            INSERT INTO redaction_outputs (
+                              run_id,
+                              page_id,
+                              status,
+                              safeguarded_preview_key,
+                              preview_sha256,
+                              started_at,
+                              generated_at,
+                              canceled_by,
+                              canceled_at,
+                              failure_reason,
+                              created_at,
+                              updated_at
+                            )
+                            VALUES (
+                              %(run_id)s,
+                              %(page_id)s,
+                              'PENDING',
+                              NULL,
+                              NULL,
+                              NULL,
+                              NULL,
+                              NULL,
+                              NULL,
+                              NULL,
+                              NOW(),
+                              NOW()
+                            )
+                            ON CONFLICT (run_id, page_id) DO NOTHING
+                            """,
+                            {
+                                "run_id": run_id,
+                                "page_id": page_id,
+                            },
+                        )
+
+                    cursor.execute(
+                        """
+                        INSERT INTO redaction_run_outputs (
+                          run_id,
+                          status,
+                          output_manifest_key,
+                          output_manifest_sha256,
+                          page_count,
+                          started_at,
+                          generated_at,
+                          canceled_by,
+                          canceled_at,
+                          failure_reason,
+                          created_at,
+                          updated_at
+                        )
+                        VALUES (
+                          %(run_id)s,
+                          'PENDING',
+                          NULL,
+                          NULL,
+                          %(page_count)s,
+                          NULL,
+                          NULL,
+                          NULL,
+                          NULL,
+                          NULL,
+                          NOW(),
+                          NOW()
+                        )
+                        ON CONFLICT (run_id) DO NOTHING
+                        """,
+                        {"run_id": run_id, "page_count": len(page_rows)},
+                    )
+
+                    cursor.execute(
+                        """
+                        SELECT
+                          id,
+                          project_id,
+                          document_id,
+                          input_transcription_run_id,
+                          input_layout_run_id,
+                          run_kind,
+                          supersedes_redaction_run_id,
+                          superseded_by_redaction_run_id,
+                          policy_snapshot_id,
+                          policy_snapshot_json,
+                          policy_snapshot_hash,
+                          policy_id,
+                          policy_family_id,
+                          policy_version,
+                          detectors_version,
+                          status,
+                          created_by,
+                          created_at,
+                          started_at,
+                          finished_at,
+                          failure_reason
+                        FROM redaction_runs
+                        WHERE id = %(run_id)s
+                        LIMIT 1
+                        """,
+                        {"run_id": run_id},
+                    )
+                    created_row = cursor.fetchone()
+                connection.commit()
+        except (
+            DocumentNotFoundError,
+            DocumentRedactionRunConflictError,
+        ):
+            raise
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError("Redaction run creation failed.") from error
+        if created_row is None:
+            raise DocumentStoreUnavailableError("Redaction run creation failed.")
+        return self._as_redaction_run_record(created_row)
+
+    def replace_redaction_findings(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        findings: Sequence[dict[str, object]],
+    ) -> list[RedactionFindingRecord]:
+        self.ensure_schema()
+        now = datetime.now(timezone.utc)
+        normalized_rows: list[dict[str, object]] = []
+
+        for index, finding in enumerate(findings):
+            raw_page_id = finding.get("page_id")
+            if not isinstance(raw_page_id, str) or not raw_page_id.strip():
+                raise DocumentStoreUnavailableError(
+                    f"Redaction finding row {index} requires page_id."
+                )
+            page_id = raw_page_id.strip()
+
+            raw_line_id = finding.get("line_id")
+            line_id = (
+                raw_line_id.strip()
+                if isinstance(raw_line_id, str) and raw_line_id.strip()
+                else None
+            )
+
+            raw_category = finding.get("category")
+            if not isinstance(raw_category, str) or not raw_category.strip():
+                raise DocumentStoreUnavailableError(
+                    f"Redaction finding row {index} requires category."
+                )
+            category = raw_category.strip()
+
+            span_start = (
+                int(finding["span_start"])
+                if isinstance(finding.get("span_start"), int)
+                else None
+            )
+            span_end = (
+                int(finding["span_end"])
+                if isinstance(finding.get("span_end"), int)
+                else None
+            )
+            if (span_start is None) ^ (span_end is None):
+                raise DocumentStoreUnavailableError(
+                    f"Redaction finding row {index} must provide both span_start and span_end or neither."
+                )
+            if span_start is not None and span_end is not None and span_end <= span_start:
+                raise DocumentStoreUnavailableError(
+                    f"Redaction finding row {index} has invalid span range."
+                )
+
+            span_basis_kind = self._assert_redaction_finding_span_basis_kind(
+                str(finding.get("span_basis_kind") or "NONE").strip().upper()
+            )
+            span_basis_ref = (
+                str(finding["span_basis_ref"]).strip()
+                if isinstance(finding.get("span_basis_ref"), str)
+                and str(finding["span_basis_ref"]).strip()
+                else None
+            )
+
+            confidence = (
+                float(finding["confidence"])
+                if isinstance(finding.get("confidence"), (int, float))
+                else None
+            )
+            if confidence is not None and (confidence < 0.0 or confidence > 1.0):
+                raise DocumentStoreUnavailableError(
+                    f"Redaction finding row {index} confidence must be between 0 and 1."
+                )
+
+            basis_primary = self._assert_redaction_finding_basis_primary(
+                str(finding.get("basis_primary") or "HEURISTIC").strip().upper()
+            )
+
+            basis_secondary_json = (
+                dict(finding["basis_secondary_json"])
+                if isinstance(finding.get("basis_secondary_json"), Mapping)
+                else None
+            )
+
+            assist_explanation_key = (
+                str(finding["assist_explanation_key"]).strip()
+                if isinstance(finding.get("assist_explanation_key"), str)
+                and str(finding["assist_explanation_key"]).strip()
+                else None
+            )
+            assist_explanation_sha256 = (
+                str(finding["assist_explanation_sha256"]).strip()
+                if isinstance(finding.get("assist_explanation_sha256"), str)
+                and str(finding["assist_explanation_sha256"]).strip()
+                else None
+            )
+
+            raw_bbox_refs = (
+                dict(finding["bbox_refs"])
+                if isinstance(finding.get("bbox_refs"), Mapping)
+                else {}
+            )
+            raw_token_refs_json = (
+                [
+                    dict(item)
+                    for item in finding["token_refs_json"]
+                    if isinstance(item, Mapping)
+                ]
+                if isinstance(finding.get("token_refs_json"), Sequence)
+                and not isinstance(finding.get("token_refs_json"), (str, bytes))
+                else None
+            )
+
+            area_mask_id = (
+                str(finding["area_mask_id"]).strip()
+                if isinstance(finding.get("area_mask_id"), str)
+                and str(finding["area_mask_id"]).strip()
+                else None
+            )
+            action_type = self._assert_redaction_decision_action_type(
+                str(finding.get("action_type") or "MASK").strip().upper()
+            )
+            decision_status = self._assert_redaction_decision_status(
+                str(finding.get("decision_status") or "NEEDS_REVIEW").strip().upper()
+            )
+            decision_reason = (
+                str(finding["decision_reason"]).strip()
+                if isinstance(finding.get("decision_reason"), str)
+                and str(finding["decision_reason"]).strip()
+                else None
+            )
+            if decision_reason is not None and len(decision_reason) > 600:
+                raise DocumentStoreUnavailableError(
+                    f"Redaction finding row {index} decision_reason must be 600 characters or fewer."
+                )
+
+            normalized_rows.append(
+                {
+                    "page_id": page_id,
+                    "line_id": line_id,
+                    "category": category,
+                    "span_start": span_start,
+                    "span_end": span_end,
+                    "span_basis_kind": span_basis_kind,
+                    "span_basis_ref": span_basis_ref,
+                    "confidence": confidence,
+                    "basis_primary": basis_primary,
+                    "basis_secondary_json": basis_secondary_json,
+                    "assist_explanation_key": assist_explanation_key,
+                    "assist_explanation_sha256": assist_explanation_sha256,
+                    "raw_bbox_refs": raw_bbox_refs,
+                    "raw_token_refs_json": raw_token_refs_json,
+                    "area_mask_id": area_mask_id,
+                    "action_type": action_type,
+                    "decision_status": decision_status,
+                    "decision_reason": decision_reason,
+                }
+            )
+
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          rr.id,
+                          rr.input_transcription_run_id,
+                          rr.created_by,
+                          rr.policy_snapshot_json
+                        FROM redaction_runs AS rr
+                        WHERE rr.id = %(run_id)s
+                          AND rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {
+                            "run_id": run_id,
+                            "project_id": project_id,
+                            "document_id": document_id,
+                        },
+                    )
+                    run_row = cursor.fetchone()
+                    if run_row is None:
+                        raise DocumentNotFoundError("Redaction run not found.")
+                    input_transcription_run_id = str(run_row["input_transcription_run_id"])
+                    run_created_by = str(run_row["created_by"])
+                    policy_snapshot_json = run_row.get("policy_snapshot_json")
+
+                    cursor.execute(
+                        """
+                        SELECT p.id, p.width, p.height
+                        FROM pages AS p
+                        WHERE p.document_id = %(document_id)s
+                        """,
+                        {"document_id": document_id},
+                    )
+                    page_dimension_rows = cursor.fetchall()
+                    page_dimensions: dict[str, tuple[int, int]] = {
+                        str(item["id"]): (
+                            int(item["width"]),
+                            int(item["height"]),
+                        )
+                        for item in page_dimension_rows
+                        if isinstance(item.get("id"), str)
+                        and isinstance(item.get("width"), int)
+                        and isinstance(item.get("height"), int)
+                    }
+
+                    cursor.execute(
+                        """
+                        SELECT t.page_id, t.token_id
+                        FROM token_transcription_results AS t
+                        WHERE t.run_id = %(run_id)s
+                        """,
+                        {"run_id": input_transcription_run_id},
+                    )
+                    token_rows = cursor.fetchall()
+                    valid_token_ids_by_page: dict[str, set[str]] = {}
+                    for item in token_rows:
+                        if not isinstance(item.get("page_id"), str) or not isinstance(
+                            item.get("token_id"), str
+                        ):
+                            continue
+                        valid_token_ids_by_page.setdefault(str(item["page_id"]), set()).add(
+                            str(item["token_id"])
+                        )
+
+                    validated_rows: list[dict[str, object]] = []
+                    for index, row in enumerate(normalized_rows):
+                        page_id = str(row["page_id"])
+                        page_dimensions_for_row = page_dimensions.get(page_id)
+                        if page_dimensions_for_row is None:
+                            raise DocumentStoreUnavailableError(
+                                f"Redaction finding row {index} references unknown page_id."
+                            )
+                        page_width, page_height = page_dimensions_for_row
+                        try:
+                            token_refs_json, bbox_refs = normalize_token_refs_and_bbox_refs(
+                                token_refs_json=(
+                                    row["raw_token_refs_json"]
+                                    if isinstance(row.get("raw_token_refs_json"), Sequence)
+                                    and not isinstance(
+                                        row.get("raw_token_refs_json"), (str, bytes)
+                                    )
+                                    else None
+                                ),
+                                bbox_refs=(
+                                    row["raw_bbox_refs"]
+                                    if isinstance(row.get("raw_bbox_refs"), Mapping)
+                                    else {}
+                                ),
+                                page_width=page_width,
+                                page_height=page_height,
+                                valid_token_ids=valid_token_ids_by_page.get(page_id, set()),
+                            )
+                        except RedactionGeometryValidationError as error:
+                            raise DocumentStoreUnavailableError(
+                                f"Redaction finding row {index} geometry is invalid: {error}"
+                            ) from error
+                        validated_rows.append(
+                            {
+                                **row,
+                                "bbox_refs": bbox_refs,
+                                "token_refs_json": token_refs_json,
+                            }
+                        )
+
+                    cursor.execute(
+                        """
+                        DELETE FROM redaction_decision_events
+                        WHERE run_id = %(run_id)s
+                        """,
+                        {"run_id": run_id},
+                    )
+
+                    cursor.execute(
+                        """
+                        DELETE FROM redaction_findings
+                        WHERE run_id = %(run_id)s
+                        """,
+                        {"run_id": run_id},
+                    )
+
+                    for row in validated_rows:
+                        finding_id = str(uuid4())
+                        decision_etag = self._compute_redaction_etag(
+                            run_id,
+                            str(row["page_id"]),
+                            str(row.get("line_id") or ""),
+                            str(row["category"]),
+                            str(row.get("span_start") if row.get("span_start") is not None else ""),
+                            str(row.get("span_end") if row.get("span_end") is not None else ""),
+                            str(row["decision_status"]),
+                            finding_id,
+                            now.isoformat(),
+                        )
+                        decision_at = (
+                            now
+                            if str(row["decision_status"]) == "AUTO_APPLIED"
+                            else None
+                        )
+                        override_risk_classification: (
+                            RedactionOverrideRiskClassification | None
+                        ) = None
+                        override_risk_reason_codes: list[str] | None = None
+                        if row["decision_status"] in {"OVERRIDDEN", "FALSE_POSITIVE"}:
+                            (
+                                override_risk_classification,
+                                override_risk_reason_codes,
+                            ) = self._derive_redaction_override_risk(
+                                decision_status=str(row["decision_status"]),
+                                area_mask_id=(
+                                    str(row["area_mask_id"])
+                                    if isinstance(row.get("area_mask_id"), str)
+                                    else None
+                                ),
+                                category=str(row["category"]),
+                                basis_secondary_json=(
+                                    row["basis_secondary_json"]
+                                    if isinstance(row.get("basis_secondary_json"), Mapping)
+                                    else None
+                                ),
+                                policy_snapshot_json=policy_snapshot_json,
+                            )
+                        cursor.execute(
+                            """
+                            INSERT INTO redaction_findings (
+                              id,
+                              run_id,
+                              page_id,
+                              line_id,
+                              category,
+                              span_start,
+                              span_end,
+                              span_basis_kind,
+                              span_basis_ref,
+                              confidence,
+                              basis_primary,
+                              basis_secondary_json,
+                              assist_explanation_key,
+                              assist_explanation_sha256,
+                              bbox_refs,
+                              token_refs_json,
+                              area_mask_id,
+                              decision_status,
+                              override_risk_classification,
+                              override_risk_reason_codes_json,
+                              decision_by,
+                              decision_at,
+                              decision_reason,
+                              decision_etag,
+                              updated_at,
+                              created_at
+                            )
+                            VALUES (
+                              %(id)s,
+                              %(run_id)s,
+                              %(page_id)s,
+                              %(line_id)s,
+                              %(category)s,
+                              %(span_start)s,
+                              %(span_end)s,
+                              %(span_basis_kind)s,
+                              %(span_basis_ref)s,
+                              %(confidence)s,
+                              %(basis_primary)s,
+                              %(basis_secondary_json)s::jsonb,
+                              %(assist_explanation_key)s,
+                              %(assist_explanation_sha256)s,
+                              %(bbox_refs)s::jsonb,
+                              %(token_refs_json)s::jsonb,
+                              %(area_mask_id)s,
+                              %(decision_status)s,
+                              %(override_risk_classification)s,
+                              %(override_risk_reason_codes_json)s::jsonb,
+                              NULL,
+                              %(decision_at)s,
+                              %(decision_reason)s,
+                              %(decision_etag)s,
+                              %(updated_at)s,
+                              %(created_at)s
+                            )
+                            """,
+                            {
+                                "id": finding_id,
+                                "run_id": run_id,
+                                "page_id": row["page_id"],
+                                "line_id": row.get("line_id"),
+                                "category": row["category"],
+                                "span_start": row.get("span_start"),
+                                "span_end": row.get("span_end"),
+                                "span_basis_kind": row["span_basis_kind"],
+                                "span_basis_ref": row.get("span_basis_ref"),
+                                "confidence": row.get("confidence"),
+                                "basis_primary": row["basis_primary"],
+                                "basis_secondary_json": json.dumps(
+                                    row.get("basis_secondary_json"),
+                                    ensure_ascii=True,
+                                    separators=(",", ":"),
+                                    sort_keys=True,
+                                )
+                                if row.get("basis_secondary_json") is not None
+                                else None,
+                                "assist_explanation_key": row.get("assist_explanation_key"),
+                                "assist_explanation_sha256": row.get(
+                                    "assist_explanation_sha256"
+                                ),
+                                "bbox_refs": json.dumps(
+                                    row.get("bbox_refs", {}),
+                                    ensure_ascii=True,
+                                    separators=(",", ":"),
+                                    sort_keys=True,
+                                ),
+                                "token_refs_json": json.dumps(
+                                    row.get("token_refs_json"),
+                                    ensure_ascii=True,
+                                    separators=(",", ":"),
+                                    sort_keys=True,
+                                )
+                                if row.get("token_refs_json") is not None
+                                else None,
+                                "area_mask_id": row.get("area_mask_id"),
+                                "decision_status": row["decision_status"],
+                                "override_risk_classification": (
+                                    override_risk_classification
+                                ),
+                                "override_risk_reason_codes_json": (
+                                    json.dumps(
+                                        override_risk_reason_codes,
+                                        ensure_ascii=True,
+                                        separators=(",", ":"),
+                                        sort_keys=True,
+                                    )
+                                    if override_risk_reason_codes is not None
+                                    else None
+                                ),
+                                "decision_at": decision_at,
+                                "decision_reason": row.get("decision_reason"),
+                                "decision_etag": decision_etag,
+                                "updated_at": now,
+                                "created_at": now,
+                            },
+                        )
+                        cursor.execute(
+                            """
+                            INSERT INTO redaction_decision_events (
+                              id,
+                              run_id,
+                              page_id,
+                              finding_id,
+                              from_decision_status,
+                              to_decision_status,
+                              action_type,
+                              area_mask_id,
+                              actor_user_id,
+                              reason,
+                              created_at
+                            )
+                            VALUES (
+                              %(id)s,
+                              %(run_id)s,
+                              %(page_id)s,
+                              %(finding_id)s,
+                              NULL,
+                              %(to_decision_status)s,
+                              %(action_type)s,
+                              %(area_mask_id)s,
+                              %(actor_user_id)s,
+                              %(reason)s,
+                              %(created_at)s
+                            )
+                            """,
+                            {
+                                "id": str(uuid4()),
+                                "run_id": run_id,
+                                "page_id": row["page_id"],
+                                "finding_id": finding_id,
+                                "to_decision_status": row["decision_status"],
+                                "action_type": row["action_type"],
+                                "area_mask_id": row.get("area_mask_id"),
+                                "actor_user_id": run_created_by,
+                                "reason": row.get("decision_reason"),
+                                "created_at": now,
+                            },
+                        )
+
+                    cursor.execute(
+                        """
+                        SELECT page_id
+                        FROM redaction_page_reviews
+                        WHERE run_id = %(run_id)s
+                        ORDER BY page_id ASC
+                        """,
+                        {"run_id": run_id},
+                    )
+                    review_page_rows = cursor.fetchall()
+                    for page_row in review_page_rows:
+                        if not isinstance(page_row.get("page_id"), str):
+                            continue
+                        self._refresh_redaction_page_second_review_requirement(
+                            cursor=cursor,
+                            run_id=run_id,
+                            page_id=str(page_row["page_id"]),
+                            actor_user_id=run_created_by,
+                        )
+
+                    cursor.execute(
+                        """
+                        SELECT
+                          rf.id,
+                          rf.run_id,
+                          rf.page_id,
+                          rf.line_id,
+                          rf.category,
+                          rf.span_start,
+                          rf.span_end,
+                          rf.span_basis_kind,
+                          rf.span_basis_ref,
+                          rf.confidence,
+                          rf.basis_primary,
+                          rf.basis_secondary_json,
+                          rf.assist_explanation_key,
+                          rf.assist_explanation_sha256,
+                          rf.bbox_refs,
+                          rf.token_refs_json,
+                          rf.area_mask_id,
+                          rf.decision_status,
+                          rf.override_risk_classification,
+                          rf.override_risk_reason_codes_json,
+                          rf.decision_by,
+                          rf.decision_at,
+                          rf.decision_reason,
+                          rf.decision_etag,
+                          rf.updated_at,
+                          rf.created_at,
+                          COALESCE((
+                            SELECT rde.action_type
+                            FROM redaction_decision_events AS rde
+                            WHERE rde.finding_id = rf.id
+                            ORDER BY rde.created_at DESC, rde.id DESC
+                            LIMIT 1
+                          ), 'MASK') AS action_type
+                        FROM redaction_findings AS rf
+                        WHERE rf.run_id = %(run_id)s
+                        ORDER BY rf.page_id ASC, rf.created_at ASC, rf.id ASC
+                        """,
+                        {"run_id": run_id},
+                    )
+                    rows = cursor.fetchall()
+                connection.commit()
+        except DocumentNotFoundError:
+            raise
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction finding replacement failed."
+            ) from error
+
+        return [self._as_redaction_finding_record(row) for row in rows]
+
+    def cancel_redaction_run(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        canceled_by: str,
+    ) -> RedactionRunRecord:
+        self.ensure_schema()
+        now = datetime.now(timezone.utc)
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT rr.id, rr.status, rrv.review_status
+                        FROM redaction_runs AS rr
+                        LEFT JOIN redaction_run_reviews AS rrv
+                          ON rrv.run_id = rr.id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND rr.id = %(run_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                        },
+                    )
+                    run_row = cursor.fetchone()
+                    if run_row is None:
+                        raise DocumentNotFoundError("Redaction run not found.")
+                    review_status = (
+                        self._assert_redaction_run_review_status(
+                            str(run_row["review_status"])
+                        )
+                        if isinstance(run_row.get("review_status"), str)
+                        else "NOT_READY"
+                    )
+                    if review_status == "APPROVED":
+                        raise DocumentRedactionRunConflictError(
+                            "Approved redaction runs cannot be canceled."
+                        )
+                    status = self._assert_redaction_run_status(str(run_row["status"]))
+                    if status == "CANCELED":
+                        raise DocumentRedactionRunConflictError(
+                            "Redaction run is already canceled."
+                        )
+                    cursor.execute(
+                        """
+                        SELECT status
+                        FROM redaction_run_outputs
+                        WHERE run_id = %(run_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {"run_id": run_id},
+                    )
+                    run_output_row = cursor.fetchone()
+                    previous_run_output_status = (
+                        self._assert_redaction_output_status(str(run_output_row["status"]))
+                        if run_output_row is not None and isinstance(run_output_row.get("status"), str)
+                        else None
+                    )
+                    cursor.execute(
+                        """
+                        UPDATE redaction_runs
+                        SET
+                          status = 'CANCELED',
+                          finished_at = NOW(),
+                          failure_reason = %(reason)s
+                        WHERE id = %(run_id)s
+                        """,
+                        {
+                            "run_id": run_id,
+                            "reason": f"Canceled by {canceled_by}.",
+                        },
+                    )
+                    cursor.execute(
+                        """
+                        UPDATE redaction_outputs
+                        SET
+                          status = 'CANCELED',
+                          canceled_by = %(canceled_by)s,
+                          canceled_at = %(canceled_at)s,
+                          updated_at = NOW()
+                        WHERE run_id = %(run_id)s
+                        """,
+                        {
+                            "run_id": run_id,
+                            "canceled_by": canceled_by,
+                            "canceled_at": now,
+                        },
+                    )
+                    cursor.execute(
+                        """
+                        UPDATE redaction_run_outputs
+                        SET
+                          status = 'CANCELED',
+                          canceled_by = %(canceled_by)s,
+                          canceled_at = %(canceled_at)s,
+                          updated_at = NOW()
+                        WHERE run_id = %(run_id)s
+                        """,
+                        {
+                            "run_id": run_id,
+                            "canceled_by": canceled_by,
+                            "canceled_at": now,
+                        },
+                    )
+                    if previous_run_output_status != "CANCELED":
+                        self._append_redaction_run_output_event(
+                            cursor=cursor,
+                            run_id=run_id,
+                            from_status=previous_run_output_status,
+                            to_status="CANCELED",
+                            reason=f"Canceled by {canceled_by}.",
+                            actor_user_id=canceled_by,
+                            created_at=now,
+                        )
+                    cursor.execute(
+                        """
+                        SELECT
+                          id,
+                          project_id,
+                          document_id,
+                          input_transcription_run_id,
+                          input_layout_run_id,
+                          run_kind,
+                          supersedes_redaction_run_id,
+                          superseded_by_redaction_run_id,
+                          policy_snapshot_id,
+                          policy_snapshot_json,
+                          policy_snapshot_hash,
+                          policy_id,
+                          policy_family_id,
+                          policy_version,
+                          detectors_version,
+                          status,
+                          created_by,
+                          created_at,
+                          started_at,
+                          finished_at,
+                          failure_reason
+                        FROM redaction_runs
+                        WHERE id = %(run_id)s
+                        LIMIT 1
+                        """,
+                        {"run_id": run_id},
+                    )
+                    row = cursor.fetchone()
+                connection.commit()
+        except (DocumentNotFoundError, DocumentRedactionRunConflictError):
+            raise
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError("Redaction run cancel failed.") from error
+        if row is None:
+            raise DocumentStoreUnavailableError("Redaction run cancel failed.")
+        return self._as_redaction_run_record(row)
+
+    def activate_redaction_run(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> DocumentRedactionProjectionRecord:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          rr.id,
+                          rr.input_transcription_run_id,
+                          rr.input_layout_run_id,
+                          rr.policy_snapshot_id,
+                          rr.status,
+                          rrv.review_status
+                        FROM redaction_runs AS rr
+                        LEFT JOIN redaction_run_reviews AS rrv
+                          ON rrv.run_id = rr.id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND rr.id = %(run_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                        },
+                    )
+                    run_row = cursor.fetchone()
+                    if run_row is None:
+                        raise DocumentNotFoundError("Redaction run not found.")
+                    run_status = self._assert_redaction_run_status(str(run_row["status"]))
+                    if run_status != "SUCCEEDED":
+                        raise DocumentRedactionRunConflictError(
+                            "Only SUCCEEDED redaction runs can be activated."
+                        )
+                    review_status = (
+                        self._assert_redaction_run_review_status(
+                            str(run_row["review_status"])
+                        )
+                        if isinstance(run_row.get("review_status"), str)
+                        else "NOT_READY"
+                    )
+                    if review_status != "APPROVED":
+                        raise DocumentRedactionRunConflictError(
+                            "Activation requires APPROVED run review."
+                        )
+
+                    cursor.execute(
+                        """
+                        SELECT 1
+                        FROM redaction_outputs
+                        WHERE run_id = %(run_id)s
+                          AND status != 'READY'
+                        LIMIT 1
+                        """,
+                        {"run_id": run_id},
+                    )
+                    if cursor.fetchone() is not None:
+                        raise DocumentRedactionRunConflictError(
+                            "Activation requires all page preview outputs to be READY."
+                        )
+
+                    cursor.execute(
+                        """
+                        SELECT status
+                        FROM redaction_run_outputs
+                        WHERE run_id = %(run_id)s
+                        LIMIT 1
+                        """,
+                        {"run_id": run_id},
+                    )
+                    output_row = cursor.fetchone()
+                    if output_row is None or self._assert_redaction_output_status(
+                        str(output_row["status"])
+                    ) != "READY":
+                        raise DocumentRedactionRunConflictError(
+                            "Activation requires run-level safeguarded output to be READY."
+                        )
+
+                    cursor.execute(
+                        """
+                        INSERT INTO document_redaction_projections (
+                          document_id,
+                          project_id,
+                          active_redaction_run_id,
+                          active_transcription_run_id,
+                          active_layout_run_id,
+                          active_policy_snapshot_id,
+                          updated_at
+                        )
+                        VALUES (
+                          %(document_id)s,
+                          %(project_id)s,
+                          %(active_redaction_run_id)s,
+                          %(active_transcription_run_id)s,
+                          %(active_layout_run_id)s,
+                          %(active_policy_snapshot_id)s,
+                          NOW()
+                        )
+                        ON CONFLICT (document_id) DO UPDATE
+                        SET
+                          project_id = EXCLUDED.project_id,
+                          active_redaction_run_id = EXCLUDED.active_redaction_run_id,
+                          active_transcription_run_id = EXCLUDED.active_transcription_run_id,
+                          active_layout_run_id = EXCLUDED.active_layout_run_id,
+                          active_policy_snapshot_id = EXCLUDED.active_policy_snapshot_id,
+                          updated_at = NOW()
+                        """,
+                        {
+                            "document_id": document_id,
+                            "project_id": project_id,
+                            "active_redaction_run_id": run_id,
+                            "active_transcription_run_id": str(
+                                run_row["input_transcription_run_id"]
+                            ),
+                            "active_layout_run_id": (
+                                str(run_row["input_layout_run_id"])
+                                if isinstance(run_row.get("input_layout_run_id"), str)
+                                else None
+                            ),
+                            "active_policy_snapshot_id": str(run_row["policy_snapshot_id"]),
+                        },
+                    )
+
+                    cursor.execute(
+                        """
+                        UPDATE document_transcription_projections
+                        SET
+                          downstream_redaction_state = 'CURRENT',
+                          downstream_redaction_invalidated_at = NULL,
+                          downstream_redaction_invalidated_reason = NULL,
+                          updated_at = NOW()
+                        WHERE project_id = %(project_id)s
+                          AND document_id = %(document_id)s
+                          AND active_transcription_run_id = %(active_transcription_run_id)s
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "active_transcription_run_id": str(
+                                run_row["input_transcription_run_id"]
+                            ),
+                        },
+                    )
+
+                    cursor.execute(
+                        """
+                        SELECT
+                          document_id,
+                          project_id,
+                          active_redaction_run_id,
+                          active_transcription_run_id,
+                          active_layout_run_id,
+                          active_policy_snapshot_id,
+                          updated_at
+                        FROM document_redaction_projections
+                        WHERE project_id = %(project_id)s
+                          AND document_id = %(document_id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                        },
+                    )
+                    projection_row = cursor.fetchone()
+                connection.commit()
+        except (DocumentNotFoundError, DocumentRedactionRunConflictError):
+            raise
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction run activation failed."
+            ) from error
+        if projection_row is None:
+            raise DocumentStoreUnavailableError("Redaction run activation failed.")
+        return self._as_redaction_projection_record(projection_row)
+
+    def get_redaction_run_review(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> RedactionRunReviewRecord | None:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          rrv.run_id,
+                          rrv.review_status,
+                          rrv.review_started_by,
+                          rrv.review_started_at,
+                          rrv.approved_by,
+                          rrv.approved_at,
+                          rrv.approved_snapshot_key,
+                          rrv.approved_snapshot_sha256,
+                          rrv.locked_at,
+                          rrv.updated_at
+                        FROM redaction_run_reviews AS rrv
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = rrv.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND rr.id = %(run_id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                        },
+                    )
+                    row = cursor.fetchone()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction run review lookup failed."
+            ) from error
+        if row is None:
+            return None
+        return self._as_redaction_run_review_record(row)
+
+    def get_redaction_approval_snapshot_artifact(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> tuple[bytes, str]:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          rrv.review_status,
+                          rrv.locked_at,
+                          rrv.approved_snapshot_sha256
+                        FROM redaction_run_reviews AS rrv
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = rrv.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND rr.id = %(run_id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                        },
+                    )
+                    review_row = cursor.fetchone()
+                    if review_row is None:
+                        raise DocumentNotFoundError("Redaction run review not found.")
+                    review_status = self._assert_redaction_run_review_status(
+                        str(review_row["review_status"])
+                    )
+                    if review_status != "APPROVED":
+                        raise DocumentRedactionRunConflictError(
+                            "Approved snapshot artifact is available only for APPROVED runs."
+                        )
+                    if not isinstance(review_row.get("locked_at"), datetime):
+                        raise DocumentStoreUnavailableError(
+                            "Approved redaction run lock timestamp is missing."
+                        )
+                    snapshot_bytes, snapshot_sha256 = self._build_redaction_approval_snapshot_bytes(
+                        cursor=cursor,
+                        run_id=run_id,
+                        captured_at=review_row["locked_at"],  # type: ignore[arg-type]
+                    )
+                    persisted_sha256 = (
+                        str(review_row["approved_snapshot_sha256"])
+                        if isinstance(review_row.get("approved_snapshot_sha256"), str)
+                        else None
+                    )
+                    if persisted_sha256 is not None and persisted_sha256 != snapshot_sha256:
+                        raise DocumentStoreUnavailableError(
+                            "Approved snapshot hash no longer matches locked review artifact."
+                        )
+        except (DocumentNotFoundError, DocumentRedactionRunConflictError):
+            raise
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction approval snapshot reconstruction failed."
+            ) from error
+        return snapshot_bytes, snapshot_sha256
+
+    def start_redaction_run_review(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        actor_user_id: str,
+    ) -> RedactionRunReviewRecord:
+        self.ensure_schema()
+        now = datetime.now(timezone.utc)
+        event_id = str(uuid4())
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT rr.status, rrv.review_status
+                        FROM redaction_runs AS rr
+                        INNER JOIN redaction_run_reviews AS rrv
+                          ON rrv.run_id = rr.id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND rr.id = %(run_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                        },
+                    )
+                    row = cursor.fetchone()
+                    if row is None:
+                        raise DocumentNotFoundError("Redaction run not found.")
+                    run_status = self._assert_redaction_run_status(str(row["status"]))
+                    if run_status != "SUCCEEDED":
+                        raise DocumentRedactionRunConflictError(
+                            "Run review can start only after run status is SUCCEEDED."
+                        )
+                    current_status = self._assert_redaction_run_review_status(
+                        str(row["review_status"])
+                    )
+                    if current_status == "APPROVED":
+                        raise DocumentRedactionRunConflictError(
+                            "Approved run review cannot be reopened."
+                        )
+                    if current_status != "NOT_READY":
+                        raise DocumentRedactionRunConflictError(
+                            "Run review start requires NOT_READY status."
+                        )
+                    cursor.execute(
+                        """
+                        SELECT 1
+                        FROM redaction_page_reviews
+                        WHERE run_id = %(run_id)s
+                          AND review_status = 'NOT_STARTED'
+                        LIMIT 1
+                        """,
+                        {"run_id": run_id},
+                    )
+                    if cursor.fetchone() is not None:
+                        raise DocumentRedactionRunConflictError(
+                            "Run review start requires every page to be reviewed at least once."
+                        )
+                    cursor.execute(
+                        """
+                        UPDATE redaction_run_reviews
+                        SET
+                          review_status = 'IN_REVIEW',
+                          review_started_by = COALESCE(review_started_by, %(actor_user_id)s),
+                          review_started_at = COALESCE(review_started_at, %(review_started_at)s),
+                          updated_at = NOW()
+                        WHERE run_id = %(run_id)s
+                        """,
+                        {
+                            "run_id": run_id,
+                            "actor_user_id": actor_user_id,
+                            "review_started_at": now,
+                        },
+                    )
+                    cursor.execute(
+                        """
+                        INSERT INTO redaction_run_review_events (
+                          id,
+                          run_id,
+                          event_type,
+                          actor_user_id,
+                          reason,
+                          created_at
+                        )
+                        VALUES (
+                          %(id)s,
+                          %(run_id)s,
+                          'RUN_REVIEW_OPENED',
+                          %(actor_user_id)s,
+                          NULL,
+                          %(created_at)s
+                        )
+                        """,
+                        {
+                            "id": event_id,
+                            "run_id": run_id,
+                            "actor_user_id": actor_user_id,
+                            "created_at": now,
+                        },
+                    )
+                    cursor.execute(
+                        """
+                        SELECT
+                          run_id,
+                          review_status,
+                          review_started_by,
+                          review_started_at,
+                          approved_by,
+                          approved_at,
+                          approved_snapshot_key,
+                          approved_snapshot_sha256,
+                          locked_at,
+                          updated_at
+                        FROM redaction_run_reviews
+                        WHERE run_id = %(run_id)s
+                        LIMIT 1
+                        """,
+                        {"run_id": run_id},
+                    )
+                    review_row = cursor.fetchone()
+                connection.commit()
+        except (DocumentNotFoundError, DocumentRedactionRunConflictError):
+            raise
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError("Redaction run review start failed.") from error
+        if review_row is None:
+            raise DocumentStoreUnavailableError("Redaction run review start failed.")
+        return self._as_redaction_run_review_record(review_row)
+
+    def complete_redaction_run_review(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        actor_user_id: str,
+        review_status: RedactionRunReviewStatus,
+        reason: str | None = None,
+        approved_snapshot_key: str | None = None,
+        approved_snapshot_sha256: str | None = None,
+    ) -> RedactionRunReviewRecord:
+        self.ensure_schema()
+        if review_status not in {"APPROVED", "CHANGES_REQUESTED"}:
+            raise DocumentRedactionRunConflictError(
+                "reviewStatus must be APPROVED or CHANGES_REQUESTED."
+            )
+        now = datetime.now(timezone.utc)
+        event_id = str(uuid4())
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT rr.id, rrv.review_status
+                        FROM redaction_runs AS rr
+                        INNER JOIN redaction_run_reviews AS rrv
+                          ON rrv.run_id = rr.id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND rr.id = %(run_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                        },
+                    )
+                    current = cursor.fetchone()
+                    if current is None:
+                        raise DocumentNotFoundError("Redaction run not found.")
+                    current_status = self._assert_redaction_run_review_status(
+                        str(current["review_status"])
+                    )
+                    if current_status != "IN_REVIEW":
+                        raise DocumentRedactionRunConflictError(
+                            "Run review completion requires IN_REVIEW state."
+                        )
+
+                    resolved_snapshot_key = (
+                        approved_snapshot_key.strip()
+                        if isinstance(approved_snapshot_key, str)
+                        and approved_snapshot_key.strip()
+                        else None
+                    )
+                    resolved_snapshot_sha256 = (
+                        approved_snapshot_sha256.strip()
+                        if isinstance(approved_snapshot_sha256, str)
+                        and approved_snapshot_sha256.strip()
+                        else None
+                    )
+                    if review_status != "APPROVED":
+                        resolved_snapshot_key = None
+                        resolved_snapshot_sha256 = None
+                    locked_at: datetime | None = None
+                    approved_at: datetime | None = None
+                    approved_by: str | None = None
+
+                    if review_status == "APPROVED":
+                        cursor.execute(
+                            """
+                            SELECT 1
+                            FROM redaction_page_reviews
+                            WHERE run_id = %(run_id)s
+                              AND (
+                                review_status != 'APPROVED'
+                                OR (
+                                  requires_second_review = TRUE
+                                  AND second_review_status != 'APPROVED'
+                                )
+                              )
+                            LIMIT 1
+                            """,
+                            {"run_id": run_id},
+                        )
+                        if cursor.fetchone() is not None:
+                            raise DocumentRedactionRunConflictError(
+                                "Run approval requires every page review to be APPROVED."
+                            )
+                        _, computed_snapshot_sha256 = self._build_redaction_approval_snapshot_bytes(
+                            cursor=cursor,
+                            run_id=run_id,
+                            captured_at=now,
+                        )
+                        if (
+                            resolved_snapshot_sha256 is not None
+                            and resolved_snapshot_sha256 != computed_snapshot_sha256
+                        ):
+                            raise DocumentRedactionRunConflictError(
+                                "Approval snapshot changed during completion. Retry approval."
+                            )
+                        resolved_snapshot_sha256 = computed_snapshot_sha256
+                        if resolved_snapshot_key is None:
+                            derived_prefix = self._settings.storage_controlled_derived_prefix.strip(
+                                "/ "
+                            )
+                            resolved_snapshot_key = (
+                                f"{derived_prefix}/{project_id}/{document_id}/redaction/{run_id}/"
+                                f"approved-snapshots/{resolved_snapshot_sha256}.json"
+                            )
+                        approved_at = now
+                        approved_by = actor_user_id
+                        locked_at = now
+
+                    cursor.execute(
+                        """
+                        UPDATE redaction_run_reviews
+                        SET
+                          review_status = %(review_status)s,
+                          approved_by = %(approved_by)s,
+                          approved_at = %(approved_at)s,
+                          approved_snapshot_key = %(approved_snapshot_key)s,
+                          approved_snapshot_sha256 = %(approved_snapshot_sha256)s,
+                          locked_at = %(locked_at)s,
+                          updated_at = NOW()
+                        WHERE run_id = %(run_id)s
+                        """,
+                        {
+                            "run_id": run_id,
+                            "review_status": review_status,
+                            "approved_by": approved_by,
+                            "approved_at": approved_at,
+                            "approved_snapshot_key": resolved_snapshot_key,
+                            "approved_snapshot_sha256": resolved_snapshot_sha256,
+                            "locked_at": locked_at,
+                        },
+                    )
+                    cursor.execute(
+                        """
+                        INSERT INTO redaction_run_review_events (
+                          id,
+                          run_id,
+                          event_type,
+                          actor_user_id,
+                          reason,
+                          created_at
+                        )
+                        VALUES (
+                          %(id)s,
+                          %(run_id)s,
+                          %(event_type)s,
+                          %(actor_user_id)s,
+                          %(reason)s,
+                          %(created_at)s
+                        )
+                        """,
+                        {
+                            "id": event_id,
+                            "run_id": run_id,
+                            "event_type": (
+                                "RUN_APPROVED"
+                                if review_status == "APPROVED"
+                                else "RUN_CHANGES_REQUESTED"
+                            ),
+                            "actor_user_id": actor_user_id,
+                            "reason": reason,
+                            "created_at": now,
+                        },
+                    )
+                    cursor.execute(
+                        """
+                        SELECT
+                          run_id,
+                          review_status,
+                          review_started_by,
+                          review_started_at,
+                          approved_by,
+                          approved_at,
+                          approved_snapshot_key,
+                          approved_snapshot_sha256,
+                          locked_at,
+                          updated_at
+                        FROM redaction_run_reviews
+                        WHERE run_id = %(run_id)s
+                        LIMIT 1
+                        """,
+                        {"run_id": run_id},
+                    )
+                    review_row = cursor.fetchone()
+                connection.commit()
+        except (DocumentNotFoundError, DocumentRedactionRunConflictError):
+            raise
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction run review completion failed."
+            ) from error
+        if review_row is None:
+            raise DocumentStoreUnavailableError(
+                "Redaction run review completion failed."
+            )
+        return self._as_redaction_run_review_record(review_row)
+
+    def list_redaction_page_reviews(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        cursor: int = 0,
+        page_size: int = 200,
+    ) -> tuple[list[RedactionPageReviewRecord], int | None]:
+        self.ensure_schema()
+        safe_cursor = max(0, cursor)
+        safe_page_size = max(1, min(page_size, 500))
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as db_cursor:
+                    db_cursor.execute(
+                        """
+                        SELECT
+                          pr.run_id,
+                          pr.page_id,
+                          pr.review_status,
+                          pr.review_etag,
+                          pr.first_reviewed_by,
+                          pr.first_reviewed_at,
+                          pr.requires_second_review,
+                          pr.second_review_status,
+                          pr.second_reviewed_by,
+                          pr.second_reviewed_at,
+                          pr.updated_at
+                        FROM redaction_page_reviews AS pr
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = pr.run_id
+                        INNER JOIN pages AS p
+                          ON p.id = pr.page_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND pr.run_id = %(run_id)s
+                        ORDER BY p.page_index ASC, pr.page_id ASC
+                        OFFSET %(cursor)s
+                        LIMIT %(limit)s
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                            "cursor": safe_cursor,
+                            "limit": safe_page_size + 1,
+                        },
+                    )
+                    rows = db_cursor.fetchall()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction page-review listing failed."
+            ) from error
+        items = [self._as_redaction_page_review_record(row) for row in rows[:safe_page_size]]
+        next_cursor = (
+            safe_cursor + safe_page_size if len(rows) > safe_page_size else None
+        )
+        return items, next_cursor
+
+    def get_redaction_page_review(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+    ) -> RedactionPageReviewRecord | None:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          pr.run_id,
+                          pr.page_id,
+                          pr.review_status,
+                          pr.review_etag,
+                          pr.first_reviewed_by,
+                          pr.first_reviewed_at,
+                          pr.requires_second_review,
+                          pr.second_review_status,
+                          pr.second_reviewed_by,
+                          pr.second_reviewed_at,
+                          pr.updated_at
+                        FROM redaction_page_reviews AS pr
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = pr.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND pr.run_id = %(run_id)s
+                          AND pr.page_id = %(page_id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                            "page_id": page_id,
+                        },
+                    )
+                    row = cursor.fetchone()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction page-review lookup failed."
+            ) from error
+        if row is None:
+            return None
+        return self._as_redaction_page_review_record(row)
+
+    def update_redaction_page_review(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        expected_review_etag: str,
+        review_status: RedactionPageReviewStatus,
+        actor_user_id: str,
+        reason: str | None = None,
+    ) -> RedactionPageReviewRecord:
+        self.ensure_schema()
+        now = datetime.now(timezone.utc)
+        event_id = str(uuid4())
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          rrv.review_status,
+                          rr.policy_snapshot_json
+                        FROM redaction_run_reviews AS rrv
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = rrv.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND rrv.run_id = %(run_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                        },
+                    )
+                    run_review_row = cursor.fetchone()
+                    if run_review_row is None:
+                        raise DocumentNotFoundError("Redaction run not found.")
+                    if self._assert_redaction_run_review_status(
+                        str(run_review_row["review_status"])
+                    ) == "APPROVED":
+                        raise DocumentRedactionRunConflictError(
+                            "Approved runs are locked and cannot be mutated."
+                        )
+                    policy_snapshot_json = run_review_row.get("policy_snapshot_json")
+
+                    cursor.execute(
+                        """
+                        SELECT
+                          pr.run_id,
+                          pr.page_id,
+                          pr.review_status,
+                          pr.review_etag,
+                          pr.first_reviewed_by,
+                          pr.first_reviewed_at,
+                          pr.requires_second_review,
+                          pr.second_review_status,
+                          pr.second_reviewed_by,
+                          pr.second_reviewed_at,
+                          pr.updated_at
+                        FROM redaction_page_reviews AS pr
+                        WHERE pr.run_id = %(run_id)s
+                          AND pr.page_id = %(page_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {
+                            "run_id": run_id,
+                            "page_id": page_id,
+                        },
+                    )
+                    current_row = cursor.fetchone()
+                    if current_row is None:
+                        raise DocumentNotFoundError("Redaction page review not found.")
+                    current_review = self._as_redaction_page_review_record(current_row)
+                    if current_review.review_etag != expected_review_etag:
+                        raise DocumentRedactionRunConflictError(
+                            "Redaction page review update conflicts with a newer change."
+                        )
+
+                    next_first_reviewed_by = (
+                        current_review.first_reviewed_by
+                        if current_review.first_reviewed_by is not None
+                        else actor_user_id
+                    )
+                    next_first_reviewed_at = (
+                        current_review.first_reviewed_at
+                        if current_review.first_reviewed_at is not None
+                        else now
+                    )
+                    effective_review_status = review_status
+                    next_second_review_status = current_review.second_review_status
+                    next_second_reviewed_by = current_review.second_reviewed_by
+                    next_second_reviewed_at = current_review.second_reviewed_at
+                    event_type: RedactionPageReviewEventType = "PAGE_REVIEW_STARTED"
+
+                    if current_review.requires_second_review:
+                        if (
+                            current_review.first_reviewed_by is not None
+                            and actor_user_id == current_review.first_reviewed_by
+                            and current_review.review_status == "APPROVED"
+                            and review_status in {"APPROVED", "CHANGES_REQUESTED"}
+                        ):
+                            raise DocumentRedactionRunConflictError(
+                                "Second review must be completed by a different reviewer."
+                            )
+                        if (
+                            current_review.first_reviewed_by is not None
+                            and actor_user_id != current_review.first_reviewed_by
+                            and current_review.review_status == "APPROVED"
+                            and review_status in {"APPROVED", "CHANGES_REQUESTED"}
+                        ):
+                            next_second_review_status = (
+                                "APPROVED"
+                                if review_status == "APPROVED"
+                                else "CHANGES_REQUESTED"
+                            )
+                            next_second_reviewed_by = actor_user_id
+                            next_second_reviewed_at = now
+                            event_type = (
+                                "SECOND_REVIEW_APPROVED"
+                                if review_status == "APPROVED"
+                                else "SECOND_REVIEW_CHANGES_REQUESTED"
+                            )
+                            effective_review_status = review_status
+                        else:
+                            next_second_review_status = "PENDING"
+                            next_second_reviewed_by = None
+                            next_second_reviewed_at = None
+                            if review_status == "APPROVED":
+                                event_type = "PAGE_APPROVED"
+                            elif review_status == "CHANGES_REQUESTED":
+                                event_type = "CHANGES_REQUESTED"
+                    else:
+                        next_second_review_status = "NOT_REQUIRED"
+                        next_second_reviewed_by = None
+                        next_second_reviewed_at = None
+                        if review_status == "APPROVED":
+                            event_type = "PAGE_APPROVED"
+                        elif review_status == "CHANGES_REQUESTED":
+                            event_type = "CHANGES_REQUESTED"
+
+                    next_etag = self._compute_redaction_etag(
+                        run_id,
+                        page_id,
+                        effective_review_status,
+                        str(next_second_review_status),
+                        actor_user_id,
+                        now.isoformat(),
+                    )
+                    cursor.execute(
+                        """
+                        UPDATE redaction_page_reviews
+                        SET
+                          review_status = %(review_status)s,
+                          review_etag = %(review_etag)s,
+                          first_reviewed_by = %(first_reviewed_by)s,
+                          first_reviewed_at = %(first_reviewed_at)s,
+                          second_review_status = %(second_review_status)s,
+                          second_reviewed_by = %(second_reviewed_by)s,
+                          second_reviewed_at = %(second_reviewed_at)s,
+                          updated_at = NOW()
+                        WHERE run_id = %(run_id)s
+                          AND page_id = %(page_id)s
+                        """,
+                        {
+                            "run_id": run_id,
+                            "page_id": page_id,
+                            "review_status": effective_review_status,
+                            "review_etag": next_etag,
+                            "first_reviewed_by": next_first_reviewed_by,
+                            "first_reviewed_at": next_first_reviewed_at,
+                            "second_review_status": next_second_review_status,
+                            "second_reviewed_by": next_second_reviewed_by,
+                            "second_reviewed_at": next_second_reviewed_at,
+                        },
+                    )
+
+                    cursor.execute(
+                        """
+                        INSERT INTO redaction_page_review_events (
+                          id,
+                          run_id,
+                          page_id,
+                          event_type,
+                          actor_user_id,
+                          reason,
+                          created_at
+                        )
+                        VALUES (
+                          %(id)s,
+                          %(run_id)s,
+                          %(page_id)s,
+                          %(event_type)s,
+                          %(actor_user_id)s,
+                          %(reason)s,
+                          %(created_at)s
+                        )
+                        """,
+                        {
+                            "id": event_id,
+                            "run_id": run_id,
+                            "page_id": page_id,
+                            "event_type": event_type,
+                            "actor_user_id": actor_user_id,
+                            "reason": reason,
+                            "created_at": now,
+                        },
+                    )
+
+                    cursor.execute(
+                        """
+                        SELECT
+                          pr.run_id,
+                          pr.page_id,
+                          pr.review_status,
+                          pr.review_etag,
+                          pr.first_reviewed_by,
+                          pr.first_reviewed_at,
+                          pr.requires_second_review,
+                          pr.second_review_status,
+                          pr.second_reviewed_by,
+                          pr.second_reviewed_at,
+                          pr.updated_at
+                        FROM redaction_page_reviews AS pr
+                        WHERE pr.run_id = %(run_id)s
+                          AND pr.page_id = %(page_id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "run_id": run_id,
+                            "page_id": page_id,
+                        },
+                    )
+                    review_row = cursor.fetchone()
+                connection.commit()
+        except (DocumentNotFoundError, DocumentRedactionRunConflictError):
+            raise
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction page-review update failed."
+            ) from error
+        if review_row is None:
+            raise DocumentStoreUnavailableError("Redaction page-review update failed.")
+        return self._as_redaction_page_review_record(review_row)
+
+    def list_redaction_findings(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str | None = None,
+        category: str | None = None,
+        unresolved_only: bool = False,
+    ) -> list[RedactionFindingRecord]:
+        self.ensure_schema()
+        clauses = [
+            "rr.project_id = %(project_id)s",
+            "rr.document_id = %(document_id)s",
+            "rf.run_id = %(run_id)s",
+        ]
+        params: dict[str, object] = {
+            "project_id": project_id,
+            "document_id": document_id,
+            "run_id": run_id,
+        }
+        if isinstance(page_id, str) and page_id.strip():
+            clauses.append("rf.page_id = %(page_id)s")
+            params["page_id"] = page_id.strip()
+        if isinstance(category, str) and category.strip():
+            clauses.append("rf.category = %(category)s")
+            params["category"] = category.strip()
+        if unresolved_only:
+            clauses.append(
+                "rf.decision_status IN ('NEEDS_REVIEW', 'OVERRIDDEN', 'FALSE_POSITIVE')"
+            )
+        where_sql = " AND ".join(clauses)
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        f"""
+                        SELECT
+                          rf.id,
+                          rf.run_id,
+                          rf.page_id,
+                          rf.line_id,
+                          rf.category,
+                          rf.span_start,
+                          rf.span_end,
+                          rf.span_basis_kind,
+                          rf.span_basis_ref,
+                          rf.confidence,
+                          rf.basis_primary,
+                          rf.basis_secondary_json,
+                          rf.assist_explanation_key,
+                          rf.assist_explanation_sha256,
+                          rf.bbox_refs,
+                          rf.token_refs_json,
+                          rf.area_mask_id,
+                          rf.decision_status,
+                          rf.override_risk_classification,
+                          rf.override_risk_reason_codes_json,
+                          rf.decision_by,
+                          rf.decision_at,
+                          rf.decision_reason,
+                          rf.decision_etag,
+                          rf.updated_at,
+                          rf.created_at,
+                          COALESCE((
+                            SELECT rde.action_type
+                            FROM redaction_decision_events AS rde
+                            WHERE rde.finding_id = rf.id
+                            ORDER BY rde.created_at DESC, rde.id DESC
+                            LIMIT 1
+                          ), 'MASK') AS action_type,
+                          rr.policy_snapshot_json
+                        FROM redaction_findings AS rf
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = rf.run_id
+                        WHERE {where_sql}
+                        ORDER BY rf.page_id ASC, rf.created_at ASC, rf.id ASC
+                        """,
+                        params,
+                    )
+                    rows = cursor.fetchall()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError("Redaction finding listing failed.") from error
+        return [self._as_redaction_finding_record(row) for row in rows]
+
+    def get_redaction_finding(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        finding_id: str,
+    ) -> RedactionFindingRecord | None:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          rf.id,
+                          rf.run_id,
+                          rf.page_id,
+                          rf.line_id,
+                          rf.category,
+                          rf.span_start,
+                          rf.span_end,
+                          rf.span_basis_kind,
+                          rf.span_basis_ref,
+                          rf.confidence,
+                          rf.basis_primary,
+                          rf.basis_secondary_json,
+                          rf.assist_explanation_key,
+                          rf.assist_explanation_sha256,
+                          rf.bbox_refs,
+                          rf.token_refs_json,
+                          rf.area_mask_id,
+                          rf.decision_status,
+                          rf.override_risk_classification,
+                          rf.override_risk_reason_codes_json,
+                          rf.decision_by,
+                          rf.decision_at,
+                          rf.decision_reason,
+                          rf.decision_etag,
+                          rf.updated_at,
+                          rf.created_at,
+                          COALESCE((
+                            SELECT rde.action_type
+                            FROM redaction_decision_events AS rde
+                            WHERE rde.finding_id = rf.id
+                            ORDER BY rde.created_at DESC, rde.id DESC
+                            LIMIT 1
+                          ), 'MASK') AS action_type
+                        FROM redaction_findings AS rf
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = rf.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND rf.run_id = %(run_id)s
+                          AND rf.id = %(finding_id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                            "finding_id": finding_id,
+                        },
+                    )
+                    row = cursor.fetchone()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError("Redaction finding lookup failed.") from error
+        if row is None:
+            return None
+        return self._as_redaction_finding_record(row)
+
+    def update_redaction_finding_decision(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        finding_id: str,
+        expected_decision_etag: str,
+        to_decision_status: RedactionDecisionStatus,
+        actor_user_id: str,
+        reason: str | None = None,
+        action_type: RedactionDecisionActionType = "MASK",
+    ) -> RedactionFindingRecord:
+        self.ensure_schema()
+        now = datetime.now(timezone.utc)
+        event_id = str(uuid4())
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          rrv.review_status,
+                          rr.policy_snapshot_json
+                        FROM redaction_run_reviews AS rrv
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = rrv.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND rrv.run_id = %(run_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                        },
+                    )
+                    run_review_row = cursor.fetchone()
+                    if run_review_row is None:
+                        raise DocumentNotFoundError("Redaction run not found.")
+                    if self._assert_redaction_run_review_status(
+                        str(run_review_row["review_status"])
+                    ) == "APPROVED":
+                        raise DocumentRedactionRunConflictError(
+                            "Approved runs are locked and cannot be mutated."
+                        )
+                    policy_snapshot_json = run_review_row.get("policy_snapshot_json")
+
+                    cursor.execute(
+                        """
+                        SELECT
+                          rf.id,
+                          rf.run_id,
+                          rf.page_id,
+                          rf.line_id,
+                          rf.category,
+                          rf.span_start,
+                          rf.span_end,
+                          rf.span_basis_kind,
+                          rf.span_basis_ref,
+                          rf.confidence,
+                          rf.basis_primary,
+                          rf.basis_secondary_json,
+                          rf.assist_explanation_key,
+                          rf.assist_explanation_sha256,
+                          rf.bbox_refs,
+                          rf.token_refs_json,
+                          rf.area_mask_id,
+                          rf.decision_status,
+                          rf.override_risk_classification,
+                          rf.override_risk_reason_codes_json,
+                          rf.decision_by,
+                          rf.decision_at,
+                          rf.decision_reason,
+                          rf.decision_etag,
+                          rf.updated_at,
+                          rf.created_at
+                        FROM redaction_findings AS rf
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = rf.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND rf.run_id = %(run_id)s
+                          AND rf.id = %(finding_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                            "finding_id": finding_id,
+                        },
+                    )
+                    row = cursor.fetchone()
+                    if row is None:
+                        raise DocumentNotFoundError("Redaction finding not found.")
+                    current = self._as_redaction_finding_record(row)
+                    if current.decision_etag != expected_decision_etag:
+                        raise DocumentRedactionRunConflictError(
+                            "Redaction finding update conflicts with a newer change."
+                        )
+                    override_risk_classification, override_risk_reason_codes = (
+                        self._derive_redaction_override_risk(
+                            to_decision_status=to_decision_status,
+                            category=current.category,
+                            area_mask_id=current.area_mask_id,
+                            basis_secondary_json=current.basis_secondary_json,
+                            policy_snapshot_json=row.get("policy_snapshot_json"),
+                        )
+                    )
+                    next_etag = self._compute_redaction_etag(
+                        run_id,
+                        finding_id,
+                        to_decision_status,
+                        actor_user_id,
+                        now.isoformat(),
+                    )
+                    cursor.execute(
+                        """
+                        UPDATE redaction_findings
+                        SET
+                          decision_status = %(decision_status)s,
+                          decision_by = %(decision_by)s,
+                          decision_at = %(decision_at)s,
+                          decision_reason = %(decision_reason)s,
+                          override_risk_classification = %(override_risk_classification)s,
+                          override_risk_reason_codes_json = %(override_risk_reason_codes_json)s::jsonb,
+                          decision_etag = %(decision_etag)s,
+                          updated_at = NOW()
+                        WHERE id = %(finding_id)s
+                        """,
+                        {
+                            "finding_id": finding_id,
+                            "decision_status": to_decision_status,
+                            "decision_by": actor_user_id,
+                            "decision_at": now,
+                            "decision_reason": reason,
+                            "override_risk_classification": override_risk_classification,
+                            "override_risk_reason_codes_json": (
+                                json.dumps(
+                                    override_risk_reason_codes,
+                                    ensure_ascii=True,
+                                    separators=(",", ":"),
+                                    sort_keys=False,
+                                )
+                                if override_risk_reason_codes is not None
+                                else None
+                            ),
+                            "decision_etag": next_etag,
+                        },
+                    )
+                    cursor.execute(
+                        """
+                        INSERT INTO redaction_decision_events (
+                          id,
+                          run_id,
+                          page_id,
+                          finding_id,
+                          from_decision_status,
+                          to_decision_status,
+                          action_type,
+                          area_mask_id,
+                          actor_user_id,
+                          reason,
+                          created_at
+                        )
+                        VALUES (
+                          %(id)s,
+                          %(run_id)s,
+                          %(page_id)s,
+                          %(finding_id)s,
+                          %(from_decision_status)s,
+                          %(to_decision_status)s,
+                          %(action_type)s,
+                          %(area_mask_id)s,
+                          %(actor_user_id)s,
+                          %(reason)s,
+                          %(created_at)s
+                        )
+                        """,
+                        {
+                            "id": event_id,
+                            "run_id": run_id,
+                            "page_id": current.page_id,
+                            "finding_id": finding_id,
+                            "from_decision_status": current.decision_status,
+                            "to_decision_status": to_decision_status,
+                            "action_type": action_type,
+                            "area_mask_id": current.area_mask_id,
+                            "actor_user_id": actor_user_id,
+                            "reason": reason,
+                            "created_at": now,
+                        },
+                    )
+                    cursor.execute(
+                        """
+                        UPDATE redaction_outputs
+                        SET
+                          status = 'PENDING',
+                          generated_at = NULL,
+                          safeguarded_preview_key = NULL,
+                          preview_sha256 = NULL,
+                          updated_at = NOW()
+                        WHERE run_id = %(run_id)s
+                          AND page_id = %(page_id)s
+                        """,
+                        {
+                            "run_id": run_id,
+                            "page_id": current.page_id,
+                        },
+                    )
+                    self._refresh_redaction_run_output_status(cursor=cursor, run_id=run_id)
+                    self._refresh_redaction_page_second_review_requirement(
+                        cursor=cursor,
+                        run_id=run_id,
+                        page_id=current.page_id,
+                        actor_user_id=actor_user_id,
+                    )
+                    cursor.execute(
+                        """
+                        SELECT
+                          rf.id,
+                          rf.run_id,
+                          rf.page_id,
+                          rf.line_id,
+                          rf.category,
+                          rf.span_start,
+                          rf.span_end,
+                          rf.span_basis_kind,
+                          rf.span_basis_ref,
+                          rf.confidence,
+                          rf.basis_primary,
+                          rf.basis_secondary_json,
+                          rf.assist_explanation_key,
+                          rf.assist_explanation_sha256,
+                          rf.bbox_refs,
+                          rf.token_refs_json,
+                          rf.area_mask_id,
+                          rf.decision_status,
+                          rf.override_risk_classification,
+                          rf.override_risk_reason_codes_json,
+                          rf.decision_by,
+                          rf.decision_at,
+                          rf.decision_reason,
+                          rf.decision_etag,
+                          rf.updated_at,
+                          rf.created_at,
+                          COALESCE((
+                            SELECT rde.action_type
+                            FROM redaction_decision_events AS rde
+                            WHERE rde.finding_id = rf.id
+                            ORDER BY rde.created_at DESC, rde.id DESC
+                            LIMIT 1
+                          ), 'MASK') AS action_type
+                        FROM redaction_findings AS rf
+                        WHERE rf.id = %(finding_id)s
+                        LIMIT 1
+                        """,
+                        {"finding_id": finding_id},
+                    )
+                    updated_row = cursor.fetchone()
+                connection.commit()
+        except (DocumentNotFoundError, DocumentRedactionRunConflictError):
+            raise
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction finding update failed."
+            ) from error
+        if updated_row is None:
+            raise DocumentStoreUnavailableError("Redaction finding update failed.")
+        return self._as_redaction_finding_record(updated_row)
+
+    def list_redaction_area_masks(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+    ) -> list[RedactionAreaMaskRecord]:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          ram.id,
+                          ram.run_id,
+                          ram.page_id,
+                          ram.geometry_json,
+                          ram.mask_reason,
+                          ram.version_etag,
+                          ram.supersedes_area_mask_id,
+                          ram.superseded_by_area_mask_id,
+                          ram.created_by,
+                          ram.created_at,
+                          ram.updated_at
+                        FROM redaction_area_masks AS ram
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = ram.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND ram.run_id = %(run_id)s
+                          AND ram.page_id = %(page_id)s
+                        ORDER BY ram.created_at ASC, ram.id ASC
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                            "page_id": page_id,
+                        },
+                    )
+                    rows = cursor.fetchall()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError("Redaction area-mask listing failed.") from error
+        return [self._as_redaction_area_mask_record(row) for row in rows]
+
+    def get_redaction_area_mask(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        mask_id: str,
+    ) -> RedactionAreaMaskRecord | None:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          ram.id,
+                          ram.run_id,
+                          ram.page_id,
+                          ram.geometry_json,
+                          ram.mask_reason,
+                          ram.version_etag,
+                          ram.supersedes_area_mask_id,
+                          ram.superseded_by_area_mask_id,
+                          ram.created_by,
+                          ram.created_at,
+                          ram.updated_at
+                        FROM redaction_area_masks AS ram
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = ram.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND ram.run_id = %(run_id)s
+                          AND ram.page_id = %(page_id)s
+                          AND ram.id = %(mask_id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                            "page_id": page_id,
+                            "mask_id": mask_id,
+                        },
+                    )
+                    row = cursor.fetchone()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError("Redaction area-mask lookup failed.") from error
+        if row is None:
+            return None
+        return self._as_redaction_area_mask_record(row)
+
+    def get_redaction_area_mask_by_id(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        mask_id: str,
+    ) -> RedactionAreaMaskRecord | None:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          ram.id,
+                          ram.run_id,
+                          ram.page_id,
+                          ram.geometry_json,
+                          ram.mask_reason,
+                          ram.version_etag,
+                          ram.supersedes_area_mask_id,
+                          ram.superseded_by_area_mask_id,
+                          ram.created_by,
+                          ram.created_at,
+                          ram.updated_at
+                        FROM redaction_area_masks AS ram
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = ram.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND ram.run_id = %(run_id)s
+                          AND ram.id = %(mask_id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                            "mask_id": mask_id,
+                        },
+                    )
+                    row = cursor.fetchone()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError("Redaction area-mask lookup failed.") from error
+        if row is None:
+            return None
+        return self._as_redaction_area_mask_record(row)
+
+    def create_redaction_area_mask(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        geometry_json: dict[str, object],
+        mask_reason: str,
+        actor_user_id: str,
+        finding_id: str | None = None,
+        expected_finding_decision_etag: str | None = None,
+    ) -> tuple[RedactionAreaMaskRecord, RedactionFindingRecord | None]:
+        self.ensure_schema()
+        now = datetime.now(timezone.utc)
+        event_id = str(uuid4())
+        new_mask_id = str(uuid4())
+        new_mask_etag = self._compute_redaction_etag(
+            run_id,
+            page_id,
+            new_mask_id,
+            actor_user_id,
+            now.isoformat(),
+        )
+        linked_finding: RedactionFindingRecord | None = None
+        new_mask_row: dict[str, object] | None = None
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT rrv.review_status
+                        FROM redaction_run_reviews AS rrv
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = rrv.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND rrv.run_id = %(run_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                        },
+                    )
+                    run_review_row = cursor.fetchone()
+                    if run_review_row is None:
+                        raise DocumentNotFoundError("Redaction run not found.")
+                    if self._assert_redaction_run_review_status(
+                        str(run_review_row["review_status"])
+                    ) == "APPROVED":
+                        raise DocumentRedactionRunConflictError(
+                            "Approved runs are locked and cannot be mutated."
+                        )
+
+                    cursor.execute(
+                        """
+                        SELECT p.width, p.height
+                        FROM pages AS p
+                        INNER JOIN documents AS d
+                          ON d.id = p.document_id
+                        WHERE p.id = %(page_id)s
+                          AND p.document_id = %(document_id)s
+                          AND d.project_id = %(project_id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "page_id": page_id,
+                        },
+                    )
+                    page_row = cursor.fetchone()
+                    if page_row is None:
+                        raise DocumentNotFoundError("Document page not found.")
+                    page_width = int(page_row["width"])
+                    page_height = int(page_row["height"])
+                    try:
+                        normalized_geometry_json = normalize_area_mask_geometry(
+                            geometry_json,
+                            page_width=page_width,
+                            page_height=page_height,
+                        )
+                    except RedactionGeometryValidationError as error:
+                        raise DocumentRedactionRunConflictError(
+                            f"Area-mask geometry is invalid: {error}"
+                        ) from error
+
+                    cursor.execute(
+                        """
+                        INSERT INTO redaction_area_masks (
+                          id,
+                          run_id,
+                          page_id,
+                          geometry_json,
+                          mask_reason,
+                          version_etag,
+                          supersedes_area_mask_id,
+                          superseded_by_area_mask_id,
+                          created_by,
+                          created_at,
+                          updated_at
+                        )
+                        VALUES (
+                          %(id)s,
+                          %(run_id)s,
+                          %(page_id)s,
+                          %(geometry_json)s::jsonb,
+                          %(mask_reason)s,
+                          %(version_etag)s,
+                          NULL,
+                          NULL,
+                          %(created_by)s,
+                          %(created_at)s,
+                          %(updated_at)s
+                        )
+                        """,
+                        {
+                            "id": new_mask_id,
+                            "run_id": run_id,
+                            "page_id": page_id,
+                            "geometry_json": json.dumps(
+                                normalized_geometry_json,
+                                ensure_ascii=True,
+                                separators=(",", ":"),
+                                sort_keys=True,
+                            ),
+                            "mask_reason": mask_reason,
+                            "version_etag": new_mask_etag,
+                            "created_by": actor_user_id,
+                            "created_at": now,
+                            "updated_at": now,
+                        },
+                    )
+
+                    if isinstance(finding_id, str) and finding_id.strip():
+                        cursor.execute(
+                            """
+                            SELECT
+                              rf.id,
+                              rf.run_id,
+                              rf.page_id,
+                              rf.line_id,
+                              rf.category,
+                              rf.span_start,
+                              rf.span_end,
+                              rf.span_basis_kind,
+                              rf.span_basis_ref,
+                              rf.confidence,
+                              rf.basis_primary,
+                              rf.basis_secondary_json,
+                              rf.assist_explanation_key,
+                              rf.assist_explanation_sha256,
+                              rf.bbox_refs,
+                              rf.token_refs_json,
+                              rf.area_mask_id,
+                              rf.decision_status,
+                              rf.override_risk_classification,
+                              rf.override_risk_reason_codes_json,
+                              rf.decision_by,
+                              rf.decision_at,
+                              rf.decision_reason,
+                              rf.decision_etag,
+                              rf.updated_at,
+                              rf.created_at
+                            FROM redaction_findings AS rf
+                            INNER JOIN redaction_runs AS rr
+                              ON rr.id = rf.run_id
+                            WHERE rr.project_id = %(project_id)s
+                              AND rr.document_id = %(document_id)s
+                              AND rf.run_id = %(run_id)s
+                              AND rf.id = %(finding_id)s
+                            LIMIT 1
+                            FOR UPDATE
+                            """,
+                            {
+                                "project_id": project_id,
+                                "document_id": document_id,
+                                "run_id": run_id,
+                                "finding_id": finding_id.strip(),
+                            },
+                        )
+                        finding_row = cursor.fetchone()
+                        if finding_row is None:
+                            raise DocumentNotFoundError(
+                                "Linked redaction finding was not found."
+                            )
+                        linked_finding = self._as_redaction_finding_record(finding_row)
+                        if linked_finding.page_id != page_id:
+                            raise DocumentRedactionRunConflictError(
+                                "Linked redaction finding must belong to the same page."
+                            )
+                        if (
+                            isinstance(expected_finding_decision_etag, str)
+                            and expected_finding_decision_etag.strip()
+                            and linked_finding.decision_etag
+                            != expected_finding_decision_etag.strip()
+                        ):
+                            raise DocumentRedactionRunConflictError(
+                                "Linked redaction finding etag is stale."
+                            )
+                        next_finding_etag = self._compute_redaction_etag(
+                            run_id,
+                            linked_finding.id,
+                            "AREA_MASK_CREATED",
+                            now.isoformat(),
+                        )
+                        override_risk_classification, override_risk_reason_codes = (
+                            self._derive_redaction_override_risk(
+                                to_decision_status="OVERRIDDEN",
+                                category=linked_finding.category,
+                                area_mask_id=new_mask_id,
+                                basis_secondary_json=linked_finding.basis_secondary_json,
+                                policy_snapshot_json=policy_snapshot_json,
+                            )
+                        )
+                        cursor.execute(
+                            """
+                            UPDATE redaction_findings
+                            SET
+                              area_mask_id = %(area_mask_id)s,
+                              decision_status = 'OVERRIDDEN',
+                              decision_by = %(decision_by)s,
+                              decision_at = %(decision_at)s,
+                              decision_reason = %(decision_reason)s,
+                              override_risk_classification = %(override_risk_classification)s,
+                              override_risk_reason_codes_json = %(override_risk_reason_codes_json)s::jsonb,
+                              decision_etag = %(decision_etag)s,
+                              updated_at = NOW()
+                            WHERE id = %(finding_id)s
+                            """,
+                            {
+                                "finding_id": linked_finding.id,
+                                "area_mask_id": new_mask_id,
+                                "decision_by": actor_user_id,
+                                "decision_at": now,
+                                "decision_reason": mask_reason,
+                                "override_risk_classification": override_risk_classification,
+                                "override_risk_reason_codes_json": (
+                                    json.dumps(
+                                        override_risk_reason_codes,
+                                        ensure_ascii=True,
+                                        separators=(",", ":"),
+                                        sort_keys=False,
+                                    )
+                                    if override_risk_reason_codes is not None
+                                    else None
+                                ),
+                                "decision_etag": next_finding_etag,
+                            },
+                        )
+                        cursor.execute(
+                            """
+                            INSERT INTO redaction_decision_events (
+                              id,
+                              run_id,
+                              page_id,
+                              finding_id,
+                              from_decision_status,
+                              to_decision_status,
+                              action_type,
+                              area_mask_id,
+                              actor_user_id,
+                              reason,
+                              created_at
+                            )
+                            VALUES (
+                              %(id)s,
+                              %(run_id)s,
+                              %(page_id)s,
+                              %(finding_id)s,
+                              %(from_decision_status)s,
+                              'OVERRIDDEN',
+                              'MASK',
+                              %(area_mask_id)s,
+                              %(actor_user_id)s,
+                              %(reason)s,
+                              %(created_at)s
+                            )
+                            """,
+                            {
+                                "id": event_id,
+                                "run_id": run_id,
+                                "page_id": page_id,
+                                "finding_id": linked_finding.id,
+                                "from_decision_status": linked_finding.decision_status,
+                                "area_mask_id": new_mask_id,
+                                "actor_user_id": actor_user_id,
+                                "reason": mask_reason,
+                                "created_at": now,
+                            },
+                        )
+
+                    cursor.execute(
+                        """
+                        UPDATE redaction_outputs
+                        SET
+                          status = 'PENDING',
+                          generated_at = NULL,
+                          safeguarded_preview_key = NULL,
+                          preview_sha256 = NULL,
+                          updated_at = NOW()
+                        WHERE run_id = %(run_id)s
+                          AND page_id = %(page_id)s
+                        """,
+                        {
+                            "run_id": run_id,
+                            "page_id": page_id,
+                        },
+                    )
+                    self._refresh_redaction_run_output_status(cursor=cursor, run_id=run_id)
+                    self._refresh_redaction_page_second_review_requirement(
+                        cursor=cursor,
+                        run_id=run_id,
+                        page_id=page_id,
+                        actor_user_id=actor_user_id,
+                    )
+                    cursor.execute(
+                        """
+                        SELECT
+                          id,
+                          run_id,
+                          page_id,
+                          geometry_json,
+                          mask_reason,
+                          version_etag,
+                          supersedes_area_mask_id,
+                          superseded_by_area_mask_id,
+                          created_by,
+                          created_at,
+                          updated_at
+                        FROM redaction_area_masks
+                        WHERE id = %(mask_id)s
+                        LIMIT 1
+                        """,
+                        {"mask_id": new_mask_id},
+                    )
+                    new_mask_row = cursor.fetchone()
+                    if linked_finding is not None:
+                        cursor.execute(
+                            """
+                            SELECT
+                              rf.id,
+                              rf.run_id,
+                              rf.page_id,
+                              rf.line_id,
+                              rf.category,
+                              rf.span_start,
+                              rf.span_end,
+                              rf.span_basis_kind,
+                              rf.span_basis_ref,
+                              rf.confidence,
+                              rf.basis_primary,
+                              rf.basis_secondary_json,
+                              rf.assist_explanation_key,
+                              rf.assist_explanation_sha256,
+                              rf.bbox_refs,
+                              rf.token_refs_json,
+                              rf.area_mask_id,
+                              rf.decision_status,
+                              rf.override_risk_classification,
+                              rf.override_risk_reason_codes_json,
+                              rf.decision_by,
+                              rf.decision_at,
+                              rf.decision_reason,
+                              rf.decision_etag,
+                              rf.updated_at,
+                              rf.created_at
+                            FROM redaction_findings AS rf
+                            WHERE rf.id = %(finding_id)s
+                            LIMIT 1
+                            """,
+                            {"finding_id": linked_finding.id},
+                        )
+                        finding_row = cursor.fetchone()
+                        linked_finding = (
+                            self._as_redaction_finding_record(finding_row)
+                            if finding_row is not None
+                            else None
+                        )
+                connection.commit()
+        except (DocumentNotFoundError, DocumentRedactionRunConflictError):
+            raise
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction area-mask creation failed."
+            ) from error
+        if new_mask_row is None:
+            raise DocumentStoreUnavailableError("Redaction area-mask creation failed.")
+        return self._as_redaction_area_mask_record(new_mask_row), linked_finding
+
+    def revise_redaction_area_mask(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        mask_id: str,
+        expected_version_etag: str,
+        geometry_json: dict[str, object],
+        mask_reason: str,
+        actor_user_id: str,
+        finding_id: str | None = None,
+        expected_finding_decision_etag: str | None = None,
+    ) -> tuple[RedactionAreaMaskRecord, RedactionFindingRecord | None]:
+        self.ensure_schema()
+        now = datetime.now(timezone.utc)
+        event_id = str(uuid4())
+        new_mask_id = str(uuid4())
+        new_mask_etag = self._compute_redaction_etag(
+            run_id,
+            page_id,
+            new_mask_id,
+            actor_user_id,
+            now.isoformat(),
+        )
+        linked_finding: RedactionFindingRecord | None = None
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT rrv.review_status
+                        FROM redaction_run_reviews AS rrv
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = rrv.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND rrv.run_id = %(run_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                        },
+                    )
+                    run_review_row = cursor.fetchone()
+                    if run_review_row is None:
+                        raise DocumentNotFoundError("Redaction run not found.")
+                    if self._assert_redaction_run_review_status(
+                        str(run_review_row["review_status"])
+                    ) == "APPROVED":
+                        raise DocumentRedactionRunConflictError(
+                            "Approved runs are locked and cannot be mutated."
+                        )
+
+                    cursor.execute(
+                        """
+                        SELECT
+                          ram.id,
+                          ram.run_id,
+                          ram.page_id,
+                          ram.geometry_json,
+                          ram.mask_reason,
+                          ram.version_etag,
+                          ram.supersedes_area_mask_id,
+                          ram.superseded_by_area_mask_id,
+                          ram.created_by,
+                          ram.created_at,
+                          ram.updated_at
+                        FROM redaction_area_masks AS ram
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = ram.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND ram.run_id = %(run_id)s
+                          AND ram.page_id = %(page_id)s
+                          AND ram.id = %(mask_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                            "page_id": page_id,
+                            "mask_id": mask_id,
+                        },
+                    )
+                    mask_row = cursor.fetchone()
+                    if mask_row is None:
+                        raise DocumentNotFoundError("Redaction area mask not found.")
+                    current_mask = self._as_redaction_area_mask_record(mask_row)
+                    if current_mask.version_etag != expected_version_etag:
+                        raise DocumentRedactionRunConflictError(
+                            "Redaction area-mask update conflicts with a newer change."
+                        )
+                    if current_mask.superseded_by_area_mask_id is not None:
+                        raise DocumentRedactionRunConflictError(
+                            "Only the latest area-mask revision can be updated."
+                        )
+                    cursor.execute(
+                        """
+                        SELECT p.width, p.height
+                        FROM pages AS p
+                        INNER JOIN documents AS d
+                          ON d.id = p.document_id
+                        WHERE p.id = %(page_id)s
+                          AND p.document_id = %(document_id)s
+                          AND d.project_id = %(project_id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "page_id": page_id,
+                        },
+                    )
+                    page_row = cursor.fetchone()
+                    if page_row is None:
+                        raise DocumentNotFoundError("Document page not found.")
+                    try:
+                        normalized_geometry_json = normalize_area_mask_geometry(
+                            geometry_json,
+                            page_width=int(page_row["width"]),
+                            page_height=int(page_row["height"]),
+                        )
+                    except RedactionGeometryValidationError as error:
+                        raise DocumentRedactionRunConflictError(
+                            f"Area-mask geometry is invalid: {error}"
+                        ) from error
+
+                    cursor.execute(
+                        """
+                        INSERT INTO redaction_area_masks (
+                          id,
+                          run_id,
+                          page_id,
+                          geometry_json,
+                          mask_reason,
+                          version_etag,
+                          supersedes_area_mask_id,
+                          superseded_by_area_mask_id,
+                          created_by,
+                          created_at,
+                          updated_at
+                        )
+                        VALUES (
+                          %(id)s,
+                          %(run_id)s,
+                          %(page_id)s,
+                          %(geometry_json)s::jsonb,
+                          %(mask_reason)s,
+                          %(version_etag)s,
+                          %(supersedes_area_mask_id)s,
+                          NULL,
+                          %(created_by)s,
+                          %(created_at)s,
+                          %(updated_at)s
+                        )
+                        """,
+                        {
+                            "id": new_mask_id,
+                            "run_id": run_id,
+                            "page_id": page_id,
+                            "geometry_json": json.dumps(
+                                normalized_geometry_json,
+                                ensure_ascii=True,
+                                separators=(",", ":"),
+                                sort_keys=True,
+                            ),
+                            "mask_reason": mask_reason,
+                            "version_etag": new_mask_etag,
+                            "supersedes_area_mask_id": mask_id,
+                            "created_by": actor_user_id,
+                            "created_at": now,
+                            "updated_at": now,
+                        },
+                    )
+                    cursor.execute(
+                        """
+                        UPDATE redaction_area_masks
+                        SET
+                          superseded_by_area_mask_id = %(superseded_by_area_mask_id)s,
+                          updated_at = NOW()
+                        WHERE id = %(id)s
+                        """,
+                        {
+                            "id": mask_id,
+                            "superseded_by_area_mask_id": new_mask_id,
+                        },
+                    )
+
+                    if isinstance(finding_id, str) and finding_id.strip():
+                        cursor.execute(
+                            """
+                            SELECT
+                              rf.id,
+                              rf.run_id,
+                              rf.page_id,
+                              rf.line_id,
+                              rf.category,
+                              rf.span_start,
+                              rf.span_end,
+                              rf.span_basis_kind,
+                              rf.span_basis_ref,
+                              rf.confidence,
+                              rf.basis_primary,
+                              rf.basis_secondary_json,
+                              rf.assist_explanation_key,
+                              rf.assist_explanation_sha256,
+                              rf.bbox_refs,
+                              rf.token_refs_json,
+                              rf.area_mask_id,
+                              rf.decision_status,
+                              rf.override_risk_classification,
+                              rf.override_risk_reason_codes_json,
+                              rf.decision_by,
+                              rf.decision_at,
+                              rf.decision_reason,
+                              rf.decision_etag,
+                              rf.updated_at,
+                              rf.created_at
+                            FROM redaction_findings AS rf
+                            INNER JOIN redaction_runs AS rr
+                              ON rr.id = rf.run_id
+                            WHERE rr.project_id = %(project_id)s
+                              AND rr.document_id = %(document_id)s
+                              AND rf.run_id = %(run_id)s
+                              AND rf.id = %(finding_id)s
+                            LIMIT 1
+                            FOR UPDATE
+                            """,
+                            {
+                                "project_id": project_id,
+                                "document_id": document_id,
+                                "run_id": run_id,
+                                "finding_id": finding_id.strip(),
+                            },
+                        )
+                        finding_row = cursor.fetchone()
+                        if finding_row is None:
+                            raise DocumentNotFoundError(
+                                "Linked redaction finding was not found."
+                            )
+                        linked_finding = self._as_redaction_finding_record(finding_row)
+                        if (
+                            isinstance(expected_finding_decision_etag, str)
+                            and expected_finding_decision_etag.strip()
+                            and linked_finding.decision_etag
+                            != expected_finding_decision_etag.strip()
+                        ):
+                            raise DocumentRedactionRunConflictError(
+                                "Linked redaction finding etag is stale."
+                            )
+                        next_finding_etag = self._compute_redaction_etag(
+                            run_id,
+                            linked_finding.id,
+                            "AREA_MASK_UPDATED",
+                            now.isoformat(),
+                        )
+                        override_risk_classification, override_risk_reason_codes = (
+                            self._derive_redaction_override_risk(
+                                to_decision_status="OVERRIDDEN",
+                                category=linked_finding.category,
+                                area_mask_id=new_mask_id,
+                                basis_secondary_json=linked_finding.basis_secondary_json,
+                                policy_snapshot_json=policy_snapshot_json,
+                            )
+                        )
+                        cursor.execute(
+                            """
+                            UPDATE redaction_findings
+                            SET
+                              area_mask_id = %(area_mask_id)s,
+                              decision_status = 'OVERRIDDEN',
+                              decision_by = %(decision_by)s,
+                              decision_at = %(decision_at)s,
+                              decision_reason = %(decision_reason)s,
+                              override_risk_classification = %(override_risk_classification)s,
+                              override_risk_reason_codes_json = %(override_risk_reason_codes_json)s::jsonb,
+                              decision_etag = %(decision_etag)s,
+                              updated_at = NOW()
+                            WHERE id = %(finding_id)s
+                            """,
+                            {
+                                "finding_id": linked_finding.id,
+                                "area_mask_id": new_mask_id,
+                                "decision_by": actor_user_id,
+                                "decision_at": now,
+                                "decision_reason": mask_reason,
+                                "override_risk_classification": override_risk_classification,
+                                "override_risk_reason_codes_json": (
+                                    json.dumps(
+                                        override_risk_reason_codes,
+                                        ensure_ascii=True,
+                                        separators=(",", ":"),
+                                        sort_keys=False,
+                                    )
+                                    if override_risk_reason_codes is not None
+                                    else None
+                                ),
+                                "decision_etag": next_finding_etag,
+                            },
+                        )
+                        cursor.execute(
+                            """
+                            INSERT INTO redaction_decision_events (
+                              id,
+                              run_id,
+                              page_id,
+                              finding_id,
+                              from_decision_status,
+                              to_decision_status,
+                              action_type,
+                              area_mask_id,
+                              actor_user_id,
+                              reason,
+                              created_at
+                            )
+                            VALUES (
+                              %(id)s,
+                              %(run_id)s,
+                              %(page_id)s,
+                              %(finding_id)s,
+                              %(from_decision_status)s,
+                              'OVERRIDDEN',
+                              'MASK',
+                              %(area_mask_id)s,
+                              %(actor_user_id)s,
+                              %(reason)s,
+                              %(created_at)s
+                            )
+                            """,
+                            {
+                                "id": event_id,
+                                "run_id": run_id,
+                                "page_id": page_id,
+                                "finding_id": linked_finding.id,
+                                "from_decision_status": linked_finding.decision_status,
+                                "area_mask_id": new_mask_id,
+                                "actor_user_id": actor_user_id,
+                                "reason": mask_reason,
+                                "created_at": now,
+                            },
+                        )
+
+                    cursor.execute(
+                        """
+                        UPDATE redaction_outputs
+                        SET
+                          status = 'PENDING',
+                          generated_at = NULL,
+                          safeguarded_preview_key = NULL,
+                          preview_sha256 = NULL,
+                          updated_at = NOW()
+                        WHERE run_id = %(run_id)s
+                          AND page_id = %(page_id)s
+                        """,
+                        {
+                            "run_id": run_id,
+                            "page_id": page_id,
+                        },
+                    )
+                    self._refresh_redaction_run_output_status(cursor=cursor, run_id=run_id)
+                    self._refresh_redaction_page_second_review_requirement(
+                        cursor=cursor,
+                        run_id=run_id,
+                        page_id=page_id,
+                        actor_user_id=actor_user_id,
+                    )
+                    cursor.execute(
+                        """
+                        SELECT
+                          id,
+                          run_id,
+                          page_id,
+                          geometry_json,
+                          mask_reason,
+                          version_etag,
+                          supersedes_area_mask_id,
+                          superseded_by_area_mask_id,
+                          created_by,
+                          created_at,
+                          updated_at
+                        FROM redaction_area_masks
+                        WHERE id = %(mask_id)s
+                        LIMIT 1
+                        """,
+                        {"mask_id": new_mask_id},
+                    )
+                    new_mask_row = cursor.fetchone()
+
+                    if linked_finding is not None:
+                        cursor.execute(
+                            """
+                            SELECT
+                              rf.id,
+                              rf.run_id,
+                              rf.page_id,
+                              rf.line_id,
+                              rf.category,
+                              rf.span_start,
+                              rf.span_end,
+                              rf.span_basis_kind,
+                              rf.span_basis_ref,
+                              rf.confidence,
+                              rf.basis_primary,
+                              rf.basis_secondary_json,
+                              rf.assist_explanation_key,
+                              rf.assist_explanation_sha256,
+                              rf.bbox_refs,
+                              rf.token_refs_json,
+                              rf.area_mask_id,
+                              rf.decision_status,
+                              rf.override_risk_classification,
+                              rf.override_risk_reason_codes_json,
+                              rf.decision_by,
+                              rf.decision_at,
+                              rf.decision_reason,
+                              rf.decision_etag,
+                              rf.updated_at,
+                              rf.created_at
+                            FROM redaction_findings AS rf
+                            WHERE rf.id = %(finding_id)s
+                            LIMIT 1
+                            """,
+                            {"finding_id": linked_finding.id},
+                        )
+                        finding_row = cursor.fetchone()
+                        linked_finding = (
+                            self._as_redaction_finding_record(finding_row)
+                            if finding_row is not None
+                            else None
+                        )
+                connection.commit()
+        except (DocumentNotFoundError, DocumentRedactionRunConflictError):
+            raise
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction area-mask revision failed."
+            ) from error
+        if new_mask_row is None:
+            raise DocumentStoreUnavailableError("Redaction area-mask revision failed.")
+        return self._as_redaction_area_mask_record(new_mask_row), linked_finding
+
+    def list_redaction_decision_events(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str | None = None,
+    ) -> list[RedactionDecisionEventRecord]:
+        self.ensure_schema()
+        where_clause = (
+            "rr.project_id = %(project_id)s AND rr.document_id = %(document_id)s "
+            "AND rde.run_id = %(run_id)s"
+        )
+        params: dict[str, object] = {
+            "project_id": project_id,
+            "document_id": document_id,
+            "run_id": run_id,
+        }
+        if isinstance(page_id, str) and page_id.strip():
+            where_clause += " AND rde.page_id = %(page_id)s"
+            params["page_id"] = page_id.strip()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        f"""
+                        SELECT
+                          rde.id,
+                          rde.run_id,
+                          rde.page_id,
+                          rde.finding_id,
+                          rde.from_decision_status,
+                          rde.to_decision_status,
+                          rde.action_type,
+                          rde.area_mask_id,
+                          rde.actor_user_id,
+                          rde.reason,
+                          rde.created_at
+                        FROM redaction_decision_events AS rde
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = rde.run_id
+                        WHERE {where_clause}
+                        ORDER BY rde.created_at ASC, rde.id ASC
+                        """,
+                        params,
+                    )
+                    rows = cursor.fetchall()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction decision event listing failed."
+            ) from error
+        return [self._as_redaction_decision_event_record(row) for row in rows]
+
+    def list_redaction_page_review_events(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str | None = None,
+    ) -> list[RedactionPageReviewEventRecord]:
+        self.ensure_schema()
+        where_clause = (
+            "rr.project_id = %(project_id)s AND rr.document_id = %(document_id)s "
+            "AND rpre.run_id = %(run_id)s"
+        )
+        params: dict[str, object] = {
+            "project_id": project_id,
+            "document_id": document_id,
+            "run_id": run_id,
+        }
+        if isinstance(page_id, str) and page_id.strip():
+            where_clause += " AND rpre.page_id = %(page_id)s"
+            params["page_id"] = page_id.strip()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        f"""
+                        SELECT
+                          rpre.id,
+                          rpre.run_id,
+                          rpre.page_id,
+                          rpre.event_type,
+                          rpre.actor_user_id,
+                          rpre.reason,
+                          rpre.created_at
+                        FROM redaction_page_review_events AS rpre
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = rpre.run_id
+                        WHERE {where_clause}
+                        ORDER BY rpre.created_at ASC, rpre.id ASC
+                        """,
+                        params,
+                    )
+                    rows = cursor.fetchall()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction page-review event listing failed."
+            ) from error
+        return [self._as_redaction_page_review_event_record(row) for row in rows]
+
+    def list_redaction_run_review_events(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> list[RedactionRunReviewEventRecord]:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          rrre.id,
+                          rrre.run_id,
+                          rrre.event_type,
+                          rrre.actor_user_id,
+                          rrre.reason,
+                          rrre.created_at
+                        FROM redaction_run_review_events AS rrre
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = rrre.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND rrre.run_id = %(run_id)s
+                        ORDER BY rrre.created_at ASC, rrre.id ASC
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                        },
+                    )
+                    rows = cursor.fetchall()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction run-review event listing failed."
+            ) from error
+        return [self._as_redaction_run_review_event_record(row) for row in rows]
+
+    def list_redaction_run_output_events(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> list[RedactionRunOutputEventRecord]:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          rroe.id,
+                          rroe.run_id,
+                          rroe.event_type,
+                          rroe.from_status,
+                          rroe.to_status,
+                          rroe.reason,
+                          rroe.actor_user_id,
+                          rroe.created_at
+                        FROM redaction_run_output_events AS rroe
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = rroe.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND rroe.run_id = %(run_id)s
+                        ORDER BY rroe.created_at ASC, rroe.id ASC
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                        },
+                    )
+                    rows = cursor.fetchall()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction run-output event listing failed."
+            ) from error
+        return [self._as_redaction_run_output_event_record(row) for row in rows]
+
+    def reset_redaction_outputs_for_reviewed_generation(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> RedactionRunOutputRecord:
+        self.ensure_schema()
+        now = datetime.now(timezone.utc)
+        run_output_row: dict[str, object] | None = None
+        previous_run_output_status: RedactionOutputStatus | None = None
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          rrv.review_status
+                        FROM redaction_run_reviews AS rrv
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = rrv.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND rrv.run_id = %(run_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                        },
+                    )
+                    review_row = cursor.fetchone()
+                    if review_row is None:
+                        raise DocumentNotFoundError("Redaction run not found.")
+                    review_status = self._assert_redaction_run_review_status(
+                        str(review_row["review_status"])
+                    )
+                    if review_status != "APPROVED":
+                        raise DocumentRedactionRunConflictError(
+                            "Reviewed output regeneration requires APPROVED run review."
+                        )
+                    cursor.execute(
+                        """
+                        SELECT status
+                        FROM redaction_run_outputs
+                        WHERE run_id = %(run_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {"run_id": run_id},
+                    )
+                    prior_run_output_row = cursor.fetchone()
+                    if prior_run_output_row is None:
+                        raise DocumentNotFoundError("Redaction run output not found.")
+                    previous_run_output_status = self._assert_redaction_output_status(
+                        str(prior_run_output_row["status"])
+                    )
+                    cursor.execute(
+                        """
+                        UPDATE redaction_outputs
+                        SET
+                          status = 'PENDING',
+                          safeguarded_preview_key = NULL,
+                          preview_sha256 = NULL,
+                          started_at = %(started_at)s,
+                          generated_at = NULL,
+                          canceled_by = NULL,
+                          canceled_at = NULL,
+                          failure_reason = NULL,
+                          updated_at = NOW()
+                        WHERE run_id = %(run_id)s
+                        """,
+                        {
+                            "run_id": run_id,
+                            "started_at": now,
+                        },
+                    )
+                    cursor.execute(
+                        """
+                        UPDATE redaction_run_outputs
+                        SET
+                          status = 'PENDING',
+                          output_manifest_key = NULL,
+                          output_manifest_sha256 = NULL,
+                          started_at = %(started_at)s,
+                          generated_at = NULL,
+                          canceled_by = NULL,
+                          canceled_at = NULL,
+                          failure_reason = NULL,
+                          updated_at = NOW()
+                        WHERE run_id = %(run_id)s
+                        """,
+                        {
+                            "run_id": run_id,
+                            "started_at": now,
+                        },
+                    )
+                    self._append_redaction_run_output_event(
+                        cursor=cursor,
+                        run_id=run_id,
+                        from_status=previous_run_output_status,
+                        to_status="PENDING",
+                        reason="Reviewed output generation triggered from approved snapshot.",
+                    )
+                    self._refresh_redaction_run_output_status(cursor=cursor, run_id=run_id)
+                    cursor.execute(
+                        """
+                        SELECT
+                          rro.run_id,
+                          rro.status,
+                          rro.output_manifest_key,
+                          rro.output_manifest_sha256,
+                          rro.page_count,
+                          rro.started_at,
+                          rro.generated_at,
+                          rro.canceled_by,
+                          rro.canceled_at,
+                          rro.failure_reason,
+                          rro.created_at,
+                          rro.updated_at
+                        FROM redaction_run_outputs AS rro
+                        WHERE rro.run_id = %(run_id)s
+                        LIMIT 1
+                        """,
+                        {"run_id": run_id},
+                    )
+                    run_output_row = cursor.fetchone()
+                connection.commit()
+        except (DocumentNotFoundError, DocumentRedactionRunConflictError):
+            raise
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction reviewed output reset failed."
+            ) from error
+        if run_output_row is None:
+            raise DocumentStoreUnavailableError("Redaction reviewed output reset failed.")
+        return self._as_redaction_run_output_record(run_output_row)
+
+    def set_redaction_output_projection(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        status: RedactionOutputStatus,
+        safeguarded_preview_key: str | None,
+        preview_sha256: str | None,
+        failure_reason: str | None = None,
+    ) -> RedactionOutputRecord:
+        self.ensure_schema()
+        output_row: dict[str, object] | None = None
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        UPDATE redaction_outputs AS ro
+                        SET
+                          status = %(status)s,
+                          safeguarded_preview_key = %(safeguarded_preview_key)s,
+                          preview_sha256 = %(preview_sha256)s,
+                          generated_at = CASE
+                            WHEN %(status)s = 'READY' THEN NOW()
+                            ELSE NULL
+                          END,
+                          failure_reason = %(failure_reason)s,
+                          canceled_by = CASE
+                            WHEN %(status)s = 'CANCELED' THEN ro.canceled_by
+                            ELSE NULL
+                          END,
+                          canceled_at = CASE
+                            WHEN %(status)s = 'CANCELED' THEN ro.canceled_at
+                            ELSE NULL
+                          END,
+                          updated_at = NOW()
+                        WHERE ro.run_id = %(run_id)s
+                          AND ro.page_id = %(page_id)s
+                          AND EXISTS (
+                            SELECT 1
+                            FROM redaction_runs AS rr
+                            WHERE rr.id = ro.run_id
+                              AND rr.project_id = %(project_id)s
+                              AND rr.document_id = %(document_id)s
+                          )
+                        RETURNING
+                          ro.run_id,
+                          ro.page_id,
+                          ro.status,
+                          ro.safeguarded_preview_key,
+                          ro.preview_sha256,
+                          ro.started_at,
+                          ro.generated_at,
+                          ro.canceled_by,
+                          ro.canceled_at,
+                          ro.failure_reason,
+                          ro.created_at,
+                          ro.updated_at
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                            "page_id": page_id,
+                            "status": status,
+                            "safeguarded_preview_key": safeguarded_preview_key,
+                            "preview_sha256": preview_sha256,
+                            "failure_reason": failure_reason,
+                        },
+                    )
+                    output_row = cursor.fetchone()
+                    if output_row is None:
+                        raise DocumentNotFoundError("Redaction output was not found.")
+                    self._refresh_redaction_run_output_status(cursor=cursor, run_id=run_id)
+                connection.commit()
+        except (DocumentNotFoundError,):
+            raise
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError("Redaction output update failed.") from error
+        if output_row is None:
+            raise DocumentStoreUnavailableError("Redaction output update failed.")
+        return self._as_redaction_output_record(output_row)
+
+    def get_redaction_output(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+    ) -> RedactionOutputRecord | None:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          ro.run_id,
+                          ro.page_id,
+                          ro.status,
+                          ro.safeguarded_preview_key,
+                          ro.preview_sha256,
+                          ro.started_at,
+                          ro.generated_at,
+                          ro.canceled_by,
+                          ro.canceled_at,
+                          ro.failure_reason,
+                          ro.created_at,
+                          ro.updated_at
+                        FROM redaction_outputs AS ro
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = ro.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND ro.run_id = %(run_id)s
+                          AND ro.page_id = %(page_id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                            "page_id": page_id,
+                        },
+                    )
+                    row = cursor.fetchone()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError("Redaction output lookup failed.") from error
+        if row is None:
+            return None
+        return self._as_redaction_output_record(row)
+
+    def list_redaction_outputs(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> list[RedactionOutputRecord]:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          ro.run_id,
+                          ro.page_id,
+                          ro.status,
+                          ro.safeguarded_preview_key,
+                          ro.preview_sha256,
+                          ro.started_at,
+                          ro.generated_at,
+                          ro.canceled_by,
+                          ro.canceled_at,
+                          ro.failure_reason,
+                          ro.created_at,
+                          ro.updated_at
+                        FROM redaction_outputs AS ro
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = ro.run_id
+                        INNER JOIN pages AS p
+                          ON p.id = ro.page_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND ro.run_id = %(run_id)s
+                        ORDER BY p.page_index ASC, ro.page_id ASC
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                        },
+                    )
+                    rows = cursor.fetchall()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError("Redaction output listing failed.") from error
+        return [self._as_redaction_output_record(row) for row in rows]
+
+    def get_redaction_run_output(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> RedactionRunOutputRecord | None:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          rro.run_id,
+                          rro.status,
+                          rro.output_manifest_key,
+                          rro.output_manifest_sha256,
+                          rro.page_count,
+                          rro.started_at,
+                          rro.generated_at,
+                          rro.canceled_by,
+                          rro.canceled_at,
+                          rro.failure_reason,
+                          rro.created_at,
+                          rro.updated_at
+                        FROM redaction_run_outputs AS rro
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = rro.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND rro.run_id = %(run_id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                        },
+                    )
+                    row = cursor.fetchone()
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction run output lookup failed."
+            ) from error
+        if row is None:
+            return None
+        return self._as_redaction_run_output_record(row)
+
+    def set_redaction_run_output_status(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        status: RedactionOutputStatus,
+        failure_reason: str | None = None,
+        actor_user_id: str | None = None,
+    ) -> RedactionRunOutputRecord:
+        self.ensure_schema()
+        next_row: dict[str, object] | None = None
+        now = datetime.now(timezone.utc)
+        trimmed_reason = (
+            failure_reason.strip()[:600]
+            if isinstance(failure_reason, str) and failure_reason.strip()
+            else None
+        )
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          rro.run_id,
+                          rro.status,
+                          rro.started_at
+                        FROM redaction_run_outputs AS rro
+                        INNER JOIN redaction_runs AS rr
+                          ON rr.id = rro.run_id
+                        WHERE rr.project_id = %(project_id)s
+                          AND rr.document_id = %(document_id)s
+                          AND rro.run_id = %(run_id)s
+                        LIMIT 1
+                        FOR UPDATE
+                        """,
+                        {
+                            "project_id": project_id,
+                            "document_id": document_id,
+                            "run_id": run_id,
+                        },
+                    )
+                    current_row = cursor.fetchone()
+                    if current_row is None:
+                        raise DocumentNotFoundError("Redaction run output not found.")
+                    previous_status = self._assert_redaction_output_status(
+                        str(current_row["status"])
+                    )
+                    previous_started_at = current_row.get("started_at")
+                    started_at: datetime | None
+                    if status == "PENDING":
+                        if (
+                            previous_status == "PENDING"
+                            and isinstance(previous_started_at, datetime)
+                        ):
+                            started_at = previous_started_at
+                        else:
+                            started_at = now
+                    elif isinstance(previous_started_at, datetime):
+                        started_at = previous_started_at
+                    else:
+                        started_at = now
+
+                    cursor.execute(
+                        """
+                        UPDATE redaction_run_outputs
+                        SET
+                          status = %(status)s,
+                          output_manifest_key = CASE
+                            WHEN %(status)s = 'READY' THEN output_manifest_key
+                            ELSE NULL
+                          END,
+                          output_manifest_sha256 = CASE
+                            WHEN %(status)s = 'READY' THEN output_manifest_sha256
+                            ELSE NULL
+                          END,
+                          started_at = %(started_at)s,
+                          generated_at = CASE
+                            WHEN %(status)s = 'READY' THEN NOW()
+                            ELSE NULL
+                          END,
+                          canceled_by = CASE
+                            WHEN %(status)s = 'CANCELED' THEN %(actor_user_id)s
+                            ELSE NULL
+                          END,
+                          canceled_at = CASE
+                            WHEN %(status)s = 'CANCELED' THEN NOW()
+                            ELSE NULL
+                          END,
+                          failure_reason = %(failure_reason)s,
+                          updated_at = NOW()
+                        WHERE run_id = %(run_id)s
+                        RETURNING
+                          run_id,
+                          status,
+                          output_manifest_key,
+                          output_manifest_sha256,
+                          page_count,
+                          started_at,
+                          generated_at,
+                          canceled_by,
+                          canceled_at,
+                          failure_reason,
+                          created_at,
+                          updated_at
+                        """,
+                        {
+                            "run_id": run_id,
+                            "status": status,
+                            "started_at": started_at,
+                            "actor_user_id": actor_user_id,
+                            "failure_reason": trimmed_reason,
+                        },
+                    )
+                    next_row = cursor.fetchone()
+                    if next_row is None:
+                        raise DocumentStoreUnavailableError(
+                            "Redaction run output status update failed."
+                        )
+                    if previous_status != status:
+                        self._append_redaction_run_output_event(
+                            cursor=cursor,
+                            run_id=run_id,
+                            from_status=previous_status,
+                            to_status=status,
+                            reason=trimmed_reason,
+                            actor_user_id=actor_user_id,
+                            created_at=now,
+                        )
+                connection.commit()
+        except (DocumentNotFoundError,):
+            raise
+        except psycopg.Error as error:
+            raise DocumentStoreUnavailableError(
+                "Redaction run output status update failed."
+            ) from error
+        if next_row is None:
+            raise DocumentStoreUnavailableError("Redaction run output status update failed.")
+        return self._as_redaction_run_output_record(next_row)

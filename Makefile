@@ -4,7 +4,7 @@ PIP ?= $(PYTHON) -m pip
 HELM_IMAGE ?= alpine/helm:3.17.3
 ROOT_DIR := $(CURDIR)
 
-.PHONY: install-js install-python lint format-check typecheck test test-browser test-preprocess-gold update-preprocess-gold-baseline build audit ci ci-js ci-python verify-images render-manifests dev-db-up dev-db-down dev-stack-up dev-stack-down smoke-health clean
+.PHONY: install-js install-python lint format-check typecheck test test-browser test-preprocess-gold test-privacy-regression test-governance-integrity test-export-hardening update-preprocess-gold-baseline build audit ci ci-js ci-python verify-images render-manifests dev-db-up dev-db-down dev-stack-up dev-stack-down smoke-health clean
 
 install-js:
 	pnpm install --frozen-lockfile
@@ -35,6 +35,22 @@ test-browser:
 
 test-preprocess-gold:
 	$(PYTHON) -m pytest api/tests/test_preprocessing_gold_set.py
+
+test-privacy-regression:
+	$(PYTHON) -m pytest \
+		api/tests/test_privacy_regression_pack.py \
+		api/tests/test_redaction_detection.py \
+		api/tests/test_redaction_preview.py \
+		api/tests/test_documents_redaction_routes.py
+
+test-governance-integrity:
+	$(PYTHON) -m pytest \
+		api/tests/test_governance_integrity.py \
+		api/tests/test_evidence_ledger.py \
+		api/tests/test_documents_governance_routes.py
+
+test-export-hardening:
+	$(PYTHON) -m pytest api/tests/test_export_hardening_regression.py
 
 APPROVED_BY ?= local
 APPROVAL_REFERENCE ?= local
@@ -67,7 +83,18 @@ ci-python:
 	$(PYTHON) -c "import app.main"
 	$(PYTHON) -c "import ukde_workers.runtime"
 	$(MAKE) test-preprocess-gold PYTHON=$(PYTHON)
-	$(PYTHON) -m pytest api/tests --ignore=api/tests/test_preprocessing_gold_set.py
+	$(MAKE) test-privacy-regression PYTHON=$(PYTHON)
+	$(MAKE) test-governance-integrity PYTHON=$(PYTHON)
+	$(MAKE) test-export-hardening PYTHON=$(PYTHON)
+	$(PYTHON) -m pytest \
+		api/tests \
+		--ignore=api/tests/test_preprocessing_gold_set.py \
+		--ignore=api/tests/test_privacy_regression_pack.py \
+		--ignore=api/tests/test_governance_integrity.py \
+		--ignore=api/tests/test_export_hardening_regression.py \
+		--ignore=api/tests/test_redaction_detection.py \
+		--ignore=api/tests/test_redaction_preview.py \
+		--ignore=api/tests/test_documents_redaction_routes.py
 	$(PYTHON) -m pytest workers/tests
 	$(PYTHON) -m pip_audit -r requirements/python-ci.lock --strict
 

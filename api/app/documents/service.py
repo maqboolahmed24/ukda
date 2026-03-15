@@ -5,15 +5,30 @@ import json
 import tempfile
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field, replace
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
-from typing import BinaryIO, Mapping, Sequence
+from typing import BinaryIO, Literal, Mapping, Sequence
 from uuid import uuid4
 
 from app.auth.models import SessionPrincipal
 from app.core.config import Settings, get_settings
+from app.documents.governance import (
+    ExportCandidateSnapshotContractRecord,
+    GovernanceReadinessProjectionRecord,
+    GovernanceRunConflictError,
+    GovernanceRunEventRecord,
+    GovernanceRunEventType,
+    GovernanceRunNotFoundError,
+    GovernanceRunSummaryRecord,
+    GovernanceStore,
+    GovernanceStoreUnavailableError,
+    LedgerVerificationRunRecord,
+    RedactionEvidenceLedgerRecord,
+    RedactionManifestRecord,
+    get_governance_store,
+)
 from app.documents.models import (
     ApprovedModelRecord,
     ApprovedModelRole,
@@ -22,10 +37,31 @@ from app.documents.models import (
     ApprovedModelType,
     ProjectModelAssignmentRecord,
     TrainingDatasetRecord,
+    DocumentRedactionProjectionRecord,
     DocumentTranscriptionProjectionRecord,
+    RedactionAreaMaskRecord,
+    RedactionDecisionActionType,
+    RedactionDecisionEventRecord,
+    RedactionDecisionStatus,
+    RedactionFindingRecord,
+    RedactionOutputRecord,
+    RedactionOutputStatus,
+    RedactionPageReviewEventRecord,
+    RedactionPageReviewRecord,
+    RedactionPageReviewStatus,
+    RedactionSecondReviewStatus,
+    RedactionRunKind,
+    RedactionRunOutputRecord,
+    RedactionRunOutputReadinessState,
+    RedactionRunRecord,
+    RedactionRunReviewEventRecord,
+    RedactionRunReviewRecord,
+    RedactionRunReviewStatus,
+    RedactionRunStatus,
     LineTranscriptionResultRecord,
     PageTranscriptionResultRecord,
     TokenTranscriptionResultRecord,
+    TranscriptionRescueResolutionRecord,
     TranscriptVersionRecord,
     TranscriptVariantKind,
     TranscriptVariantLayerRecord,
@@ -33,11 +69,13 @@ from app.documents.models import (
     TranscriptVariantSuggestionEventRecord,
     TranscriptVariantSuggestionRecord,
     TranscriptionCompareDecision,
+    TranscriptionCompareDecisionEventRecord,
     TranscriptionCompareDecisionRecord,
     TranscriptionConfidenceBasis,
     TranscriptionConfidenceBand,
     TranscriptionFallbackReasonCode,
     TranscriptionOutputProjectionRecord,
+    TranscriptionRescueResolutionStatus,
     TranscriptionRunEngine,
     TranscriptionRunRecord,
     TranscriptionRunStatus,
@@ -97,6 +135,31 @@ from app.documents.extraction import (
     placeholder_png_bytes,
     resolve_source_metadata,
 )
+from app.documents.redaction_detection import (
+    BoundedAssistExplainer,
+    LocalNERDetector,
+    RedactionDetectionLine,
+    RedactionDetectionToken,
+    detect_direct_identifier_findings,
+    resolve_direct_identifier_policy_config,
+)
+from app.documents.redaction_generalization import (
+    detect_indirect_identifier_findings,
+    extract_transformation_value,
+)
+from app.documents.redaction_preview import (
+    PreviewFinding,
+    PreviewLine,
+    PreviewToken,
+    SafeguardedPreviewArtifact,
+    build_safeguarded_preview_artifact,
+    canonical_preview_manifest_bytes,
+)
+from app.documents.evidence_ledger import (
+    canonical_evidence_ledger_bytes,
+    extract_ledger_rows,
+    verify_canonical_evidence_ledger_payload,
+)
 from app.documents.scanner import (
     DocumentScanner,
     DocumentScannerUnavailableError,
@@ -110,12 +173,15 @@ from app.documents.store import (
     DocumentNotFoundError,
     DocumentPreprocessRunConflictError,
     DocumentProcessingRunConflictError,
+    DocumentRedactionRunConflictError,
     DocumentTranscriptionRunConflictError,
     DocumentStore,
     DocumentStoreUnavailableError,
     DocumentUploadSessionConflictError,
     DocumentUploadSessionNotFoundError,
 )
+from app.policies.models import RedactionPolicyRecord
+from app.policies.store import PolicyStore, PolicyStoreUnavailableError
 from app.documents.validation import (
     DocumentUploadValidationError,
     parse_allowed_extension,
@@ -134,10 +200,17 @@ _ALLOWED_LAYOUT_VIEW_ROLES = {"PROJECT_LEAD", "RESEARCHER", "REVIEWER"}
 _ALLOWED_LAYOUT_MUTATION_ROLES = {"PROJECT_LEAD", "REVIEWER", "ADMIN"}
 _ALLOWED_TRANSCRIPTION_VIEW_ROLES = {"PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"}
 _ALLOWED_TRANSCRIPTION_MUTATION_ROLES = {"PROJECT_LEAD", "REVIEWER", "ADMIN"}
+_ALLOWED_REDACTION_VIEW_ROLES = {"PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"}
+_ALLOWED_REDACTION_COMPARE_VIEW_ROLES = {"PROJECT_LEAD", "REVIEWER", "ADMIN", "AUDITOR"}
+_ALLOWED_REDACTION_REVIEWED_OUTPUT_VIEW_ROLES = {"PROJECT_LEAD", "REVIEWER"}
+_ALLOWED_REDACTION_MUTATION_ROLES = {"PROJECT_LEAD", "REVIEWER", "ADMIN"}
+_ALLOWED_REDACTION_POLICY_RERUN_ROLES = {"PROJECT_LEAD", "ADMIN"}
 _ALLOWED_MODEL_CATALOG_READ_MEMBERSHIP_ROLES = {"PROJECT_LEAD", "REVIEWER"}
 _ALLOWED_MODEL_CATALOG_MUTATION_MEMBERSHIP_ROLES = {"PROJECT_LEAD"}
 _ALLOWED_MODEL_ASSIGNMENT_VIEW_ROLES = {"PROJECT_LEAD", "REVIEWER"}
 _ALLOWED_MODEL_ASSIGNMENT_MUTATION_ROLES = {"PROJECT_LEAD"}
+_ALLOWED_GOVERNANCE_VIEW_ROLES = {"PROJECT_LEAD", "REVIEWER"}
+_ALLOWED_GOVERNANCE_LEDGER_VIEW_ROLES = {"ADMIN", "AUDITOR"}
 _CONTROLLED_STORAGE_FAILURE_MESSAGE = "Controlled storage write failed."
 _PAGE_ASSET_CACHE_CONTROL = "private, no-cache, max-age=0, must-revalidate"
 _PREPROCESS_DEFAULT_PIPELINE_VERSION = "preprocess-v1"
@@ -148,6 +221,7 @@ _TRANSCRIPTION_DEFAULT_PIPELINE_VERSION = "transcription-v1"
 _TRANSCRIPTION_DEFAULT_CONTAINER_DIGEST = "ukde/transcription:v1"
 _TRANSCRIPTION_DEFAULT_REVIEW_CONFIDENCE_THRESHOLD = 0.85
 _TRANSCRIPTION_DEFAULT_FALLBACK_CONFIDENCE_THRESHOLD = 0.72
+_REDACTION_PREVIEW_MEDIA_TYPE = "image/png"
 _TRANSCRIPTION_TRIAGE_FAILED_STATUS_WEIGHT = 1_000.0
 _TRANSCRIPTION_TRIAGE_LOW_CONFIDENCE_WEIGHT = 120.0
 _TRANSCRIPTION_TRIAGE_MIN_CONFIDENCE_WEIGHT = 80.0
@@ -188,8 +262,41 @@ _TRANSCRIPTION_FALLBACK_REASONS: set[TranscriptionFallbackReasonCode] = {
     "ANCHOR_RESOLUTION_FAILED",
     "CONFIDENCE_BELOW_THRESHOLD",
 }
+_REDACTION_MASKABLE_DECISION_STATUSES: set[RedactionDecisionStatus] = {
+    "AUTO_APPLIED",
+    "APPROVED",
+    "OVERRIDDEN",
+}
+_TRANSCRIPTION_RESCUE_ELIGIBLE_CANDIDATE_STATUSES = {"ACCEPTED", "RESOLVED"}
+_TRANSCRIPTION_RESCUE_MANUAL_OVERRIDE_STATUS = "MANUAL_REVIEW_RESOLVED"
 _PAGE_XML_NAMESPACE = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15"
 _PAGE_XML_NS = {"pc": _PAGE_XML_NAMESPACE}
+
+TranscriptionRescueReadinessState = Literal[
+    "READY",
+    "BLOCKED_RESCUE",
+    "BLOCKED_MANUAL_REVIEW",
+    "BLOCKED_PAGE_STATUS",
+]
+TranscriptionRescueBlockerReasonCode = Literal[
+    "PAGE_TRANSCRIPTION_NOT_SUCCEEDED",
+    "RESCUE_SOURCE_MISSING",
+    "RESCUE_SOURCE_UNTRANSCRIBED",
+    "MANUAL_REVIEW_RESOLUTION_REQUIRED",
+]
+TranscriptionRunActivationBlockerCode = Literal[
+    "RUN_NOT_SUCCEEDED",
+    "RUN_LAYOUT_BASIS_STALE",
+    "RUN_LAYOUT_SNAPSHOT_STALE",
+    "RUN_LAYOUT_PROJECTION_MISSING",
+    "TOKEN_ANCHOR_MISSING",
+    "TOKEN_ANCHOR_INVALID",
+    "TOKEN_ANCHOR_STALE",
+    "PAGE_TRANSCRIPTION_NOT_SUCCEEDED",
+    "RESCUE_SOURCE_MISSING",
+    "RESCUE_SOURCE_UNTRANSCRIBED",
+    "MANUAL_REVIEW_RESOLUTION_REQUIRED",
+]
 
 
 class DocumentValidationError(RuntimeError):
@@ -276,6 +383,41 @@ class DocumentTranscriptionRunNotFoundError(RuntimeError):
 class DocumentTranscriptionConflictError(RuntimeError):
     """Transcription mutation conflicts with run lineage or current state."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        rescue_status: DocumentTranscriptionRunRescueStatusSnapshot | None = None,
+        blocker_codes: tuple[TranscriptionRunActivationBlockerCode, ...] = (),
+    ) -> None:
+        super().__init__(message)
+        self.rescue_status = rescue_status
+        self.blocker_codes = blocker_codes
+
+
+class DocumentRedactionAccessDeniedError(ProjectAccessDeniedError):
+    """Current role cannot access privacy-review routes for this project."""
+
+
+class DocumentRedactionRunNotFoundError(RuntimeError):
+    """Redaction run was not found in project scope."""
+
+
+class DocumentRedactionConflictError(RuntimeError):
+    """Privacy-review mutation conflicts with run lineage or current state."""
+
+
+class DocumentGovernanceAccessDeniedError(ProjectAccessDeniedError):
+    """Current role cannot access governance routes for this project."""
+
+
+class DocumentGovernanceRunNotFoundError(RuntimeError):
+    """Governance run was not found in project scope."""
+
+
+class DocumentGovernanceConflictError(RuntimeError):
+    """Governance mutation conflicts with run lineage or current state."""
+
 
 class DocumentModelCatalogAccessDeniedError(ProjectAccessDeniedError):
     """Current role cannot access approved model catalog routes."""
@@ -307,6 +449,14 @@ class PreparedUpload:
 
 @dataclass(frozen=True)
 class DocumentPageImageAsset:
+    payload: bytes
+    media_type: str
+    etag_seed: str | None
+    cache_control: str
+
+
+@dataclass(frozen=True)
+class DocumentRedactionPreviewAsset:
     payload: bytes
     media_type: str
     etag_seed: str | None
@@ -558,6 +708,376 @@ class DocumentTranscriptionOverviewSnapshot:
 
 
 @dataclass(frozen=True)
+class DocumentRedactionRunPageSnapshot:
+    run_id: str
+    page_id: str
+    page_index: int
+    finding_count: int
+    unresolved_count: int
+    review_status: RedactionPageReviewStatus
+    review_etag: str
+    requires_second_review: bool
+    second_review_status: RedactionSecondReviewStatus
+    second_reviewed_by: str | None
+    second_reviewed_at: datetime | None
+    last_reviewed_by: str | None
+    last_reviewed_at: datetime | None
+    preview_status: RedactionOutputStatus | None
+    top_findings: tuple[RedactionFindingRecord, ...]
+
+
+@dataclass(frozen=True)
+class DocumentRedactionPreviewStatusSnapshot:
+    run_id: str
+    page_id: str
+    status: RedactionOutputStatus
+    preview_sha256: str | None
+    generated_at: datetime | None
+    failure_reason: str | None
+    run_output_status: RedactionOutputStatus | None
+    run_output_manifest_sha256: str | None
+    run_output_readiness_state: RedactionRunOutputReadinessState | None
+    downstream_ready: bool
+
+
+@dataclass(frozen=True)
+class DocumentRedactionRunOutputSnapshot:
+    run_output: RedactionRunOutputRecord
+    review_status: RedactionRunReviewStatus
+    readiness_state: RedactionRunOutputReadinessState
+    downstream_ready: bool
+
+
+@dataclass(frozen=True)
+class DocumentRedactionRunTimelineEventSnapshot:
+    source_table: str
+    source_table_precedence: int
+    event_id: str
+    run_id: str
+    page_id: str | None
+    finding_id: str | None
+    event_type: str
+    actor_user_id: str | None
+    reason: str | None
+    created_at: datetime
+    details_json: dict[str, object]
+
+
+@dataclass(frozen=True)
+class DocumentRedactionOverviewSnapshot:
+    document: DocumentRecord
+    projection: DocumentRedactionProjectionRecord | None
+    active_run: RedactionRunRecord | None
+    latest_run: RedactionRunRecord | None
+    total_runs: int
+    page_count: int
+    findings_by_category: dict[str, int]
+    unresolved_findings: int
+    auto_applied_findings: int
+    needs_review_findings: int
+    overridden_findings: int
+    pages_blocked_for_review: int
+    preview_ready_pages: int
+    preview_total_pages: int
+    preview_failed_pages: int
+
+
+@dataclass(frozen=True)
+class DocumentRedactionComparePageSnapshot:
+    page_id: str
+    page_index: int
+    base_finding_count: int
+    candidate_finding_count: int
+    changed_decision_count: int
+    changed_action_count: int
+    base_decision_counts: dict[RedactionDecisionStatus, int]
+    candidate_decision_counts: dict[RedactionDecisionStatus, int]
+    decision_status_deltas: dict[RedactionDecisionStatus, int]
+    base_action_counts: dict[RedactionDecisionActionType, int]
+    candidate_action_counts: dict[RedactionDecisionActionType, int]
+    action_type_deltas: dict[RedactionDecisionActionType, int]
+    action_compare_state: Literal["AVAILABLE", "NOT_YET_AVAILABLE"]
+    changed_review_status: bool
+    changed_second_review_status: bool
+    base_review: RedactionPageReviewRecord | None
+    candidate_review: RedactionPageReviewRecord | None
+    base_preview_status: RedactionOutputStatus | None
+    candidate_preview_status: RedactionOutputStatus | None
+    preview_ready_delta: int
+
+
+RedactionPolicyWarningCode = Literal[
+    "BROAD_ALLOW_RULE",
+    "INCONSISTENT_THRESHOLD",
+]
+RedactionPolicyWarningSeverity = Literal["WARNING"]
+
+
+@dataclass(frozen=True)
+class DocumentRedactionPolicyWarningSnapshot:
+    code: RedactionPolicyWarningCode
+    severity: RedactionPolicyWarningSeverity
+    message: str
+    affected_categories: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class DocumentRedactionCompareSnapshot:
+    document: DocumentRecord
+    base_run: RedactionRunRecord
+    candidate_run: RedactionRunRecord
+    pages: tuple[DocumentRedactionComparePageSnapshot, ...]
+    changed_page_count: int
+    changed_decision_count: int
+    changed_action_count: int
+    compare_action_state: Literal["AVAILABLE", "NOT_YET_RERUN", "NOT_YET_AVAILABLE"]
+    candidate_policy_status: str | None
+    comparison_only_candidate: bool
+    pre_activation_warnings: tuple[DocumentRedactionPolicyWarningSnapshot, ...]
+
+
+@dataclass(frozen=True)
+class DocumentGovernanceOverviewSnapshot:
+    document: DocumentRecord
+    active_run_id: str | None
+    total_runs: int
+    approved_runs: int
+    ready_runs: int
+    pending_runs: int
+    failed_runs: int
+    latest_run_id: str | None
+    latest_ready_run_id: str | None
+    latest_run: GovernanceRunSummaryRecord | None
+    latest_ready_run: GovernanceRunSummaryRecord | None
+
+
+@dataclass(frozen=True)
+class DocumentGovernanceRunsSnapshot:
+    document: DocumentRecord
+    active_run_id: str | None
+    runs: tuple[GovernanceRunSummaryRecord, ...]
+
+
+@dataclass(frozen=True)
+class DocumentGovernanceRunOverviewSnapshot:
+    document: DocumentRecord
+    active_run_id: str | None
+    run: GovernanceRunSummaryRecord
+    readiness: GovernanceReadinessProjectionRecord
+    manifest_attempts: tuple[RedactionManifestRecord, ...]
+    ledger_attempts: tuple[RedactionEvidenceLedgerRecord, ...]
+
+
+@dataclass(frozen=True)
+class DocumentGovernanceEventSnapshot:
+    id: str
+    run_id: str
+    event_type: GovernanceRunEventType
+    actor_user_id: str | None
+    from_status: str | None
+    to_status: str | None
+    reason: str | None
+    created_at: datetime
+    screening_safe: bool
+
+
+@dataclass(frozen=True)
+class DocumentGovernanceManifestSnapshot:
+    overview: DocumentGovernanceRunOverviewSnapshot
+    latest_attempt: RedactionManifestRecord | None
+    manifest_payload: dict[str, object] | None
+    stream_sha256: str | None
+    hash_matches: bool
+    internal_only: bool
+    export_approved: bool
+    not_export_approved: bool
+
+
+@dataclass(frozen=True)
+class DocumentGovernanceManifestStatusSnapshot:
+    run_id: str
+    status: Literal["UNAVAILABLE", "QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELED"]
+    latest_attempt: RedactionManifestRecord | None
+    attempt_count: int
+    ready_manifest_id: str | None
+    latest_manifest_sha256: str | None
+    generation_status: Literal["IDLE", "RUNNING", "FAILED", "CANCELED"]
+    readiness_status: Literal["PENDING", "READY", "FAILED"]
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
+class DocumentGovernanceManifestEntriesSnapshot:
+    run_id: str
+    status: Literal["UNAVAILABLE", "QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELED"]
+    manifest_id: str | None
+    manifest_sha256: str | None
+    source_review_snapshot_sha256: str | None
+    items: tuple[dict[str, object], ...]
+    next_cursor: int | None
+    total_count: int
+    internal_only: bool
+    export_approved: bool
+    not_export_approved: bool
+
+
+@dataclass(frozen=True)
+class DocumentGovernanceManifestHashSnapshot:
+    run_id: str
+    status: Literal["UNAVAILABLE", "QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELED"]
+    manifest_id: str | None
+    manifest_sha256: str | None
+    stream_sha256: str | None
+    hash_matches: bool
+    internal_only: bool
+    export_approved: bool
+    not_export_approved: bool
+
+
+@dataclass(frozen=True)
+class DocumentGovernanceLedgerSnapshot:
+    overview: DocumentGovernanceRunOverviewSnapshot
+    latest_attempt: RedactionEvidenceLedgerRecord | None
+    ledger_payload: dict[str, object] | None
+    stream_sha256: str | None
+    hash_matches: bool
+    internal_only: bool
+
+
+@dataclass(frozen=True)
+class DocumentGovernanceLedgerStatusSnapshot:
+    run_id: str
+    status: Literal["UNAVAILABLE", "QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELED"]
+    latest_attempt: RedactionEvidenceLedgerRecord | None
+    attempt_count: int
+    ready_ledger_id: str | None
+    latest_ledger_sha256: str | None
+    generation_status: Literal["IDLE", "RUNNING", "FAILED", "CANCELED"]
+    readiness_status: Literal["PENDING", "READY", "FAILED"]
+    ledger_verification_status: Literal["PENDING", "VALID", "INVALID"]
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
+class DocumentGovernanceLedgerEntriesSnapshot:
+    run_id: str
+    status: Literal["UNAVAILABLE", "QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELED"]
+    view: Literal["list", "timeline"]
+    ledger_id: str | None
+    ledger_sha256: str | None
+    hash_chain_version: str | None
+    total_count: int
+    next_cursor: int | None
+    verification_status: Literal["PENDING", "VALID", "INVALID"]
+    items: tuple[dict[str, object], ...]
+
+
+@dataclass(frozen=True)
+class DocumentGovernanceLedgerSummarySnapshot:
+    run_id: str
+    status: Literal["UNAVAILABLE", "QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELED"]
+    ledger_id: str | None
+    ledger_sha256: str | None
+    hash_chain_version: str | None
+    row_count: int
+    hash_chain_head: str | None
+    hash_chain_valid: bool
+    verification_status: Literal["PENDING", "VALID", "INVALID"]
+    category_counts: dict[str, int]
+    action_counts: dict[str, int]
+    override_count: int
+    assist_reference_count: int
+    internal_only: bool
+
+
+@dataclass(frozen=True)
+class DocumentGovernanceLedgerVerificationStatusSnapshot:
+    run_id: str
+    verification_status: Literal["PENDING", "VALID", "INVALID"]
+    attempt_count: int
+    latest_attempt: LedgerVerificationRunRecord | None
+    latest_completed_attempt: LedgerVerificationRunRecord | None
+    ready_ledger_id: str | None
+    latest_ledger_sha256: str | None
+    last_verified_at: datetime | None
+
+
+@dataclass(frozen=True)
+class DocumentGovernanceLedgerVerificationRunsSnapshot:
+    run_id: str
+    verification_status: Literal["PENDING", "VALID", "INVALID"]
+    items: tuple[LedgerVerificationRunRecord, ...]
+
+
+@dataclass(frozen=True)
+class DocumentGovernanceLedgerVerificationDetailSnapshot:
+    run_id: str
+    verification_status: Literal["PENDING", "VALID", "INVALID"]
+    attempt: LedgerVerificationRunRecord
+
+
+@dataclass(frozen=True)
+class DocumentExportCandidateSnapshotContractsSnapshot:
+    project_id: str
+    items: tuple[ExportCandidateSnapshotContractRecord, ...]
+
+
+@dataclass(frozen=True)
+class DocumentTranscriptionRescueSourceSnapshot:
+    source_ref_id: str
+    source_kind: TranscriptionTokenSourceKind
+    candidate_kind: str
+    candidate_status: str
+    token_count: int
+    has_transcription_output: bool
+    confidence: float | None
+    source_signal: str | None
+    geometry_json: dict[str, object]
+
+
+@dataclass(frozen=True)
+class DocumentTranscriptionRescuePageStatusSnapshot:
+    run_id: str
+    page_id: str
+    page_index: int
+    page_recall_status: PageRecallStatus
+    rescue_source_count: int
+    rescue_transcribed_source_count: int
+    rescue_unresolved_source_count: int
+    readiness_state: TranscriptionRescueReadinessState
+    blocker_reason_codes: tuple[TranscriptionRescueBlockerReasonCode, ...]
+    resolution_status: TranscriptionRescueResolutionStatus | None
+    resolution_reason: str | None
+    resolution_updated_by: str | None
+    resolution_updated_at: datetime | None
+
+
+@dataclass(frozen=True)
+class DocumentTranscriptionRunRescueStatusSnapshot:
+    document: DocumentRecord
+    run: TranscriptionRunRecord
+    ready_for_activation: bool
+    blocker_count: int
+    run_blocker_reason_codes: tuple[TranscriptionRunActivationBlockerCode, ...]
+    pages: tuple[DocumentTranscriptionRescuePageStatusSnapshot, ...]
+
+
+@dataclass(frozen=True)
+class DocumentTranscriptionPageRescueSourcesSnapshot:
+    document: DocumentRecord
+    run: TranscriptionRunRecord
+    page: DocumentPageRecord
+    page_recall_status: PageRecallStatus
+    readiness_state: TranscriptionRescueReadinessState
+    blocker_reason_codes: tuple[TranscriptionRescueBlockerReasonCode, ...]
+    rescue_sources: tuple[DocumentTranscriptionRescueSourceSnapshot, ...]
+    resolution_status: TranscriptionRescueResolutionStatus | None
+    resolution_reason: str | None
+    resolution_updated_by: str | None
+    resolution_updated_at: datetime | None
+
+
+@dataclass(frozen=True)
 class DocumentTranscriptionCompareTokenDiffSnapshot:
     token_id: str
     token_index: int | None
@@ -604,6 +1124,34 @@ class DocumentTranscriptionCompareSnapshot:
     changed_confidence_count: int
     base_engine_metadata: dict[str, object]
     candidate_engine_metadata: dict[str, object]
+    compare_decision_snapshot_hash: str
+    compare_decision_count: int
+    compare_decision_event_count: int
+
+
+@dataclass(frozen=True)
+class DocumentTranscriptVersionLineageSnapshot:
+    version: TranscriptVersionRecord
+    is_active: bool
+    source_type: str
+
+
+@dataclass(frozen=True)
+class DocumentTranscriptionLineVersionHistorySnapshot:
+    run: TranscriptionRunRecord
+    page: DocumentPageRecord
+    line: LineTranscriptionResultRecord
+    versions: tuple[DocumentTranscriptVersionLineageSnapshot, ...]
+
+
+@dataclass(frozen=True)
+class DocumentTranscriptionCompareFinalizeSnapshot:
+    document: DocumentRecord
+    base_run: TranscriptionRunRecord
+    candidate_run: TranscriptionRunRecord
+    composed_run: TranscriptionRunRecord
+    compare_decision_snapshot_hash: str
+    page_scope: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -646,12 +1194,16 @@ class DocumentService:
         *,
         settings: Settings,
         store: DocumentStore | None = None,
+        governance_store: GovernanceStore | None = None,
+        policy_store: PolicyStore | None = None,
         project_service: ProjectService | None = None,
         storage: DocumentStorage | None = None,
         scanner: DocumentScanner | None = None,
     ) -> None:
         self._settings = settings
         self._store = store or DocumentStore(settings)
+        self._governance_store = governance_store or get_governance_store()
+        self._policy_store = policy_store or PolicyStore(settings)
         self._project_service = project_service or get_project_service()
         self._storage = storage or get_document_storage()
         self._scanner = scanner or get_document_scanner()
@@ -709,6 +1261,10 @@ class DocumentService:
     @staticmethod
     def _is_admin(current_user: SessionPrincipal) -> bool:
         return "ADMIN" in set(current_user.platform_roles)
+
+    @staticmethod
+    def _is_auditor(current_user: SessionPrincipal) -> bool:
+        return "AUDITOR" in set(current_user.platform_roles)
 
     @staticmethod
     def _sha256_hex(payload: bytes) -> str:
@@ -1683,6 +2239,215 @@ class DocumentService:
                 "Current role cannot create, cancel, or activate transcription runs."
             )
         return str(role)
+
+    def _require_redaction_view_access(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+    ) -> None:
+        context = self._project_service.resolve_workspace_context(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        if self._is_admin(current_user):
+            return
+        if not context.is_member:
+            raise DocumentRedactionAccessDeniedError(
+                "Membership is required for privacy-review access."
+            )
+        role = context.summary.current_user_role
+        if role not in _ALLOWED_REDACTION_VIEW_ROLES:
+            raise DocumentRedactionAccessDeniedError(
+                "Current role cannot view privacy-review routes in this project."
+            )
+
+    def _require_redaction_compare_access(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+    ) -> None:
+        if self._is_admin(current_user) or self._is_auditor(current_user):
+            return
+        context = self._project_service.resolve_workspace_context(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        if not context.is_member:
+            raise DocumentRedactionAccessDeniedError(
+                "Membership is required for privacy compare access."
+            )
+        role = context.summary.current_user_role
+        if role not in _ALLOWED_REDACTION_COMPARE_VIEW_ROLES:
+            raise DocumentRedactionAccessDeniedError(
+                "Current role cannot view privacy compare routes in this project."
+            )
+
+    def _require_redaction_mutation_access(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+    ) -> str:
+        context = self._project_service.resolve_workspace_context(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        if self._is_admin(current_user):
+            return "ADMIN"
+        if not context.is_member:
+            raise DocumentRedactionAccessDeniedError(
+                "Membership is required for privacy-review administration."
+            )
+        role = context.summary.current_user_role
+        if role not in _ALLOWED_REDACTION_MUTATION_ROLES:
+            raise DocumentRedactionAccessDeniedError(
+                "Current role cannot create, cancel, activate, or review privacy runs."
+            )
+        return str(role)
+
+    def _require_redaction_policy_rerun_access(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+    ) -> str:
+        context = self._project_service.resolve_workspace_context(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        if self._is_admin(current_user):
+            return "ADMIN"
+        if not context.is_member:
+            raise DocumentRedactionAccessDeniedError(
+                "Membership is required for policy rerun administration."
+            )
+        role = context.summary.current_user_role
+        if role not in _ALLOWED_REDACTION_POLICY_RERUN_ROLES:
+            raise DocumentRedactionAccessDeniedError(
+                "Current role cannot request policy reruns in this project."
+            )
+        return str(role)
+
+    def _require_redaction_reviewed_output_read_access(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        review_status: RedactionRunReviewStatus,
+    ) -> None:
+        if self._is_admin(current_user):
+            return
+        if self._is_auditor(current_user):
+            if review_status != "APPROVED":
+                raise DocumentRedactionAccessDeniedError(
+                    "Auditor access to reviewed outputs is available only for APPROVED runs."
+                )
+            return
+        context = self._project_service.resolve_workspace_context(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        if not context.is_member:
+            raise DocumentRedactionAccessDeniedError(
+                "Membership is required for reviewed-output access."
+            )
+        role = context.summary.current_user_role
+        if role not in _ALLOWED_REDACTION_REVIEWED_OUTPUT_VIEW_ROLES:
+            raise DocumentRedactionAccessDeniedError(
+                "Current role cannot access reviewed output artefacts."
+            )
+
+    def _require_governance_view_access(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+    ) -> str:
+        if self._is_admin(current_user):
+            return "ADMIN"
+        if self._is_auditor(current_user):
+            return "AUDITOR"
+        context = self._project_service.resolve_workspace_context(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        if not context.is_member:
+            raise DocumentGovernanceAccessDeniedError(
+                "Membership is required for governance access."
+            )
+        role = context.summary.current_user_role
+        if role not in _ALLOWED_GOVERNANCE_VIEW_ROLES:
+            raise DocumentGovernanceAccessDeniedError(
+                "Current role cannot access governance routes in this project."
+            )
+        return str(role)
+
+    def _require_governance_ledger_view_access(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+    ) -> str:
+        role = self._require_governance_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        if role not in _ALLOWED_GOVERNANCE_LEDGER_VIEW_ROLES:
+            raise DocumentGovernanceAccessDeniedError(
+                "Current role cannot access controlled evidence-ledger routes."
+            )
+        return role
+
+    def _require_governance_ledger_verify_access(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+    ) -> None:
+        role = self._require_governance_ledger_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        if role != "ADMIN":
+            raise DocumentGovernanceAccessDeniedError(
+                "Current role cannot trigger ledger verification mutations."
+            )
+
+    @staticmethod
+    def _is_governance_ledger_event(event_type: str) -> bool:
+        return event_type.startswith("LEDGER_")
+
+    def _resolve_governance_event_reason(
+        self,
+        *,
+        event: GovernanceRunEventRecord,
+        role: str,
+    ) -> str | None:
+        if role in _ALLOWED_GOVERNANCE_LEDGER_VIEW_ROLES:
+            return event.reason
+        if not self._is_governance_ledger_event(event.event_type):
+            return event.reason
+        return "Controlled ledger transition recorded."
+
+    @staticmethod
+    def _derive_redaction_run_output_readiness_state(
+        *,
+        review_status: RedactionRunReviewStatus,
+        run_output: RedactionRunOutputRecord,
+    ) -> RedactionRunOutputReadinessState:
+        if review_status != "APPROVED":
+            return "APPROVAL_REQUIRED"
+        if run_output.status == "READY":
+            return "OUTPUT_READY"
+        if run_output.status == "FAILED":
+            return "OUTPUT_FAILED"
+        if run_output.status == "CANCELED":
+            return "OUTPUT_CANCELED"
+        if isinstance(run_output.started_at, datetime):
+            return "OUTPUT_GENERATING"
+        return "APPROVED_OUTPUT_PENDING"
 
     def _require_model_catalog_view_access(
         self,
@@ -4287,6 +5052,4219 @@ class DocumentService:
             page_size=page_size,
         )
 
+    @staticmethod
+    def _normalize_redaction_run_kind(value: str | None) -> RedactionRunKind:
+        if not isinstance(value, str):
+            return "BASELINE"
+        normalized = value.strip().upper()
+        if not normalized:
+            return "BASELINE"
+        if normalized in {"BASELINE", "POLICY_RERUN"}:
+            return normalized
+        raise DocumentValidationError("runKind must be BASELINE or POLICY_RERUN.")
+
+    @staticmethod
+    def _normalize_redaction_reference(
+        value: str | None,
+        *,
+        field_name: str,
+        max_length: int = 160,
+    ) -> str | None:
+        if not isinstance(value, str):
+            return None
+        normalized = value.strip()
+        if not normalized:
+            return None
+        if len(normalized) > max_length:
+            raise DocumentValidationError(f"{field_name} must be {max_length} characters or fewer.")
+        return normalized
+
+    @staticmethod
+    def _canonical_policy_rules_sha256(rules_json: Mapping[str, object]) -> str:
+        payload = json.dumps(
+            dict(rules_json),
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+        ).encode("utf-8")
+        return hashlib.sha256(payload).hexdigest()
+
+    @staticmethod
+    def _coerce_probability(value: object) -> float | None:
+        if not isinstance(value, (int, float)):
+            return None
+        numeric = float(value)
+        if numeric < 0.0 or numeric > 1.0:
+            return None
+        return numeric
+
+    @staticmethod
+    def _normalized_category_label(value: object, *, fallback: str) -> str:
+        if isinstance(value, str):
+            normalized = value.strip()
+            if normalized:
+                return normalized
+        return fallback
+
+    def _build_policy_pre_activation_warnings(
+        self,
+        *,
+        policy_snapshot_json: Mapping[str, object],
+    ) -> tuple[DocumentRedactionPolicyWarningSnapshot, ...]:
+        categories_raw = policy_snapshot_json.get("categories")
+        categories = (
+            [item for item in categories_raw if isinstance(item, Mapping)]
+            if isinstance(categories_raw, Sequence)
+            and not isinstance(categories_raw, (str, bytes))
+            else []
+        )
+
+        broad_allow_categories: set[str] = set()
+        inconsistent_threshold_categories: set[str] = set()
+
+        for index, category_item in enumerate(categories):
+            category = dict(category_item)
+            category_label = self._normalized_category_label(
+                category.get("id"),
+                fallback=f"categories[{index}]",
+            )
+            action = (
+                str(category.get("action")).strip().upper()
+                if isinstance(category.get("action"), str)
+                else ""
+            )
+            if action == "ALLOW":
+                broad_allow_categories.add(category_label)
+
+            review_required_below = self._coerce_probability(category.get("review_required_below"))
+            auto_apply_above = self._coerce_probability(category.get("auto_apply_above"))
+            confidence_threshold = self._coerce_probability(category.get("confidence_threshold"))
+
+            has_inconsistent_threshold = (
+                review_required_below is not None
+                and auto_apply_above is not None
+                and auto_apply_above < review_required_below
+            ) or (
+                review_required_below is not None
+                and confidence_threshold is not None
+                and confidence_threshold < review_required_below
+            ) or (
+                auto_apply_above is not None
+                and confidence_threshold is not None
+                and confidence_threshold < auto_apply_above
+            )
+            if has_inconsistent_threshold:
+                inconsistent_threshold_categories.add(category_label)
+
+        warnings: list[DocumentRedactionPolicyWarningSnapshot] = []
+        if broad_allow_categories:
+            sorted_categories = tuple(sorted(broad_allow_categories))
+            warnings.append(
+                DocumentRedactionPolicyWarningSnapshot(
+                    code="BROAD_ALLOW_RULE",
+                    severity="WARNING",
+                    message=(
+                        "Policy contains broad allow action(s) that may bypass redaction for"
+                        f" high-risk categories: {', '.join(sorted_categories)}."
+                    ),
+                    affected_categories=sorted_categories,
+                )
+            )
+        if inconsistent_threshold_categories:
+            sorted_categories = tuple(sorted(inconsistent_threshold_categories))
+            warnings.append(
+                DocumentRedactionPolicyWarningSnapshot(
+                    code="INCONSISTENT_THRESHOLD",
+                    severity="WARNING",
+                    message=(
+                        "Policy contains inconsistent confidence thresholds that can create"
+                        f" ambiguous reviewer gates: {', '.join(sorted_categories)}."
+                    ),
+                    affected_categories=sorted_categories,
+                )
+            )
+        return tuple(warnings)
+
+    def _load_policy_for_redaction_rerun(
+        self,
+        *,
+        project_id: str,
+        policy_id: str,
+    ) -> RedactionPolicyRecord:
+        try:
+            target_policy = self._policy_store.get_policy(
+                project_id=project_id,
+                policy_id=policy_id,
+            )
+            if target_policy is None:
+                raise DocumentValidationError(
+                    "policyId was not found in the requested project."
+                )
+            if target_policy.status not in {"ACTIVE", "DRAFT"}:
+                raise DocumentRedactionConflictError(
+                    "Policy reruns require an ACTIVE or validated DRAFT target policy revision."
+                )
+            if target_policy.validation_status != "VALID":
+                raise DocumentRedactionConflictError(
+                    "Policy reruns require target policy validation_status=VALID."
+                )
+            rules_hash = self._canonical_policy_rules_sha256(target_policy.rules_json)
+            if target_policy.validated_rules_sha256 != rules_hash:
+                raise DocumentRedactionConflictError(
+                    "Policy reruns reject stale validated revisions whose rules no longer match validated hash."
+                )
+            if target_policy.status == "DRAFT":
+                projection = self._policy_store.get_projection(project_id=project_id)
+                if (
+                    projection is not None
+                    and isinstance(projection.active_policy_family_id, str)
+                    and projection.active_policy_family_id
+                    and projection.active_policy_family_id != target_policy.policy_family_id
+                ):
+                    raise DocumentRedactionConflictError(
+                        "Policy reruns require DRAFT revisions in the active project policy lineage."
+                    )
+        except PolicyStoreUnavailableError as error:
+            raise DocumentStoreUnavailableError("Policy lookup for rerun failed.") from error
+        return target_policy
+
+    @staticmethod
+    def _normalize_redaction_decision_status(value: str) -> RedactionDecisionStatus:
+        normalized = value.strip().upper()
+        if normalized in {
+            "AUTO_APPLIED",
+            "NEEDS_REVIEW",
+            "APPROVED",
+            "OVERRIDDEN",
+            "FALSE_POSITIVE",
+        }:
+            return normalized
+        raise DocumentValidationError(
+            "decisionStatus must be AUTO_APPLIED, NEEDS_REVIEW, APPROVED, OVERRIDDEN, or FALSE_POSITIVE."
+        )
+
+    @staticmethod
+    def _normalize_redaction_page_review_status(value: str) -> RedactionPageReviewStatus:
+        normalized = value.strip().upper()
+        if normalized in {"NOT_STARTED", "IN_REVIEW", "APPROVED", "CHANGES_REQUESTED"}:
+            return normalized
+        raise DocumentValidationError(
+            "reviewStatus must be NOT_STARTED, IN_REVIEW, APPROVED, or CHANGES_REQUESTED."
+        )
+
+    @staticmethod
+    def _normalize_redaction_run_review_status(value: str) -> RedactionRunReviewStatus:
+        normalized = value.strip().upper()
+        if normalized in {"APPROVED", "CHANGES_REQUESTED"}:
+            return normalized
+        raise DocumentValidationError(
+            "reviewStatus must be APPROVED or CHANGES_REQUESTED."
+        )
+
+    @staticmethod
+    def _normalize_redaction_action_type(value: str | None) -> RedactionDecisionActionType:
+        if not isinstance(value, str):
+            return "MASK"
+        normalized = value.strip().upper()
+        if not normalized:
+            return "MASK"
+        if normalized in {"MASK", "PSEUDONYMIZE", "GENERALIZE"}:
+            return normalized  # type: ignore[return-value]
+        raise DocumentValidationError(
+            "actionType must be MASK, PSEUDONYMIZE, or GENERALIZE."
+        )
+
+    @staticmethod
+    def _is_unresolved_redaction_decision(status: RedactionDecisionStatus) -> bool:
+        return status in {"NEEDS_REVIEW", "OVERRIDDEN", "FALSE_POSITIVE"}
+
+    @staticmethod
+    def _is_direct_identifier_category(category: str) -> bool:
+        normalized = category.strip().upper()
+        if not normalized:
+            return False
+        direct_categories = {
+            "DIRECT_IDENTIFIER",
+            "PERSON_NAME",
+            "ORGANIZATION",
+            "LOCATION",
+            "EMAIL",
+            "PHONE",
+            "URL",
+            "POSTCODE",
+            "ID_NUMBER",
+            "NATIONAL_ID",
+            "NI_NUMBER",
+            "NHS_NUMBER",
+        }
+        return normalized in direct_categories or normalized.startswith("DIRECT_")
+
+    def _load_redaction_document(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+    ) -> DocumentRecord:
+        document = self._store.get_document(project_id=project_id, document_id=document_id)
+        if document is None:
+            raise DocumentNotFoundError("Document not found.")
+        return document
+
+    def _load_redaction_run(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> RedactionRunRecord:
+        run = self._store.get_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        if run is None:
+            raise DocumentRedactionRunNotFoundError("Redaction run not found.")
+        return run
+
+    def _list_all_redaction_findings(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str | None = None,
+        category: str | None = None,
+        unresolved_only: bool = False,
+    ) -> list[RedactionFindingRecord]:
+        return self._store.list_redaction_findings(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+            category=category,
+            unresolved_only=unresolved_only,
+        )
+
+    def _list_all_redaction_page_reviews(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> list[RedactionPageReviewRecord]:
+        items: list[RedactionPageReviewRecord] = []
+        list_cursor = 0
+        while True:
+            batch, next_cursor = self._store.list_redaction_page_reviews(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                cursor=list_cursor,
+                page_size=500,
+            )
+            items.extend(batch)
+            if next_cursor is None:
+                break
+            list_cursor = next_cursor
+        return items
+
+    def _list_all_redaction_runs(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+    ) -> list[RedactionRunRecord]:
+        items: list[RedactionRunRecord] = []
+        list_cursor = 0
+        while True:
+            batch, next_cursor = self._store.list_redaction_runs(
+                project_id=project_id,
+                document_id=document_id,
+                cursor=list_cursor,
+                page_size=200,
+            )
+            items.extend(batch)
+            if next_cursor is None:
+                break
+            list_cursor = next_cursor
+        return items
+
+    def _build_redaction_detection_lines_for_page(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run: RedactionRunRecord,
+        page: DocumentPageRecord,
+    ) -> list[RedactionDetectionLine]:
+        line_rows = self._store.list_line_transcription_results(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.input_transcription_run_id,
+            page_id=page.id,
+        )
+        hydrated_lines = self._hydrate_transcription_lines_with_active_versions(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.input_transcription_run_id,
+            page_id=page.id,
+            rows=line_rows,
+        )
+        token_rows = self._store.list_token_transcription_results(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.input_transcription_run_id,
+            page_id=page.id,
+        )
+        tokens_by_line: dict[str, list[RedactionDetectionToken]] = {}
+        for token in token_rows:
+            if (
+                not isinstance(token.line_id, str)
+                or not token.line_id
+                or token.source_ref_id != token.line_id
+            ):
+                continue
+            tokens_by_line.setdefault(token.line_id, []).append(
+                RedactionDetectionToken(
+                    token_id=token.token_id,
+                    token_index=token.token_index,
+                    token_text=token.token_text,
+                    line_id=token.line_id,
+                    source_ref_id=token.source_ref_id,
+                    bbox_json=token.bbox_json,
+                    polygon_json=token.polygon_json,
+                )
+            )
+        for line_id in list(tokens_by_line):
+            tokens_by_line[line_id] = sorted(
+                tokens_by_line[line_id],
+                key=lambda item: (item.token_index, item.token_id),
+            )
+
+        rows: list[RedactionDetectionLine] = []
+        for line in hydrated_lines:
+            rows.append(
+                RedactionDetectionLine(
+                    page_id=page.id,
+                    page_index=page.page_index,
+                    line_id=line.line_id,
+                    text=line.text_diplomatic,
+                    tokens=tuple(tokens_by_line.get(line.line_id, [])),
+                )
+            )
+        return rows
+
+    def _build_redaction_page_preview_artifact(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run: RedactionRunRecord,
+        page_id: str,
+    ) -> SafeguardedPreviewArtifact:
+        line_rows = self._store.list_line_transcription_results(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.input_transcription_run_id,
+            page_id=page_id,
+        )
+        hydrated_lines = self._hydrate_transcription_lines_with_active_versions(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.input_transcription_run_id,
+            page_id=page_id,
+            rows=line_rows,
+        )
+        preview_lines = [
+            PreviewLine(
+                line_id=line.line_id,
+                text=line.text_diplomatic,
+            )
+            for line in hydrated_lines
+        ]
+        token_rows = self._store.list_token_transcription_results(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.input_transcription_run_id,
+            page_id=page_id,
+        )
+        preview_tokens = [
+            PreviewToken(
+                token_id=token.token_id,
+                line_id=token.line_id,
+                token_index=token.token_index,
+                token_text=token.token_text,
+            )
+            for token in token_rows
+            if isinstance(token.line_id, str) and token.line_id.strip()
+        ]
+        findings = self._list_all_redaction_findings(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.id,
+            page_id=page_id,
+        )
+        decision_events = self._store.list_redaction_decision_events(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.id,
+            page_id=page_id,
+        )
+        latest_action_by_finding_id: dict[str, RedactionDecisionActionType] = {}
+        for event in decision_events:
+            latest_action_by_finding_id[event.finding_id] = event.action_type
+        preview_findings = [
+            PreviewFinding(
+                finding_id=finding.id,
+                decision_status=finding.decision_status,
+                line_id=finding.line_id,
+                span_start=finding.span_start,
+                span_end=finding.span_end,
+                token_refs_json=(
+                    [dict(item) for item in finding.token_refs_json]
+                    if isinstance(finding.token_refs_json, Sequence)
+                    and not isinstance(finding.token_refs_json, (str, bytes))
+                    else None
+                ),
+                area_mask_id=finding.area_mask_id,
+                action_type=latest_action_by_finding_id.get(finding.id, "MASK"),
+                replacement_text=extract_transformation_value(
+                    finding.basis_secondary_json
+                    if isinstance(finding.basis_secondary_json, Mapping)
+                    else None
+                ),
+            )
+            for finding in findings
+        ]
+        return build_safeguarded_preview_artifact(
+            lines=preview_lines,
+            tokens=preview_tokens,
+            findings=preview_findings,
+        )
+
+    def _load_redaction_approved_snapshot_payload(
+        self,
+        *,
+        snapshot_bytes: bytes,
+        expected_run_id: str,
+        expected_snapshot_sha256: str | None,
+    ) -> dict[str, object]:
+        if expected_snapshot_sha256 is not None:
+            actual_snapshot_sha256 = self._sha256_hex(snapshot_bytes)
+            if actual_snapshot_sha256 != expected_snapshot_sha256:
+                raise DocumentStoreUnavailableError(
+                    "Approved snapshot artifact hash mismatch."
+                )
+        try:
+            payload = json.loads(snapshot_bytes.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise DocumentStoreUnavailableError(
+                "Approved snapshot artifact payload is invalid JSON."
+            ) from error
+        if not isinstance(payload, dict):
+            raise DocumentStoreUnavailableError("Approved snapshot payload is invalid.")
+        run_id = payload.get("runId")
+        if not isinstance(run_id, str) or run_id.strip() != expected_run_id:
+            raise DocumentStoreUnavailableError("Approved snapshot run id mismatch.")
+        return payload
+
+    @staticmethod
+    def _extract_snapshot_findings_for_page(
+        *,
+        approved_snapshot_payload: Mapping[str, object],
+        page_id: str,
+    ) -> list[PreviewFinding]:
+        findings_payload = approved_snapshot_payload.get("findings")
+        if not isinstance(findings_payload, list):
+            return []
+        findings: list[PreviewFinding] = []
+        for item in findings_payload:
+            if not isinstance(item, Mapping):
+                continue
+            page_id_value = item.get("pageId")
+            if not isinstance(page_id_value, str) or page_id_value != page_id:
+                continue
+            finding_id = item.get("id")
+            decision_status = item.get("decisionStatus")
+            if not isinstance(finding_id, str) or not finding_id.strip():
+                continue
+            if not isinstance(decision_status, str) or not decision_status.strip():
+                continue
+            token_refs_json: list[dict[str, object]] | None = None
+            token_refs_payload = item.get("tokenRefsJson")
+            if isinstance(token_refs_payload, list):
+                token_refs_json = [
+                    dict(entry)
+                    for entry in token_refs_payload
+                    if isinstance(entry, Mapping)
+                ]
+            findings.append(
+                PreviewFinding(
+                    finding_id=finding_id.strip(),
+                    decision_status=decision_status.strip().upper(),
+                    line_id=(
+                        str(item["lineId"])
+                        if isinstance(item.get("lineId"), str)
+                        and str(item["lineId"]).strip()
+                        else None
+                    ),
+                    span_start=(
+                        int(item["spanStart"])
+                        if isinstance(item.get("spanStart"), int)
+                        else None
+                    ),
+                    span_end=(
+                        int(item["spanEnd"])
+                        if isinstance(item.get("spanEnd"), int)
+                        else None
+                    ),
+                    token_refs_json=token_refs_json,
+                    area_mask_id=(
+                        str(item["areaMaskId"])
+                        if isinstance(item.get("areaMaskId"), str)
+                        and str(item["areaMaskId"]).strip()
+                        else None
+                    ),
+                    action_type=(
+                        str(item["actionType"]).strip().upper()
+                        if isinstance(item.get("actionType"), str)
+                        and str(item["actionType"]).strip()
+                        else "MASK"
+                    ),
+                    replacement_text=extract_transformation_value(
+                        dict(item["basisSecondaryJson"])
+                        if isinstance(item.get("basisSecondaryJson"), Mapping)
+                        else None
+                    ),
+                )
+            )
+        return findings
+
+    def _build_redaction_page_preview_artifact_from_approved_snapshot(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run: RedactionRunRecord,
+        approved_snapshot_payload: Mapping[str, object],
+        page_id: str,
+    ) -> SafeguardedPreviewArtifact:
+        snapshot_run = approved_snapshot_payload.get("run")
+        if isinstance(snapshot_run, Mapping):
+            snapshot_input_run = snapshot_run.get("inputTranscriptionRunId")
+            if (
+                isinstance(snapshot_input_run, str)
+                and snapshot_input_run.strip()
+                and snapshot_input_run.strip() != run.input_transcription_run_id
+            ):
+                raise DocumentStoreUnavailableError(
+                    "Approved snapshot transcription basis does not match run lineage."
+                )
+        line_rows = self._store.list_line_transcription_results(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.input_transcription_run_id,
+            page_id=page_id,
+        )
+        hydrated_lines = self._hydrate_transcription_lines_with_active_versions(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.input_transcription_run_id,
+            page_id=page_id,
+            rows=line_rows,
+        )
+        preview_lines = [
+            PreviewLine(
+                line_id=line.line_id,
+                text=line.text_diplomatic,
+            )
+            for line in hydrated_lines
+        ]
+        token_rows = self._store.list_token_transcription_results(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.input_transcription_run_id,
+            page_id=page_id,
+        )
+        preview_tokens = [
+            PreviewToken(
+                token_id=token.token_id,
+                line_id=token.line_id,
+                token_index=token.token_index,
+                token_text=token.token_text,
+            )
+            for token in token_rows
+            if isinstance(token.line_id, str) and token.line_id.strip()
+        ]
+        preview_findings = self._extract_snapshot_findings_for_page(
+            approved_snapshot_payload=approved_snapshot_payload,
+            page_id=page_id,
+        )
+        return build_safeguarded_preview_artifact(
+            lines=preview_lines,
+            tokens=preview_tokens,
+            findings=preview_findings,
+        )
+
+    def _persist_redaction_approved_snapshot_artifact(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        review: RedactionRunReviewRecord,
+    ) -> bytes:
+        if (
+            not isinstance(review.approved_snapshot_key, str)
+            or not review.approved_snapshot_key.strip()
+            or not isinstance(review.approved_snapshot_sha256, str)
+            or not review.approved_snapshot_sha256.strip()
+        ):
+            raise DocumentStoreUnavailableError(
+                "Approved review snapshot metadata is incomplete."
+            )
+        snapshot_bytes, snapshot_sha256 = self._store.get_redaction_approval_snapshot_artifact(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        if snapshot_sha256 != review.approved_snapshot_sha256:
+            raise DocumentStoreUnavailableError(
+                "Approved snapshot hash changed unexpectedly."
+            )
+        try:
+            stored = self._storage.write_redaction_approved_snapshot(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                approved_snapshot_sha256=snapshot_sha256,
+                payload=snapshot_bytes,
+            )
+        except DocumentStorageError as error:
+            raise DocumentStoreUnavailableError(_CONTROLLED_STORAGE_FAILURE_MESSAGE) from error
+        if stored.object_key != review.approved_snapshot_key:
+            raise DocumentStoreUnavailableError(
+                "Approved snapshot storage key mismatch."
+            )
+        return snapshot_bytes
+
+    def _refresh_redaction_reviewed_outputs_from_approved_snapshot(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run: RedactionRunRecord,
+        review: RedactionRunReviewRecord,
+    ) -> None:
+        if (
+            not isinstance(review.approved_snapshot_key, str)
+            or not review.approved_snapshot_key.strip()
+            or not isinstance(review.approved_snapshot_sha256, str)
+            or not review.approved_snapshot_sha256.strip()
+        ):
+            raise DocumentStoreUnavailableError(
+                "Approved review snapshot metadata is incomplete."
+            )
+        try:
+            snapshot_bytes = self._storage.read_object_bytes(review.approved_snapshot_key)
+        except DocumentStorageError as error:
+            raise DocumentStoreUnavailableError(
+                "Approved snapshot artifact could not be loaded."
+            ) from error
+        approved_snapshot_payload = self._load_redaction_approved_snapshot_payload(
+            snapshot_bytes=snapshot_bytes,
+            expected_run_id=run.id,
+            expected_snapshot_sha256=review.approved_snapshot_sha256,
+        )
+        self._store.reset_redaction_outputs_for_reviewed_generation(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.id,
+        )
+        pages = self._store.list_document_pages(
+            project_id=project_id,
+            document_id=document_id,
+        )
+        for page in pages:
+            try:
+                artifact = self._build_redaction_page_preview_artifact_from_approved_snapshot(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run=run,
+                    approved_snapshot_payload=approved_snapshot_payload,
+                    page_id=page.id,
+                )
+                try:
+                    stored_preview = self._storage.write_redaction_preview(
+                        project_id=project_id,
+                        document_id=document_id,
+                        run_id=run.id,
+                        page_id=page.id,
+                        preview_sha256=artifact.sha256,
+                        payload=artifact.png_bytes,
+                    )
+                except DocumentStorageError as error:
+                    raise DocumentStoreUnavailableError(
+                        _CONTROLLED_STORAGE_FAILURE_MESSAGE
+                    ) from error
+                self._store.set_redaction_output_projection(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=run.id,
+                    page_id=page.id,
+                    status="READY",
+                    safeguarded_preview_key=stored_preview.object_key,
+                    preview_sha256=artifact.sha256,
+                    failure_reason=None,
+                )
+            except Exception as error:  # noqa: BLE001
+                failure_reason = f"Reviewed preview generation failed: {error}"
+                if len(failure_reason) > 600:
+                    failure_reason = failure_reason[:600]
+                self._store.set_redaction_output_projection(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=run.id,
+                    page_id=page.id,
+                    status="FAILED",
+                    safeguarded_preview_key=None,
+                    preview_sha256=None,
+                    failure_reason=failure_reason,
+                )
+        run_output = self._store.get_redaction_run_output(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.id,
+        )
+        if run_output is None:
+            raise DocumentStoreUnavailableError("Reviewed run output projection is missing.")
+        if run_output.status != "READY":
+            return
+
+        outputs = self._store.list_redaction_outputs(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.id,
+        )
+        if not outputs:
+            self._store.set_redaction_run_output_status(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run.id,
+                status="FAILED",
+                failure_reason="Reviewed manifest generation requires at least one page preview.",
+                actor_user_id=current_user.user_id,
+            )
+            raise DocumentStoreUnavailableError(
+                "Reviewed manifest generation requires at least one page preview."
+            )
+        page_rows: list[tuple[str, str]] = []
+        for output in outputs:
+            if output.status != "READY":
+                self._store.set_redaction_run_output_status(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=run.id,
+                    status="FAILED",
+                    failure_reason="Reviewed manifest generation requires READY preview outputs.",
+                    actor_user_id=current_user.user_id,
+                )
+                raise DocumentStoreUnavailableError(
+                    "Reviewed manifest generation requires READY preview outputs."
+                )
+            if (
+                not isinstance(output.preview_sha256, str)
+                or not output.preview_sha256.strip()
+                or not isinstance(output.safeguarded_preview_key, str)
+                or not output.safeguarded_preview_key.strip()
+            ):
+                self._store.set_redaction_run_output_status(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=run.id,
+                    status="FAILED",
+                    failure_reason="Reviewed preview projection is missing immutable key or hash.",
+                    actor_user_id=current_user.user_id,
+                )
+                raise DocumentStoreUnavailableError(
+                    "Reviewed preview projection is missing immutable key or hash."
+                )
+            page_rows.append((output.page_id, output.preview_sha256))
+        manifest_bytes = canonical_preview_manifest_bytes(
+            run_id=run.id,
+            page_rows=page_rows,
+            approved_snapshot_sha256=review.approved_snapshot_sha256,
+            approved_snapshot_payload=approved_snapshot_payload,
+        )
+        manifest_sha256 = self._sha256_hex(manifest_bytes)
+        if run_output.output_manifest_sha256 != manifest_sha256:
+            self._store.set_redaction_run_output_status(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run.id,
+                status="FAILED",
+                failure_reason="Run output manifest hash projection mismatch.",
+                actor_user_id=current_user.user_id,
+            )
+            raise DocumentStoreUnavailableError(
+                "Run output manifest hash projection mismatch."
+            )
+        expected_manifest_key = self._storage.build_redaction_run_manifest_key(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.id,
+            output_manifest_sha256=manifest_sha256,
+        )
+        if run_output.output_manifest_key != expected_manifest_key:
+            self._store.set_redaction_run_output_status(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run.id,
+                status="FAILED",
+                failure_reason="Run output manifest key projection mismatch.",
+                actor_user_id=current_user.user_id,
+            )
+            raise DocumentStoreUnavailableError(
+                "Run output manifest key projection mismatch."
+            )
+        try:
+            stored_manifest = self._storage.write_redaction_run_manifest(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run.id,
+                output_manifest_sha256=manifest_sha256,
+                payload=manifest_bytes,
+            )
+        except DocumentStorageError as error:
+            self._store.set_redaction_run_output_status(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run.id,
+                status="FAILED",
+                failure_reason=_CONTROLLED_STORAGE_FAILURE_MESSAGE,
+                actor_user_id=current_user.user_id,
+            )
+            raise DocumentStoreUnavailableError(_CONTROLLED_STORAGE_FAILURE_MESSAGE) from error
+        if stored_manifest.object_key != run_output.output_manifest_key:
+            self._store.set_redaction_run_output_status(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run.id,
+                status="FAILED",
+                failure_reason="Run output manifest object key mismatch.",
+                actor_user_id=current_user.user_id,
+            )
+            raise DocumentStoreUnavailableError(
+                "Run output manifest object key mismatch."
+            )
+
+    def _refresh_redaction_page_preview_output(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run: RedactionRunRecord,
+        page_id: str,
+    ) -> RedactionOutputRecord:
+        try:
+            artifact = self._build_redaction_page_preview_artifact(
+                project_id=project_id,
+                document_id=document_id,
+                run=run,
+                page_id=page_id,
+            )
+        except Exception as error:  # noqa: BLE001
+            failure_reason = f"Preview generation failed: {error}"
+            if len(failure_reason) > 600:
+                failure_reason = failure_reason[:600]
+            return self._store.set_redaction_output_projection(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run.id,
+                page_id=page_id,
+                status="FAILED",
+                safeguarded_preview_key=None,
+                preview_sha256=None,
+                failure_reason=failure_reason,
+            )
+        return self._store.set_redaction_output_projection(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.id,
+            page_id=page_id,
+            status="READY",
+            safeguarded_preview_key=f"redaction://{run.id}/{page_id}",
+            preview_sha256=artifact.sha256,
+            failure_reason=None,
+        )
+
+    def _refresh_redaction_run_preview_outputs(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run: RedactionRunRecord,
+        page_id: str | None = None,
+    ) -> list[RedactionOutputRecord]:
+        pages = self._store.list_document_pages(
+            project_id=project_id,
+            document_id=document_id,
+        )
+        target_page_ids = (
+            {page_id}
+            if isinstance(page_id, str) and page_id.strip()
+            else {page.id for page in pages}
+        )
+        refreshed: list[RedactionOutputRecord] = []
+        for page in pages:
+            if page.id not in target_page_ids:
+                continue
+            refreshed.append(
+                self._refresh_redaction_page_preview_output(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run=run,
+                    page_id=page.id,
+                )
+            )
+        return refreshed
+
+    def _materialize_redaction_findings_for_run(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run: RedactionRunRecord,
+    ) -> list[RedactionFindingRecord]:
+        policy_config = resolve_direct_identifier_policy_config(
+            policy_snapshot_json=run.policy_snapshot_json,
+            pinned_recall_floor=self._settings.redaction_direct_identifier_recall_floor,
+            pinned_default_threshold=self._settings.redaction_default_auto_apply_threshold,
+            pinned_ner_timeout_seconds=self._settings.redaction_ner_timeout_seconds,
+            pinned_assist_timeout_seconds=self._settings.redaction_assist_timeout_seconds,
+            pinned_assist_enabled=self._settings.redaction_assist_enabled,
+        )
+        ner_detector = LocalNERDetector(timeout_seconds=policy_config.ner_timeout_seconds)
+        assist_explainer = (
+            BoundedAssistExplainer(timeout_seconds=policy_config.assist_timeout_seconds)
+            if policy_config.assist_enabled
+            else None
+        )
+
+        pages = self._store.list_document_pages(
+            project_id=project_id,
+            document_id=document_id,
+        )
+        write_rows: list[dict[str, object]] = []
+        for page in pages:
+            detection_lines = self._build_redaction_detection_lines_for_page(
+                project_id=project_id,
+                document_id=document_id,
+                run=run,
+                page=page,
+            )
+            findings = detect_direct_identifier_findings(
+                lines=detection_lines,
+                policy_config=policy_config,
+                ner_detector=ner_detector,
+                assist_explainer=assist_explainer,
+            )
+            indirect_findings = detect_indirect_identifier_findings(
+                lines=detection_lines,
+                policy_snapshot_json=run.policy_snapshot_json,
+            )
+            place_generalization_spans = {
+                (finding.line_id, finding.span_start, finding.span_end)
+                for finding in indirect_findings
+                if finding.category == "INDIRECT_TOWN"
+            }
+            for finding in findings:
+                if (
+                    finding.line_id is not None
+                    and isinstance(finding.span_start, int)
+                    and isinstance(finding.span_end, int)
+                    and (finding.line_id, finding.span_start, finding.span_end)
+                    in place_generalization_spans
+                    and finding.category.strip().upper() in {"LOCATION", "ADDRESS", "PLACE"}
+                ):
+                    continue
+                basis_secondary_json = (
+                    dict(finding.basis_secondary_json)
+                    if isinstance(finding.basis_secondary_json, Mapping)
+                    else None
+                )
+                if finding.assist_summary is not None:
+                    if basis_secondary_json is None:
+                        basis_secondary_json = {}
+                    basis_secondary_json["assistSummary"] = finding.assist_summary
+                write_rows.append(
+                    {
+                        "page_id": finding.page_id,
+                        "line_id": finding.line_id,
+                        "category": finding.category,
+                        "span_start": finding.span_start,
+                        "span_end": finding.span_end,
+                        "span_basis_kind": "LINE_TEXT",
+                        "span_basis_ref": finding.line_id,
+                        "confidence": finding.confidence,
+                        "basis_primary": finding.basis_primary,
+                        "basis_secondary_json": basis_secondary_json,
+                        "assist_explanation_key": None,
+                        "assist_explanation_sha256": None,
+                        "bbox_refs": dict(finding.bbox_refs),
+                        "token_refs_json": (
+                            [dict(item) for item in finding.token_refs_json]
+                            if isinstance(finding.token_refs_json, Sequence)
+                            and not isinstance(finding.token_refs_json, (str, bytes))
+                            else None
+                        ),
+                        "area_mask_id": None,
+                        "decision_status": finding.decision_status,
+                        "decision_reason": finding.decision_reason,
+                        "action_type": "MASK",
+                    }
+                )
+            for finding in indirect_findings:
+                write_rows.append(
+                    {
+                        "page_id": finding.page_id,
+                        "line_id": finding.line_id,
+                        "category": finding.category,
+                        "span_start": finding.span_start,
+                        "span_end": finding.span_end,
+                        "span_basis_kind": "LINE_TEXT",
+                        "span_basis_ref": finding.line_id,
+                        "confidence": finding.confidence,
+                        "basis_primary": finding.basis_primary,
+                        "basis_secondary_json": dict(finding.basis_secondary_json),
+                        "assist_explanation_key": None,
+                        "assist_explanation_sha256": None,
+                        "bbox_refs": dict(finding.bbox_refs),
+                        "token_refs_json": (
+                            [dict(item) for item in finding.token_refs_json]
+                            if isinstance(finding.token_refs_json, Sequence)
+                            and not isinstance(finding.token_refs_json, (str, bytes))
+                            else None
+                        ),
+                        "area_mask_id": None,
+                        "decision_status": finding.decision_status,
+                        "decision_reason": finding.decision_reason,
+                        "action_type": finding.action_type,
+                    }
+                )
+        return self._store.replace_redaction_findings(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.id,
+            findings=write_rows,
+        )
+
+    def get_redaction_projection(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+    ) -> DocumentRedactionProjectionRecord | None:
+        self._require_redaction_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        _ = self._load_redaction_document(project_id=project_id, document_id=document_id)
+        return self._store.get_redaction_projection(
+            project_id=project_id,
+            document_id=document_id,
+        )
+
+    def list_redaction_runs(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        cursor: int = 0,
+        page_size: int = 50,
+    ) -> tuple[list[RedactionRunRecord], int | None]:
+        self._require_redaction_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        if cursor < 0:
+            raise DocumentValidationError("Cursor must be zero or greater.")
+        if page_size < 1 or page_size > 200:
+            raise DocumentValidationError("Page size must be between 1 and 200.")
+        _ = self._load_redaction_document(project_id=project_id, document_id=document_id)
+        return self._store.list_redaction_runs(
+            project_id=project_id,
+            document_id=document_id,
+            cursor=cursor,
+            page_size=page_size,
+        )
+
+    def get_redaction_run(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> RedactionRunRecord:
+        self._require_redaction_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        _ = self._load_redaction_document(project_id=project_id, document_id=document_id)
+        return self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+
+    def get_redaction_run_status(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> RedactionRunRecord:
+        return self.get_redaction_run(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+
+    def get_active_redaction_run(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+    ) -> tuple[DocumentRedactionProjectionRecord | None, RedactionRunRecord | None]:
+        self._require_redaction_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        _ = self._load_redaction_document(project_id=project_id, document_id=document_id)
+        projection = self._store.get_redaction_projection(
+            project_id=project_id,
+            document_id=document_id,
+        )
+        run = self._store.get_active_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+        )
+        return projection, run
+
+    def create_redaction_run(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        input_transcription_run_id: str | None = None,
+        input_layout_run_id: str | None = None,
+        run_kind: str | None = None,
+        supersedes_redaction_run_id: str | None = None,
+        detectors_version: str | None = None,
+    ) -> RedactionRunRecord:
+        _ = self._require_redaction_mutation_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        _ = self._load_redaction_document(project_id=project_id, document_id=document_id)
+        normalized_run_kind = self._normalize_redaction_run_kind(run_kind)
+        normalized_input_transcription_run_id = self._normalize_redaction_reference(
+            input_transcription_run_id,
+            field_name="inputTranscriptionRunId",
+            max_length=120,
+        )
+        normalized_input_layout_run_id = self._normalize_redaction_reference(
+            input_layout_run_id,
+            field_name="inputLayoutRunId",
+            max_length=120,
+        )
+        normalized_supersedes_run_id = self._normalize_redaction_reference(
+            supersedes_redaction_run_id,
+            field_name="supersedesRedactionRunId",
+            max_length=120,
+        )
+        normalized_detectors_version = (
+            detectors_version.strip()
+            if isinstance(detectors_version, str) and detectors_version.strip()
+            else "phase-5.0-scaffold"
+        )
+        created_run: RedactionRunRecord
+        try:
+            created_run = self._store.create_redaction_run(
+                project_id=project_id,
+                document_id=document_id,
+                created_by=current_user.user_id,
+                input_transcription_run_id=normalized_input_transcription_run_id,
+                input_layout_run_id=normalized_input_layout_run_id,
+                run_kind=normalized_run_kind,
+                supersedes_redaction_run_id=normalized_supersedes_run_id,
+                detectors_version=normalized_detectors_version,
+            )
+        except DocumentRedactionRunConflictError as error:
+            raise DocumentRedactionConflictError(str(error)) from error
+        try:
+            self._materialize_redaction_findings_for_run(
+                project_id=project_id,
+                document_id=document_id,
+                run=created_run,
+            )
+        except Exception as error:  # noqa: BLE001
+            try:
+                self._store.cancel_redaction_run(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=created_run.id,
+                    canceled_by=current_user.user_id,
+                )
+            except Exception:  # noqa: BLE001
+                pass
+            raise DocumentStoreUnavailableError(
+                "Redaction run detection pipeline failed."
+            ) from error
+        hydrated_run = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=created_run.id,
+        )
+        self._refresh_redaction_run_preview_outputs(
+            project_id=project_id,
+            document_id=document_id,
+            run=hydrated_run,
+        )
+        return hydrated_run
+
+    def request_policy_rerun(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        source_run_id: str,
+        policy_id: str,
+    ) -> RedactionRunRecord:
+        self._require_redaction_policy_rerun_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        normalized_policy_id = self._normalize_redaction_reference(
+            policy_id,
+            field_name="policyId",
+            max_length=120,
+        )
+        if normalized_policy_id is None:
+            raise DocumentValidationError("policyId is required.")
+        source_run = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=source_run_id,
+        )
+        if source_run.status != "SUCCEEDED":
+            raise DocumentRedactionConflictError(
+                "Policy rerun source run must be SUCCEEDED."
+            )
+        source_review = self._store.get_redaction_run_review(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=source_run.id,
+        )
+        if source_review is None or source_review.review_status != "APPROVED":
+            raise DocumentRedactionConflictError(
+                "Policy rerun source run must be APPROVED under run review."
+            )
+        try:
+            readiness = self._governance_store.get_readiness_projection(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=source_run.id,
+            )
+        except GovernanceRunNotFoundError as error:
+            raise DocumentRedactionConflictError(str(error)) from error
+        except GovernanceStoreUnavailableError as error:
+            raise DocumentStoreUnavailableError(str(error)) from error
+        if readiness.status != "READY":
+            raise DocumentRedactionConflictError(
+                "Policy rerun source run must be governance-ready."
+            )
+        target_policy = self._load_policy_for_redaction_rerun(
+            project_id=project_id,
+            policy_id=normalized_policy_id,
+        )
+        target_policy_hash = self._canonical_policy_rules_sha256(target_policy.rules_json)
+        try:
+            created_run = self._store.create_redaction_run(
+                project_id=project_id,
+                document_id=document_id,
+                created_by=current_user.user_id,
+                input_transcription_run_id=source_run.input_transcription_run_id,
+                input_layout_run_id=source_run.input_layout_run_id,
+                run_kind="POLICY_RERUN",
+                supersedes_redaction_run_id=source_run.id,
+                detectors_version=source_run.detectors_version,
+                policy_snapshot_id=target_policy.id,
+                policy_snapshot_json=target_policy.rules_json,
+                policy_snapshot_hash=target_policy_hash,
+                policy_id=target_policy.id,
+                policy_family_id=target_policy.policy_family_id,
+                policy_version=str(target_policy.version),
+            )
+        except DocumentRedactionRunConflictError as error:
+            raise DocumentRedactionConflictError(str(error)) from error
+
+        try:
+            self._materialize_redaction_findings_for_run(
+                project_id=project_id,
+                document_id=document_id,
+                run=created_run,
+            )
+        except Exception as error:  # noqa: BLE001
+            try:
+                self._store.cancel_redaction_run(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=created_run.id,
+                    canceled_by=current_user.user_id,
+                )
+            except Exception:  # noqa: BLE001
+                pass
+            raise DocumentStoreUnavailableError(
+                "Policy rerun detection pipeline failed."
+            ) from error
+
+        hydrated_run = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=created_run.id,
+        )
+        self._refresh_redaction_run_preview_outputs(
+            project_id=project_id,
+            document_id=document_id,
+            run=hydrated_run,
+        )
+        return hydrated_run
+
+    def cancel_redaction_run(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> RedactionRunRecord:
+        self._require_redaction_mutation_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        try:
+            return self._store.cancel_redaction_run(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                canceled_by=current_user.user_id,
+            )
+        except DocumentNotFoundError as error:
+            raise DocumentRedactionRunNotFoundError(str(error)) from error
+        except DocumentRedactionRunConflictError as error:
+            raise DocumentRedactionConflictError(str(error)) from error
+
+    def activate_redaction_run(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> DocumentRedactionProjectionRecord:
+        self._require_redaction_mutation_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        _ = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        try:
+            return self._store.activate_redaction_run(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+            )
+        except DocumentNotFoundError as error:
+            raise DocumentRedactionRunNotFoundError(str(error)) from error
+        except DocumentRedactionRunConflictError as error:
+            raise DocumentRedactionConflictError(str(error)) from error
+
+    def get_redaction_run_review(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> RedactionRunReviewRecord:
+        self._require_redaction_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        _ = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        review = self._store.get_redaction_run_review(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        if review is None:
+            raise DocumentRedactionRunNotFoundError("Redaction run review not found.")
+        return review
+
+    def start_redaction_run_review(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> RedactionRunReviewRecord:
+        self._require_redaction_mutation_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        page_reviews = self._list_all_redaction_page_reviews(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        if not page_reviews:
+            raise DocumentRedactionConflictError(
+                "Run review cannot start before page-review projections exist."
+            )
+        if any(item.review_status == "NOT_STARTED" for item in page_reviews):
+            raise DocumentRedactionConflictError(
+                "Run review start requires every page to be reviewed at least once."
+            )
+        try:
+            return self._store.start_redaction_run_review(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                actor_user_id=current_user.user_id,
+            )
+        except DocumentNotFoundError as error:
+            raise DocumentRedactionRunNotFoundError(str(error)) from error
+        except DocumentRedactionRunConflictError as error:
+            raise DocumentRedactionConflictError(str(error)) from error
+
+    def complete_redaction_run_review(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        review_status: str,
+        reason: str | None = None,
+    ) -> RedactionRunReviewRecord:
+        self._require_redaction_mutation_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        normalized_status = self._normalize_redaction_run_review_status(review_status)
+        normalized_reason = (
+            reason.strip() if isinstance(reason, str) and reason.strip() else None
+        )
+        if normalized_reason is not None and len(normalized_reason) > 600:
+            raise DocumentValidationError("reason must be 600 characters or fewer.")
+        try:
+            review = self._store.complete_redaction_run_review(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                actor_user_id=current_user.user_id,
+                review_status=normalized_status,
+                reason=normalized_reason,
+            )
+        except DocumentNotFoundError as error:
+            raise DocumentRedactionRunNotFoundError(str(error)) from error
+        except DocumentRedactionRunConflictError as error:
+            raise DocumentRedactionConflictError(str(error)) from error
+        if normalized_status == "APPROVED":
+            run = self._load_redaction_run(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+            )
+            try:
+                self._persist_redaction_approved_snapshot_artifact(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=run_id,
+                    review=review,
+                )
+                self._refresh_redaction_reviewed_outputs_from_approved_snapshot(
+                    current_user=current_user,
+                    project_id=project_id,
+                    document_id=document_id,
+                    run=run,
+                    review=review,
+                )
+            except Exception as error:  # noqa: BLE001
+                failure_reason = f"Reviewed output generation failed: {error}"
+                if len(failure_reason) > 600:
+                    failure_reason = failure_reason[:600]
+                try:
+                    self._store.set_redaction_run_output_status(
+                        project_id=project_id,
+                        document_id=document_id,
+                        run_id=run_id,
+                        status="FAILED",
+                        failure_reason=failure_reason,
+                        actor_user_id=current_user.user_id,
+                    )
+                except Exception:  # noqa: BLE001
+                    pass
+                raise DocumentStoreUnavailableError(
+                    "Redaction reviewed output generation failed."
+                ) from error
+            refreshed_review = self._store.get_redaction_run_review(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+            )
+            if refreshed_review is not None:
+                return refreshed_review
+        return review
+
+    def list_redaction_run_page_findings(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        category: str | None = None,
+        unresolved_only: bool = False,
+        direct_identifiers_only: bool = False,
+    ) -> list[RedactionFindingRecord]:
+        self._require_redaction_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        _ = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        normalized_category = (
+            category.strip() if isinstance(category, str) and category.strip() else None
+        )
+        rows = self._list_all_redaction_findings(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+            category=normalized_category,
+            unresolved_only=unresolved_only,
+        )
+        if direct_identifiers_only:
+            rows = [row for row in rows if self._is_direct_identifier_category(row.category)]
+        return rows
+
+    def get_redaction_run_page_finding(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        finding_id: str,
+    ) -> RedactionFindingRecord:
+        self._require_redaction_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        _ = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        finding = self._store.get_redaction_finding(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            finding_id=finding_id,
+        )
+        if finding is None or finding.page_id != page_id:
+            raise DocumentPageNotFoundError("Redaction finding not found.")
+        return finding
+
+    def list_redaction_area_masks(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+    ) -> list[RedactionAreaMaskRecord]:
+        self._require_redaction_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        _ = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        return self._store.list_redaction_area_masks(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+
+    def get_redaction_area_mask_by_id(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        mask_id: str,
+    ) -> RedactionAreaMaskRecord:
+        self._require_redaction_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        _ = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        mask = self._store.get_redaction_area_mask_by_id(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            mask_id=mask_id,
+        )
+        if mask is None:
+            raise DocumentPageNotFoundError("Redaction area mask not found.")
+        return mask
+
+    def get_redaction_run_page_review(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+    ) -> RedactionPageReviewRecord:
+        self._require_redaction_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        _ = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        review = self._store.get_redaction_page_review(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+        if review is None:
+            raise DocumentPageNotFoundError("Redaction page review not found.")
+        return review
+
+    def list_redaction_run_pages(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        category: str | None = None,
+        unresolved_only: bool = False,
+        direct_identifiers_only: bool = False,
+        cursor: int = 0,
+        page_size: int = 200,
+    ) -> tuple[list[DocumentRedactionRunPageSnapshot], int | None]:
+        self._require_redaction_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        if cursor < 0:
+            raise DocumentValidationError("Cursor must be zero or greater.")
+        if page_size < 1 or page_size > 500:
+            raise DocumentValidationError("Page size must be between 1 and 500.")
+        run = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        pages = self._store.list_document_pages(
+            project_id=project_id,
+            document_id=document_id,
+        )
+        findings = self._list_all_redaction_findings(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.id,
+            category=category,
+            unresolved_only=unresolved_only,
+        )
+        if direct_identifiers_only:
+            findings = [row for row in findings if self._is_direct_identifier_category(row.category)]
+        findings_by_page: dict[str, list[RedactionFindingRecord]] = {}
+        for finding in findings:
+            findings_by_page.setdefault(finding.page_id, []).append(finding)
+        page_reviews = self._list_all_redaction_page_reviews(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.id,
+        )
+        reviews_by_page = {row.page_id: row for row in page_reviews}
+        outputs = self._store.list_redaction_outputs(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.id,
+        )
+        outputs_by_page = {row.page_id: row for row in outputs}
+        rows: list[DocumentRedactionRunPageSnapshot] = []
+        for page in pages:
+            page_findings = findings_by_page.get(page.id, [])
+            unresolved_count = sum(
+                1
+                for item in page_findings
+                if self._is_unresolved_redaction_decision(item.decision_status)
+            )
+            review = reviews_by_page.get(page.id)
+            output = outputs_by_page.get(page.id)
+            if unresolved_only and unresolved_count <= 0:
+                continue
+            rows.append(
+                DocumentRedactionRunPageSnapshot(
+                    run_id=run.id,
+                    page_id=page.id,
+                    page_index=page.page_index,
+                    finding_count=len(page_findings),
+                    unresolved_count=unresolved_count,
+                    review_status=review.review_status if review is not None else "NOT_STARTED",
+                    review_etag=review.review_etag if review is not None else "",
+                    requires_second_review=(
+                        review.requires_second_review if review is not None else False
+                    ),
+                    second_review_status=(
+                        review.second_review_status if review is not None else "NOT_REQUIRED"
+                    ),
+                    second_reviewed_by=(
+                        review.second_reviewed_by if review is not None else None
+                    ),
+                    second_reviewed_at=(
+                        review.second_reviewed_at if review is not None else None
+                    ),
+                    last_reviewed_by=review.first_reviewed_by if review is not None else None,
+                    last_reviewed_at=review.first_reviewed_at if review is not None else None,
+                    preview_status=output.status if output is not None else None,
+                    top_findings=tuple(page_findings[:5]),
+                )
+            )
+        ordered_rows = sorted(rows, key=lambda item: (item.page_index, item.page_id))
+        start = max(0, cursor)
+        end = start + page_size
+        next_cursor = end if end < len(ordered_rows) else None
+        return ordered_rows[start:end], next_cursor
+
+    def update_redaction_finding_decision(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        finding_id: str,
+        expected_decision_etag: str,
+        decision_status: str,
+        reason: str | None = None,
+        action_type: str | None = None,
+    ) -> RedactionFindingRecord:
+        self._require_redaction_mutation_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        normalized_decision_etag = (
+            expected_decision_etag.strip()
+            if isinstance(expected_decision_etag, str)
+            else ""
+        )
+        if not normalized_decision_etag:
+            raise DocumentValidationError("decisionEtag is required.")
+        normalized_decision_status = self._normalize_redaction_decision_status(
+            decision_status
+        )
+        normalized_reason = (
+            reason.strip() if isinstance(reason, str) and reason.strip() else None
+        )
+        if normalized_reason is not None and len(normalized_reason) > 600:
+            raise DocumentValidationError("reason must be 600 characters or fewer.")
+        normalized_action_type = self._normalize_redaction_action_type(action_type)
+        run = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        try:
+            finding = self._store.update_redaction_finding_decision(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                finding_id=finding_id,
+                expected_decision_etag=normalized_decision_etag,
+                to_decision_status=normalized_decision_status,
+                actor_user_id=current_user.user_id,
+                reason=normalized_reason,
+                action_type=normalized_action_type,
+            )
+        except DocumentNotFoundError as error:
+            raise DocumentPageNotFoundError(str(error)) from error
+        except DocumentRedactionRunConflictError as error:
+            raise DocumentRedactionConflictError(str(error)) from error
+        self._refresh_redaction_run_preview_outputs(
+            project_id=project_id,
+            document_id=document_id,
+            run=run,
+            page_id=finding.page_id,
+        )
+        return finding
+
+    def update_redaction_page_review(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        expected_review_etag: str,
+        review_status: str,
+        reason: str | None = None,
+    ) -> RedactionPageReviewRecord:
+        self._require_redaction_mutation_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        normalized_review_etag = (
+            expected_review_etag.strip()
+            if isinstance(expected_review_etag, str)
+            else ""
+        )
+        if not normalized_review_etag:
+            raise DocumentValidationError("reviewEtag is required.")
+        normalized_review_status = self._normalize_redaction_page_review_status(
+            review_status
+        )
+        normalized_reason = (
+            reason.strip() if isinstance(reason, str) and reason.strip() else None
+        )
+        if normalized_reason is not None and len(normalized_reason) > 600:
+            raise DocumentValidationError("reason must be 600 characters or fewer.")
+        try:
+            return self._store.update_redaction_page_review(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                page_id=page_id,
+                expected_review_etag=normalized_review_etag,
+                review_status=normalized_review_status,
+                actor_user_id=current_user.user_id,
+                reason=normalized_reason,
+            )
+        except DocumentNotFoundError as error:
+            raise DocumentPageNotFoundError(str(error)) from error
+        except DocumentRedactionRunConflictError as error:
+            raise DocumentRedactionConflictError(str(error)) from error
+
+    def revise_redaction_area_mask(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        mask_id: str,
+        expected_version_etag: str,
+        geometry_json: dict[str, object],
+        mask_reason: str,
+        finding_id: str | None = None,
+        expected_finding_decision_etag: str | None = None,
+    ) -> tuple[RedactionAreaMaskRecord, RedactionFindingRecord | None]:
+        self._require_redaction_mutation_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        normalized_version_etag = (
+            expected_version_etag.strip()
+            if isinstance(expected_version_etag, str)
+            else ""
+        )
+        if not normalized_version_etag:
+            raise DocumentValidationError("versionEtag is required.")
+        normalized_mask_reason = mask_reason.strip() if isinstance(mask_reason, str) else ""
+        if not normalized_mask_reason:
+            raise DocumentValidationError("maskReason is required.")
+        if len(normalized_mask_reason) > 600:
+            raise DocumentValidationError("maskReason must be 600 characters or fewer.")
+        normalized_finding_id = self._normalize_redaction_reference(
+            finding_id,
+            field_name="findingId",
+            max_length=160,
+        )
+        normalized_finding_etag = self._normalize_redaction_reference(
+            expected_finding_decision_etag,
+            field_name="findingDecisionEtag",
+            max_length=128,
+        )
+        run = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        try:
+            area_mask, finding = self._store.revise_redaction_area_mask(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                page_id=page_id,
+                mask_id=mask_id,
+                expected_version_etag=normalized_version_etag,
+                geometry_json=dict(geometry_json),
+                mask_reason=normalized_mask_reason,
+                actor_user_id=current_user.user_id,
+                finding_id=normalized_finding_id,
+                expected_finding_decision_etag=normalized_finding_etag,
+            )
+        except DocumentNotFoundError as error:
+            raise DocumentPageNotFoundError(str(error)) from error
+        except DocumentRedactionRunConflictError as error:
+            raise DocumentRedactionConflictError(str(error)) from error
+        self._refresh_redaction_run_preview_outputs(
+            project_id=project_id,
+            document_id=document_id,
+            run=run,
+            page_id=page_id,
+        )
+        return area_mask, finding
+
+    def create_redaction_area_mask(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        geometry_json: dict[str, object],
+        mask_reason: str,
+        finding_id: str | None = None,
+        expected_finding_decision_etag: str | None = None,
+    ) -> tuple[RedactionAreaMaskRecord, RedactionFindingRecord | None]:
+        self._require_redaction_mutation_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        normalized_mask_reason = mask_reason.strip() if isinstance(mask_reason, str) else ""
+        if not normalized_mask_reason:
+            raise DocumentValidationError("maskReason is required.")
+        if len(normalized_mask_reason) > 600:
+            raise DocumentValidationError("maskReason must be 600 characters or fewer.")
+        normalized_finding_id = self._normalize_redaction_reference(
+            finding_id,
+            field_name="findingId",
+            max_length=160,
+        )
+        normalized_finding_etag = self._normalize_redaction_reference(
+            expected_finding_decision_etag,
+            field_name="findingDecisionEtag",
+            max_length=128,
+        )
+        run = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        try:
+            area_mask, finding = self._store.create_redaction_area_mask(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                page_id=page_id,
+                geometry_json=dict(geometry_json),
+                mask_reason=normalized_mask_reason,
+                actor_user_id=current_user.user_id,
+                finding_id=normalized_finding_id,
+                expected_finding_decision_etag=normalized_finding_etag,
+            )
+        except DocumentNotFoundError as error:
+            raise DocumentPageNotFoundError(str(error)) from error
+        except DocumentRedactionRunConflictError as error:
+            raise DocumentRedactionConflictError(str(error)) from error
+        self._refresh_redaction_run_preview_outputs(
+            project_id=project_id,
+            document_id=document_id,
+            run=run,
+            page_id=page_id,
+        )
+        return area_mask, finding
+
+    def revise_redaction_area_mask_by_id(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        mask_id: str,
+        expected_version_etag: str,
+        geometry_json: dict[str, object],
+        mask_reason: str,
+        finding_id: str | None = None,
+        expected_finding_decision_etag: str | None = None,
+    ) -> tuple[RedactionAreaMaskRecord, RedactionFindingRecord | None]:
+        mask = self.get_redaction_area_mask_by_id(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            mask_id=mask_id,
+        )
+        return self.revise_redaction_area_mask(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=mask.page_id,
+            mask_id=mask_id,
+            expected_version_etag=expected_version_etag,
+            geometry_json=geometry_json,
+            mask_reason=mask_reason,
+            finding_id=finding_id,
+            expected_finding_decision_etag=expected_finding_decision_etag,
+        )
+
+    def list_redaction_run_page_events(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+    ) -> list[DocumentRedactionRunTimelineEventSnapshot]:
+        self._require_redaction_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        _ = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        decision_events = self._store.list_redaction_decision_events(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+        page_review_events = self._store.list_redaction_page_review_events(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+        timeline: list[DocumentRedactionRunTimelineEventSnapshot] = []
+        for event in decision_events:
+            timeline.append(
+                DocumentRedactionRunTimelineEventSnapshot(
+                    source_table="redaction_decision_events",
+                    source_table_precedence=0,
+                    event_id=event.id,
+                    run_id=event.run_id,
+                    page_id=event.page_id,
+                    finding_id=event.finding_id,
+                    event_type=event.action_type,
+                    actor_user_id=event.actor_user_id,
+                    reason=event.reason,
+                    created_at=event.created_at,
+                    details_json={
+                        "fromDecisionStatus": event.from_decision_status,
+                        "toDecisionStatus": event.to_decision_status,
+                        "actionType": event.action_type,
+                        "areaMaskId": event.area_mask_id,
+                    },
+                )
+            )
+        for event in page_review_events:
+            timeline.append(
+                DocumentRedactionRunTimelineEventSnapshot(
+                    source_table="redaction_page_review_events",
+                    source_table_precedence=1,
+                    event_id=event.id,
+                    run_id=event.run_id,
+                    page_id=event.page_id,
+                    finding_id=None,
+                    event_type=event.event_type,
+                    actor_user_id=event.actor_user_id,
+                    reason=event.reason,
+                    created_at=event.created_at,
+                    details_json={},
+                )
+            )
+        return sorted(
+            timeline,
+            key=lambda item: (
+                item.created_at,
+                item.source_table_precedence,
+                item.event_id,
+            ),
+        )
+
+    def list_redaction_run_events(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> list[DocumentRedactionRunTimelineEventSnapshot]:
+        self._require_redaction_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        _ = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        decision_events = self._store.list_redaction_decision_events(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        page_review_events = self._store.list_redaction_page_review_events(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        run_review_events = self._store.list_redaction_run_review_events(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        run_output_events = self._store.list_redaction_run_output_events(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        timeline: list[DocumentRedactionRunTimelineEventSnapshot] = []
+        for event in decision_events:
+            timeline.append(
+                DocumentRedactionRunTimelineEventSnapshot(
+                    source_table="redaction_decision_events",
+                    source_table_precedence=0,
+                    event_id=event.id,
+                    run_id=event.run_id,
+                    page_id=event.page_id,
+                    finding_id=event.finding_id,
+                    event_type=event.action_type,
+                    actor_user_id=event.actor_user_id,
+                    reason=event.reason,
+                    created_at=event.created_at,
+                    details_json={
+                        "fromDecisionStatus": event.from_decision_status,
+                        "toDecisionStatus": event.to_decision_status,
+                        "actionType": event.action_type,
+                        "areaMaskId": event.area_mask_id,
+                    },
+                )
+            )
+        for event in page_review_events:
+            timeline.append(
+                DocumentRedactionRunTimelineEventSnapshot(
+                    source_table="redaction_page_review_events",
+                    source_table_precedence=1,
+                    event_id=event.id,
+                    run_id=event.run_id,
+                    page_id=event.page_id,
+                    finding_id=None,
+                    event_type=event.event_type,
+                    actor_user_id=event.actor_user_id,
+                    reason=event.reason,
+                    created_at=event.created_at,
+                    details_json={},
+                )
+            )
+        for event in run_review_events:
+            timeline.append(
+                DocumentRedactionRunTimelineEventSnapshot(
+                    source_table="redaction_run_review_events",
+                    source_table_precedence=2,
+                    event_id=event.id,
+                    run_id=event.run_id,
+                    page_id=None,
+                    finding_id=None,
+                    event_type=event.event_type,
+                    actor_user_id=event.actor_user_id,
+                    reason=event.reason,
+                    created_at=event.created_at,
+                    details_json={},
+                )
+            )
+        for event in run_output_events:
+            timeline.append(
+                DocumentRedactionRunTimelineEventSnapshot(
+                    source_table="redaction_run_output_events",
+                    source_table_precedence=3,
+                    event_id=event.id,
+                    run_id=event.run_id,
+                    page_id=None,
+                    finding_id=None,
+                    event_type=event.event_type,
+                    actor_user_id=event.actor_user_id,
+                    reason=event.reason,
+                    created_at=event.created_at,
+                    details_json={
+                        "fromStatus": event.from_status,
+                        "toStatus": event.to_status,
+                    },
+                )
+            )
+        return sorted(
+            timeline,
+            key=lambda item: (
+                item.created_at,
+                item.source_table_precedence,
+                item.event_id,
+            ),
+        )
+
+    def get_redaction_page_preview_status(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+    ) -> DocumentRedactionPreviewStatusSnapshot:
+        run = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        review = self._store.get_redaction_run_review(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.id,
+        )
+        if review is None:
+            raise DocumentRedactionRunNotFoundError("Redaction run review not found.")
+        self._require_redaction_reviewed_output_read_access(
+            current_user=current_user,
+            project_id=project_id,
+            review_status=review.review_status,
+        )
+        output = self._store.get_redaction_output(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+        if output is None:
+            raise DocumentPageNotFoundError("Redaction preview status was not found.")
+        run_output = self._store.get_redaction_run_output(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        readiness_state: RedactionRunOutputReadinessState | None = None
+        downstream_ready = False
+        if run_output is not None:
+            readiness_state = self._derive_redaction_run_output_readiness_state(
+                review_status=review.review_status,
+                run_output=run_output,
+            )
+            downstream_ready = readiness_state == "OUTPUT_READY"
+        return DocumentRedactionPreviewStatusSnapshot(
+            run_id=run_id,
+            page_id=page_id,
+            status=output.status,
+            preview_sha256=output.preview_sha256,
+            generated_at=output.generated_at,
+            failure_reason=output.failure_reason,
+            run_output_status=run_output.status if run_output is not None else None,
+            run_output_manifest_sha256=(
+                run_output.output_manifest_sha256 if run_output is not None else None
+            ),
+            run_output_readiness_state=readiness_state,
+            downstream_ready=downstream_ready,
+        )
+
+    def read_redaction_page_preview(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+    ) -> DocumentRedactionPreviewAsset:
+        status_snapshot = self.get_redaction_page_preview_status(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+        if status_snapshot.status != "READY":
+            raise DocumentPageAssetNotReadyError(
+                "Safeguarded preview is not ready for this page."
+            )
+        output = self._store.get_redaction_output(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+        if (
+            output is None
+            or not isinstance(output.safeguarded_preview_key, str)
+            or not output.safeguarded_preview_key.strip()
+        ):
+            raise DocumentPageAssetNotReadyError(
+                "Safeguarded preview artifact is not available for this page."
+            )
+        try:
+            preview_bytes = self._storage.read_object_bytes(output.safeguarded_preview_key)
+        except DocumentStorageError as error:
+            raise DocumentStoreUnavailableError(
+                "Safeguarded preview artifact could not be loaded."
+            ) from error
+        return DocumentRedactionPreviewAsset(
+            payload=preview_bytes,
+            media_type=_REDACTION_PREVIEW_MEDIA_TYPE,
+            etag_seed=status_snapshot.preview_sha256,
+            cache_control=_PAGE_ASSET_CACHE_CONTROL,
+        )
+
+    def get_redaction_run_output(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> DocumentRedactionRunOutputSnapshot:
+        run = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        review = self._store.get_redaction_run_review(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.id,
+        )
+        if review is None:
+            raise DocumentRedactionRunNotFoundError("Redaction run review not found.")
+        self._require_redaction_reviewed_output_read_access(
+            current_user=current_user,
+            project_id=project_id,
+            review_status=review.review_status,
+        )
+        output = self._store.get_redaction_run_output(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        if output is None:
+            raise DocumentRedactionRunNotFoundError("Redaction run output not found.")
+        readiness_state = self._derive_redaction_run_output_readiness_state(
+            review_status=review.review_status,
+            run_output=output,
+        )
+        return DocumentRedactionRunOutputSnapshot(
+            run_output=output,
+            review_status=review.review_status,
+            readiness_state=readiness_state,
+            downstream_ready=readiness_state == "OUTPUT_READY",
+        )
+
+    def get_redaction_run_output_status(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> DocumentRedactionRunOutputSnapshot:
+        return self.get_redaction_run_output(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+
+    def get_redaction_overview(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+    ) -> DocumentRedactionOverviewSnapshot:
+        self._require_redaction_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        document = self._load_redaction_document(project_id=project_id, document_id=document_id)
+        projection = self._store.get_redaction_projection(
+            project_id=project_id,
+            document_id=document_id,
+        )
+        active_run = self._store.get_active_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+        )
+        all_runs = self._list_all_redaction_runs(
+            project_id=project_id,
+            document_id=document_id,
+        )
+        latest_run = all_runs[0] if all_runs else None
+        page_count = len(
+            self._store.list_document_pages(
+                project_id=project_id,
+                document_id=document_id,
+            )
+        )
+        findings_by_category: dict[str, int] = {}
+        unresolved_findings = 0
+        auto_applied_findings = 0
+        needs_review_findings = 0
+        overridden_findings = 0
+        pages_blocked_for_review = 0
+        preview_ready_pages = 0
+        preview_total_pages = 0
+        preview_failed_pages = 0
+
+        if active_run is not None:
+            findings = self._list_all_redaction_findings(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=active_run.id,
+            )
+            for finding in findings:
+                findings_by_category[finding.category] = (
+                    findings_by_category.get(finding.category, 0) + 1
+                )
+                if finding.decision_status == "AUTO_APPLIED":
+                    auto_applied_findings += 1
+                elif finding.decision_status == "NEEDS_REVIEW":
+                    needs_review_findings += 1
+                elif finding.decision_status == "OVERRIDDEN":
+                    overridden_findings += 1
+                if self._is_unresolved_redaction_decision(finding.decision_status):
+                    unresolved_findings += 1
+            page_reviews = self._list_all_redaction_page_reviews(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=active_run.id,
+            )
+            pages_blocked_for_review = sum(
+                1
+                for review in page_reviews
+                if review.review_status != "APPROVED"
+                or (
+                    review.requires_second_review
+                    and review.second_review_status != "APPROVED"
+                )
+            )
+            outputs = self._store.list_redaction_outputs(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=active_run.id,
+            )
+            preview_total_pages = len(outputs)
+            preview_ready_pages = sum(1 for output in outputs if output.status == "READY")
+            preview_failed_pages = sum(1 for output in outputs if output.status == "FAILED")
+
+        return DocumentRedactionOverviewSnapshot(
+            document=document,
+            projection=projection,
+            active_run=active_run,
+            latest_run=latest_run,
+            total_runs=len(all_runs),
+            page_count=page_count,
+            findings_by_category=findings_by_category,
+            unresolved_findings=unresolved_findings,
+            auto_applied_findings=auto_applied_findings,
+            needs_review_findings=needs_review_findings,
+            overridden_findings=overridden_findings,
+            pages_blocked_for_review=pages_blocked_for_review,
+            preview_ready_pages=preview_ready_pages,
+            preview_total_pages=preview_total_pages,
+            preview_failed_pages=preview_failed_pages,
+        )
+
+    def compare_redaction_runs(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        base_run_id: str,
+        candidate_run_id: str,
+    ) -> DocumentRedactionCompareSnapshot:
+        self._require_redaction_compare_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        if base_run_id == candidate_run_id:
+            raise DocumentValidationError(
+                "baseRunId and candidateRunId must reference different runs."
+            )
+        document = self._load_redaction_document(project_id=project_id, document_id=document_id)
+        base_run = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=base_run_id,
+        )
+        candidate_run = self._load_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=candidate_run_id,
+        )
+        pages = self._store.list_document_pages(
+            project_id=project_id,
+            document_id=document_id,
+        )
+        base_findings = self._list_all_redaction_findings(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=base_run.id,
+        )
+        candidate_findings = self._list_all_redaction_findings(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=candidate_run.id,
+        )
+        base_reviews = {
+            review.page_id: review
+            for review in self._list_all_redaction_page_reviews(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=base_run.id,
+            )
+        }
+        candidate_reviews = {
+            review.page_id: review
+            for review in self._list_all_redaction_page_reviews(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=candidate_run.id,
+            )
+        }
+        base_outputs = {
+            output.page_id: output
+            for output in self._store.list_redaction_outputs(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=base_run.id,
+            )
+        }
+        candidate_outputs = {
+            output.page_id: output
+            for output in self._store.list_redaction_outputs(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=candidate_run.id,
+            )
+        }
+        base_decision_events = self._store.list_redaction_decision_events(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=base_run.id,
+        )
+        candidate_decision_events = self._store.list_redaction_decision_events(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=candidate_run.id,
+        )
+        base_action_by_finding_id: dict[str, RedactionDecisionActionType] = {}
+        candidate_action_by_finding_id: dict[str, RedactionDecisionActionType] = {}
+        for event in base_decision_events:
+            base_action_by_finding_id[event.finding_id] = event.action_type
+        for event in candidate_decision_events:
+            candidate_action_by_finding_id[event.finding_id] = event.action_type
+        base_findings_by_page: dict[str, list[RedactionFindingRecord]] = {}
+        candidate_findings_by_page: dict[str, list[RedactionFindingRecord]] = {}
+        for row in base_findings:
+            base_findings_by_page.setdefault(row.page_id, []).append(row)
+        for row in candidate_findings:
+            candidate_findings_by_page.setdefault(row.page_id, []).append(row)
+
+        changed_page_count = 0
+        changed_decision_count = 0
+        changed_action_count = 0
+        page_snapshots: list[DocumentRedactionComparePageSnapshot] = []
+        for page in pages:
+            page_base = base_findings_by_page.get(page.id, [])
+            page_candidate = candidate_findings_by_page.get(page.id, [])
+            base_decision_counts: dict[RedactionDecisionStatus, int] = {}
+            candidate_decision_counts: dict[RedactionDecisionStatus, int] = {}
+            base_action_counts: dict[RedactionDecisionActionType, int] = {}
+            candidate_action_counts: dict[RedactionDecisionActionType, int] = {}
+            for finding in page_base:
+                base_decision_counts[finding.decision_status] = (
+                    base_decision_counts.get(finding.decision_status, 0) + 1
+                )
+                action_type = base_action_by_finding_id.get(finding.id, "MASK")
+                base_action_counts[action_type] = base_action_counts.get(action_type, 0) + 1
+            for finding in page_candidate:
+                candidate_decision_counts[finding.decision_status] = (
+                    candidate_decision_counts.get(finding.decision_status, 0) + 1
+                )
+                action_type = candidate_action_by_finding_id.get(finding.id, "MASK")
+                candidate_action_counts[action_type] = (
+                    candidate_action_counts.get(action_type, 0) + 1
+                )
+            page_changed_decision_count = 0
+            for status_key in set(base_decision_counts) | set(candidate_decision_counts):
+                page_changed_decision_count += abs(
+                    base_decision_counts.get(status_key, 0)
+                    - candidate_decision_counts.get(status_key, 0)
+                )
+            page_changed_action_count = 0
+            for action_key in {"MASK", "PSEUDONYMIZE", "GENERALIZE"}:
+                page_changed_action_count += abs(
+                    base_action_counts.get(action_key, 0)
+                    - candidate_action_counts.get(action_key, 0)
+                )
+            decision_status_deltas: dict[RedactionDecisionStatus, int] = {}
+            for status_key in {
+                "AUTO_APPLIED",
+                "NEEDS_REVIEW",
+                "APPROVED",
+                "OVERRIDDEN",
+                "FALSE_POSITIVE",
+            }:
+                delta = candidate_decision_counts.get(status_key, 0) - base_decision_counts.get(
+                    status_key, 0
+                )
+                decision_status_deltas[status_key] = delta
+            action_type_deltas: dict[RedactionDecisionActionType, int] = {}
+            for action_key in {"MASK", "PSEUDONYMIZE", "GENERALIZE"}:
+                action_type_deltas[action_key] = (
+                    candidate_action_counts.get(action_key, 0)
+                    - base_action_counts.get(action_key, 0)
+                )
+            base_review = base_reviews.get(page.id)
+            candidate_review = candidate_reviews.get(page.id)
+            changed_review_status = (
+                (base_review.review_status if base_review is not None else None)
+                != (candidate_review.review_status if candidate_review is not None else None)
+            )
+            changed_second_review_status = (
+                (base_review.second_review_status if base_review is not None else None)
+                != (
+                    candidate_review.second_review_status
+                    if candidate_review is not None
+                    else None
+                )
+            )
+            base_preview_status = base_outputs.get(page.id).status if base_outputs.get(page.id) else None
+            candidate_preview_status = (
+                candidate_outputs.get(page.id).status
+                if candidate_outputs.get(page.id)
+                else None
+            )
+            preview_ready_delta = int(candidate_preview_status == "READY") - int(
+                base_preview_status == "READY"
+            )
+            action_compare_state: Literal["AVAILABLE", "NOT_YET_AVAILABLE"] = (
+                "AVAILABLE"
+                if base_preview_status == "READY" and candidate_preview_status == "READY"
+                else "NOT_YET_AVAILABLE"
+            )
+            if (
+                page_changed_decision_count > 0
+                or page_changed_action_count > 0
+                or changed_review_status
+                or changed_second_review_status
+                or (
+                    base_preview_status != candidate_preview_status
+                )
+            ):
+                changed_page_count += 1
+            changed_decision_count += page_changed_decision_count
+            changed_action_count += page_changed_action_count
+            page_snapshots.append(
+                DocumentRedactionComparePageSnapshot(
+                    page_id=page.id,
+                    page_index=page.page_index,
+                    base_finding_count=len(page_base),
+                    candidate_finding_count=len(page_candidate),
+                    changed_decision_count=page_changed_decision_count,
+                    changed_action_count=page_changed_action_count,
+                    base_decision_counts=base_decision_counts,
+                    candidate_decision_counts=candidate_decision_counts,
+                    decision_status_deltas=decision_status_deltas,
+                    base_action_counts=base_action_counts,
+                    candidate_action_counts=candidate_action_counts,
+                    action_type_deltas=action_type_deltas,
+                    action_compare_state=action_compare_state,
+                    changed_review_status=changed_review_status,
+                    changed_second_review_status=changed_second_review_status,
+                    base_review=base_review,
+                    candidate_review=candidate_review,
+                    base_preview_status=base_preview_status,
+                    candidate_preview_status=candidate_preview_status,
+                    preview_ready_delta=preview_ready_delta,
+                )
+            )
+        has_policy_rerun_context = (
+            base_run.run_kind == "POLICY_RERUN"
+            or candidate_run.run_kind == "POLICY_RERUN"
+            or candidate_run.supersedes_redaction_run_id == base_run.id
+            or base_run.supersedes_redaction_run_id == candidate_run.id
+        )
+        compare_action_state: Literal["AVAILABLE", "NOT_YET_RERUN", "NOT_YET_AVAILABLE"]
+        if not has_policy_rerun_context:
+            compare_action_state = "NOT_YET_RERUN"
+        elif any(item.action_compare_state != "AVAILABLE" for item in page_snapshots):
+            compare_action_state = "NOT_YET_AVAILABLE"
+        else:
+            compare_action_state = "AVAILABLE"
+
+        candidate_policy_status: str | None = None
+        comparison_only_candidate = False
+        if isinstance(candidate_run.policy_id, str) and candidate_run.policy_id:
+            try:
+                candidate_policy = self._policy_store.get_policy(
+                    project_id=project_id,
+                    policy_id=candidate_run.policy_id,
+                )
+            except PolicyStoreUnavailableError as error:
+                raise DocumentStoreUnavailableError(
+                    "Policy lookup for compare context failed."
+                ) from error
+            if candidate_policy is not None:
+                candidate_policy_status = candidate_policy.status
+                comparison_only_candidate = candidate_policy.status == "DRAFT"
+        pre_activation_warnings = self._build_policy_pre_activation_warnings(
+            policy_snapshot_json=candidate_run.policy_snapshot_json
+        )
+
+        return DocumentRedactionCompareSnapshot(
+            document=document,
+            base_run=base_run,
+            candidate_run=candidate_run,
+            pages=tuple(sorted(page_snapshots, key=lambda item: (item.page_index, item.page_id))),
+            changed_page_count=changed_page_count,
+            changed_decision_count=changed_decision_count,
+            changed_action_count=changed_action_count,
+            compare_action_state=compare_action_state,
+            candidate_policy_status=candidate_policy_status,
+            comparison_only_candidate=comparison_only_candidate,
+            pre_activation_warnings=pre_activation_warnings,
+        )
+
+    def _raise_governance_lookup_error(
+        self,
+        *,
+        error: GovernanceRunNotFoundError,
+    ) -> None:
+        message = str(error)
+        if "Document not found" in message:
+            raise DocumentNotFoundError(message) from error
+        raise DocumentGovernanceRunNotFoundError(message) from error
+
+    def _resolve_governance_active_run_id(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+    ) -> str | None:
+        projection = self._store.get_redaction_projection(
+            project_id=project_id,
+            document_id=document_id,
+        )
+        if projection is None:
+            return None
+        return projection.active_redaction_run_id
+
+    @staticmethod
+    def _truncate_governance_failure_reason(reason: str) -> str:
+        message = reason.strip() or "Governance operation failed."
+        if len(message) > 600:
+            return message[:600]
+        return message
+
+    @staticmethod
+    def _resolve_governance_ledger_status(
+        *,
+        latest_attempt: RedactionEvidenceLedgerRecord | None,
+    ) -> Literal["UNAVAILABLE", "QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELED"]:
+        if latest_attempt is None:
+            return "UNAVAILABLE"
+        return latest_attempt.status
+
+    def _load_governance_ledger_payload(
+        self,
+        *,
+        run_id: str,
+        latest_attempt: RedactionEvidenceLedgerRecord | None,
+    ) -> tuple[dict[str, object] | None, str | None, bool]:
+        if (
+            latest_attempt is None
+            or latest_attempt.status != "SUCCEEDED"
+            or not isinstance(latest_attempt.ledger_key, str)
+            or not latest_attempt.ledger_key.strip()
+        ):
+            return None, None, False
+        try:
+            payload_bytes = self._storage.read_object_bytes(latest_attempt.ledger_key)
+        except DocumentStorageError as error:
+            raise DocumentStoreUnavailableError("Governance ledger artifact could not be loaded.") from error
+        stream_sha256 = self._sha256_hex(payload_bytes)
+        expected_sha256 = (
+            latest_attempt.ledger_sha256.strip()
+            if isinstance(latest_attempt.ledger_sha256, str)
+            and latest_attempt.ledger_sha256.strip()
+            else None
+        )
+        hash_matches = expected_sha256 == stream_sha256 if expected_sha256 is not None else False
+        if expected_sha256 is not None and not hash_matches:
+            raise DocumentStoreUnavailableError("Governance ledger artifact hash mismatch.")
+        try:
+            payload = json.loads(payload_bytes.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise DocumentStoreUnavailableError("Governance ledger artifact payload is invalid JSON.") from error
+        if not isinstance(payload, dict):
+            raise DocumentStoreUnavailableError("Governance ledger payload is invalid.")
+        payload_run_id = payload.get("runId")
+        if isinstance(payload_run_id, str) and payload_run_id.strip() != run_id:
+            raise DocumentStoreUnavailableError("Governance ledger run id mismatch.")
+        return payload, stream_sha256, hash_matches
+
+    @staticmethod
+    def _latest_completed_verification_attempt(
+        attempts: Sequence[LedgerVerificationRunRecord],
+    ) -> LedgerVerificationRunRecord | None:
+        for attempt in attempts:
+            if attempt.status == "SUCCEEDED":
+                return attempt
+        return None
+
+    @staticmethod
+    def _verification_attempt_targets_ledger(
+        *,
+        attempt: LedgerVerificationRunRecord,
+        ledger_sha256: str,
+    ) -> bool:
+        result_json = attempt.result_json
+        if not isinstance(result_json, Mapping):
+            return False
+        result_sha = result_json.get("ledgerSha256")
+        return isinstance(result_sha, str) and result_sha.strip() == ledger_sha256
+
+    def _run_governance_ledger_verification(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        actor_user_id: str,
+    ) -> LedgerVerificationRunRecord:
+        try:
+            ledger_attempts = self._governance_store.list_ledger_attempts(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+            )
+        except GovernanceRunNotFoundError as error:
+            self._raise_governance_lookup_error(error=error)
+        except GovernanceStoreUnavailableError as error:
+            raise DocumentStoreUnavailableError(str(error)) from error
+        latest_succeeded = next(
+            (
+                attempt
+                for attempt in ledger_attempts
+                if attempt.status == "SUCCEEDED"
+                and isinstance(attempt.ledger_key, str)
+                and attempt.ledger_key.strip()
+                and isinstance(attempt.ledger_sha256, str)
+                and attempt.ledger_sha256.strip()
+            ),
+            None,
+        )
+        if latest_succeeded is None:
+            raise DocumentGovernanceConflictError(
+                "Ledger verification requires a successful evidence-ledger attempt."
+            )
+
+        try:
+            created = self._governance_store.create_ledger_verification_attempt(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                actor_user_id=actor_user_id,
+            )
+            running = self._governance_store.start_ledger_verification_attempt(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                verification_run_id=created.id,
+            )
+        except GovernanceRunNotFoundError as error:
+            self._raise_governance_lookup_error(error=error)
+        except GovernanceRunConflictError as error:
+            raise DocumentGovernanceConflictError(str(error)) from error
+        except GovernanceStoreUnavailableError as error:
+            raise DocumentStoreUnavailableError(str(error)) from error
+
+        try:
+            assert latest_succeeded.ledger_key is not None
+            assert latest_succeeded.ledger_sha256 is not None
+            ledger_bytes = self._storage.read_object_bytes(latest_succeeded.ledger_key)
+            stream_sha256 = self._sha256_hex(ledger_bytes)
+            if stream_sha256 != latest_succeeded.ledger_sha256:
+                raise DocumentStoreUnavailableError("Evidence-ledger stream hash mismatch.")
+            try:
+                ledger_payload = json.loads(ledger_bytes.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise DocumentStoreUnavailableError("Evidence-ledger payload is invalid JSON.") from error
+            if not isinstance(ledger_payload, Mapping):
+                raise DocumentStoreUnavailableError("Evidence-ledger payload is invalid.")
+            verification = verify_canonical_evidence_ledger_payload(
+                ledger_payload,
+                expected_run_id=run_id,
+                expected_snapshot_sha256=latest_succeeded.source_review_snapshot_sha256,
+            )
+            verification["ledgerId"] = latest_succeeded.id
+            verification["ledgerSha256"] = latest_succeeded.ledger_sha256
+            verification_result: Literal["VALID", "INVALID"] = (
+                "VALID" if bool(verification.get("isValid")) else "INVALID"
+            )
+            return self._governance_store.complete_ledger_verification_attempt(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                verification_run_id=running.id,
+                verification_result=verification_result,
+                result_json=dict(verification),
+            )
+        except (DocumentStorageError, DocumentStoreUnavailableError, ValueError) as error:
+            failure_reason = self._truncate_governance_failure_reason(str(error))
+            try:
+                self._governance_store.fail_ledger_verification_attempt(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=run_id,
+                    verification_run_id=running.id,
+                    failure_reason=failure_reason,
+                )
+            except (GovernanceRunNotFoundError, GovernanceRunConflictError, GovernanceStoreUnavailableError):
+                pass
+            raise DocumentStoreUnavailableError(failure_reason) from error
+        except GovernanceStoreUnavailableError as error:
+            raise DocumentStoreUnavailableError(str(error)) from error
+
+    def _ensure_governance_ledger_generated(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        actor_user_id: str,
+    ) -> None:
+        run = self._store.get_redaction_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        if run is None:
+            raise DocumentGovernanceRunNotFoundError("Governance run was not found in project scope.")
+        review = self._store.get_redaction_run_review(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        run_output = self._store.get_redaction_run_output(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        if (
+            review is None
+            or review.review_status != "APPROVED"
+            or review.locked_at is None
+            or not isinstance(review.approved_snapshot_key, str)
+            or not review.approved_snapshot_key.strip()
+            or not isinstance(review.approved_snapshot_sha256, str)
+            or not review.approved_snapshot_sha256.strip()
+            or run_output is None
+            or run_output.status != "READY"
+            or not isinstance(run_output.output_manifest_key, str)
+            or not run_output.output_manifest_key.strip()
+            or not isinstance(run_output.output_manifest_sha256, str)
+            or not run_output.output_manifest_sha256.strip()
+        ):
+            try:
+                self._governance_store.sync_governance_run(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=run_id,
+                )
+            except (GovernanceRunNotFoundError, GovernanceStoreUnavailableError):
+                pass
+            return
+
+        try:
+            ledger_attempts = self._governance_store.list_ledger_attempts(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+            )
+            verification_attempts = self._governance_store.list_ledger_verification_runs(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+            )
+        except GovernanceRunNotFoundError as error:
+            self._raise_governance_lookup_error(error=error)
+        except GovernanceStoreUnavailableError as error:
+            raise DocumentStoreUnavailableError(str(error)) from error
+
+        latest_attempt = ledger_attempts[0] if ledger_attempts else None
+        snapshot_matches = (
+            latest_attempt is not None
+            and latest_attempt.source_review_snapshot_key == review.approved_snapshot_key
+            and latest_attempt.source_review_snapshot_sha256 == review.approved_snapshot_sha256
+        )
+        latest_completed_verification = self._latest_completed_verification_attempt(
+            verification_attempts
+        )
+        has_completed_verification_for_latest = (
+            snapshot_matches
+            and latest_attempt is not None
+            and latest_attempt.status == "SUCCEEDED"
+            and isinstance(latest_attempt.ledger_sha256, str)
+            and latest_attempt.ledger_sha256.strip()
+            and latest_completed_verification is not None
+            and self._verification_attempt_targets_ledger(
+                attempt=latest_completed_verification,
+                ledger_sha256=latest_attempt.ledger_sha256,
+            )
+        )
+        if (
+            snapshot_matches
+            and latest_attempt is not None
+            and latest_attempt.status == "SUCCEEDED"
+            and isinstance(latest_attempt.ledger_key, str)
+            and latest_attempt.ledger_key.strip()
+            and isinstance(latest_attempt.ledger_sha256, str)
+            and latest_attempt.ledger_sha256.strip()
+            and has_completed_verification_for_latest
+        ):
+            return
+
+        force_new_attempt = (
+            latest_attempt is not None
+            and (
+                latest_attempt.status in {"FAILED", "CANCELED"}
+                or not snapshot_matches
+            )
+        )
+        try:
+            started_attempt = self._governance_store.begin_ledger_attempt(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                source_review_snapshot_key=review.approved_snapshot_key,
+                source_review_snapshot_sha256=review.approved_snapshot_sha256,
+                actor_user_id=actor_user_id,
+                force_new_attempt=force_new_attempt,
+            )
+        except GovernanceRunNotFoundError as error:
+            self._raise_governance_lookup_error(error=error)
+        except GovernanceRunConflictError as error:
+            raise DocumentGovernanceConflictError(str(error)) from error
+        except GovernanceStoreUnavailableError as error:
+            raise DocumentStoreUnavailableError(str(error)) from error
+
+        if (
+            started_attempt.status == "SUCCEEDED"
+            and isinstance(started_attempt.ledger_key, str)
+            and started_attempt.ledger_key.strip()
+            and isinstance(started_attempt.ledger_sha256, str)
+            and started_attempt.ledger_sha256.strip()
+        ):
+            if has_completed_verification_for_latest:
+                return
+            try:
+                self._run_governance_ledger_verification(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=run_id,
+                    actor_user_id=actor_user_id,
+                )
+            except (DocumentGovernanceConflictError, DocumentStoreUnavailableError):
+                pass
+            return
+
+        try:
+            snapshot_bytes = self._storage.read_object_bytes(review.approved_snapshot_key)
+            approved_snapshot_payload = self._load_redaction_approved_snapshot_payload(
+                snapshot_bytes=snapshot_bytes,
+                expected_run_id=run_id,
+                expected_snapshot_sha256=review.approved_snapshot_sha256,
+            )
+            ledger_bytes = canonical_evidence_ledger_bytes(
+                run_id=run_id,
+                approved_snapshot_sha256=review.approved_snapshot_sha256,
+                approved_snapshot_payload=approved_snapshot_payload,
+            )
+            ledger_sha256 = self._sha256_hex(ledger_bytes)
+            expected_ledger_key = self._storage.build_governance_evidence_ledger_key(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                ledger_sha256=ledger_sha256,
+            )
+            stored_ledger = self._storage.write_governance_evidence_ledger(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                ledger_sha256=ledger_sha256,
+                payload=ledger_bytes,
+            )
+            if stored_ledger.object_key != expected_ledger_key:
+                raise DocumentStoreUnavailableError("Evidence-ledger storage key mismatch.")
+            self._governance_store.complete_ledger_attempt(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                ledger_id=started_attempt.id,
+                ledger_key=stored_ledger.object_key,
+                ledger_sha256=ledger_sha256,
+                actor_user_id=actor_user_id,
+            )
+        except (
+            DocumentStorageError,
+            DocumentStoreUnavailableError,
+            ValueError,
+            GovernanceRunConflictError,
+            GovernanceStoreUnavailableError,
+        ) as error:
+            failure_reason = self._truncate_governance_failure_reason(str(error))
+            try:
+                self._governance_store.fail_ledger_attempt(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=run_id,
+                    ledger_id=started_attempt.id,
+                    failure_reason=failure_reason,
+                    actor_user_id=actor_user_id,
+                )
+            except (GovernanceRunNotFoundError, GovernanceRunConflictError, GovernanceStoreUnavailableError):
+                pass
+            return
+
+        try:
+            self._run_governance_ledger_verification(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                actor_user_id=actor_user_id,
+            )
+        except (DocumentGovernanceConflictError, DocumentStoreUnavailableError):
+            pass
+
+    def _build_governance_run_overview_snapshot(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        actor_user_id: str,
+    ) -> DocumentGovernanceRunOverviewSnapshot:
+        document = self._load_redaction_document(project_id=project_id, document_id=document_id)
+        active_run_id = self._resolve_governance_active_run_id(
+            project_id=project_id,
+            document_id=document_id,
+        )
+        self._ensure_governance_ledger_generated(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            actor_user_id=actor_user_id,
+        )
+        try:
+            run = self._governance_store.get_governance_run_overview(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+            )
+            readiness = self._governance_store.get_readiness_projection(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+            )
+            manifest_attempts = tuple(
+                self._governance_store.list_manifest_attempts(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=run_id,
+                )
+            )
+            ledger_attempts = tuple(
+                self._governance_store.list_ledger_attempts(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=run_id,
+                )
+            )
+        except GovernanceRunNotFoundError as error:
+            self._raise_governance_lookup_error(error=error)
+        except GovernanceStoreUnavailableError as error:
+            raise DocumentStoreUnavailableError(str(error)) from error
+        return DocumentGovernanceRunOverviewSnapshot(
+            document=document,
+            active_run_id=active_run_id,
+            run=run,
+            readiness=readiness,
+            manifest_attempts=manifest_attempts,
+            ledger_attempts=ledger_attempts,
+        )
+
+    def get_governance_overview(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+    ) -> DocumentGovernanceOverviewSnapshot:
+        _ = self._require_governance_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        document = self._load_redaction_document(project_id=project_id, document_id=document_id)
+        try:
+            runs = tuple(
+                self._governance_store.list_governance_runs(
+                    project_id=project_id,
+                    document_id=document_id,
+                )
+            )
+        except GovernanceRunNotFoundError as error:
+            self._raise_governance_lookup_error(error=error)
+        except GovernanceStoreUnavailableError as error:
+            raise DocumentStoreUnavailableError(str(error)) from error
+
+        for row in runs:
+            if row.review_status != "APPROVED":
+                continue
+            self._ensure_governance_ledger_generated(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=row.run_id,
+                actor_user_id=current_user.user_id,
+            )
+        if runs:
+            try:
+                runs = tuple(
+                    self._governance_store.list_governance_runs(
+                        project_id=project_id,
+                        document_id=document_id,
+                    )
+                )
+            except GovernanceRunNotFoundError as error:
+                self._raise_governance_lookup_error(error=error)
+            except GovernanceStoreUnavailableError as error:
+                raise DocumentStoreUnavailableError(str(error)) from error
+
+        total_runs = len(runs)
+        approved_runs = sum(1 for row in runs if row.review_status == "APPROVED")
+        ready_runs = sum(1 for row in runs if row.readiness_status == "READY")
+        failed_runs = sum(1 for row in runs if row.readiness_status == "FAILED")
+        pending_runs = max(0, total_runs - ready_runs - failed_runs)
+        latest_run = runs[0] if runs else None
+        latest_ready_run = next(
+            (row for row in runs if row.readiness_status == "READY"),
+            None,
+        )
+        active_run_id = self._resolve_governance_active_run_id(
+            project_id=project_id,
+            document_id=document_id,
+        )
+        return DocumentGovernanceOverviewSnapshot(
+            document=document,
+            active_run_id=active_run_id,
+            total_runs=total_runs,
+            approved_runs=approved_runs,
+            ready_runs=ready_runs,
+            pending_runs=pending_runs,
+            failed_runs=failed_runs,
+            latest_run_id=latest_run.run_id if latest_run is not None else None,
+            latest_ready_run_id=(latest_ready_run.run_id if latest_ready_run is not None else None),
+            latest_run=latest_run,
+            latest_ready_run=latest_ready_run,
+        )
+
+    def list_governance_runs(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+    ) -> DocumentGovernanceRunsSnapshot:
+        _ = self._require_governance_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        document = self._load_redaction_document(project_id=project_id, document_id=document_id)
+        active_run_id = self._resolve_governance_active_run_id(
+            project_id=project_id,
+            document_id=document_id,
+        )
+        try:
+            runs = tuple(
+                self._governance_store.list_governance_runs(
+                    project_id=project_id,
+                    document_id=document_id,
+                )
+            )
+        except GovernanceRunNotFoundError as error:
+            self._raise_governance_lookup_error(error=error)
+        except GovernanceStoreUnavailableError as error:
+            raise DocumentStoreUnavailableError(str(error)) from error
+        for row in runs:
+            if row.review_status != "APPROVED":
+                continue
+            self._ensure_governance_ledger_generated(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=row.run_id,
+                actor_user_id=current_user.user_id,
+            )
+        if runs:
+            try:
+                runs = tuple(
+                    self._governance_store.list_governance_runs(
+                        project_id=project_id,
+                        document_id=document_id,
+                    )
+                )
+            except GovernanceRunNotFoundError as error:
+                self._raise_governance_lookup_error(error=error)
+            except GovernanceStoreUnavailableError as error:
+                raise DocumentStoreUnavailableError(str(error)) from error
+        return DocumentGovernanceRunsSnapshot(
+            document=document,
+            active_run_id=active_run_id,
+            runs=runs,
+        )
+
+    def get_governance_run_overview(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> DocumentGovernanceRunOverviewSnapshot:
+        _ = self._require_governance_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        return self._build_governance_run_overview_snapshot(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            actor_user_id=current_user.user_id,
+        )
+
+    def list_governance_run_events(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> tuple[DocumentGovernanceEventSnapshot, ...]:
+        role = self._require_governance_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        _ = self._load_redaction_document(project_id=project_id, document_id=document_id)
+        try:
+            _ = self._governance_store.get_governance_run_overview(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+            )
+            events = self._governance_store.list_governance_run_events(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+            )
+        except GovernanceRunNotFoundError as error:
+            self._raise_governance_lookup_error(error=error)
+        except GovernanceStoreUnavailableError as error:
+            raise DocumentStoreUnavailableError(str(error)) from error
+        projected: list[DocumentGovernanceEventSnapshot] = []
+        for event in events:
+            reason = self._resolve_governance_event_reason(event=event, role=role)
+            screening_safe = not self._is_governance_ledger_event(event.event_type)
+            projected.append(
+                DocumentGovernanceEventSnapshot(
+                    id=event.id,
+                    run_id=event.run_id,
+                    event_type=event.event_type,
+                    actor_user_id=event.actor_user_id,
+                    from_status=event.from_status,
+                    to_status=event.to_status,
+                    reason=reason,
+                    created_at=event.created_at,
+                    screening_safe=screening_safe,
+                )
+            )
+        return tuple(projected)
+
+    @staticmethod
+    def _resolve_governance_manifest_status(
+        *,
+        latest_attempt: RedactionManifestRecord | None,
+    ) -> Literal["UNAVAILABLE", "QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELED"]:
+        if latest_attempt is None:
+            return "UNAVAILABLE"
+        return latest_attempt.status
+
+    def _load_governance_manifest_payload(
+        self,
+        *,
+        run_id: str,
+        latest_attempt: RedactionManifestRecord | None,
+    ) -> tuple[dict[str, object] | None, str | None, bool]:
+        if (
+            latest_attempt is None
+            or latest_attempt.status != "SUCCEEDED"
+            or not isinstance(latest_attempt.manifest_key, str)
+            or not latest_attempt.manifest_key.strip()
+        ):
+            return None, None, False
+        try:
+            payload_bytes = self._storage.read_object_bytes(latest_attempt.manifest_key)
+        except DocumentStorageError as error:
+            raise DocumentStoreUnavailableError("Governance manifest artifact could not be loaded.") from error
+        stream_sha256 = self._sha256_hex(payload_bytes)
+        expected_sha256 = (
+            latest_attempt.manifest_sha256.strip()
+            if isinstance(latest_attempt.manifest_sha256, str)
+            and latest_attempt.manifest_sha256.strip()
+            else None
+        )
+        hash_matches = expected_sha256 == stream_sha256 if expected_sha256 is not None else False
+        if expected_sha256 is not None and not hash_matches:
+            raise DocumentStoreUnavailableError("Governance manifest artifact hash mismatch.")
+        try:
+            payload = json.loads(payload_bytes.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise DocumentStoreUnavailableError("Governance manifest artifact payload is invalid JSON.") from error
+        if not isinstance(payload, dict):
+            raise DocumentStoreUnavailableError("Governance manifest payload is invalid.")
+        payload_run_id = payload.get("runId")
+        if isinstance(payload_run_id, str) and payload_run_id.strip() != run_id:
+            raise DocumentStoreUnavailableError("Governance manifest run id mismatch.")
+        return payload, stream_sha256, hash_matches
+
+    @staticmethod
+    def _resolve_manifest_access_flags(
+        payload: Mapping[str, object] | None,
+    ) -> tuple[bool, bool, bool]:
+        if not isinstance(payload, Mapping):
+            return True, False, True
+        internal_only = bool(payload.get("internalOnly", True))
+        export_approved = bool(payload.get("exportApproved", False))
+        export_status = payload.get("exportApprovalStatus")
+        not_export_approved = (
+            not export_approved
+            or (
+                isinstance(export_status, str)
+                and export_status.strip().upper() == "NOT_EXPORT_APPROVED"
+            )
+        )
+        return internal_only, export_approved, not_export_approved
+
+    @staticmethod
+    def _parse_manifest_entry_timestamp(value: object) -> datetime | None:
+        if not isinstance(value, str):
+            return None
+        trimmed = value.strip()
+        if not trimmed:
+            return None
+        normalized = trimmed.replace("Z", "+00:00")
+        try:
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed
+
+    @staticmethod
+    def _filter_manifest_entries(
+        *,
+        entries: Sequence[Mapping[str, object]],
+        category: str | None,
+        page: int | None,
+        review_state: str | None,
+        from_timestamp: datetime | None,
+        to_timestamp: datetime | None,
+    ) -> list[dict[str, object]]:
+        normalized_category = (
+            category.strip().upper() if isinstance(category, str) and category.strip() else None
+        )
+        normalized_review_state = (
+            review_state.strip().upper()
+            if isinstance(review_state, str) and review_state.strip()
+            else None
+        )
+        filtered: list[dict[str, object]] = []
+        for item in entries:
+            if normalized_category is not None:
+                entry_category = item.get("category")
+                if (
+                    not isinstance(entry_category, str)
+                    or entry_category.strip().upper() != normalized_category
+                ):
+                    continue
+            if isinstance(page, int):
+                entry_page = item.get("pageIndex")
+                if not isinstance(entry_page, int) or entry_page != page:
+                    continue
+            if normalized_review_state is not None:
+                entry_review_state = item.get("reviewState")
+                if (
+                    not isinstance(entry_review_state, str)
+                    or entry_review_state.strip().upper() != normalized_review_state
+                ):
+                    continue
+            if from_timestamp is not None or to_timestamp is not None:
+                entry_timestamp = DocumentService._parse_manifest_entry_timestamp(
+                    item.get("decisionTimestamp")
+                )
+                if entry_timestamp is None:
+                    continue
+                if from_timestamp is not None and entry_timestamp < from_timestamp:
+                    continue
+                if to_timestamp is not None and entry_timestamp > to_timestamp:
+                    continue
+            filtered.append(dict(item))
+        return filtered
+
+    def get_governance_run_manifest(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> DocumentGovernanceManifestSnapshot:
+        _ = self._require_governance_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        overview = self._build_governance_run_overview_snapshot(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            actor_user_id=current_user.user_id,
+        )
+        latest_attempt = overview.manifest_attempts[0] if overview.manifest_attempts else None
+        manifest_payload, stream_sha256, hash_matches = self._load_governance_manifest_payload(
+            run_id=run_id,
+            latest_attempt=latest_attempt,
+        )
+        internal_only, export_approved, not_export_approved = self._resolve_manifest_access_flags(
+            manifest_payload
+        )
+        return DocumentGovernanceManifestSnapshot(
+            overview=overview,
+            latest_attempt=latest_attempt,
+            manifest_payload=manifest_payload,
+            stream_sha256=stream_sha256,
+            hash_matches=hash_matches,
+            internal_only=internal_only,
+            export_approved=export_approved,
+            not_export_approved=not_export_approved,
+        )
+
+    def get_governance_run_manifest_status(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> DocumentGovernanceManifestStatusSnapshot:
+        manifest = self.get_governance_run_manifest(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        status = self._resolve_governance_manifest_status(
+            latest_attempt=manifest.latest_attempt,
+        )
+        return DocumentGovernanceManifestStatusSnapshot(
+            run_id=run_id,
+            status=status,
+            latest_attempt=manifest.latest_attempt,
+            attempt_count=len(manifest.overview.manifest_attempts),
+            ready_manifest_id=manifest.overview.readiness.manifest_id,
+            latest_manifest_sha256=manifest.overview.readiness.last_manifest_sha256,
+            generation_status=manifest.overview.readiness.generation_status,
+            readiness_status=manifest.overview.readiness.status,
+            updated_at=manifest.overview.readiness.updated_at,
+        )
+
+    def list_governance_run_manifest_entries(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        category: str | None = None,
+        page: int | None = None,
+        review_state: str | None = None,
+        from_timestamp: datetime | None = None,
+        to_timestamp: datetime | None = None,
+        cursor: int = 0,
+        limit: int = 100,
+    ) -> DocumentGovernanceManifestEntriesSnapshot:
+        manifest = self.get_governance_run_manifest(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        status = self._resolve_governance_manifest_status(
+            latest_attempt=manifest.latest_attempt,
+        )
+        payload_entries = (
+            manifest.manifest_payload.get("entries")
+            if isinstance(manifest.manifest_payload, Mapping)
+            else None
+        )
+        entries = (
+            [item for item in payload_entries if isinstance(item, Mapping)]
+            if isinstance(payload_entries, Sequence)
+            and not isinstance(payload_entries, (str, bytes))
+            else []
+        )
+        filtered = self._filter_manifest_entries(
+            entries=entries,
+            category=category,
+            page=page,
+            review_state=review_state,
+            from_timestamp=from_timestamp,
+            to_timestamp=to_timestamp,
+        )
+        safe_cursor = max(0, int(cursor))
+        safe_limit = max(1, min(int(limit), 200))
+        page_slice = tuple(filtered[safe_cursor : safe_cursor + safe_limit])
+        next_cursor = (
+            safe_cursor + safe_limit
+            if safe_cursor + safe_limit < len(filtered)
+            else None
+        )
+        return DocumentGovernanceManifestEntriesSnapshot(
+            run_id=run_id,
+            status=status,
+            manifest_id=manifest.latest_attempt.id if manifest.latest_attempt is not None else None,
+            manifest_sha256=(
+                manifest.latest_attempt.manifest_sha256
+                if manifest.latest_attempt is not None
+                else None
+            ),
+            source_review_snapshot_sha256=(
+                manifest.latest_attempt.source_review_snapshot_sha256
+                if manifest.latest_attempt is not None
+                else None
+            ),
+            items=page_slice,
+            next_cursor=next_cursor,
+            total_count=len(filtered),
+            internal_only=manifest.internal_only,
+            export_approved=manifest.export_approved,
+            not_export_approved=manifest.not_export_approved,
+        )
+
+    def get_governance_run_manifest_hash(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> DocumentGovernanceManifestHashSnapshot:
+        manifest = self.get_governance_run_manifest(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        status = self._resolve_governance_manifest_status(
+            latest_attempt=manifest.latest_attempt,
+        )
+        return DocumentGovernanceManifestHashSnapshot(
+            run_id=run_id,
+            status=status,
+            manifest_id=manifest.latest_attempt.id if manifest.latest_attempt is not None else None,
+            manifest_sha256=(
+                manifest.latest_attempt.manifest_sha256
+                if manifest.latest_attempt is not None
+                else None
+            ),
+            stream_sha256=manifest.stream_sha256,
+            hash_matches=manifest.hash_matches,
+            internal_only=manifest.internal_only,
+            export_approved=manifest.export_approved,
+            not_export_approved=manifest.not_export_approved,
+        )
+
+    def get_governance_run_ledger(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> DocumentGovernanceLedgerSnapshot:
+        _ = self._require_governance_ledger_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        overview = self._build_governance_run_overview_snapshot(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            actor_user_id=current_user.user_id,
+        )
+        latest_attempt = overview.ledger_attempts[0] if overview.ledger_attempts else None
+        ledger_payload, stream_sha256, hash_matches = self._load_governance_ledger_payload(
+            run_id=run_id,
+            latest_attempt=latest_attempt,
+        )
+        return DocumentGovernanceLedgerSnapshot(
+            overview=overview,
+            latest_attempt=latest_attempt,
+            ledger_payload=ledger_payload,
+            stream_sha256=stream_sha256,
+            hash_matches=hash_matches,
+            internal_only=True,
+        )
+
+    def get_governance_run_ledger_status(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> DocumentGovernanceLedgerStatusSnapshot:
+        ledger = self.get_governance_run_ledger(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        status = self._resolve_governance_ledger_status(
+            latest_attempt=ledger.latest_attempt,
+        )
+        return DocumentGovernanceLedgerStatusSnapshot(
+            run_id=run_id,
+            status=status,
+            latest_attempt=ledger.latest_attempt,
+            attempt_count=len(ledger.overview.ledger_attempts),
+            ready_ledger_id=ledger.overview.readiness.ledger_id,
+            latest_ledger_sha256=ledger.overview.readiness.last_ledger_sha256,
+            generation_status=ledger.overview.readiness.generation_status,
+            readiness_status=ledger.overview.readiness.status,
+            ledger_verification_status=ledger.overview.readiness.ledger_verification_status,
+            updated_at=ledger.overview.readiness.updated_at,
+        )
+
+    def list_governance_run_ledger_entries(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        view: Literal["list", "timeline"] = "list",
+        cursor: int = 0,
+        limit: int = 100,
+    ) -> DocumentGovernanceLedgerEntriesSnapshot:
+        ledger = self.get_governance_run_ledger(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        status = self._resolve_governance_ledger_status(
+            latest_attempt=ledger.latest_attempt,
+        )
+        rows = (
+            extract_ledger_rows(ledger.ledger_payload)
+            if isinstance(ledger.ledger_payload, Mapping)
+            else []
+        )
+        projected_rows = rows if view == "list" else list(reversed(rows))
+        safe_cursor = max(0, int(cursor))
+        safe_limit = max(1, min(int(limit), 200))
+        page_slice = tuple(projected_rows[safe_cursor : safe_cursor + safe_limit])
+        next_cursor = (
+            safe_cursor + safe_limit
+            if safe_cursor + safe_limit < len(projected_rows)
+            else None
+        )
+        return DocumentGovernanceLedgerEntriesSnapshot(
+            run_id=run_id,
+            status=status,
+            view=view,
+            ledger_id=ledger.latest_attempt.id if ledger.latest_attempt is not None else None,
+            ledger_sha256=(
+                ledger.latest_attempt.ledger_sha256 if ledger.latest_attempt is not None else None
+            ),
+            hash_chain_version=(
+                ledger.latest_attempt.hash_chain_version if ledger.latest_attempt is not None else None
+            ),
+            total_count=len(projected_rows),
+            next_cursor=next_cursor,
+            verification_status=ledger.overview.readiness.ledger_verification_status,
+            items=page_slice,
+        )
+
+    def get_governance_run_ledger_summary(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> DocumentGovernanceLedgerSummarySnapshot:
+        ledger = self.get_governance_run_ledger(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        status = self._resolve_governance_ledger_status(
+            latest_attempt=ledger.latest_attempt,
+        )
+        rows = (
+            extract_ledger_rows(ledger.ledger_payload)
+            if isinstance(ledger.ledger_payload, Mapping)
+            else []
+        )
+        category_counts: dict[str, int] = {}
+        action_counts: dict[str, int] = {}
+        override_count = 0
+        assist_reference_count = 0
+        for row in rows:
+            category = str(row.get("category") or "").strip().upper()
+            if category:
+                category_counts[category] = category_counts.get(category, 0) + 1
+            action_type = str(row.get("actionType") or "").strip().upper()
+            if action_type:
+                action_counts[action_type] = action_counts.get(action_type, 0) + 1
+            override_reason = row.get("overrideReason")
+            if isinstance(override_reason, str) and override_reason.strip():
+                override_count += 1
+            assist_key = row.get("assistExplanationKey")
+            assist_sha256 = row.get("assistExplanationSha256")
+            if (
+                isinstance(assist_key, str)
+                and assist_key.strip()
+                and isinstance(assist_sha256, str)
+                and assist_sha256.strip()
+            ):
+                assist_reference_count += 1
+        verification = (
+            verify_canonical_evidence_ledger_payload(
+                ledger.ledger_payload,
+                expected_run_id=run_id,
+                expected_snapshot_sha256=(
+                    ledger.latest_attempt.source_review_snapshot_sha256
+                    if ledger.latest_attempt is not None
+                    else None
+                ),
+            )
+            if isinstance(ledger.ledger_payload, Mapping)
+            else {"isValid": False, "headHash": None}
+        )
+        return DocumentGovernanceLedgerSummarySnapshot(
+            run_id=run_id,
+            status=status,
+            ledger_id=ledger.latest_attempt.id if ledger.latest_attempt is not None else None,
+            ledger_sha256=(
+                ledger.latest_attempt.ledger_sha256 if ledger.latest_attempt is not None else None
+            ),
+            hash_chain_version=(
+                ledger.latest_attempt.hash_chain_version if ledger.latest_attempt is not None else None
+            ),
+            row_count=len(rows),
+            hash_chain_head=(
+                str(verification.get("headHash"))
+                if isinstance(verification.get("headHash"), str)
+                else None
+            ),
+            hash_chain_valid=bool(verification.get("isValid")),
+            verification_status=ledger.overview.readiness.ledger_verification_status,
+            category_counts=category_counts,
+            action_counts=action_counts,
+            override_count=override_count,
+            assist_reference_count=assist_reference_count,
+            internal_only=ledger.internal_only,
+        )
+
+    def request_governance_run_ledger_verification(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> DocumentGovernanceLedgerVerificationDetailSnapshot:
+        self._require_governance_ledger_verify_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        self._ensure_governance_ledger_generated(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            actor_user_id=current_user.user_id,
+        )
+        attempt = self._run_governance_ledger_verification(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            actor_user_id=current_user.user_id,
+        )
+        readiness = self._governance_store.get_readiness_projection(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        return DocumentGovernanceLedgerVerificationDetailSnapshot(
+            run_id=run_id,
+            verification_status=readiness.ledger_verification_status,
+            attempt=attempt,
+        )
+
+    def get_governance_run_ledger_verification_status(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> DocumentGovernanceLedgerVerificationStatusSnapshot:
+        _ = self._require_governance_ledger_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        _ = self._load_redaction_document(project_id=project_id, document_id=document_id)
+        self._ensure_governance_ledger_generated(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            actor_user_id=current_user.user_id,
+        )
+        try:
+            readiness = self._governance_store.get_readiness_projection(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+            )
+            attempts = tuple(
+                self._governance_store.list_ledger_verification_runs(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=run_id,
+                )
+            )
+        except GovernanceRunNotFoundError as error:
+            self._raise_governance_lookup_error(error=error)
+        except GovernanceStoreUnavailableError as error:
+            raise DocumentStoreUnavailableError(str(error)) from error
+        latest_attempt = attempts[0] if attempts else None
+        latest_completed_attempt = self._latest_completed_verification_attempt(attempts)
+        return DocumentGovernanceLedgerVerificationStatusSnapshot(
+            run_id=run_id,
+            verification_status=readiness.ledger_verification_status,
+            attempt_count=len(attempts),
+            latest_attempt=latest_attempt,
+            latest_completed_attempt=latest_completed_attempt,
+            ready_ledger_id=readiness.ledger_id,
+            latest_ledger_sha256=readiness.last_ledger_sha256,
+            last_verified_at=readiness.ledger_verified_at,
+        )
+
+    def list_governance_run_ledger_verification_runs(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> DocumentGovernanceLedgerVerificationRunsSnapshot:
+        status_snapshot = self.get_governance_run_ledger_verification_status(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        try:
+            attempts = tuple(
+                self._governance_store.list_ledger_verification_runs(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=run_id,
+                )
+            )
+        except GovernanceRunNotFoundError as error:
+            self._raise_governance_lookup_error(error=error)
+        except GovernanceStoreUnavailableError as error:
+            raise DocumentStoreUnavailableError(str(error)) from error
+        return DocumentGovernanceLedgerVerificationRunsSnapshot(
+            run_id=run_id,
+            verification_status=status_snapshot.verification_status,
+            items=attempts,
+        )
+
+    def get_governance_run_ledger_verification_run(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        verification_run_id: str,
+    ) -> DocumentGovernanceLedgerVerificationDetailSnapshot:
+        status_snapshot = self.get_governance_run_ledger_verification_status(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        try:
+            attempt = self._governance_store.get_ledger_verification_run(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                verification_run_id=verification_run_id,
+            )
+        except GovernanceRunNotFoundError as error:
+            self._raise_governance_lookup_error(error=error)
+        except GovernanceStoreUnavailableError as error:
+            raise DocumentStoreUnavailableError(str(error)) from error
+        return DocumentGovernanceLedgerVerificationDetailSnapshot(
+            run_id=run_id,
+            verification_status=status_snapshot.verification_status,
+            attempt=attempt,
+        )
+
+    def cancel_governance_run_ledger_verification_run(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        verification_run_id: str,
+    ) -> DocumentGovernanceLedgerVerificationDetailSnapshot:
+        self._require_governance_ledger_verify_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        try:
+            attempt = self._governance_store.cancel_ledger_verification_attempt(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                verification_run_id=verification_run_id,
+                actor_user_id=current_user.user_id,
+            )
+            readiness = self._governance_store.get_readiness_projection(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+            )
+        except GovernanceRunNotFoundError as error:
+            self._raise_governance_lookup_error(error=error)
+        except GovernanceRunConflictError as error:
+            raise DocumentGovernanceConflictError(str(error)) from error
+        except GovernanceStoreUnavailableError as error:
+            raise DocumentStoreUnavailableError(str(error)) from error
+        return DocumentGovernanceLedgerVerificationDetailSnapshot(
+            run_id=run_id,
+            verification_status=readiness.ledger_verification_status,
+            attempt=attempt,
+        )
+
+    def list_export_candidate_snapshot_contracts(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+    ) -> DocumentExportCandidateSnapshotContractsSnapshot:
+        _ = self._require_governance_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        try:
+            items = tuple(
+                self._governance_store.list_candidate_snapshot_contracts(
+                    project_id=project_id,
+                )
+            )
+        except GovernanceStoreUnavailableError as error:
+            raise DocumentStoreUnavailableError(str(error)) from error
+        return DocumentExportCandidateSnapshotContractsSnapshot(
+            project_id=project_id,
+            items=items,
+        )
+
     def list_approved_models(
         self,
         *,
@@ -4833,6 +9811,40 @@ class DocumentService:
             current_user=current_user,
             project_id=project_id,
         )
+        run = self._store.get_transcription_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        if run is None:
+            raise DocumentTranscriptionRunNotFoundError("Transcription run not found.")
+        document = self._store.get_document(project_id=project_id, document_id=document_id)
+        if document is None:
+            raise DocumentNotFoundError("Document not found.")
+        rescue_status = self._build_transcription_run_rescue_status_snapshot(
+            document=document,
+            run=run,
+        )
+        if not rescue_status.ready_for_activation:
+            blocked_pages = [
+                page.page_index + 1
+                for page in rescue_status.pages
+                if page.blocker_reason_codes
+            ]
+            blocker_codes = self._derive_transcription_activation_blocker_codes(
+                rescue_status
+            )
+            blocked_page_text = (
+                ", ".join(str(number) for number in blocked_pages)
+                if blocked_pages
+                else "unknown"
+            )
+            raise DocumentTranscriptionConflictError(
+                "RESCUE_UNRESOLVED: Activation requires resolved rescue/manual-review "
+                f"readiness before promotion. Blocked pages: {blocked_page_text}.",
+                rescue_status=rescue_status,
+                blocker_codes=blocker_codes,
+            )
         try:
             return self._store.activate_transcription_run(
                 project_id=project_id,
@@ -4840,7 +9852,469 @@ class DocumentService:
                 run_id=run_id,
             )
         except DocumentTranscriptionRunConflictError as error:
-            raise DocumentTranscriptionConflictError(str(error)) from error
+            raise DocumentTranscriptionConflictError(
+                str(error),
+                rescue_status=rescue_status,
+                blocker_codes=self._map_transcription_activation_blocker_codes(str(error)),
+            ) from error
+
+    @staticmethod
+    def _normalize_transcription_rescue_resolution_status(
+        value: str,
+    ) -> TranscriptionRescueResolutionStatus:
+        normalized = value.strip().upper()
+        if normalized in {"RESCUE_VERIFIED", "MANUAL_REVIEW_RESOLVED"}:
+            return normalized
+        raise DocumentValidationError(
+            "resolutionStatus must be RESCUE_VERIFIED or MANUAL_REVIEW_RESOLVED."
+        )
+
+    @staticmethod
+    def _coerce_rescue_source_kind(
+        candidate_kind: str,
+    ) -> TranscriptionTokenSourceKind:
+        if candidate_kind == "LINE_EXPANSION":
+            return "RESCUE_CANDIDATE"
+        return "PAGE_WINDOW"
+
+    @staticmethod
+    def _dedupe_activation_codes(
+        codes: Sequence[TranscriptionRunActivationBlockerCode],
+    ) -> tuple[TranscriptionRunActivationBlockerCode, ...]:
+        ordered: list[TranscriptionRunActivationBlockerCode] = []
+        seen: set[TranscriptionRunActivationBlockerCode] = set()
+        for code in codes:
+            if code in seen:
+                continue
+            ordered.append(code)
+            seen.add(code)
+        return tuple(ordered)
+
+    @staticmethod
+    def _map_transcription_activation_blocker_codes(
+        message: str,
+    ) -> tuple[TranscriptionRunActivationBlockerCode, ...]:
+        normalized = message.strip().upper()
+        codes: list[TranscriptionRunActivationBlockerCode] = []
+        if "ONLY SUCCEEDED TRANSCRIPTION RUNS CAN BE ACTIVATED" in normalized:
+            codes.append("RUN_NOT_SUCCEEDED")
+        if "ACTIVE LAYOUT PROJECTION" in normalized:
+            codes.append("RUN_LAYOUT_PROJECTION_MISSING")
+        if "LAYOUT BASIS IS STALE" in normalized:
+            codes.append("RUN_LAYOUT_BASIS_STALE")
+        if "SNAPSHOT HASH NO LONGER MATCHES ACTIVE LAYOUT BASIS" in normalized:
+            codes.append("RUN_LAYOUT_SNAPSHOT_STALE")
+        if "TOKEN_ANCHOR_INVALID" in normalized:
+            codes.append("TOKEN_ANCHOR_INVALID")
+        if "CURRENT TOKEN-ANCHOR STATUS" in normalized:
+            codes.append("TOKEN_ANCHOR_STALE")
+        if "TOKEN ANCHORS FOR ALL ELIGIBLE PAGES" in normalized:
+            codes.append("TOKEN_ANCHOR_MISSING")
+        return DocumentService._dedupe_activation_codes(codes)
+
+    @staticmethod
+    def _derive_transcription_activation_blocker_codes(
+        rescue_status: DocumentTranscriptionRunRescueStatusSnapshot,
+    ) -> tuple[TranscriptionRunActivationBlockerCode, ...]:
+        codes: list[TranscriptionRunActivationBlockerCode] = list(
+            rescue_status.run_blocker_reason_codes
+        )
+        for page in rescue_status.pages:
+            codes.extend(page.blocker_reason_codes)
+        return DocumentService._dedupe_activation_codes(codes)
+
+    def _build_transcription_rescue_source_snapshots(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        layout_run_id: str,
+        page_id: str,
+    ) -> tuple[DocumentTranscriptionRescueSourceSnapshot, ...]:
+        rescue_candidates = self._store.list_layout_rescue_candidates(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=layout_run_id,
+            page_id=page_id,
+        )
+        token_rows = self._store.list_token_transcription_results(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+        token_counts_by_source: dict[tuple[str, str], int] = {}
+        for token in token_rows:
+            if token.source_kind not in {"RESCUE_CANDIDATE", "PAGE_WINDOW"}:
+                continue
+            key = (token.source_kind, token.source_ref_id)
+            token_counts_by_source[key] = token_counts_by_source.get(key, 0) + 1
+
+        snapshots: list[DocumentTranscriptionRescueSourceSnapshot] = []
+        for candidate in rescue_candidates:
+            source_kind = self._coerce_rescue_source_kind(candidate.candidate_kind)
+            token_count = token_counts_by_source.get((source_kind, candidate.id), 0)
+            snapshots.append(
+                DocumentTranscriptionRescueSourceSnapshot(
+                    source_ref_id=candidate.id,
+                    source_kind=source_kind,
+                    candidate_kind=candidate.candidate_kind,
+                    candidate_status=candidate.status,
+                    token_count=token_count,
+                    has_transcription_output=token_count > 0,
+                    confidence=candidate.confidence,
+                    source_signal=candidate.source_signal,
+                    geometry_json=dict(candidate.geometry_json),
+                )
+            )
+        return tuple(snapshots)
+
+    @staticmethod
+    def _compute_transcription_rescue_page_readiness(
+        *,
+        page_recall_status: PageRecallStatus,
+        page_transcription_status: TranscriptionRunStatus | None,
+        rescue_sources: Sequence[DocumentTranscriptionRescueSourceSnapshot],
+        resolution: TranscriptionRescueResolutionRecord | None,
+    ) -> tuple[
+        TranscriptionRescueReadinessState,
+        tuple[TranscriptionRescueBlockerReasonCode, ...],
+        int,
+        int,
+        int,
+    ]:
+        blocker_codes: list[TranscriptionRescueBlockerReasonCode] = []
+        if page_transcription_status != "SUCCEEDED":
+            blocker_codes.append("PAGE_TRANSCRIPTION_NOT_SUCCEEDED")
+
+        eligible_sources = [
+            source
+            for source in rescue_sources
+            if source.candidate_status in _TRANSCRIPTION_RESCUE_ELIGIBLE_CANDIDATE_STATUSES
+        ]
+        transcribed_sources = [
+            source for source in eligible_sources if source.has_transcription_output
+        ]
+        rescue_source_count = len(eligible_sources)
+        rescue_transcribed_source_count = len(transcribed_sources)
+        rescue_unresolved_source_count = max(
+            0, rescue_source_count - rescue_transcribed_source_count
+        )
+        manual_override_applied = (
+            resolution is not None
+            and resolution.resolution_status == _TRANSCRIPTION_RESCUE_MANUAL_OVERRIDE_STATUS
+        )
+
+        if page_recall_status == "NEEDS_RESCUE":
+            if rescue_source_count <= 0 and not manual_override_applied:
+                blocker_codes.append("RESCUE_SOURCE_MISSING")
+            elif rescue_unresolved_source_count > 0 and not manual_override_applied:
+                blocker_codes.append("RESCUE_SOURCE_UNTRANSCRIBED")
+        elif (
+            page_recall_status == "NEEDS_MANUAL_REVIEW"
+            and not manual_override_applied
+        ):
+            blocker_codes.append("MANUAL_REVIEW_RESOLUTION_REQUIRED")
+
+        deduped_blockers: list[TranscriptionRescueBlockerReasonCode] = []
+        seen_blockers: set[TranscriptionRescueBlockerReasonCode] = set()
+        for code in blocker_codes:
+            if code in seen_blockers:
+                continue
+            deduped_blockers.append(code)
+            seen_blockers.add(code)
+
+        readiness_state: TranscriptionRescueReadinessState = "READY"
+        if deduped_blockers:
+            if "MANUAL_REVIEW_RESOLUTION_REQUIRED" in deduped_blockers:
+                readiness_state = "BLOCKED_MANUAL_REVIEW"
+            elif any(
+                code in {"RESCUE_SOURCE_MISSING", "RESCUE_SOURCE_UNTRANSCRIBED"}
+                for code in deduped_blockers
+            ):
+                readiness_state = "BLOCKED_RESCUE"
+            else:
+                readiness_state = "BLOCKED_PAGE_STATUS"
+
+        return (
+            readiness_state,
+            tuple(deduped_blockers),
+            rescue_source_count,
+            rescue_transcribed_source_count,
+            rescue_unresolved_source_count,
+        )
+
+    def _build_transcription_page_rescue_status_snapshot(
+        self,
+        *,
+        run: TranscriptionRunRecord,
+        layout_page: PageLayoutResultRecord,
+        page_transcription: PageTranscriptionResultRecord | None,
+        resolution: TranscriptionRescueResolutionRecord | None,
+    ) -> tuple[
+        DocumentTranscriptionRescuePageStatusSnapshot,
+        tuple[DocumentTranscriptionRescueSourceSnapshot, ...],
+    ]:
+        rescue_sources = self._build_transcription_rescue_source_snapshots(
+            project_id=run.project_id,
+            document_id=run.document_id,
+            run_id=run.id,
+            layout_run_id=run.input_layout_run_id,
+            page_id=layout_page.page_id,
+        )
+        (
+            readiness_state,
+            blocker_reason_codes,
+            rescue_source_count,
+            rescue_transcribed_source_count,
+            rescue_unresolved_source_count,
+        ) = self._compute_transcription_rescue_page_readiness(
+            page_recall_status=layout_page.page_recall_status,
+            page_transcription_status=(
+                page_transcription.status if page_transcription is not None else None
+            ),
+            rescue_sources=rescue_sources,
+            resolution=resolution,
+        )
+        snapshot = DocumentTranscriptionRescuePageStatusSnapshot(
+            run_id=run.id,
+            page_id=layout_page.page_id,
+            page_index=layout_page.page_index,
+            page_recall_status=layout_page.page_recall_status,
+            rescue_source_count=rescue_source_count,
+            rescue_transcribed_source_count=rescue_transcribed_source_count,
+            rescue_unresolved_source_count=rescue_unresolved_source_count,
+            readiness_state=readiness_state,
+            blocker_reason_codes=blocker_reason_codes,
+            resolution_status=(
+                resolution.resolution_status if resolution is not None else None
+            ),
+            resolution_reason=(resolution.resolution_reason if resolution else None),
+            resolution_updated_by=(resolution.updated_by if resolution else None),
+            resolution_updated_at=(resolution.updated_at if resolution else None),
+        )
+        return snapshot, rescue_sources
+
+    def _build_transcription_run_rescue_status_snapshot(
+        self,
+        *,
+        document: DocumentRecord,
+        run: TranscriptionRunRecord,
+    ) -> DocumentTranscriptionRunRescueStatusSnapshot:
+        layout_pages = self._list_all_layout_page_results(
+            project_id=run.project_id,
+            document_id=run.document_id,
+            run_id=run.input_layout_run_id,
+        )
+        transcription_pages = {
+            row.page_id: row
+            for row in self._list_all_transcription_page_results(
+                project_id=run.project_id,
+                document_id=run.document_id,
+                run_id=run.id,
+            )
+        }
+        resolutions = {
+            row.page_id: row
+            for row in self._store.list_transcription_rescue_resolutions(
+                project_id=run.project_id,
+                document_id=run.document_id,
+                run_id=run.id,
+                page_ids=[row.page_id for row in layout_pages],
+            )
+        }
+
+        page_snapshots: list[DocumentTranscriptionRescuePageStatusSnapshot] = []
+        run_blockers: list[TranscriptionRunActivationBlockerCode] = []
+        if run.status != "SUCCEEDED":
+            run_blockers.append("RUN_NOT_SUCCEEDED")
+
+        for layout_page in layout_pages:
+            page_snapshot, _ = self._build_transcription_page_rescue_status_snapshot(
+                run=run,
+                layout_page=layout_page,
+                page_transcription=transcription_pages.get(layout_page.page_id),
+                resolution=resolutions.get(layout_page.page_id),
+            )
+            page_snapshots.append(page_snapshot)
+            run_blockers.extend(page_snapshot.blocker_reason_codes)
+
+        run_blocker_reason_codes = self._dedupe_activation_codes(run_blockers)
+        blocker_count = (
+            len(run_blocker_reason_codes)
+            + sum(1 for page in page_snapshots if page.blocker_reason_codes)
+        )
+        return DocumentTranscriptionRunRescueStatusSnapshot(
+            document=document,
+            run=run,
+            ready_for_activation=(len(run_blocker_reason_codes) == 0),
+            blocker_count=blocker_count,
+            run_blocker_reason_codes=run_blocker_reason_codes,
+            pages=tuple(page_snapshots),
+        )
+
+    def get_transcription_run_rescue_status(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> DocumentTranscriptionRunRescueStatusSnapshot:
+        self._require_transcription_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        document = self._store.get_document(project_id=project_id, document_id=document_id)
+        if document is None:
+            raise DocumentNotFoundError("Document not found.")
+        run = self._store.get_transcription_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        if run is None:
+            raise DocumentTranscriptionRunNotFoundError("Transcription run not found.")
+        return self._build_transcription_run_rescue_status_snapshot(
+            document=document,
+            run=run,
+        )
+
+    def list_transcription_run_page_rescue_sources(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+    ) -> DocumentTranscriptionPageRescueSourcesSnapshot:
+        self._require_transcription_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        document = self._store.get_document(project_id=project_id, document_id=document_id)
+        if document is None:
+            raise DocumentNotFoundError("Document not found.")
+        run = self._store.get_transcription_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        if run is None:
+            raise DocumentTranscriptionRunNotFoundError("Transcription run not found.")
+        page = self._store.get_document_page(
+            project_id=project_id,
+            document_id=document_id,
+            page_id=page_id,
+        )
+        if page is None:
+            raise DocumentPageNotFoundError("Page not found.")
+        layout_page = self._store.get_layout_page_result(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.input_layout_run_id,
+            page_id=page_id,
+        )
+        if layout_page is None:
+            raise DocumentPageNotFoundError(
+                "Layout page result backing this transcription run was not found."
+            )
+        page_transcription = self._store.get_page_transcription_result(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+        resolution = self._store.get_transcription_rescue_resolution(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.id,
+            page_id=page_id,
+        )
+        page_status, rescue_sources = self._build_transcription_page_rescue_status_snapshot(
+            run=run,
+            layout_page=layout_page,
+            page_transcription=page_transcription,
+            resolution=resolution,
+        )
+        return DocumentTranscriptionPageRescueSourcesSnapshot(
+            document=document,
+            run=run,
+            page=page,
+            page_recall_status=page_status.page_recall_status,
+            readiness_state=page_status.readiness_state,
+            blocker_reason_codes=page_status.blocker_reason_codes,
+            rescue_sources=rescue_sources,
+            resolution_status=page_status.resolution_status,
+            resolution_reason=page_status.resolution_reason,
+            resolution_updated_by=page_status.resolution_updated_by,
+            resolution_updated_at=page_status.resolution_updated_at,
+        )
+
+    def update_transcription_page_rescue_resolution(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        resolution_status: str,
+        resolution_reason: str | None = None,
+    ) -> DocumentTranscriptionPageRescueSourcesSnapshot:
+        self._require_transcription_mutation_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        run = self._store.get_transcription_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        if run is None:
+            raise DocumentTranscriptionRunNotFoundError("Transcription run not found.")
+        layout_page = self._store.get_layout_page_result(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.input_layout_run_id,
+            page_id=page_id,
+        )
+        if layout_page is None:
+            raise DocumentPageNotFoundError("Layout page result not found.")
+        if layout_page.page_recall_status == "COMPLETE":
+            raise DocumentTranscriptionConflictError(
+                "Rescue resolution is only valid for NEEDS_RESCUE or NEEDS_MANUAL_REVIEW pages.",
+            )
+        normalized_status = self._normalize_transcription_rescue_resolution_status(
+            resolution_status
+        )
+        normalized_reason = (
+            resolution_reason.strip()
+            if isinstance(resolution_reason, str) and resolution_reason.strip()
+            else None
+        )
+        if normalized_reason is not None and len(normalized_reason) > 600:
+            raise DocumentValidationError(
+                "resolutionReason must be 600 characters or fewer."
+            )
+        self._store.upsert_transcription_rescue_resolution(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.id,
+            page_id=page_id,
+            resolution_status=normalized_status,
+            resolution_reason=normalized_reason,
+            updated_by=current_user.user_id,
+        )
+        return self.list_transcription_run_page_rescue_sources(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.id,
+            page_id=page_id,
+        )
 
     def list_transcription_run_pages(
         self,
@@ -5109,6 +10583,695 @@ class DocumentService:
             projection=projection,
             text_changed=text_changed,
             downstream_projection=downstream_projection,
+        )
+
+    def list_transcription_line_versions(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        line_id: str,
+    ) -> DocumentTranscriptionLineVersionHistorySnapshot:
+        self._require_transcription_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        run = self._store.get_transcription_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        if run is None:
+            raise DocumentTranscriptionRunNotFoundError("Transcription run not found.")
+        page = self._store.get_document_page(
+            project_id=project_id,
+            document_id=document_id,
+            page_id=page_id,
+        )
+        if page is None:
+            raise DocumentPageNotFoundError("Document page was not found.")
+        line_rows = self._store.list_line_transcription_results(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+        line = next((item for item in line_rows if item.line_id == line_id), None)
+        if line is None:
+            raise DocumentPageNotFoundError("Transcription line result not found.")
+        versions = self._store.list_transcript_versions(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+            line_id=line_id,
+        )
+        snapshots = tuple(
+            DocumentTranscriptVersionLineageSnapshot(
+                version=item,
+                is_active=item.id == line.active_transcript_version_id,
+                source_type=self._resolve_transcript_version_source_type(
+                    run=run,
+                    version=item,
+                ),
+            )
+            for item in versions
+        )
+        return DocumentTranscriptionLineVersionHistorySnapshot(
+            run=run,
+            page=page,
+            line=line,
+            versions=snapshots,
+        )
+
+    def get_transcription_line_version(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        line_id: str,
+        version_id: str,
+    ) -> DocumentTranscriptVersionLineageSnapshot:
+        history = self.list_transcription_line_versions(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+            line_id=line_id,
+        )
+        version = self._store.get_transcript_version(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+            line_id=line_id,
+            version_id=version_id,
+        )
+        if version is None:
+            raise DocumentPageNotFoundError("Transcript version was not found.")
+        return DocumentTranscriptVersionLineageSnapshot(
+            version=version,
+            is_active=version.id == history.line.active_transcript_version_id,
+            source_type=self._resolve_transcript_version_source_type(
+                run=history.run,
+                version=version,
+            ),
+        )
+
+    def finalize_transcription_compare(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        base_run_id: str,
+        candidate_run_id: str,
+        page_ids: Sequence[str] | None = None,
+        expected_compare_decision_snapshot_hash: str | None = None,
+    ) -> DocumentTranscriptionCompareFinalizeSnapshot:
+        self._require_transcription_mutation_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        if base_run_id == candidate_run_id:
+            raise DocumentValidationError(
+                "baseRunId and candidateRunId must reference different runs."
+            )
+        document = self._store.get_document(project_id=project_id, document_id=document_id)
+        if document is None:
+            raise DocumentNotFoundError("Document not found.")
+        base_run = self._store.get_transcription_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=base_run_id,
+        )
+        if base_run is None:
+            raise DocumentTranscriptionRunNotFoundError("Base transcription run not found.")
+        candidate_run = self._store.get_transcription_run(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=candidate_run_id,
+        )
+        if candidate_run is None:
+            raise DocumentTranscriptionRunNotFoundError(
+                "Candidate transcription run not found."
+            )
+        if base_run.status != "SUCCEEDED" or candidate_run.status != "SUCCEEDED":
+            raise DocumentTranscriptionConflictError(
+                "Compare finalization requires SUCCEEDED base and candidate runs."
+            )
+        if not self._transcription_runs_share_compare_basis(
+            base_run=base_run,
+            candidate_run=candidate_run,
+        ):
+            raise DocumentTranscriptionConflictError(
+                "Compare finalization requires base and candidate runs to share preprocess/layout basis and layout snapshot hash."
+            )
+        normalized_page_scope = sorted(
+            {
+                item.strip()
+                for item in (page_ids or ())
+                if isinstance(item, str) and item.strip()
+            }
+        )
+
+        base_pages = self._list_all_transcription_page_results(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=base_run.id,
+        )
+        candidate_pages = self._list_all_transcription_page_results(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=candidate_run.id,
+        )
+        page_map: dict[str, int] = {}
+        for item in base_pages:
+            page_map[item.page_id] = item.page_index
+        for item in candidate_pages:
+            page_map.setdefault(item.page_id, item.page_index)
+        if normalized_page_scope:
+            missing_page_ids = [
+                item for item in normalized_page_scope if item not in page_map
+            ]
+            if missing_page_ids:
+                raise DocumentPageNotFoundError(
+                    "One or more requested pageIds were not found in compare scope."
+                )
+        decisions = self._store.list_transcription_compare_decisions(
+            project_id=project_id,
+            document_id=document_id,
+            base_run_id=base_run.id,
+            candidate_run_id=candidate_run.id,
+        )
+        if normalized_page_scope:
+            allowed_page_ids = set(normalized_page_scope)
+            decisions = [
+                item for item in decisions if item.page_id in allowed_page_ids
+            ]
+        decision_events = self._store.list_transcription_compare_decision_events(
+            project_id=project_id,
+            document_id=document_id,
+            base_run_id=base_run.id,
+            candidate_run_id=candidate_run.id,
+            page_ids=normalized_page_scope or None,
+        )
+        compare_decision_snapshot_hash = (
+            self._compute_transcription_compare_decision_snapshot_hash(
+                decisions=decisions,
+                events=decision_events,
+            )
+        )
+        normalized_expected_hash = (
+            expected_compare_decision_snapshot_hash.strip()
+            if isinstance(expected_compare_decision_snapshot_hash, str)
+            and expected_compare_decision_snapshot_hash.strip()
+            else None
+        )
+        if (
+            normalized_expected_hash is not None
+            and normalized_expected_hash != compare_decision_snapshot_hash
+        ):
+            raise DocumentTranscriptionConflictError(
+                "Compare decision snapshot is stale; refresh compare before finalizing."
+            )
+        if not decisions:
+            raise DocumentTranscriptionConflictError(
+                "Compare finalization requires at least one explicit compare decision."
+            )
+
+        preferred_model = self._store.get_approved_transcription_model(
+            preferred_model_role="TRANSCRIPTION_PRIMARY"
+        )
+        if preferred_model is None:
+            raise DocumentTranscriptionConflictError(
+                "No APPROVED primary transcription model is available for compare finalization."
+            )
+
+        composed_params = self._normalize_transcription_params_json(
+            dict(base_run.params_json)
+        )
+        composed_params["baseRunId"] = base_run.id
+        composed_params["candidateRunId"] = candidate_run.id
+        composed_params["compareDecisionSnapshotHash"] = compare_decision_snapshot_hash
+        composed_params["pageScope"] = list(normalized_page_scope)
+        composed_params["finalizedBy"] = current_user.user_id
+        composed_params["finalizedAt"] = datetime.now(timezone.utc).isoformat()
+        composed_params["decisionCount"] = len(decisions)
+        composed_params["decisionEventCount"] = len(decision_events)
+
+        try:
+            composed_run = self._store.create_transcription_run(
+                project_id=project_id,
+                document_id=document_id,
+                created_by=current_user.user_id,
+                input_preprocess_run_id=base_run.input_preprocess_run_id,
+                input_layout_run_id=base_run.input_layout_run_id,
+                input_layout_snapshot_hash=base_run.input_layout_snapshot_hash,
+                engine="REVIEW_COMPOSED",
+                model_id=preferred_model.id,
+                project_model_assignment_id=None,
+                prompt_template_id=None,
+                prompt_template_sha256=None,
+                response_schema_version=max(1, base_run.response_schema_version),
+                confidence_basis="READ_AGREEMENT",
+                confidence_calibration_version=base_run.confidence_calibration_version,
+                params_json=composed_params,
+                pipeline_version=base_run.pipeline_version,
+                container_digest=base_run.container_digest,
+                supersedes_transcription_run_id=None,
+            )
+            composed_run = self._store.mark_transcription_run_running(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=composed_run.id,
+            )
+        except DocumentTranscriptionRunConflictError as error:
+            raise DocumentTranscriptionConflictError(str(error)) from error
+
+        base_pages_by_id = {item.page_id: item for item in base_pages}
+        candidate_pages_by_id = {item.page_id: item for item in candidate_pages}
+        composed_pages = self._list_all_transcription_page_results(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=composed_run.id,
+        )
+        scope_page_ids = (
+            set(normalized_page_scope)
+            if normalized_page_scope
+            else {item.page_id for item in composed_pages}
+        )
+
+        decisions_by_line = {
+            (item.page_id, item.line_id): item
+            for item in decisions
+            if item.line_id is not None and item.token_id is None
+        }
+        decisions_by_token = {
+            (item.page_id, item.line_id, item.token_id): item
+            for item in decisions
+            if item.token_id is not None
+        }
+
+        try:
+            for page_result in composed_pages:
+                page_id = page_result.page_id
+                base_page = base_pages_by_id.get(page_id)
+                candidate_page = candidate_pages_by_id.get(page_id)
+                if base_page is None and candidate_page is None:
+                    raise DocumentTranscriptionConflictError(
+                        f"Compare finalization source page '{page_id}' is unavailable."
+                    )
+                page_in_scope = page_id in scope_page_ids
+
+                base_line_rows = (
+                    self._store.list_line_transcription_results(
+                        project_id=project_id,
+                        document_id=document_id,
+                        run_id=base_run.id,
+                        page_id=page_id,
+                    )
+                    if base_page is not None
+                    else []
+                )
+                candidate_line_rows = (
+                    self._store.list_line_transcription_results(
+                        project_id=project_id,
+                        document_id=document_id,
+                        run_id=candidate_run.id,
+                        page_id=page_id,
+                    )
+                    if candidate_page is not None
+                    else []
+                )
+                base_lines = self._hydrate_transcription_lines_with_active_versions(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=base_run.id,
+                    page_id=page_id,
+                    rows=base_line_rows,
+                )
+                candidate_lines = self._hydrate_transcription_lines_with_active_versions(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=candidate_run.id,
+                    page_id=page_id,
+                    rows=candidate_line_rows,
+                )
+                base_lines_by_id = {item.line_id: item for item in base_lines}
+                candidate_lines_by_id = {item.line_id: item for item in candidate_lines}
+                line_ids = sorted(set(base_lines_by_id) | set(candidate_lines_by_id))
+                selected_origin_by_line_id: dict[str, str] = {}
+                line_payloads: list[dict[str, object]] = []
+                for target_line_id in line_ids:
+                    decision = (
+                        decisions_by_line.get((page_id, target_line_id))
+                        if page_in_scope
+                        else None
+                    )
+                    base_line = base_lines_by_id.get(target_line_id)
+                    candidate_line = candidate_lines_by_id.get(target_line_id)
+                    selected_line = base_line
+                    selected_origin = "BASE"
+                    if (
+                        decision is not None
+                        and decision.decision == "PROMOTE_CANDIDATE"
+                        and candidate_line is not None
+                    ):
+                        selected_line = candidate_line
+                        selected_origin = "CANDIDATE"
+                    elif selected_line is None and candidate_line is not None:
+                        selected_line = candidate_line
+                        selected_origin = "CANDIDATE"
+                    if selected_line is None:
+                        continue
+                    flags_json = dict(selected_line.flags_json)
+                    flags_json["lineage"] = {
+                        "sourceType": (
+                            "COMPARE_DECISION_PROMOTE_CANDIDATE"
+                            if decision is not None and decision.decision == "PROMOTE_CANDIDATE"
+                            else "COMPARE_BASE_INHERITED"
+                        ),
+                        "sourceRunId": (
+                            candidate_run.id if selected_origin == "CANDIDATE" else base_run.id
+                        ),
+                        "sourceLineId": target_line_id,
+                        "sourceActiveTranscriptVersionId": selected_line.active_transcript_version_id,
+                        "decisionId": decision.id if decision is not None else None,
+                        "decisionEtag": decision.decision_etag if decision is not None else None,
+                    }
+                    next_line_etag = hashlib.sha256(
+                        (
+                            f"{composed_run.id}|{page_id}|{target_line_id}|"
+                            f"{selected_origin}|{selected_line.version_etag}|"
+                            f"{selected_line.text_diplomatic}"
+                        ).encode("utf-8")
+                    ).hexdigest()
+                    line_payloads.append(
+                        {
+                            "line_id": target_line_id,
+                            "text_diplomatic": selected_line.text_diplomatic,
+                            "conf_line": selected_line.conf_line,
+                            "confidence_band": selected_line.confidence_band,
+                            "confidence_basis": selected_line.confidence_basis,
+                            "confidence_calibration_version": selected_line.confidence_calibration_version,
+                            "alignment_json_key": selected_line.alignment_json_key,
+                            "char_boxes_key": selected_line.char_boxes_key,
+                            "schema_validation_status": selected_line.schema_validation_status,
+                            "flags_json": flags_json,
+                            "machine_output_sha256": selected_line.machine_output_sha256,
+                            "active_transcript_version_id": None,
+                            "version_etag": next_line_etag,
+                            "token_anchor_status": selected_line.token_anchor_status,
+                        }
+                    )
+                    selected_origin_by_line_id[target_line_id] = selected_origin
+
+                selected_line_ids = {
+                    str(item["line_id"])
+                    for item in line_payloads
+                    if isinstance(item.get("line_id"), str)
+                }
+                base_tokens = (
+                    self._store.list_token_transcription_results(
+                        project_id=project_id,
+                        document_id=document_id,
+                        run_id=base_run.id,
+                        page_id=page_id,
+                    )
+                    if base_page is not None
+                    else None
+                )
+                if base_tokens is None:
+                    base_tokens = []
+                candidate_tokens = (
+                    self._store.list_token_transcription_results(
+                        project_id=project_id,
+                        document_id=document_id,
+                        run_id=candidate_run.id,
+                        page_id=page_id,
+                    )
+                    if candidate_page is not None
+                    else None
+                )
+                if candidate_tokens is None:
+                    candidate_tokens = []
+                base_tokens_by_id = {item.token_id: item for item in base_tokens}
+                candidate_tokens_by_id = {item.token_id: item for item in candidate_tokens}
+                token_ids = sorted(
+                    set(base_tokens_by_id) | set(candidate_tokens_by_id),
+                    key=lambda token: (
+                        (
+                            base_tokens_by_id[token].token_index
+                            if token in base_tokens_by_id
+                            else candidate_tokens_by_id[token].token_index
+                        ),
+                        token,
+                    ),
+                )
+                token_payloads: list[dict[str, object]] = []
+                refresh_required_line_ids: set[str] = set()
+                for target_token_id in token_ids:
+                    base_token = base_tokens_by_id.get(target_token_id)
+                    candidate_token = candidate_tokens_by_id.get(target_token_id)
+                    token_line_id = (
+                        base_token.line_id
+                        if base_token is not None
+                        else candidate_token.line_id if candidate_token is not None else None
+                    )
+                    decision = (
+                        decisions_by_token.get((page_id, token_line_id, target_token_id))
+                        if page_in_scope
+                        else None
+                    )
+                    selected_token = base_token
+                    selected_origin = "BASE"
+                    if (
+                        decision is not None
+                        and decision.decision == "PROMOTE_CANDIDATE"
+                        and candidate_token is not None
+                    ):
+                        selected_token = candidate_token
+                        selected_origin = "CANDIDATE"
+                    elif (
+                        decision is not None
+                        and selected_token is None
+                        and candidate_token is not None
+                    ):
+                        selected_token = candidate_token
+                        selected_origin = "CANDIDATE"
+                    elif (
+                        decision is None
+                        and isinstance(token_line_id, str)
+                        and selected_origin_by_line_id.get(token_line_id) == "CANDIDATE"
+                        and candidate_token is not None
+                    ):
+                        selected_token = candidate_token
+                        selected_origin = "CANDIDATE"
+                    elif selected_token is None and candidate_token is not None:
+                        selected_token = candidate_token
+                        selected_origin = "CANDIDATE"
+                    if selected_token is None:
+                        continue
+                    if (
+                        not isinstance(selected_token.line_id, str)
+                        or selected_token.line_id not in selected_line_ids
+                    ):
+                        continue
+                    if decision is not None:
+                        refresh_required_line_ids.add(selected_token.line_id)
+                    token_payloads.append(
+                        {
+                            "line_id": selected_token.line_id,
+                            "token_id": selected_token.token_id,
+                            "token_index": selected_token.token_index,
+                            "token_text": selected_token.token_text,
+                            "token_confidence": selected_token.token_confidence,
+                            "bbox_json": selected_token.bbox_json,
+                            "polygon_json": selected_token.polygon_json,
+                            "source_kind": "LINE",
+                            "source_ref_id": selected_token.line_id,
+                            "projection_basis": selected_token.projection_basis,
+                            "lineage_origin": selected_origin,
+                        }
+                    )
+
+                if refresh_required_line_ids:
+                    for row in line_payloads:
+                        line_row_id = str(row.get("line_id") or "")
+                        if line_row_id in refresh_required_line_ids:
+                            row["token_anchor_status"] = "REFRESH_REQUIRED"
+
+                line_text_by_id = {
+                    str(item["line_id"]): str(item["text_diplomatic"])
+                    for item in line_payloads
+                    if isinstance(item.get("line_id"), str)
+                    and isinstance(item.get("text_diplomatic"), str)
+                }
+                base_pagexml = self._read_transcription_pagexml_for_run_page(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=base_run.id,
+                    page_id=page_id,
+                    page_result=base_page,
+                )
+                candidate_pagexml = self._read_transcription_pagexml_for_run_page(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=candidate_run.id,
+                    page_id=page_id,
+                    page_result=candidate_page or base_page,
+                )
+                composed_pagexml_bytes = self._build_transcription_composed_pagexml(
+                    base_pagexml_bytes=base_pagexml,
+                    candidate_pagexml_bytes=candidate_pagexml,
+                    line_text_by_id=line_text_by_id,
+                )
+                page_object = self._storage.write_transcription_page_xml(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=composed_run.id,
+                    page_index=page_result.page_index,
+                    payload=composed_pagexml_bytes,
+                )
+                page_decisions = [
+                    item
+                    for item in decisions
+                    if item.page_id == page_id
+                ]
+                raw_payload = {
+                    "schemaVersion": 1,
+                    "source": "REVIEW_COMPOSED",
+                    "baseRunId": base_run.id,
+                    "candidateRunId": candidate_run.id,
+                    "pageId": page_id,
+                    "pageIndex": page_result.page_index,
+                    "compareDecisionSnapshotHash": compare_decision_snapshot_hash,
+                    "decisions": [
+                        {
+                            "id": item.id,
+                            "lineId": item.line_id,
+                            "tokenId": item.token_id,
+                            "decision": item.decision,
+                            "decisionEtag": item.decision_etag,
+                            "decidedBy": item.decided_by,
+                            "decidedAt": item.decided_at.isoformat(),
+                            "reason": item.decision_reason,
+                        }
+                        for item in page_decisions
+                    ],
+                    "pageScopeApplied": page_in_scope,
+                }
+                raw_bytes = json.dumps(
+                    raw_payload,
+                    ensure_ascii=True,
+                    separators=(",", ":"),
+                    sort_keys=True,
+                ).encode("utf-8")
+                raw_object = self._storage.write_transcription_raw_response(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=composed_run.id,
+                    page_index=page_result.page_index,
+                    payload=raw_bytes,
+                )
+                self._store.replace_line_transcription_results(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=composed_run.id,
+                    page_id=page_id,
+                    rows=line_payloads,
+                )
+                self._store.replace_token_transcription_results(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=composed_run.id,
+                    page_id=page_id,
+                    rows=[
+                        {
+                            "line_id": item["line_id"],
+                            "token_id": item["token_id"],
+                            "token_index": item["token_index"],
+                            "token_text": item["token_text"],
+                            "token_confidence": item["token_confidence"],
+                            "bbox_json": item["bbox_json"],
+                            "polygon_json": item["polygon_json"],
+                            "source_kind": item["source_kind"],
+                            "source_ref_id": item["source_ref_id"],
+                            "projection_basis": item["projection_basis"],
+                        }
+                        for item in token_payloads
+                    ],
+                )
+                source_page = (
+                    candidate_page
+                    if any(
+                        item.decision == "PROMOTE_CANDIDATE"
+                        for item in page_decisions
+                    )
+                    else base_page
+                ) or base_page or candidate_page
+                metrics_json = (
+                    dict(source_page.metrics_json)
+                    if source_page is not None
+                    else {}
+                )
+                metrics_json["compare_decision_count"] = len(page_decisions)
+                metrics_json["compare_decision_promote_count"] = sum(
+                    1
+                    for item in page_decisions
+                    if item.decision == "PROMOTE_CANDIDATE"
+                )
+                warnings_json = (
+                    list(source_page.warnings_json)
+                    if source_page is not None
+                    else []
+                )
+                if any(
+                    str(item.get("token_anchor_status")) != "CURRENT"
+                    for item in line_payloads
+                ):
+                    warning_code = "TOKEN_ANCHOR_REFRESH_REQUIRED"
+                    if warning_code not in warnings_json:
+                        warnings_json.append(warning_code)
+                self._store.complete_transcription_page_result(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=composed_run.id,
+                    page_id=page_id,
+                    pagexml_out_key=page_object.object_key,
+                    pagexml_out_sha256=self._sha256_hex(composed_pagexml_bytes),
+                    raw_model_response_key=raw_object.object_key,
+                    raw_model_response_sha256=self._sha256_hex(raw_bytes),
+                    metrics_json=metrics_json,
+                    warnings_json=warnings_json,
+                    hocr_out_key=None,
+                    hocr_out_sha256=None,
+                )
+
+            composed_run = self._store.finalize_transcription_run(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=composed_run.id,
+            )
+        except DocumentTranscriptionRunConflictError as error:
+            raise DocumentTranscriptionConflictError(str(error)) from error
+        except DocumentStorageError as error:
+            raise DocumentStoreUnavailableError(_CONTROLLED_STORAGE_FAILURE_MESSAGE) from error
+        return DocumentTranscriptionCompareFinalizeSnapshot(
+            document=document,
+            base_run=base_run,
+            candidate_run=candidate_run,
+            composed_run=composed_run,
+            compare_decision_snapshot_hash=compare_decision_snapshot_hash,
+            page_scope=tuple(normalized_page_scope),
         )
 
     def list_transcription_variant_layers(
@@ -6186,6 +12349,197 @@ class DocumentService:
             f"version={transcript_version_id}"
         )
 
+    def _hydrate_transcription_lines_with_active_versions(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        rows: Sequence[LineTranscriptionResultRecord],
+    ) -> list[LineTranscriptionResultRecord]:
+        hydrated: list[LineTranscriptionResultRecord] = []
+        for row in rows:
+            active_version_id = (
+                row.active_transcript_version_id
+                if isinstance(row.active_transcript_version_id, str)
+                and row.active_transcript_version_id.strip()
+                else None
+            )
+            if active_version_id is None:
+                hydrated.append(row)
+                continue
+            version = self._store.get_transcript_version(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                page_id=page_id,
+                line_id=row.line_id,
+                version_id=active_version_id,
+            )
+            if version is None:
+                hydrated.append(row)
+                continue
+            hydrated.append(replace(row, text_diplomatic=version.text_diplomatic))
+        return hydrated
+
+    def _resolve_transcript_version_source_type(
+        self,
+        *,
+        run: TranscriptionRunRecord,
+        version: TranscriptVersionRecord,
+    ) -> str:
+        if run.engine == "REVIEW_COMPOSED":
+            return "COMPARE_COMPOSED"
+        if version.base_version_id is None:
+            return "ENGINE_OUTPUT"
+        return "REVIEWER_CORRECTION"
+
+    @staticmethod
+    def _compute_transcription_compare_decision_snapshot_hash(
+        *,
+        decisions: Sequence[TranscriptionCompareDecisionRecord],
+        events: Sequence[TranscriptionCompareDecisionEventRecord],
+    ) -> str:
+        payload = {
+            "decisions": [
+                {
+                    "id": item.id,
+                    "documentId": item.document_id,
+                    "baseRunId": item.base_run_id,
+                    "candidateRunId": item.candidate_run_id,
+                    "pageId": item.page_id,
+                    "lineId": item.line_id,
+                    "tokenId": item.token_id,
+                    "decision": item.decision,
+                    "decisionEtag": item.decision_etag,
+                    "decidedBy": item.decided_by,
+                    "decidedAt": item.decided_at.isoformat(),
+                    "decisionReason": item.decision_reason,
+                    "updatedAt": item.updated_at.isoformat(),
+                }
+                for item in sorted(
+                    decisions,
+                    key=lambda row: (
+                        row.page_id,
+                        row.line_id or "",
+                        row.token_id or "",
+                        row.id,
+                    ),
+                )
+            ],
+            "events": [
+                {
+                    "id": event.id,
+                    "decisionId": event.decision_id,
+                    "documentId": event.document_id,
+                    "baseRunId": event.base_run_id,
+                    "candidateRunId": event.candidate_run_id,
+                    "pageId": event.page_id,
+                    "lineId": event.line_id,
+                    "tokenId": event.token_id,
+                    "fromDecision": event.from_decision,
+                    "toDecision": event.to_decision,
+                    "actorUserId": event.actor_user_id,
+                    "reason": event.reason,
+                    "createdAt": event.created_at.isoformat(),
+                }
+                for event in sorted(events, key=lambda row: (row.created_at, row.id))
+            ],
+        }
+        encoded = json.dumps(
+            payload,
+            ensure_ascii=True,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
+    def _read_transcription_pagexml_for_run_page(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        page_result: PageTranscriptionResultRecord | None,
+    ) -> bytes:
+        if page_result is None:
+            raise DocumentTranscriptionConflictError(
+                f"Transcription page result '{page_id}' was not found."
+            )
+        projection = self._store.get_transcription_output_projection(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+        object_key = (
+            projection.corrected_pagexml_key
+            if projection is not None
+            else page_result.pagexml_out_key
+        )
+        if not isinstance(object_key, str) or not object_key.strip():
+            raise DocumentTranscriptionConflictError(
+                f"Transcription PAGE-XML is unavailable for page '{page_id}'."
+            )
+        try:
+            return self._storage.read_object_bytes(object_key)
+        except DocumentStorageError as error:
+            raise DocumentStoreUnavailableError(
+                "Transcription PAGE-XML could not be loaded."
+            ) from error
+
+    def _build_transcription_composed_pagexml(
+        self,
+        *,
+        base_pagexml_bytes: bytes,
+        candidate_pagexml_bytes: bytes,
+        line_text_by_id: Mapping[str, str],
+    ) -> bytes:
+        try:
+            base_root = ET.fromstring(base_pagexml_bytes)
+            candidate_root = ET.fromstring(candidate_pagexml_bytes)
+        except ET.ParseError as error:
+            raise DocumentStoreUnavailableError(
+                "Transcription PAGE-XML payload is invalid."
+            ) from error
+
+        required_line_ids = set(line_text_by_id.keys())
+        base_line_ids = {
+            str(item.get("id"))
+            for item in base_root.findall(".//pc:TextLine", _PAGE_XML_NS)
+            if isinstance(item.get("id"), str)
+        }
+        candidate_line_ids = {
+            str(item.get("id"))
+            for item in candidate_root.findall(".//pc:TextLine", _PAGE_XML_NS)
+            if isinstance(item.get("id"), str)
+        }
+
+        if required_line_ids.issubset(base_line_ids):
+            target_root = base_root
+        elif required_line_ids.issubset(candidate_line_ids):
+            target_root = candidate_root
+        else:
+            missing = sorted(
+                required_line_ids - (base_line_ids | candidate_line_ids)
+            )
+            missing_label = ", ".join(missing[:5]) if missing else "<unknown>"
+            raise DocumentTranscriptionConflictError(
+                "Compared PAGE-XML payloads are missing one or more composed lines: "
+                f"{missing_label}."
+            )
+
+        for line_element in target_root.findall(".//pc:TextLine", _PAGE_XML_NS):
+            line_id = line_element.get("id")
+            if not isinstance(line_id, str):
+                continue
+            if line_id not in line_text_by_id:
+                continue
+            self._set_pagexml_text_equiv(line_element, line_text_by_id[line_id])
+        return ET.tostring(target_root, encoding="utf-8", xml_declaration=True) + b"\n"
+
     def compare_transcription_runs(
         self,
         *,
@@ -6194,6 +12548,9 @@ class DocumentService:
         document_id: str,
         base_run_id: str,
         candidate_run_id: str,
+        page_number: int | None = None,
+        line_id: str | None = None,
+        token_id: str | None = None,
     ) -> DocumentTranscriptionCompareSnapshot:
         self._require_transcription_view_access(
             current_user=current_user,
@@ -6229,6 +12586,15 @@ class DocumentService:
             raise DocumentTranscriptionConflictError(
                 "Compare requires base and candidate runs to share preprocess/layout basis and layout snapshot hash."
             )
+        normalized_page_number = int(page_number) if isinstance(page_number, int) else None
+        if normalized_page_number is not None and normalized_page_number < 1:
+            raise DocumentValidationError("page must be 1 or greater.")
+        normalized_line_id = (
+            line_id.strip() if isinstance(line_id, str) and line_id.strip() else None
+        )
+        normalized_token_id = (
+            token_id.strip() if isinstance(token_id, str) and token_id.strip() else None
+        )
 
         base_pages = self._list_all_transcription_page_results(
             project_id=project_id,
@@ -6267,18 +12633,69 @@ class DocumentService:
                     "candidate": item,
                 }
 
+        selected_page_ids: set[str] | None = None
+        if normalized_page_number is not None:
+            selected_page_ids = {
+                page_id
+                for page_id, page_entry in page_index.items()
+                if int(page_entry["page_index"]) + 1 == normalized_page_number
+            }
+            if not selected_page_ids:
+                raise DocumentPageNotFoundError(
+                    "Compared page target was not found for selected runs."
+                )
+
+        decisions = self._store.list_transcription_compare_decisions(
+            project_id=project_id,
+            document_id=document_id,
+            base_run_id=base_run.id,
+            candidate_run_id=candidate_run.id,
+        )
+        if selected_page_ids is not None:
+            decisions = [item for item in decisions if item.page_id in selected_page_ids]
+        if normalized_line_id is not None:
+            decisions = [
+                item for item in decisions if item.line_id == normalized_line_id
+            ]
+        if normalized_token_id is not None:
+            decisions = [
+                item for item in decisions if item.token_id == normalized_token_id
+            ]
+        decisions_by_key = {
+            (item.page_id, item.line_id, item.token_id): item for item in decisions
+        }
+        decision_events = self._store.list_transcription_compare_decision_events(
+            project_id=project_id,
+            document_id=document_id,
+            base_run_id=base_run.id,
+            candidate_run_id=candidate_run.id,
+            page_ids=(sorted(selected_page_ids) if selected_page_ids is not None else None),
+        )
+        if normalized_line_id is not None:
+            decision_events = [
+                event for event in decision_events if event.line_id == normalized_line_id
+            ]
+        if normalized_token_id is not None:
+            decision_events = [
+                event for event in decision_events if event.token_id == normalized_token_id
+            ]
+
         page_snapshots: list[DocumentTranscriptionComparePageSnapshot] = []
         total_changed_lines = 0
         total_changed_tokens = 0
         total_changed_confidence = 0
+        matched_line_filter = normalized_line_id is None
+        matched_token_filter = normalized_token_id is None
         for page_id, page_entry in sorted(
             page_index.items(),
             key=lambda item: (int(item[1]["page_index"]), item[0]),
         ):
+            if selected_page_ids is not None and page_id not in selected_page_ids:
+                continue
             base_page = page_entry["base"]  # type: ignore[assignment]
             candidate_page = page_entry["candidate"]  # type: ignore[assignment]
             page_number = int(page_entry["page_index"])
-            base_lines = (
+            base_lines_raw = (
                 self._store.list_line_transcription_results(
                     project_id=project_id,
                     document_id=document_id,
@@ -6288,7 +12705,7 @@ class DocumentService:
                 if base_page is not None
                 else []
             )
-            candidate_lines = (
+            candidate_lines_raw = (
                 self._store.list_line_transcription_results(
                     project_id=project_id,
                     document_id=document_id,
@@ -6298,14 +12715,39 @@ class DocumentService:
                 if candidate_page is not None
                 else []
             )
+            base_lines = self._hydrate_transcription_lines_with_active_versions(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=base_run.id,
+                page_id=page_id,
+                rows=base_lines_raw,
+            )
+            candidate_lines = self._hydrate_transcription_lines_with_active_versions(
+                project_id=project_id,
+                document_id=document_id,
+                run_id=candidate_run.id,
+                page_id=page_id,
+                rows=candidate_lines_raw,
+            )
             base_lines_by_id = {line.line_id: line for line in base_lines}
             candidate_lines_by_id = {line.line_id: line for line in candidate_lines}
-            line_ids = sorted(set(base_lines_by_id) | set(candidate_lines_by_id))
+            line_ids = sorted(
+                set(base_lines_by_id)
+                | set(candidate_lines_by_id)
+                | {
+                    item.line_id
+                    for item in decisions
+                    if item.page_id == page_id and item.line_id is not None
+                }
+            )
+            if normalized_line_id is not None:
+                line_ids = [item for item in line_ids if item == normalized_line_id]
             line_diffs: list[DocumentTranscriptionCompareLineDiffSnapshot] = []
             page_changed_confidence = 0
-            for line_id in line_ids:
-                base_line = base_lines_by_id.get(line_id)
-                candidate_line = candidate_lines_by_id.get(line_id)
+            for target_line_id in line_ids:
+                matched_line_filter = True
+                base_line = base_lines_by_id.get(target_line_id)
+                candidate_line = candidate_lines_by_id.get(target_line_id)
                 confidence_delta = (
                     round(candidate_line.conf_line - base_line.conf_line, 6)
                     if (
@@ -6325,11 +12767,11 @@ class DocumentService:
                     or base_line.token_anchor_status != candidate_line.token_anchor_status
                     or confidence_delta is not None
                 )
-                decision_row = decisions_by_key.get((page_id, line_id, None))
+                decision_row = decisions_by_key.get((page_id, target_line_id, None))
                 if changed or decision_row is not None:
                     line_diffs.append(
                         DocumentTranscriptionCompareLineDiffSnapshot(
-                            line_id=line_id,
+                            line_id=target_line_id,
                             base_line=base_line,
                             candidate_line=candidate_line,
                             changed=changed,
@@ -6362,11 +12804,22 @@ class DocumentService:
             )
             base_tokens_by_id = {token.token_id: token for token in base_tokens}
             candidate_tokens_by_id = {token.token_id: token for token in candidate_tokens}
-            token_ids = sorted(set(base_tokens_by_id) | set(candidate_tokens_by_id))
+            token_ids = sorted(
+                set(base_tokens_by_id)
+                | set(candidate_tokens_by_id)
+                | {
+                    item.token_id
+                    for item in decisions
+                    if item.page_id == page_id and item.token_id is not None
+                }
+            )
+            if normalized_token_id is not None:
+                token_ids = [item for item in token_ids if item == normalized_token_id]
             token_diffs: list[DocumentTranscriptionCompareTokenDiffSnapshot] = []
-            for token_id in token_ids:
-                base_token = base_tokens_by_id.get(token_id)
-                candidate_token = candidate_tokens_by_id.get(token_id)
+            for target_token_id in token_ids:
+                matched_token_filter = True
+                base_token = base_tokens_by_id.get(target_token_id)
+                candidate_token = candidate_tokens_by_id.get(target_token_id)
                 confidence_delta = (
                     round(candidate_token.token_confidence - base_token.token_confidence, 6)
                     if (
@@ -6387,16 +12840,20 @@ class DocumentService:
                     or base_token.token_index != candidate_token.token_index
                     or confidence_delta is not None
                 )
-                line_id = (
+                token_line_id = (
                     base_token.line_id
                     if base_token is not None
                     else candidate_token.line_id if candidate_token is not None else None
                 )
-                decision_row = decisions_by_key.get((page_id, line_id, token_id))
+                if normalized_line_id is not None and token_line_id != normalized_line_id:
+                    continue
+                decision_row = decisions_by_key.get(
+                    (page_id, token_line_id, target_token_id)
+                )
                 if changed or decision_row is not None:
                     token_diffs.append(
                         DocumentTranscriptionCompareTokenDiffSnapshot(
-                            token_id=token_id,
+                            token_id=target_token_id,
                             token_index=(
                                 base_token.token_index
                                 if base_token is not None
@@ -6406,7 +12863,7 @@ class DocumentService:
                                     else None
                                 )
                             ),
-                            line_id=line_id,
+                            line_id=token_line_id,
                             base_token=base_token,
                             candidate_token=candidate_token,
                             changed=changed,
@@ -6414,6 +12871,33 @@ class DocumentService:
                             current_decision=decision_row,
                         )
                     )
+            if (
+                (normalized_line_id is not None or normalized_token_id is not None)
+                and not line_diffs
+                and not token_diffs
+            ):
+                continue
+
+            base_projection = (
+                self._store.get_transcription_output_projection(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=base_run.id,
+                    page_id=page_id,
+                )
+                if base_page is not None
+                else None
+            )
+            candidate_projection = (
+                self._store.get_transcription_output_projection(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=candidate_run.id,
+                    page_id=page_id,
+                )
+                if candidate_page is not None
+                else None
+            )
 
             page_snapshot = DocumentTranscriptionComparePageSnapshot(
                 page_id=page_id,
@@ -6429,7 +12913,13 @@ class DocumentService:
                     "basePageXml": bool(
                         base_page is not None
                         and base_page.status == "SUCCEEDED"
-                        and base_page.pagexml_out_key
+                        and (
+                            (
+                                base_projection is not None
+                                and base_projection.corrected_pagexml_key
+                            )
+                            or base_page.pagexml_out_key
+                        )
                     ),
                     "baseRawResponse": bool(
                         base_page is not None and base_page.raw_model_response_sha256
@@ -6438,7 +12928,13 @@ class DocumentService:
                     "candidatePageXml": bool(
                         candidate_page is not None
                         and candidate_page.status == "SUCCEEDED"
-                        and candidate_page.pagexml_out_key
+                        and (
+                            (
+                                candidate_projection is not None
+                                and candidate_projection.corrected_pagexml_key
+                            )
+                            or candidate_page.pagexml_out_key
+                        )
                     ),
                     "candidateRawResponse": bool(
                         candidate_page is not None
@@ -6454,6 +12950,17 @@ class DocumentService:
             total_changed_tokens += page_snapshot.changed_token_count
             total_changed_confidence += page_snapshot.changed_confidence_count
 
+        if not matched_line_filter:
+            raise DocumentPageNotFoundError("Compared line target was not found.")
+        if not matched_token_filter:
+            raise DocumentPageNotFoundError("Compared token target was not found.")
+
+        compare_decision_snapshot_hash = (
+            self._compute_transcription_compare_decision_snapshot_hash(
+                decisions=decisions,
+                events=decision_events,
+            )
+        )
         return DocumentTranscriptionCompareSnapshot(
             document=document,
             base_run=base_run,
@@ -6466,6 +12973,9 @@ class DocumentService:
             candidate_engine_metadata=self._build_transcription_engine_metadata(
                 candidate_run
             ),
+            compare_decision_snapshot_hash=compare_decision_snapshot_hash,
+            compare_decision_count=len(decisions),
+            compare_decision_event_count=len(decision_events),
         )
 
     def record_transcription_compare_decisions(

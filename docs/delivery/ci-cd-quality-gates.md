@@ -61,6 +61,24 @@ Canonical preprocessing determinism gate:
 make test-preprocess-gold
 ```
 
+Canonical privacy regression gate (disclosure safety + reviewer lifecycle):
+
+```bash
+make test-privacy-regression
+```
+
+Canonical governance-integrity gate (manifest/ledger reconciliation, tamper evidence, and handoff lineage):
+
+```bash
+make test-governance-integrity
+```
+
+Canonical export-hardening gate (release-pack validation, audit completeness, and egress denial regressions):
+
+```bash
+make test-export-hardening
+```
+
 ## Toolchain Pins
 
 - Node.js: [`.node-version`](../../.node-version)
@@ -105,11 +123,14 @@ When browser regression fails in CI, the JavaScript job uploads:
 
 These artifacts are the canonical review path for visual and interaction regressions.
 
-When preprocessing gold-set regression fails in CI, the Python job uploads:
+When preprocessing, privacy, governance, or export-hardening regression gates fail in CI, the Python job uploads:
 
 - `api/tests/.artifacts/preprocessing-gold-set`
+- `api/tests/.artifacts/privacy-regression`
+- `api/tests/.artifacts/governance-integrity`
+- `api/tests/.artifacts/export-hardening`
 
-This artifact contains per-record hash/metric/warning drift details for triage.
+These artifacts contain deterministic drift/failure details for triage, including request-level release-pack and audit-completeness failures plus no-bypass egress denial checks.
 
 ## Prompt 30 Phase 1 Quality Gates
 

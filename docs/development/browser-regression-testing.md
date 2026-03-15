@@ -44,6 +44,22 @@ It includes:
 
 No second browser regression framework is introduced.
 
+## Phase 5 Privacy Reviewer-Safety Coverage
+
+Prompt 66 extends the same Playwright/Axe stack with deterministic privacy reviewer-safety coverage:
+
+- `web/tests/browser/privacy-workspace-regression.spec.ts`
+
+It includes:
+
+- visual baselines for workspace default/selected/override/controlled states plus run-review and compare lock-state surfaces
+- accessibility checks for privacy workspace, run review gates, and compare tables
+- keyboard-only flows for next-unresolved navigation, decision controls, review controls, and modal open/close behavior
+- focus-visibility and no-keyboard-trap assertions
+- bounded scrolling/reflow safety checks for workspace and review surfaces
+
+Privacy coverage uses the existing fixture stack (`UKDE_BROWSER_TEST_MODE=1`) and does not introduce a second browser framework.
+
 ## Scope Covered by This Gate
 
 Canonical route coverage:
@@ -99,10 +115,22 @@ Run preprocessing-only browser regression checks:
 pnpm test:browser --project=chromium --grep @preprocess --workers=1
 ```
 
+Run privacy reviewer-safety and visual checks:
+
+```bash
+pnpm test:browser --project=chromium --grep @privacy --workers=1
+```
+
 Update visual baselines intentionally:
 
 ```bash
 pnpm test:browser:update
+```
+
+Update only privacy baselines intentionally:
+
+```bash
+pnpm test:browser:update --project=chromium --grep @privacy --workers=1
 ```
 
 The JS CI gate (`make ci-js`) runs this suite and fails on visual, accessibility, keyboard, or focus regressions.

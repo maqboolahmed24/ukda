@@ -23,8 +23,13 @@ import {
   activityPath,
   adminPath,
   approvedModelsPath,
+  projectEntitiesPath,
   healthPath,
+  projectIndexesPath,
   projectModelAssignmentsPath,
+  projectPoliciesPath,
+  projectPseudonymRegistryPath,
+  projectSearchPath,
   projectsPath
 } from "../lib/routes";
 import { GlobalCommandBar } from "./global-command-bar";
@@ -56,6 +61,15 @@ const PROJECT_CONTEXT_LINKS: NavLink[] = [
   {
     href: "model-assignments",
     label: "Model assignments",
+    requiresProjectMembership: true
+  },
+  { href: "search", label: "Search", requiresProjectMembership: true },
+  { href: "entities", label: "Entities", requiresProjectMembership: true },
+  { href: "indexes", label: "Indexes", requiresProjectMembership: true },
+  { href: "policies", label: "Policies", requiresProjectMembership: true },
+  {
+    href: "pseudonym-registry",
+    label: "Pseudonym registry",
     requiresProjectMembership: true
   },
   { href: "jobs", label: "Jobs", requiresProjectMembership: true },
@@ -127,6 +141,28 @@ function resolveTaskContext(pathname: string): "dense" | "standard" {
     return "dense";
   }
   return "standard";
+}
+
+function resolveProjectContextHref(projectId: string, linkHref: string): string {
+  if (linkHref === "model-assignments") {
+    return projectModelAssignmentsPath(projectId);
+  }
+  if (linkHref === "indexes") {
+    return projectIndexesPath(projectId);
+  }
+  if (linkHref === "search") {
+    return projectSearchPath(projectId);
+  }
+  if (linkHref === "entities") {
+    return projectEntitiesPath(projectId);
+  }
+  if (linkHref === "policies") {
+    return projectPoliciesPath(projectId);
+  }
+  if (linkHref === "pseudonym-registry") {
+    return projectPseudonymRegistryPath(projectId);
+  }
+  return `/projects/${projectId}/${linkHref}`;
 }
 
 function resolveOpenDetailsLayers(): HTMLDetailsElement[] {
@@ -406,10 +442,10 @@ export function AuthenticatedShell({
             >
               <ul className="authenticatedShellContextList">
                 {visibleProjectLinks.map((link) => {
-                  const href =
-                    link.href === "model-assignments"
-                      ? projectModelAssignmentsPath(currentProject.id)
-                      : `/projects/${currentProject.id}/${link.href}`;
+                  const href = resolveProjectContextHref(
+                    currentProject.id,
+                    link.href
+                  );
                   return (
                     <li key={link.href}>
                       <Link
@@ -436,10 +472,10 @@ export function AuthenticatedShell({
               <nav aria-label="Project context">
                 <ul className="authenticatedShellContextList">
                   {visibleProjectLinks.map((link) => {
-                    const href =
-                      link.href === "model-assignments"
-                        ? projectModelAssignmentsPath(currentProject.id)
-                        : `/projects/${currentProject.id}/${link.href}`;
+                    const href = resolveProjectContextHref(
+                      currentProject.id,
+                      link.href
+                    );
                     return (
                       <li key={link.href}>
                         <Link

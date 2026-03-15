@@ -1,14 +1,14 @@
 # Transcription Compare Decision Contract
 
-Status: Implemented in Prompt 52
-Scope: Compare decision projection shape, concurrency, append-only event chronology, and read/write API semantics
+Status: Updated in Prompt 57
+Scope: Compare read filters, explicit decision writes, append-only chronology, snapshot-hash conflict control, and immutable finalization into composed runs
 
 ## Canonical persistence
 
-Decision persistence uses two tables:
+Compare state is split into:
 
-- `transcription_compare_decisions` (current projection row per target tuple)
-- `transcription_compare_decision_events` (append-only event stream)
+- `transcription_compare_decisions`: current projection row per compare target
+- `transcription_compare_decision_events`: append-only decision chronology
 
 Decision target identity tuple:
 
@@ -19,61 +19,81 @@ Decision target identity tuple:
 - `line_id` (nullable)
 - `token_id` (nullable)
 
-At most one current projection row is allowed per tuple.
+At most one current projection row exists per tuple. Chronology is never rewritten.
 
-## Decision model
+## Compare read contract
 
-Allowed values:
+Read endpoint:
 
-- `KEEP_BASE`
-- `PROMOTE_CANDIDATE`
+- `GET /projects/{projectId}/documents/{documentId}/transcription-runs/compare?baseRunId={baseRunId}&candidateRunId={candidateRunId}&page={pageNumber}&lineId={lineId}&tokenId={tokenId}`
 
-Decision writes may include optional reason text (`decision_reason`) for reviewer rationale.
+Behavior:
 
-## Optimistic concurrency
+- compares only runs that share preprocess run, layout run, and layout snapshot hash
+- supports optional page/line/token filtering without creating a second compare route family
+- returns line and token diffs plus engine metadata
+- returns decision lineage metadata:
+  - `compareDecisionSnapshotHash`
+  - `compareDecisionCount`
+  - `compareDecisionEventCount`
 
-Decision updates require `decision_etag`.
-
-Rules:
-
-- create flow: `decision_etag` must be omitted
-- update flow: `decision_etag` must match current row
-- stale or missing etag for an existing row is rejected
-
-Every accepted write generates a new etag.
-
-## Append-only event chronology
-
-Each accepted create/update writes a new event row to `transcription_compare_decision_events`:
-
-- `from_decision` (nullable on first write)
-- `to_decision`
-- `actor_user_id`
-- `reason`
-- `created_at`
-
-This event stream is the immutable chronology for replay and audit.
-
-## API contract
+## Decision write contract
 
 Write endpoint:
 
 - `POST /projects/{projectId}/documents/{documentId}/transcription-runs/compare/decisions`
 
-Payload semantics:
+Rules:
 
-- `baseRunId`, `candidateRunId`
-- one or more decision items
-- each item targets page/line/token scope
-- each item includes decision and optional reason/etag
+- explicit decisions only (`KEEP_BASE` or `PROMOTE_CANDIDATE`)
+- create path must omit `decisionEtag`
+- update path must provide current `decisionEtag`
+- stale/missing etag for existing target is rejected
+- accepted writes update the projection row and append one immutable event row
 
-Response semantics:
+## Snapshot-hash conflict control
 
-- returns persisted decision projection rows with updated etags
-- does not mutate base/candidate transcription run outputs
+Decision snapshot hash is computed from:
 
-## Guardrails
+- filtered current decision projection rows
+- matching append-only decision events
 
-- compare decisions are valid only for runs that pass compare-basis checks
-- decisions are explicit reviewer actions, never inferred automatically
-- no hidden merge/finalization side effects are triggered by decision writes alone
+This hash is exposed in compare reads and used as optimistic-lock input for finalize operations.
+
+## Finalize contract (`REVIEW_COMPOSED`)
+
+Finalize endpoint:
+
+- `POST /projects/{projectId}/documents/{documentId}/transcription-runs/compare/finalize`
+
+Request shape:
+
+- `baseRunId`
+- `candidateRunId`
+- optional `pageIds`
+- optional `expectedCompareDecisionSnapshotHash`
+
+Behavior:
+
+- requires explicit decisions (no silent merge path)
+- rejects stale expected snapshot hash
+- creates a new immutable `transcription_runs` row with `engine = REVIEW_COMPOSED`
+- writes run `params_json` lineage fields:
+  - `baseRunId`
+  - `candidateRunId`
+  - `compareDecisionSnapshotHash`
+  - `pageScope`
+  - `finalizedBy`
+  - `finalizedAt`
+- rebuilds PAGE-XML output and composed token projections
+- source runs remain immutable
+
+## Audit and governance
+
+Canonical events:
+
+- `TRANSCRIPTION_RUN_COMPARE_VIEWED`
+- `TRANSCRIPTION_COMPARE_DECISION_RECORDED`
+- `TRANSCRIPTION_COMPARE_FINALIZED`
+
+No hidden reasoning text is persisted or surfaced by compare endpoints.

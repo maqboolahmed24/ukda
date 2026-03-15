@@ -29,11 +29,21 @@ All operations APIs are read-only.
 Reads are self-audited with bounded metadata:
 
 - `OPERATIONS_OVERVIEW_VIEWED`
+- `OPERATIONS_EXPORT_STATUS_VIEWED`
 - `OPERATIONS_SLOS_VIEWED`
 - `OPERATIONS_ALERTS_VIEWED`
 - `OPERATIONS_TIMELINE_VIEWED`
 
-`/admin/operations/export-status` currently reuses security posture data while the dedicated Phase 11 export-status API and event (`OPERATIONS_EXPORT_STATUS_VIEWED`) remain pending.
+`/admin/operations/export-status` returns export-queue handoff telemetry for long-running governance programs:
+
+- open-request volume
+- queue-aging buckets (`UNSTARTED`, `NO_SLA`, `ON_TRACK`, `DUE_SOON`, `OVERDUE`, plus stale-open count)
+- reminder and escalation due/sent totals
+- retention-pending count with explicit pending window
+- terminal exported/approved/rejected/returned counts
+- active policy thresholds used for SLA/reminder/escalation/retention calculations
+
+This route remains read-only for `ADMIN` and `AUDITOR`.
 
 ## Operations Web Surfaces
 

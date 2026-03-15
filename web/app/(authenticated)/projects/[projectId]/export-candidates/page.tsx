@@ -13,7 +13,7 @@ export default async function ProjectExportCandidatesPage({
   params: Promise<{ projectId: string }>;
 }>) {
   const { projectId } = await params;
-  const [projectResult, exportResult] = await Promise.all([
+  const [projectResult, candidatesResult] = await Promise.all([
     getProjectSummary(projectId),
     listExportCandidates(projectId)
   ]);
@@ -22,59 +22,87 @@ export default async function ProjectExportCandidatesPage({
     redirect("/projects?error=member-route");
   }
 
+  const items = candidatesResult.ok && candidatesResult.data
+    ? candidatesResult.data.items
+    : [];
+
   return (
     <main className="homeLayout">
       <section className="sectionCard ukde-panel">
-        <SectionState
-          kind="disabled"
-          eyebrow="Export gateway (Phase 0)"
-          title="Export candidates"
-          description="Candidate listing is intentionally disabled until the Phase 8 screening workflow is implemented."
-        />
+        <h1 className="sectionTitle">Export candidates</h1>
+        <p className="ukde-muted">
+          Immutable candidate snapshots are pinned to governance and policy lineage.
+          Start submission from an eligible snapshot.
+        </p>
         <div className="buttonRow">
           <Link
             className="secondaryButton"
             href={`/projects/${projectId}/export-requests`}
           >
-            View export requests
-          </Link>
-          <Link
-            className="secondaryButton"
-            href={`/projects/${projectId}/export-review`}
-          >
-            Review queue stub
+            View request history
           </Link>
         </div>
       </section>
 
-      <section className="sectionCard ukde-panel">
-        {!exportResult.ok || !exportResult.data ? (
+      {!candidatesResult.ok ? (
+        <section className="sectionCard ukde-panel">
           <SectionState
             kind="error"
-            title="Export stub unavailable"
-            description={exportResult.detail ?? "Unknown failure"}
+            title="Candidate list unavailable"
+            description={candidatesResult.detail ?? "Unknown failure"}
           />
-        ) : (
-          <>
-            <div className="auditIntegrityRow">
-              <span className="ukde-badge">{exportResult.data.status}</span>
-              <span className="ukde-badge">{exportResult.data.code}</span>
-            </div>
-            <p className="ukde-muted">{exportResult.data.detail}</p>
-            <p className="ukde-muted">
-              Route {exportResult.data.method} {exportResult.data.route}
-            </p>
-            <div className="buttonRow">
-              <button className="projectPrimaryButton" disabled type="button">
-                Create candidate
-              </button>
-              <button className="projectSecondaryButton" disabled type="button">
-                Download preview
-              </button>
-            </div>
-          </>
-        )}
-      </section>
+        </section>
+      ) : items.length === 0 ? (
+        <section className="sectionCard ukde-panel">
+          <SectionState
+            kind="empty"
+            title="No eligible candidates yet"
+            description="Candidates appear after approved governance-ready outputs are frozen."
+          />
+        </section>
+      ) : (
+        <section className="sectionCard ukde-panel">
+          <table className="ukde-data-table">
+            <thead>
+              <tr>
+                <th>Candidate</th>
+                <th>Kind</th>
+                <th>Source phase</th>
+                <th>Created</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id}>
+                  <td>
+                    <code>{item.id}</code>
+                  </td>
+                  <td>{item.candidateKind}</td>
+                  <td>{item.sourcePhase}</td>
+                  <td>{new Date(item.createdAt).toLocaleString()}</td>
+                  <td>
+                    <div className="buttonRow">
+                      <Link
+                        className="secondaryButton"
+                        href={`/projects/${projectId}/export-candidates/${item.id}`}
+                      >
+                        Details
+                      </Link>
+                      <Link
+                        className="projectPrimaryButton"
+                        href={`/projects/${projectId}/export-requests/new?candidateId=${encodeURIComponent(item.id)}`}
+                      >
+                        New request
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
     </main>
   );
 }

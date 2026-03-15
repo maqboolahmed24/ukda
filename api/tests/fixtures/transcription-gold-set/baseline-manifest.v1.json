@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "fixturePackId": "transcription-gold-set-internal",
+  "fixturePackVersion": "v1",
+  "baselineVersion": "v1",
+  "generatedAt": "2026-03-14T00:00:00Z",
+  "generatedBy": "prompt-58",
+  "expectations": [
+    {
+      "sliceName": "overall",
+      "caseCount": 4,
+      "expectedCer": 0.05454545454545454,
+      "expectedWer": 0.3333333333333333,
+      "tolerance": 1e-12
+    },
+    {
+      "sliceName": "ordinary_line",
+      "caseCount": 2,
+      "expectedCer": 0.045454545454545456,
+      "expectedWer": 0.25,
+      "tolerance": 1e-12
+    },
+    {
+      "sliceName": "rescue_source",
+      "caseCount": 2,
+      "expectedCer": 0.06060606060606061,
+      "expectedWer": 0.4,
+      "tolerance": 1e-12
+    },
+    {
+      "sliceName": "fallback_invoked",
+      "caseCount": 1,
+      "expectedCer": 0.058823529411764705,
+      "expectedWer": 0.3333333333333333,
+      "tolerance": 1e-12
+    }
+  ]
+}

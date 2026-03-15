@@ -1,3 +1,4 @@
+import hmac
 from collections.abc import Callable
 
 from fastapi import Depends, Header, HTTPException, Request, status
@@ -8,6 +9,7 @@ from app.audit.service import AuditService, get_audit_service
 from app.auth.models import AuthSource, PlatformRole, SessionPrincipal
 from app.auth.service import InvalidSessionError, get_auth_service
 from app.auth.store import AuthStoreUnavailableError
+from app.core.config import Settings, get_settings
 from app.telemetry.context import current_trace_id
 from app.telemetry.service import TelemetryService, get_telemetry_service
 
@@ -155,6 +157,32 @@ def require_platform_roles(
         )
 
     return _guard
+
+
+def require_internal_export_gateway_service_account(
+    internal_token: str | None = Header(default=None, alias="X-UKDE-Internal-Token"),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    settings: Settings = Depends(get_settings),
+) -> str:
+    expected = settings.internal_export_gateway_token.strip()
+    provided = (internal_token or "").strip()
+    if expected and provided and hmac.compare_digest(provided, expected):
+        return settings.internal_export_gateway_actor_user_id
+    audit_service.record_event_best_effort(
+        event_type="ACCESS_DENIED",
+        actor_user_id=None,
+        metadata={
+            "route": request_context.route_template,
+            "required_roles": ["INTERNAL_EXPORT_GATEWAY_SERVICE"],
+            "status_code": status.HTTP_403_FORBIDDEN,
+        },
+        request_context=request_context,
+    )
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Internal export-gateway authentication failed.",
+    )
 
 
 def require_csrf_for_cookie_auth(

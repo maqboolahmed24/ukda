@@ -1,0 +1,615 @@
+{
+  "fixturePackId": "privacy-regression-pack-v1",
+  "fixturePackVersion": "v1",
+  "schemaVersion": 2,
+  "generatedAt": "2026-03-14T00:00:00Z",
+  "ownership": {
+    "ownerTeam": "privacy-review",
+    "maintainers": [
+      "privacy-platform@ukde.test",
+      "qa-governance@ukde.test"
+    ],
+    "reviewCadence": "quarterly",
+    "publicDataDependency": false
+  },
+  "policySnapshot": {
+    "defaults": {
+      "auto_apply_confidence_threshold": 0.9
+    },
+    "directIdentifierRecallFloor": 0.99
+  },
+  "regressionSlices": [
+    {
+      "sliceId": "direct_identifier",
+      "description": "Structured direct identifier extraction and masking regressions."
+    },
+    {
+      "sliceId": "near_miss",
+      "description": "Near-miss and false-positive handling without disclosure leaks."
+    },
+    {
+      "sliceId": "unreadable_risk",
+      "description": "Area-mask-backed unreadable-risk disclosures."
+    },
+    {
+      "sliceId": "overlapping_span",
+      "description": "Deterministic overlap handling for competing findings."
+    },
+    {
+      "sliceId": "dual_review_override",
+      "description": "High-risk override fixtures that require dual control downstream."
+    }
+  ],
+  "cases": [
+    {
+      "caseId": "email-01",
+      "sliceId": "direct_identifier",
+      "fixtureType": "direct_identifier",
+      "sourceKind": "synthetic",
+      "includeInRecallGate": true,
+      "text": "Correspondence: jane.doe@example.org",
+      "expected": [
+        {
+          "category": "EMAIL",
+          "value": "jane.doe@example.org"
+        }
+      ],
+      "rawValues": [
+        "jane.doe@example.org"
+      ],
+      "previewFixture": {
+        "lines": [
+          {
+            "lineId": "line-email-01",
+            "text": "Correspondence: jane.doe@example.org"
+          }
+        ],
+        "tokens": [
+          {
+            "tokenId": "token-email-01",
+            "lineId": "line-email-01",
+            "tokenIndex": 1,
+            "tokenText": "jane.doe@example.org"
+          }
+        ],
+        "findings": [
+          {
+            "findingId": "finding-email-01",
+            "decisionStatus": "APPROVED",
+            "lineId": "line-email-01",
+            "spanStart": 16,
+            "spanEnd": 36,
+            "tokenRefsJson": [
+              {
+                "tokenId": "token-email-01",
+                "lineId": "line-email-01"
+              }
+            ],
+            "areaMaskId": null
+          }
+        ],
+        "manifest": {
+          "runId": "regression-email-01",
+          "pageRows": [
+            {
+              "pageId": "page-1",
+              "previewSha256": "preview-email-01"
+            }
+          ],
+          "approvedSnapshotSha256": "approved-email-01",
+          "previewKeysByPage": {
+            "page-1": "controlled/derived/privacy/regression-email-01/page-1.png"
+          }
+        }
+      }
+    },
+    {
+      "caseId": "phone-01",
+      "sliceId": "direct_identifier",
+      "fixtureType": "direct_identifier",
+      "sourceKind": "synthetic",
+      "includeInRecallGate": true,
+      "text": "Call +44 20 7946 0958 tomorrow.",
+      "expected": [
+        {
+          "category": "PHONE",
+          "value": "+44 20 7946 0958"
+        }
+      ],
+      "rawValues": [
+        "+44 20 7946 0958"
+      ],
+      "previewFixture": {
+        "lines": [
+          {
+            "lineId": "line-phone-01",
+            "text": "Call +44 20 7946 0958 tomorrow."
+          }
+        ],
+        "tokens": [],
+        "findings": [
+          {
+            "findingId": "finding-phone-01",
+            "decisionStatus": "APPROVED",
+            "lineId": "line-phone-01",
+            "spanStart": 5,
+            "spanEnd": 21,
+            "tokenRefsJson": null,
+            "areaMaskId": null
+          }
+        ],
+        "manifest": {
+          "runId": "regression-phone-01",
+          "pageRows": [
+            {
+              "pageId": "page-1",
+              "previewSha256": "preview-phone-01"
+            }
+          ],
+          "approvedSnapshotSha256": "approved-phone-01",
+          "previewKeysByPage": {
+            "page-1": "controlled/derived/privacy/regression-phone-01/page-1.png"
+          }
+        }
+      }
+    },
+    {
+      "caseId": "postcode-01",
+      "sliceId": "direct_identifier",
+      "fixtureType": "direct_identifier",
+      "sourceKind": "synthetic",
+      "includeInRecallGate": true,
+      "text": "Address SW1A 1AA London",
+      "expected": [
+        {
+          "category": "POSTCODE",
+          "value": "SW1A 1AA"
+        }
+      ],
+      "rawValues": [
+        "SW1A 1AA"
+      ],
+      "previewFixture": {
+        "lines": [
+          {
+            "lineId": "line-postcode-01",
+            "text": "Address SW1A 1AA London"
+          }
+        ],
+        "tokens": [],
+        "findings": [
+          {
+            "findingId": "finding-postcode-01",
+            "decisionStatus": "APPROVED",
+            "lineId": "line-postcode-01",
+            "spanStart": 8,
+            "spanEnd": 16,
+            "tokenRefsJson": null,
+            "areaMaskId": null
+          }
+        ],
+        "manifest": {
+          "runId": "regression-postcode-01",
+          "pageRows": [
+            {
+              "pageId": "page-1",
+              "previewSha256": "preview-postcode-01"
+            }
+          ],
+          "approvedSnapshotSha256": "approved-postcode-01",
+          "previewKeysByPage": {
+            "page-1": "controlled/derived/privacy/regression-postcode-01/page-1.png"
+          }
+        }
+      }
+    },
+    {
+      "caseId": "url-01",
+      "sliceId": "direct_identifier",
+      "fixtureType": "direct_identifier",
+      "sourceKind": "synthetic",
+      "includeInRecallGate": true,
+      "text": "See https://archives.example.gov.uk/source for details.",
+      "expected": [
+        {
+          "category": "URL",
+          "value": "https://archives.example.gov.uk/source"
+        }
+      ],
+      "rawValues": [
+        "https://archives.example.gov.uk/source"
+      ],
+      "previewFixture": {
+        "lines": [
+          {
+            "lineId": "line-url-01",
+            "text": "See https://archives.example.gov.uk/source for details."
+          }
+        ],
+        "tokens": [],
+        "findings": [
+          {
+            "findingId": "finding-url-01",
+            "decisionStatus": "APPROVED",
+            "lineId": "line-url-01",
+            "spanStart": 4,
+            "spanEnd": 41,
+            "tokenRefsJson": null,
+            "areaMaskId": null
+          }
+        ],
+        "manifest": {
+          "runId": "regression-url-01",
+          "pageRows": [
+            {
+              "pageId": "page-1",
+              "previewSha256": "preview-url-01"
+            }
+          ],
+          "approvedSnapshotSha256": "approved-url-01",
+          "previewKeysByPage": {
+            "page-1": "controlled/derived/privacy/regression-url-01/page-1.png"
+          }
+        }
+      }
+    },
+    {
+      "caseId": "ni-01",
+      "sliceId": "direct_identifier",
+      "fixtureType": "direct_identifier",
+      "sourceKind": "synthetic",
+      "includeInRecallGate": true,
+      "text": "Reference AB123456C assigned.",
+      "expected": [
+        {
+          "category": "NI_NUMBER",
+          "value": "AB123456C"
+        }
+      ],
+      "rawValues": [
+        "AB123456C"
+      ],
+      "previewFixture": {
+        "lines": [
+          {
+            "lineId": "line-ni-01",
+            "text": "Reference AB123456C assigned."
+          }
+        ],
+        "tokens": [],
+        "findings": [
+          {
+            "findingId": "finding-ni-01",
+            "decisionStatus": "APPROVED",
+            "lineId": "line-ni-01",
+            "spanStart": 10,
+            "spanEnd": 19,
+            "tokenRefsJson": null,
+            "areaMaskId": null
+          }
+        ],
+        "manifest": {
+          "runId": "regression-ni-01",
+          "pageRows": [
+            {
+              "pageId": "page-1",
+              "previewSha256": "preview-ni-01"
+            }
+          ],
+          "approvedSnapshotSha256": "approved-ni-01",
+          "previewKeysByPage": {
+            "page-1": "controlled/derived/privacy/regression-ni-01/page-1.png"
+          }
+        }
+      }
+    },
+    {
+      "caseId": "nhs-01",
+      "sliceId": "direct_identifier",
+      "fixtureType": "direct_identifier",
+      "sourceKind": "synthetic",
+      "includeInRecallGate": true,
+      "text": "NHS Number 943 476 5919 recorded.",
+      "expected": [
+        {
+          "category": "NHS_NUMBER",
+          "value": "943 476 5919"
+        }
+      ],
+      "rawValues": [
+        "943 476 5919"
+      ],
+      "previewFixture": {
+        "lines": [
+          {
+            "lineId": "line-nhs-01",
+            "text": "NHS Number 943 476 5919 recorded."
+          }
+        ],
+        "tokens": [],
+        "findings": [
+          {
+            "findingId": "finding-nhs-01",
+            "decisionStatus": "APPROVED",
+            "lineId": "line-nhs-01",
+            "spanStart": 11,
+            "spanEnd": 23,
+            "tokenRefsJson": null,
+            "areaMaskId": null
+          }
+        ],
+        "manifest": {
+          "runId": "regression-nhs-01",
+          "pageRows": [
+            {
+              "pageId": "page-1",
+              "previewSha256": "preview-nhs-01"
+            }
+          ],
+          "approvedSnapshotSha256": "approved-nhs-01",
+          "previewKeysByPage": {
+            "page-1": "controlled/derived/privacy/regression-nhs-01/page-1.png"
+          }
+        }
+      }
+    },
+    {
+      "caseId": "idlike-01",
+      "sliceId": "direct_identifier",
+      "fixtureType": "direct_identifier",
+      "sourceKind": "synthetic",
+      "includeInRecallGate": true,
+      "text": "Document ID AB-12345678 logged.",
+      "expected": [
+        {
+          "category": "ID_NUMBER",
+          "value": "AB-12345678"
+        }
+      ],
+      "rawValues": [
+        "AB-12345678"
+      ],
+      "previewFixture": {
+        "lines": [
+          {
+            "lineId": "line-idlike-01",
+            "text": "Document ID AB-12345678 logged."
+          }
+        ],
+        "tokens": [],
+        "findings": [
+          {
+            "findingId": "finding-idlike-01",
+            "decisionStatus": "APPROVED",
+            "lineId": "line-idlike-01",
+            "spanStart": 12,
+            "spanEnd": 23,
+            "tokenRefsJson": null,
+            "areaMaskId": null
+          }
+        ],
+        "manifest": {
+          "runId": "regression-idlike-01",
+          "pageRows": [
+            {
+              "pageId": "page-1",
+              "previewSha256": "preview-idlike-01"
+            }
+          ],
+          "approvedSnapshotSha256": "approved-idlike-01",
+          "previewKeysByPage": {
+            "page-1": "controlled/derived/privacy/regression-idlike-01/page-1.png"
+          }
+        }
+      }
+    },
+    {
+      "caseId": "near-miss-01",
+      "sliceId": "near_miss",
+      "fixtureType": "near_miss",
+      "sourceKind": "synthetic",
+      "includeInRecallGate": false,
+      "text": "Shelf marker AB-12 cleared for indexing.",
+      "expected": [],
+      "rawValues": [],
+      "previewFixture": {
+        "lines": [
+          {
+            "lineId": "line-nearmiss-01",
+            "text": "Shelf marker AB-12 cleared for indexing."
+          }
+        ],
+        "tokens": [],
+        "findings": [
+          {
+            "findingId": "finding-nearmiss-01",
+            "decisionStatus": "FALSE_POSITIVE",
+            "lineId": "line-nearmiss-01",
+            "spanStart": 13,
+            "spanEnd": 18,
+            "tokenRefsJson": null,
+            "areaMaskId": null
+          }
+        ],
+        "manifest": {
+          "runId": "regression-nearmiss-01",
+          "pageRows": [
+            {
+              "pageId": "page-1",
+              "previewSha256": "preview-nearmiss-01"
+            }
+          ],
+          "approvedSnapshotSha256": "approved-nearmiss-01",
+          "previewKeysByPage": {
+            "page-1": "controlled/derived/privacy/regression-nearmiss-01/page-1.png"
+          }
+        }
+      }
+    },
+    {
+      "caseId": "unreadable-risk-01",
+      "sliceId": "unreadable_risk",
+      "fixtureType": "unreadable_risk",
+      "sourceKind": "synthetic",
+      "includeInRecallGate": false,
+      "text": "Folded note: AB123456C not fully legible.",
+      "expected": [],
+      "rawValues": [
+        "AB123456C"
+      ],
+      "previewFixture": {
+        "lines": [
+          {
+            "lineId": "line-unreadable-01",
+            "text": "Folded note: AB123456C not fully legible."
+          }
+        ],
+        "tokens": [],
+        "findings": [
+          {
+            "findingId": "finding-unreadable-01",
+            "decisionStatus": "OVERRIDDEN",
+            "lineId": "line-unreadable-01",
+            "spanStart": null,
+            "spanEnd": null,
+            "tokenRefsJson": null,
+            "areaMaskId": "mask-unreadable-01"
+          }
+        ],
+        "manifest": {
+          "runId": "regression-unreadable-01",
+          "pageRows": [
+            {
+              "pageId": "page-1",
+              "previewSha256": "preview-unreadable-01"
+            }
+          ],
+          "approvedSnapshotSha256": "approved-unreadable-01",
+          "previewKeysByPage": {
+            "page-1": "controlled/derived/privacy/regression-unreadable-01/page-1.png"
+          }
+        }
+      }
+    },
+    {
+      "caseId": "overlapping-span-01",
+      "sliceId": "overlapping_span",
+      "fixtureType": "overlapping_span",
+      "sourceKind": "synthetic",
+      "includeInRecallGate": false,
+      "text": "ID AB123456C flagged twice.",
+      "expected": [],
+      "rawValues": [
+        "AB123456C"
+      ],
+      "previewFixture": {
+        "lines": [
+          {
+            "lineId": "line-overlap-01",
+            "text": "ID AB123456C flagged twice."
+          }
+        ],
+        "tokens": [],
+        "findings": [
+          {
+            "findingId": "finding-overlap-01-a",
+            "decisionStatus": "APPROVED",
+            "lineId": "line-overlap-01",
+            "spanStart": 3,
+            "spanEnd": 12,
+            "tokenRefsJson": null,
+            "areaMaskId": null
+          },
+          {
+            "findingId": "finding-overlap-01-b",
+            "decisionStatus": "OVERRIDDEN",
+            "lineId": "line-overlap-01",
+            "spanStart": 5,
+            "spanEnd": 12,
+            "tokenRefsJson": null,
+            "areaMaskId": null
+          }
+        ],
+        "manifest": {
+          "runId": "regression-overlap-01",
+          "pageRows": [
+            {
+              "pageId": "page-1",
+              "previewSha256": "preview-overlap-01"
+            }
+          ],
+          "approvedSnapshotSha256": "approved-overlap-01",
+          "previewKeysByPage": {
+            "page-1": "controlled/derived/privacy/regression-overlap-01/page-1.png"
+          }
+        }
+      }
+    },
+    {
+      "caseId": "dual-review-override-01",
+      "sliceId": "dual_review_override",
+      "fixtureType": "dual_review_override",
+      "sourceKind": "synthetic",
+      "includeInRecallGate": true,
+      "text": "Witness email jane.override@example.org requires escalation.",
+      "expected": [
+        {
+          "category": "EMAIL",
+          "value": "jane.override@example.org"
+        }
+      ],
+      "rawValues": [
+        "jane.override@example.org"
+      ],
+      "metadata": {
+        "dualReviewRequired": true,
+        "overrideRiskClassification": "HIGH"
+      },
+      "previewFixture": {
+        "lines": [
+          {
+            "lineId": "line-dual-01",
+            "text": "Witness email jane.override@example.org requires escalation."
+          }
+        ],
+        "tokens": [
+          {
+            "tokenId": "token-dual-01",
+            "lineId": "line-dual-01",
+            "tokenIndex": 2,
+            "tokenText": "jane.override@example.org"
+          }
+        ],
+        "findings": [
+          {
+            "findingId": "finding-dual-01",
+            "decisionStatus": "OVERRIDDEN",
+            "lineId": "line-dual-01",
+            "spanStart": 14,
+            "spanEnd": 39,
+            "tokenRefsJson": [
+              {
+                "tokenId": "token-dual-01",
+                "lineId": "line-dual-01"
+              }
+            ],
+            "areaMaskId": null
+          }
+        ],
+        "manifest": {
+          "runId": "regression-dual-01",
+          "pageRows": [
+            {
+              "pageId": "page-1",
+              "previewSha256": "preview-dual-01"
+            }
+          ],
+          "approvedSnapshotSha256": "approved-dual-01",
+          "previewKeysByPage": {
+            "page-1": "controlled/derived/privacy/regression-dual-01/page-1.png"
+          }
+        }
+      }
+    }
+  ]
+}

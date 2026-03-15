@@ -1086,6 +1086,47 @@ class TranscriptionCorrectionStore:
             return []
         return [self.line]
 
+    def list_transcript_versions(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        line_id: str,
+    ) -> list[TranscriptVersionRecord]:
+        if (
+            project_id != self.run.project_id
+            or document_id != self.run.document_id
+            or run_id != self.run.id
+            or page_id != self.page.id
+            or line_id != self.line.line_id
+        ):
+            return []
+        return list(self.transcript_versions)
+
+    def get_transcript_version(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        line_id: str,
+        version_id: str,
+    ) -> TranscriptVersionRecord | None:
+        versions = self.list_transcript_versions(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+            line_id=line_id,
+        )
+        for item in versions:
+            if item.id == version_id:
+                return item
+        return None
+
     def append_transcript_line_version(
         self,
         *,
@@ -2375,6 +2416,114 @@ def test_correct_transcription_line_rejects_stale_version_etag(tmp_path: Path) -
             text_diplomatic="Dear diary?",
             version_etag="line-etag-stale",
         )
+
+
+def test_transcription_line_version_history_tracks_engine_and_reviewer_lineage(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    store = TranscriptionCorrectionStore()
+    storage = DocumentStorage(settings=settings)
+    storage.write_transcription_page_xml(
+        project_id=store.run.project_id,
+        document_id=store.run.document_id,
+        run_id=store.run.id,
+        page_index=store.page.page_index,
+        payload=b"""<?xml version="1.0" encoding="UTF-8"?>
+<PcGts xmlns="http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15">
+  <Page imageFilename="page-1.png" imageWidth="1000" imageHeight="1400">
+    <TextRegion id="region-1">
+      <TextLine id="line-1">
+        <TextEquiv><Unicode>Dear diary</Unicode></TextEquiv>
+      </TextLine>
+    </TextRegion>
+  </Page>
+</PcGts>
+""",
+    )
+    service = DocumentService(
+        settings=settings,
+        store=store,  # type: ignore[arg-type]
+        project_service=FakeProjectService(),  # type: ignore[arg-type]
+        storage=storage,
+    )
+
+    history_before = service.list_transcription_line_versions(
+        current_user=_principal(roles=("ADMIN",)),
+        project_id=store.run.project_id,
+        document_id=store.run.document_id,
+        run_id=store.run.id,
+        page_id=store.page.id,
+        line_id=store.line.line_id,
+    )
+    assert len(history_before.versions) == 1
+    assert history_before.versions[0].source_type == "ENGINE_OUTPUT"
+    assert history_before.versions[0].is_active is True
+
+    correction = service.correct_transcription_line(
+        current_user=_principal(roles=("ADMIN",)),
+        project_id=store.run.project_id,
+        document_id=store.run.document_id,
+        run_id=store.run.id,
+        page_id=store.page.id,
+        line_id=store.line.line_id,
+        text_diplomatic="Dear diary!",
+        version_etag="line-etag-1",
+        edit_reason="Punctuation correction",
+    )
+
+    history_after = service.list_transcription_line_versions(
+        current_user=_principal(roles=("ADMIN",)),
+        project_id=store.run.project_id,
+        document_id=store.run.document_id,
+        run_id=store.run.id,
+        page_id=store.page.id,
+        line_id=store.line.line_id,
+    )
+    assert len(history_after.versions) == 2
+    source_types = {entry.version.id: entry.source_type for entry in history_after.versions}
+    active_flags = {entry.version.id: entry.is_active for entry in history_after.versions}
+    assert source_types["transcript-version-1"] == "ENGINE_OUTPUT"
+    assert source_types[correction.active_version.id] == "REVIEWER_CORRECTION"
+    assert active_flags["transcript-version-1"] is False
+    assert active_flags[correction.active_version.id] is True
+
+    resolved = service.get_transcription_line_version(
+        current_user=_principal(roles=("ADMIN",)),
+        project_id=store.run.project_id,
+        document_id=store.run.document_id,
+        run_id=store.run.id,
+        page_id=store.page.id,
+        line_id=store.line.line_id,
+        version_id=correction.active_version.id,
+    )
+    assert resolved.source_type == "REVIEWER_CORRECTION"
+    assert resolved.is_active is True
+
+
+def test_transcription_line_version_history_marks_review_composed_source_type(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    store = TranscriptionCorrectionStore()
+    store.run = replace(store.run, engine="REVIEW_COMPOSED")
+    service = DocumentService(
+        settings=settings,
+        store=store,  # type: ignore[arg-type]
+        project_service=FakeProjectService(),  # type: ignore[arg-type]
+        storage=DocumentStorage(settings=settings),
+    )
+
+    history = service.list_transcription_line_versions(
+        current_user=_principal(roles=("ADMIN",)),
+        project_id=store.run.project_id,
+        document_id=store.run.document_id,
+        run_id=store.run.id,
+        page_id=store.page.id,
+        line_id=store.line.line_id,
+    )
+    assert len(history.versions) == 1
+    assert history.versions[0].source_type == "COMPARE_COMPOSED"
 
 
 def test_variant_layer_decisions_append_events_without_mutating_diplomatic_text(

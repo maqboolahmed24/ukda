@@ -31,6 +31,18 @@ export const routeLoadingCopy = {
     title: "Preparing project workspace",
     summary: "Project context remains mounted while section data resolves."
   },
+  projectSearch: {
+    eyebrow: "Loading search route",
+    title: "Preparing project search",
+    summary:
+      "Search filters and result regions remain stable while query data resolves."
+  },
+  projectEntities: {
+    eyebrow: "Loading entities route",
+    title: "Preparing entity discovery",
+    summary:
+      "Entity list, filters, and occurrence context remain stable while active index data resolves."
+  },
   projectDocuments: {
     eyebrow: "Loading documents route",
     title: "Preparing document surface",
@@ -95,6 +107,13 @@ export const routeErrorCopy = {
     title: "Document route failed",
     summary:
       "Document route content failed while project shell context stayed mounted.",
+    retryLabel: "Retry route"
+  },
+  projectEntities: {
+    eyebrow: "Route boundary",
+    title: "Entity discovery route failed",
+    summary:
+      "Entity discovery content failed while project shell context stayed mounted.",
     retryLabel: "Retry route"
   },
   projectViewer: {

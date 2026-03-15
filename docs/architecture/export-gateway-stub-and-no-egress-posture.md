@@ -1,10 +1,14 @@
 # Export Gateway Stub And No-Egress Posture (Phase 0.5)
 
-Phase 0 reserves the export gateway contract while intentionally preventing any live export behavior.
+Historical note: this document captured the Phase 0 stub posture before Prompt 78.
+Requester-side candidate/request/release-pack routes are now active under:
+
+- `/docs/architecture/export-request-release-pack-and-lineage-contract.md`
+- `/docs/architecture/export-gateway-no-bypass-and-receipt-lineage-contract.md`
 
 ## Disabled Route Contract
 
-The following project-scoped routes exist as disabled stubs and return `501` with code `EXPORT_GATEWAY_DISABLED_PHASE0`:
+The following project-scoped routes originally shipped as disabled stubs and returned `501` with code `EXPORT_GATEWAY_DISABLED_PHASE0`:
 
 - `GET /projects/{projectId}/export-candidates`
 - `GET /projects/{projectId}/export-candidates/{candidateId}`
@@ -36,7 +40,7 @@ Phase 0 persistence is intentionally minimal:
   - `request_id`
   - `created_at`
 
-No Phase 8 export-request, review, receipt, or release-pack schemas are created in this iteration.
+No Phase 8 export-request, review, receipt, or release-pack schemas were created in this iteration.
 
 ## Audit And Access
 
@@ -50,7 +54,7 @@ No Phase 8 export-request, review, receipt, or release-pack schemas are created 
 
 ## Web Surfaces
 
-The disabled routes are surfaced as explicit UI stubs:
+The disabled routes were surfaced as explicit UI stubs:
 
 - `/projects/:projectId/export-candidates`
 - `/projects/:projectId/export-requests`

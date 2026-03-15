@@ -139,6 +139,46 @@ describe("command registry", () => {
     expect(target).toBe("/projects/project-b/documents/import");
   });
 
+  it("preserves policy section when switching projects", () => {
+    const target = resolveProjectSwitchHref(
+      "/projects/project-a/policies/policy-1/compare?against=policy-0",
+      projectB
+    );
+    expect(target).toBe("/projects/project-b/policies");
+  });
+
+  it("preserves pseudonym-registry section when switching projects", () => {
+    const target = resolveProjectSwitchHref(
+      "/projects/project-a/pseudonym-registry/entry-1/events",
+      projectB
+    );
+    expect(target).toBe("/projects/project-b/pseudonym-registry");
+  });
+
+  it("preserves indexes section when switching projects", () => {
+    const target = resolveProjectSwitchHref(
+      "/projects/project-a/indexes/search/search-1",
+      projectB
+    );
+    expect(target).toBe("/projects/project-b/indexes");
+  });
+
+  it("preserves search section when switching projects", () => {
+    const target = resolveProjectSwitchHref(
+      "/projects/project-a/search?q=archive",
+      projectB
+    );
+    expect(target).toBe("/projects/project-b/search");
+  });
+
+  it("preserves entities section when switching projects", () => {
+    const target = resolveProjectSwitchHref(
+      "/projects/project-a/entities/entity-1",
+      projectB
+    );
+    expect(target).toBe("/projects/project-b/entities");
+  });
+
   it("falls back to overview when switching into project without settings access", () => {
     const target = resolveProjectSwitchHref(
       "/projects/project-a/settings",

@@ -1,6 +1,9 @@
 import type { BrowserContext } from "@playwright/test";
 
-import { getBrowserFixtureSessionToken } from "../../../lib/data/browser-regression-fixtures";
+import {
+  getBrowserFixtureSessionToken,
+  type BrowserFixtureSessionProfile
+} from "../../../lib/data/browser-regression-fixtures";
 
 const SESSION_COOKIE_NAME =
   process.env.AUTH_COOKIE_NAME?.trim() || "ukde_session";
@@ -10,11 +13,12 @@ const FIXTURE_CSRF_TOKEN = "fixture-csrf-token";
 
 export async function seedAuthenticatedSession(
   context: BrowserContext,
-  baseURL: string
+  baseURL: string,
+  options?: { profile?: BrowserFixtureSessionProfile }
 ): Promise<void> {
   const origin = new URL(baseURL);
   const secure = origin.protocol === "https:";
-  const sessionToken = getBrowserFixtureSessionToken();
+  const sessionToken = getBrowserFixtureSessionToken(options?.profile ?? "admin");
 
   await context.addCookies([
     {

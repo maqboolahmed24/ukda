@@ -5,7 +5,7 @@
 Deploy UKDE with Phase 0.5 secure defaults:
 
 - deny-by-default egress policies rendered in Helm
-- export gateway disabled stubs active
+- export gateway-only egress enforcement active
 - security headers and rate limiting active
 - admin security status endpoint available
 
@@ -66,14 +66,14 @@ curl -sS -H "Authorization: Bearer <admin_or_auditor_token>" \
   https://<api-host>/admin/security/status
 ```
 
-3. Export stubs stay disabled:
+3. Export routes remain gateway-only:
 
 ```bash
 curl -i -H "Authorization: Bearer <member_token>" \
   https://<api-host>/projects/<project_id>/export-candidates
 ```
 
-Expected: `501` + `EXPORT_GATEWAY_DISABLED_PHASE0`.
+Expected: `200` for candidate/request/review reads, and no public attach/download bypass route.
 
 4. Egress deny-by-default policy exists:
 

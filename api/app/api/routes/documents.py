@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, time, timezone
 from time import sleep
-from typing import Literal
+from typing import Literal, Mapping
 
 from fastapi import (
     APIRouter,
@@ -18,7 +18,7 @@ from fastapi import (
     status,
 )
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.audit.dependencies import get_audit_request_context
 from app.audit.models import AuditRequestContext
@@ -26,7 +26,14 @@ from app.audit.service import AuditService, get_audit_service
 from app.auth.dependencies import require_authenticated_user
 from app.auth.models import SessionPrincipal
 from app.documents.models import (
+    DocumentRedactionProjectionRecord,
     DocumentTranscriptionProjectionRecord,
+    RedactionAreaMaskRecord,
+    RedactionFindingRecord,
+    RedactionOutputRecord,
+    RedactionPageReviewRecord,
+    RedactionRunRecord,
+    RedactionRunReviewRecord,
     LineTranscriptionResultRecord,
     PageTranscriptionResultRecord,
     TranscriptVersionRecord,
@@ -52,17 +59,60 @@ from app.documents.models import (
     DocumentProcessingRunRecord,
     DocumentRecord,
 )
+from app.documents.governance import (
+    GovernanceRunSummaryRecord,
+    LedgerVerificationRunRecord,
+    RedactionEvidenceLedgerRecord,
+    RedactionManifestRecord,
+)
+from app.documents.redaction_geometry import build_finding_geometry_payload
 from app.documents.service import (
+    DocumentGovernanceAccessDeniedError,
+    DocumentGovernanceConflictError,
+    DocumentGovernanceEventSnapshot,
+    DocumentGovernanceLedgerEntriesSnapshot,
+    DocumentGovernanceLedgerSnapshot,
+    DocumentGovernanceLedgerStatusSnapshot,
+    DocumentGovernanceLedgerSummarySnapshot,
+    DocumentGovernanceLedgerVerificationDetailSnapshot,
+    DocumentGovernanceLedgerVerificationRunsSnapshot,
+    DocumentGovernanceLedgerVerificationStatusSnapshot,
+    DocumentGovernanceManifestEntriesSnapshot,
+    DocumentGovernanceManifestHashSnapshot,
+    DocumentGovernanceManifestSnapshot,
+    DocumentGovernanceManifestStatusSnapshot,
+    DocumentGovernanceOverviewSnapshot,
+    DocumentGovernanceRunNotFoundError,
+    DocumentGovernanceRunOverviewSnapshot,
+    DocumentGovernanceRunsSnapshot,
+    DocumentRedactionAccessDeniedError,
+    DocumentRedactionCompareSnapshot,
+    DocumentRedactionPolicyWarningSnapshot,
+    DocumentRedactionConflictError,
+    DocumentRedactionOverviewSnapshot,
+    DocumentRedactionPreviewAsset,
+    DocumentRedactionPreviewStatusSnapshot,
+    DocumentRedactionRunNotFoundError,
+    DocumentRedactionRunOutputSnapshot,
+    DocumentRedactionRunPageSnapshot,
+    DocumentRedactionRunTimelineEventSnapshot,
     DocumentTranscriptionAccessDeniedError,
+    DocumentTranscriptionCompareFinalizeSnapshot,
     DocumentTranscriptionCompareSnapshot,
     DocumentTranscriptionConflictError,
     DocumentTranscriptionLineCorrectionSnapshot,
+    DocumentTranscriptionLineVersionHistorySnapshot,
     DocumentTranscriptionMetricsSnapshot,
     DocumentTranscriptionOverviewSnapshot,
+    DocumentTranscriptionPageRescueSourcesSnapshot,
+    DocumentTranscriptionRescuePageStatusSnapshot,
+    DocumentTranscriptionRescueSourceSnapshot,
     DocumentTranscriptionRunNotFoundError,
+    DocumentTranscriptionRunRescueStatusSnapshot,
     DocumentTranscriptionTriagePageSnapshot,
     DocumentTranscriptionVariantLayersSnapshot,
     DocumentTranscriptionVariantSuggestionDecisionSnapshot,
+    DocumentTranscriptVersionLineageSnapshot,
     DocumentLayoutAccessDeniedError,
     DocumentLayoutConflictError,
     DocumentLayoutContextWindowAsset,
@@ -234,6 +284,93 @@ TranscriptionRunStatusLiteral = Literal[
     "FAILED",
     "CANCELED",
 ]
+RedactionRunKindLiteral = Literal["BASELINE", "POLICY_RERUN"]
+RedactionRunStatusLiteral = Literal[
+    "QUEUED",
+    "RUNNING",
+    "SUCCEEDED",
+    "FAILED",
+    "CANCELED",
+]
+RedactionDecisionStatusLiteral = Literal[
+    "AUTO_APPLIED",
+    "NEEDS_REVIEW",
+    "APPROVED",
+    "OVERRIDDEN",
+    "FALSE_POSITIVE",
+]
+RedactionDecisionActionTypeLiteral = Literal["MASK", "PSEUDONYMIZE", "GENERALIZE"]
+RedactionCompareActionStateLiteral = Literal[
+    "AVAILABLE",
+    "NOT_YET_RERUN",
+    "NOT_YET_AVAILABLE",
+]
+RedactionComparePageActionStateLiteral = Literal["AVAILABLE", "NOT_YET_AVAILABLE"]
+RedactionPolicyStatusLiteral = Literal["DRAFT", "ACTIVE", "RETIRED"]
+RedactionPolicyWarningCodeLiteral = Literal[
+    "BROAD_ALLOW_RULE",
+    "INCONSISTENT_THRESHOLD",
+]
+RedactionPolicyWarningSeverityLiteral = Literal["WARNING"]
+RedactionPageReviewStatusLiteral = Literal[
+    "NOT_STARTED",
+    "IN_REVIEW",
+    "APPROVED",
+    "CHANGES_REQUESTED",
+]
+RedactionSecondReviewStatusLiteral = Literal[
+    "NOT_REQUIRED",
+    "PENDING",
+    "APPROVED",
+    "CHANGES_REQUESTED",
+]
+RedactionRunReviewStatusLiteral = Literal[
+    "NOT_READY",
+    "IN_REVIEW",
+    "APPROVED",
+    "CHANGES_REQUESTED",
+]
+RedactionOutputStatusLiteral = Literal["PENDING", "READY", "FAILED", "CANCELED"]
+RedactionRunOutputReadinessStateLiteral = Literal[
+    "APPROVAL_REQUIRED",
+    "APPROVED_OUTPUT_PENDING",
+    "OUTPUT_GENERATING",
+    "OUTPUT_FAILED",
+    "OUTPUT_CANCELED",
+    "OUTPUT_READY",
+]
+GovernanceArtifactStatusLiteral = Literal[
+    "UNAVAILABLE",
+    "QUEUED",
+    "RUNNING",
+    "SUCCEEDED",
+    "FAILED",
+    "CANCELED",
+]
+GovernanceReadinessStatusLiteral = Literal["PENDING", "READY", "FAILED"]
+GovernanceGenerationStatusLiteral = Literal["IDLE", "RUNNING", "FAILED", "CANCELED"]
+GovernanceLedgerVerificationStatusLiteral = Literal["PENDING", "VALID", "INVALID"]
+GovernanceLedgerVerificationResultLiteral = Literal["VALID", "INVALID"]
+GovernanceLedgerEntriesViewLiteral = Literal["list", "timeline"]
+GovernanceRunEventTypeLiteral = Literal[
+    "RUN_CREATED",
+    "MANIFEST_STARTED",
+    "MANIFEST_SUCCEEDED",
+    "MANIFEST_FAILED",
+    "MANIFEST_CANCELED",
+    "LEDGER_STARTED",
+    "LEDGER_SUCCEEDED",
+    "LEDGER_FAILED",
+    "LEDGER_CANCELED",
+    "LEDGER_VERIFY_STARTED",
+    "LEDGER_VERIFIED_VALID",
+    "LEDGER_VERIFIED_INVALID",
+    "LEDGER_VERIFY_CANCELED",
+    "REGENERATE_REQUESTED",
+    "RUN_CANCELED",
+    "READY_SET",
+    "READY_FAILED",
+]
 TranscriptionConfidenceBasisLiteral = Literal[
     "MODEL_NATIVE",
     "READ_AGREEMENT",
@@ -244,6 +381,35 @@ TranscriptionTokenSourceKindLiteral = Literal[
     "LINE",
     "RESCUE_CANDIDATE",
     "PAGE_WINDOW",
+]
+TranscriptionRescueResolutionStatusLiteral = Literal[
+    "RESCUE_VERIFIED",
+    "MANUAL_REVIEW_RESOLVED",
+]
+TranscriptionRescueReadinessStateLiteral = Literal[
+    "READY",
+    "BLOCKED_RESCUE",
+    "BLOCKED_MANUAL_REVIEW",
+    "BLOCKED_PAGE_STATUS",
+]
+TranscriptionRescueBlockerReasonCodeLiteral = Literal[
+    "PAGE_TRANSCRIPTION_NOT_SUCCEEDED",
+    "RESCUE_SOURCE_MISSING",
+    "RESCUE_SOURCE_UNTRANSCRIBED",
+    "MANUAL_REVIEW_RESOLUTION_REQUIRED",
+]
+TranscriptionActivationBlockerCodeLiteral = Literal[
+    "RUN_NOT_SUCCEEDED",
+    "RUN_LAYOUT_BASIS_STALE",
+    "RUN_LAYOUT_SNAPSHOT_STALE",
+    "RUN_LAYOUT_PROJECTION_MISSING",
+    "TOKEN_ANCHOR_MISSING",
+    "TOKEN_ANCHOR_INVALID",
+    "TOKEN_ANCHOR_STALE",
+    "PAGE_TRANSCRIPTION_NOT_SUCCEEDED",
+    "RESCUE_SOURCE_MISSING",
+    "RESCUE_SOURCE_UNTRANSCRIBED",
+    "MANUAL_REVIEW_RESOLUTION_REQUIRED",
 ]
 TranscriptionProjectionBasisLiteral = Literal["ENGINE_OUTPUT", "REVIEW_CORRECTED"]
 TranscriptionLineSchemaValidationStatusLiteral = Literal[
@@ -257,6 +423,11 @@ TranscriptionFallbackReasonLiteral = Literal[
     "CONFIDENCE_BELOW_THRESHOLD",
 ]
 TranscriptionCompareDecisionLiteral = Literal["KEEP_BASE", "PROMOTE_CANDIDATE"]
+TranscriptVersionSourceTypeLiteral = Literal[
+    "ENGINE_OUTPUT",
+    "REVIEWER_CORRECTION",
+    "COMPARE_COMPOSED",
+]
 TokenAnchorStatusLiteral = Literal["CURRENT", "STALE", "REFRESH_REQUIRED"]
 TranscriptVariantKindLiteral = Literal["NORMALISED"]
 TranscriptVariantSuggestionStatusLiteral = Literal["PENDING", "ACCEPTED", "REJECTED"]
@@ -1640,6 +1811,125 @@ class TranscriptionTokenResultListResponse(BaseModel):
     items: list[TranscriptionTokenResultResponse]
 
 
+class TranscriptionRescueSourceResponse(BaseModel):
+    source_ref_id: str = Field(serialization_alias="sourceRefId")
+    source_kind: TranscriptionTokenSourceKindLiteral = Field(serialization_alias="sourceKind")
+    candidate_kind: LayoutRescueCandidateKindLiteral = Field(
+        serialization_alias="candidateKind"
+    )
+    candidate_status: LayoutRescueCandidateStatusLiteral = Field(
+        serialization_alias="candidateStatus"
+    )
+    token_count: int = Field(serialization_alias="tokenCount")
+    has_transcription_output: bool = Field(
+        serialization_alias="hasTranscriptionOutput"
+    )
+    confidence: float | None = None
+    source_signal: str | None = Field(default=None, serialization_alias="sourceSignal")
+    geometry_json: dict[str, object] = Field(serialization_alias="geometryJson")
+
+
+class TranscriptionRescuePageStatusResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    page_id: str = Field(serialization_alias="pageId")
+    page_index: int = Field(serialization_alias="pageIndex")
+    page_recall_status: PageRecallStatusLiteral = Field(
+        serialization_alias="pageRecallStatus"
+    )
+    rescue_source_count: int = Field(serialization_alias="rescueSourceCount")
+    rescue_transcribed_source_count: int = Field(
+        serialization_alias="rescueTranscribedSourceCount"
+    )
+    rescue_unresolved_source_count: int = Field(
+        serialization_alias="rescueUnresolvedSourceCount"
+    )
+    readiness_state: TranscriptionRescueReadinessStateLiteral = Field(
+        serialization_alias="readinessState"
+    )
+    blocker_reason_codes: list[TranscriptionRescueBlockerReasonCodeLiteral] = Field(
+        serialization_alias="blockerReasonCodes"
+    )
+    resolution_status: TranscriptionRescueResolutionStatusLiteral | None = Field(
+        default=None,
+        serialization_alias="resolutionStatus",
+    )
+    resolution_reason: str | None = Field(
+        default=None,
+        serialization_alias="resolutionReason",
+    )
+    resolution_updated_by: str | None = Field(
+        default=None,
+        serialization_alias="resolutionUpdatedBy",
+    )
+    resolution_updated_at: datetime | None = Field(
+        default=None,
+        serialization_alias="resolutionUpdatedAt",
+    )
+
+
+class TranscriptionRunRescueStatusResponse(BaseModel):
+    document_id: str = Field(serialization_alias="documentId")
+    project_id: str = Field(serialization_alias="projectId")
+    run_id: str = Field(serialization_alias="runId")
+    ready_for_activation: bool = Field(serialization_alias="readyForActivation")
+    blocker_count: int = Field(serialization_alias="blockerCount")
+    run_blocker_reason_codes: list[TranscriptionActivationBlockerCodeLiteral] = Field(
+        serialization_alias="runBlockerReasonCodes"
+    )
+    pages: list[TranscriptionRescuePageStatusResponse]
+
+
+class TranscriptionPageRescueSourcesResponse(BaseModel):
+    document_id: str = Field(serialization_alias="documentId")
+    project_id: str = Field(serialization_alias="projectId")
+    run_id: str = Field(serialization_alias="runId")
+    page_id: str = Field(serialization_alias="pageId")
+    page_index: int = Field(serialization_alias="pageIndex")
+    page_recall_status: PageRecallStatusLiteral = Field(
+        serialization_alias="pageRecallStatus"
+    )
+    readiness_state: TranscriptionRescueReadinessStateLiteral = Field(
+        serialization_alias="readinessState"
+    )
+    blocker_reason_codes: list[TranscriptionRescueBlockerReasonCodeLiteral] = Field(
+        serialization_alias="blockerReasonCodes"
+    )
+    rescue_sources: list[TranscriptionRescueSourceResponse] = Field(
+        serialization_alias="rescueSources"
+    )
+    resolution_status: TranscriptionRescueResolutionStatusLiteral | None = Field(
+        default=None,
+        serialization_alias="resolutionStatus",
+    )
+    resolution_reason: str | None = Field(
+        default=None,
+        serialization_alias="resolutionReason",
+    )
+    resolution_updated_by: str | None = Field(
+        default=None,
+        serialization_alias="resolutionUpdatedBy",
+    )
+    resolution_updated_at: datetime | None = Field(
+        default=None,
+        serialization_alias="resolutionUpdatedAt",
+    )
+
+
+class UpdateTranscriptionRescueResolutionRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    resolution_status: TranscriptionRescueResolutionStatusLiteral = Field(
+        alias="resolutionStatus",
+        serialization_alias="resolutionStatus",
+    )
+    resolution_reason: str | None = Field(
+        default=None,
+        alias="resolutionReason",
+        serialization_alias="resolutionReason",
+        max_length=600,
+    )
+
+
 class TranscriptVersionResponse(BaseModel):
     id: str
     run_id: str = Field(serialization_alias="runId")
@@ -1658,6 +1948,24 @@ class TranscriptVersionResponse(BaseModel):
     editor_user_id: str = Field(serialization_alias="editorUserId")
     edit_reason: str | None = Field(default=None, serialization_alias="editReason")
     created_at: datetime = Field(serialization_alias="createdAt")
+
+
+class TranscriptVersionLineageResponse(BaseModel):
+    version: TranscriptVersionResponse
+    is_active: bool = Field(serialization_alias="isActive")
+    source_type: TranscriptVersionSourceTypeLiteral = Field(
+        serialization_alias="sourceType"
+    )
+
+
+class TranscriptionLineVersionHistoryResponse(BaseModel):
+    document_id: str = Field(serialization_alias="documentId")
+    project_id: str = Field(serialization_alias="projectId")
+    run_id: str = Field(serialization_alias="runId")
+    page_id: str = Field(serialization_alias="pageId")
+    line_id: str = Field(serialization_alias="lineId")
+    line: TranscriptionLineResultResponse
+    versions: list[TranscriptVersionLineageResponse]
 
 
 class TranscriptionOutputProjectionResponse(BaseModel):
@@ -1868,6 +2176,13 @@ class TranscriptionCompareResponse(BaseModel):
     candidate_engine_metadata: dict[str, object] = Field(
         serialization_alias="candidateEngineMetadata"
     )
+    compare_decision_snapshot_hash: str = Field(
+        serialization_alias="compareDecisionSnapshotHash"
+    )
+    compare_decision_count: int = Field(serialization_alias="compareDecisionCount")
+    compare_decision_event_count: int = Field(
+        serialization_alias="compareDecisionEventCount"
+    )
     items: list[TranscriptionComparePageResponse]
 
 
@@ -1931,6 +2246,47 @@ class RecordTranscriptionCompareDecisionsResponse(BaseModel):
     base_run_id: str = Field(serialization_alias="baseRunId")
     candidate_run_id: str = Field(serialization_alias="candidateRunId")
     items: list[TranscriptionCompareDecisionResponse]
+
+
+class FinalizeTranscriptionCompareRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    base_run_id: str = Field(
+        alias="baseRunId",
+        serialization_alias="baseRunId",
+        min_length=1,
+        max_length=120,
+    )
+    candidate_run_id: str = Field(
+        alias="candidateRunId",
+        serialization_alias="candidateRunId",
+        min_length=1,
+        max_length=120,
+    )
+    page_ids: list[str] = Field(
+        default_factory=list,
+        alias="pageIds",
+        serialization_alias="pageIds",
+    )
+    expected_compare_decision_snapshot_hash: str | None = Field(
+        default=None,
+        alias="expectedCompareDecisionSnapshotHash",
+        serialization_alias="expectedCompareDecisionSnapshotHash",
+        min_length=1,
+        max_length=128,
+    )
+
+
+class FinalizeTranscriptionCompareResponse(BaseModel):
+    document_id: str = Field(serialization_alias="documentId")
+    project_id: str = Field(serialization_alias="projectId")
+    base_run_id: str = Field(serialization_alias="baseRunId")
+    candidate_run_id: str = Field(serialization_alias="candidateRunId")
+    composed_run: TranscriptionRunResponse = Field(serialization_alias="composedRun")
+    compare_decision_snapshot_hash: str = Field(
+        serialization_alias="compareDecisionSnapshotHash"
+    )
+    page_scope: list[str] = Field(serialization_alias="pageScope")
 
 
 class TranscriptionTriagePageResponse(BaseModel):
@@ -2065,6 +2421,1094 @@ class TranscriptionOverviewResponse(BaseModel):
 class ActivateTranscriptionRunResponse(BaseModel):
     projection: TranscriptionProjectionResponse
     run: TranscriptionRunResponse
+
+
+class RedactionRunResponse(BaseModel):
+    id: str
+    project_id: str = Field(serialization_alias="projectId")
+    document_id: str = Field(serialization_alias="documentId")
+    input_transcription_run_id: str = Field(serialization_alias="inputTranscriptionRunId")
+    input_layout_run_id: str | None = Field(
+        default=None,
+        serialization_alias="inputLayoutRunId",
+    )
+    run_kind: RedactionRunKindLiteral = Field(serialization_alias="runKind")
+    supersedes_redaction_run_id: str | None = Field(
+        default=None,
+        serialization_alias="supersedesRedactionRunId",
+    )
+    superseded_by_redaction_run_id: str | None = Field(
+        default=None,
+        serialization_alias="supersededByRedactionRunId",
+    )
+    policy_snapshot_id: str = Field(serialization_alias="policySnapshotId")
+    policy_snapshot_json: dict[str, object] = Field(serialization_alias="policySnapshotJson")
+    policy_snapshot_hash: str = Field(serialization_alias="policySnapshotHash")
+    policy_id: str | None = Field(default=None, serialization_alias="policyId")
+    policy_family_id: str | None = Field(default=None, serialization_alias="policyFamilyId")
+    policy_version: str | None = Field(default=None, serialization_alias="policyVersion")
+    detectors_version: str = Field(serialization_alias="detectorsVersion")
+    status: RedactionRunStatusLiteral
+    created_by: str = Field(serialization_alias="createdBy")
+    created_at: datetime = Field(serialization_alias="createdAt")
+    started_at: datetime | None = Field(default=None, serialization_alias="startedAt")
+    finished_at: datetime | None = Field(default=None, serialization_alias="finishedAt")
+    failure_reason: str | None = Field(default=None, serialization_alias="failureReason")
+    is_active_projection: bool = Field(serialization_alias="isActiveProjection")
+    is_superseded: bool = Field(serialization_alias="isSuperseded")
+    is_current_attempt: bool = Field(serialization_alias="isCurrentAttempt")
+    is_historical_attempt: bool = Field(serialization_alias="isHistoricalAttempt")
+
+
+class RedactionRunListResponse(BaseModel):
+    items: list[RedactionRunResponse]
+    next_cursor: int | None = Field(default=None, serialization_alias="nextCursor")
+
+
+class RedactionRunStatusResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    document_id: str = Field(serialization_alias="documentId")
+    status: RedactionRunStatusLiteral
+    failure_reason: str | None = Field(default=None, serialization_alias="failureReason")
+    started_at: datetime | None = Field(default=None, serialization_alias="startedAt")
+    finished_at: datetime | None = Field(default=None, serialization_alias="finishedAt")
+    created_at: datetime = Field(serialization_alias="createdAt")
+    active: bool
+
+
+class RedactionProjectionResponse(BaseModel):
+    document_id: str = Field(serialization_alias="documentId")
+    project_id: str = Field(serialization_alias="projectId")
+    active_redaction_run_id: str | None = Field(
+        default=None,
+        serialization_alias="activeRedactionRunId",
+    )
+    active_transcription_run_id: str | None = Field(
+        default=None,
+        serialization_alias="activeTranscriptionRunId",
+    )
+    active_layout_run_id: str | None = Field(
+        default=None,
+        serialization_alias="activeLayoutRunId",
+    )
+    active_policy_snapshot_id: str | None = Field(
+        default=None,
+        serialization_alias="activePolicySnapshotId",
+    )
+    updated_at: datetime = Field(serialization_alias="updatedAt")
+
+
+class RedactionActiveRunResponse(BaseModel):
+    projection: RedactionProjectionResponse | None
+    run: RedactionRunResponse | None
+
+
+class CreateRedactionRunRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    input_transcription_run_id: str | None = Field(
+        default=None,
+        alias="inputTranscriptionRunId",
+        serialization_alias="inputTranscriptionRunId",
+        min_length=1,
+        max_length=120,
+    )
+    input_layout_run_id: str | None = Field(
+        default=None,
+        alias="inputLayoutRunId",
+        serialization_alias="inputLayoutRunId",
+        min_length=1,
+        max_length=120,
+    )
+    run_kind: RedactionRunKindLiteral | None = Field(
+        default=None,
+        alias="runKind",
+        serialization_alias="runKind",
+    )
+    supersedes_redaction_run_id: str | None = Field(
+        default=None,
+        alias="supersedesRedactionRunId",
+        serialization_alias="supersedesRedactionRunId",
+        min_length=1,
+        max_length=120,
+    )
+    detectors_version: str | None = Field(
+        default=None,
+        alias="detectorsVersion",
+        serialization_alias="detectorsVersion",
+        min_length=1,
+        max_length=160,
+    )
+
+
+class RedactionRunReviewResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    review_status: RedactionRunReviewStatusLiteral = Field(serialization_alias="reviewStatus")
+    review_started_by: str | None = Field(default=None, serialization_alias="reviewStartedBy")
+    review_started_at: datetime | None = Field(default=None, serialization_alias="reviewStartedAt")
+    approved_by: str | None = Field(default=None, serialization_alias="approvedBy")
+    approved_at: datetime | None = Field(default=None, serialization_alias="approvedAt")
+    approved_snapshot_key: str | None = Field(
+        default=None,
+        serialization_alias="approvedSnapshotKey",
+    )
+    approved_snapshot_sha256: str | None = Field(
+        default=None,
+        serialization_alias="approvedSnapshotSha256",
+    )
+    locked_at: datetime | None = Field(default=None, serialization_alias="lockedAt")
+    updated_at: datetime = Field(serialization_alias="updatedAt")
+
+
+class CompleteRedactionRunReviewRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    review_status: RedactionRunReviewStatusLiteral = Field(
+        alias="reviewStatus",
+        serialization_alias="reviewStatus",
+    )
+    reason: str | None = Field(default=None, max_length=600)
+
+
+class RedactionRunPageResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    page_id: str = Field(serialization_alias="pageId")
+    page_index: int = Field(serialization_alias="pageIndex")
+    finding_count: int = Field(serialization_alias="findingCount")
+    unresolved_count: int = Field(serialization_alias="unresolvedCount")
+    review_status: RedactionPageReviewStatusLiteral = Field(serialization_alias="reviewStatus")
+    review_etag: str = Field(serialization_alias="reviewEtag")
+    requires_second_review: bool = Field(serialization_alias="requiresSecondReview")
+    second_review_status: RedactionSecondReviewStatusLiteral = Field(
+        serialization_alias="secondReviewStatus"
+    )
+    second_reviewed_by: str | None = Field(default=None, serialization_alias="secondReviewedBy")
+    second_reviewed_at: datetime | None = Field(
+        default=None,
+        serialization_alias="secondReviewedAt",
+    )
+    last_reviewed_by: str | None = Field(default=None, serialization_alias="lastReviewedBy")
+    last_reviewed_at: datetime | None = Field(default=None, serialization_alias="lastReviewedAt")
+    preview_status: RedactionOutputStatusLiteral | None = Field(
+        default=None,
+        serialization_alias="previewStatus",
+    )
+    top_findings: list["RedactionFindingResponse"] = Field(
+        default_factory=list,
+        serialization_alias="topFindings",
+    )
+
+
+class RedactionRunPageListResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    items: list[RedactionRunPageResponse]
+    next_cursor: int | None = Field(default=None, serialization_alias="nextCursor")
+
+
+RedactionFindingAnchorKindLiteral = Literal[
+    "TOKEN_LINKED",
+    "AREA_MASK_BACKED",
+    "BBOX_ONLY",
+    "NONE",
+]
+RedactionFindingGeometrySourceLiteral = Literal["TOKEN_REF", "BBOX_REF", "AREA_MASK"]
+
+
+class RedactionFindingGeometryPointResponse(BaseModel):
+    x: float
+    y: float
+
+
+class RedactionFindingGeometryBoxResponse(BaseModel):
+    x: float
+    y: float
+    width: float
+    height: float
+    source: RedactionFindingGeometrySourceLiteral
+
+
+class RedactionFindingGeometryPolygonResponse(BaseModel):
+    points: list[RedactionFindingGeometryPointResponse]
+    source: RedactionFindingGeometrySourceLiteral
+
+
+class RedactionFindingGeometryResponse(BaseModel):
+    anchor_kind: RedactionFindingAnchorKindLiteral = Field(serialization_alias="anchorKind")
+    line_id: str | None = Field(default=None, serialization_alias="lineId")
+    token_ids: list[str] = Field(default_factory=list, serialization_alias="tokenIds")
+    boxes: list[RedactionFindingGeometryBoxResponse] = Field(default_factory=list)
+    polygons: list[RedactionFindingGeometryPolygonResponse] = Field(default_factory=list)
+
+
+class RedactionFindingResponse(BaseModel):
+    id: str
+    run_id: str = Field(serialization_alias="runId")
+    page_id: str = Field(serialization_alias="pageId")
+    line_id: str | None = Field(default=None, serialization_alias="lineId")
+    category: str
+    span_start: int | None = Field(default=None, serialization_alias="spanStart")
+    span_end: int | None = Field(default=None, serialization_alias="spanEnd")
+    span_basis_kind: str = Field(serialization_alias="spanBasisKind")
+    span_basis_ref: str | None = Field(default=None, serialization_alias="spanBasisRef")
+    confidence: float | None = None
+    basis_primary: str = Field(serialization_alias="basisPrimary")
+    basis_secondary_json: dict[str, object] | None = Field(
+        default=None,
+        serialization_alias="basisSecondaryJson",
+    )
+    assist_explanation_key: str | None = Field(
+        default=None,
+        serialization_alias="assistExplanationKey",
+    )
+    assist_explanation_sha256: str | None = Field(
+        default=None,
+        serialization_alias="assistExplanationSha256",
+    )
+    bbox_refs: dict[str, object] = Field(serialization_alias="bboxRefs")
+    token_refs_json: list[dict[str, object]] | None = Field(
+        default=None,
+        serialization_alias="tokenRefsJson",
+    )
+    area_mask_id: str | None = Field(default=None, serialization_alias="areaMaskId")
+    decision_status: RedactionDecisionStatusLiteral = Field(serialization_alias="decisionStatus")
+    action_type: RedactionDecisionActionTypeLiteral = Field(
+        default="MASK",
+        serialization_alias="actionType",
+    )
+    override_risk_classification: str | None = Field(
+        default=None,
+        serialization_alias="overrideRiskClassification",
+    )
+    override_risk_reason_codes_json: list[str] | None = Field(
+        default=None,
+        serialization_alias="overrideRiskReasonCodesJson",
+    )
+    decision_by: str | None = Field(default=None, serialization_alias="decisionBy")
+    decision_at: datetime | None = Field(default=None, serialization_alias="decisionAt")
+    decision_reason: str | None = Field(default=None, serialization_alias="decisionReason")
+    decision_etag: str = Field(serialization_alias="decisionEtag")
+    updated_at: datetime = Field(serialization_alias="updatedAt")
+    created_at: datetime = Field(serialization_alias="createdAt")
+    geometry: RedactionFindingGeometryResponse
+    active_area_mask: "RedactionAreaMaskResponse | None" = Field(
+        default=None,
+        serialization_alias="activeAreaMask",
+    )
+
+
+class RedactionFindingListResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    page_id: str = Field(serialization_alias="pageId")
+    items: list[RedactionFindingResponse]
+
+
+class PatchRedactionFindingRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    decision_status: RedactionDecisionStatusLiteral = Field(
+        alias="decisionStatus",
+        serialization_alias="decisionStatus",
+    )
+    decision_etag: str = Field(
+        alias="decisionEtag",
+        serialization_alias="decisionEtag",
+        min_length=1,
+        max_length=128,
+    )
+    reason: str | None = Field(default=None, max_length=600)
+    action_type: RedactionDecisionActionTypeLiteral | None = Field(
+        default=None,
+        alias="actionType",
+        serialization_alias="actionType",
+    )
+
+    @model_validator(mode="after")
+    def validate_override_reason(self) -> "PatchRedactionFindingRequest":
+        if self.decision_status in {"OVERRIDDEN", "FALSE_POSITIVE"}:
+            reason = self.reason.strip() if isinstance(self.reason, str) else ""
+            if not reason:
+                raise ValueError(
+                    "reason is required when decisionStatus is OVERRIDDEN or FALSE_POSITIVE."
+                )
+        return self
+
+
+class RedactionPageReviewResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    page_id: str = Field(serialization_alias="pageId")
+    review_status: RedactionPageReviewStatusLiteral = Field(serialization_alias="reviewStatus")
+    review_etag: str = Field(serialization_alias="reviewEtag")
+    first_reviewed_by: str | None = Field(default=None, serialization_alias="firstReviewedBy")
+    first_reviewed_at: datetime | None = Field(default=None, serialization_alias="firstReviewedAt")
+    requires_second_review: bool = Field(serialization_alias="requiresSecondReview")
+    second_review_status: RedactionSecondReviewStatusLiteral = Field(
+        serialization_alias="secondReviewStatus"
+    )
+    second_reviewed_by: str | None = Field(default=None, serialization_alias="secondReviewedBy")
+    second_reviewed_at: datetime | None = Field(default=None, serialization_alias="secondReviewedAt")
+    updated_at: datetime = Field(serialization_alias="updatedAt")
+
+
+class PatchRedactionPageReviewRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    review_status: RedactionPageReviewStatusLiteral = Field(
+        alias="reviewStatus",
+        serialization_alias="reviewStatus",
+    )
+    review_etag: str = Field(
+        alias="reviewEtag",
+        serialization_alias="reviewEtag",
+        min_length=1,
+        max_length=128,
+    )
+    reason: str | None = Field(default=None, max_length=600)
+
+
+class RedactionAreaMaskResponse(BaseModel):
+    id: str
+    run_id: str = Field(serialization_alias="runId")
+    page_id: str = Field(serialization_alias="pageId")
+    geometry_json: dict[str, object] = Field(serialization_alias="geometryJson")
+    mask_reason: str = Field(serialization_alias="maskReason")
+    version_etag: str = Field(serialization_alias="versionEtag")
+    supersedes_area_mask_id: str | None = Field(
+        default=None,
+        serialization_alias="supersedesAreaMaskId",
+    )
+    superseded_by_area_mask_id: str | None = Field(
+        default=None,
+        serialization_alias="supersededByAreaMaskId",
+    )
+    created_by: str = Field(serialization_alias="createdBy")
+    created_at: datetime = Field(serialization_alias="createdAt")
+    updated_at: datetime = Field(serialization_alias="updatedAt")
+
+
+class PatchRedactionAreaMaskRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    version_etag: str = Field(
+        alias="versionEtag",
+        serialization_alias="versionEtag",
+        min_length=1,
+        max_length=128,
+    )
+    geometry_json: dict[str, object] = Field(
+        alias="geometryJson",
+        serialization_alias="geometryJson",
+    )
+    mask_reason: str = Field(
+        alias="maskReason",
+        serialization_alias="maskReason",
+        min_length=1,
+        max_length=600,
+    )
+    finding_id: str | None = Field(
+        default=None,
+        alias="findingId",
+        serialization_alias="findingId",
+        min_length=1,
+        max_length=160,
+    )
+    finding_decision_etag: str | None = Field(
+        default=None,
+        alias="findingDecisionEtag",
+        serialization_alias="findingDecisionEtag",
+        min_length=1,
+        max_length=128,
+    )
+
+
+class CreateRedactionAreaMaskRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    geometry_json: dict[str, object] = Field(
+        alias="geometryJson",
+        serialization_alias="geometryJson",
+    )
+    mask_reason: str = Field(
+        alias="maskReason",
+        serialization_alias="maskReason",
+        min_length=1,
+        max_length=600,
+    )
+    finding_id: str | None = Field(
+        default=None,
+        alias="findingId",
+        serialization_alias="findingId",
+        min_length=1,
+        max_length=160,
+    )
+    finding_decision_etag: str | None = Field(
+        default=None,
+        alias="findingDecisionEtag",
+        serialization_alias="findingDecisionEtag",
+        min_length=1,
+        max_length=128,
+    )
+
+
+class PatchRedactionAreaMaskResponse(BaseModel):
+    area_mask: RedactionAreaMaskResponse = Field(serialization_alias="areaMask")
+    finding: RedactionFindingResponse | None = None
+
+
+class RedactionTimelineEventResponse(BaseModel):
+    source_table: str = Field(serialization_alias="sourceTable")
+    source_table_precedence: int = Field(serialization_alias="sourceTablePrecedence")
+    event_id: str = Field(serialization_alias="eventId")
+    run_id: str = Field(serialization_alias="runId")
+    page_id: str | None = Field(default=None, serialization_alias="pageId")
+    finding_id: str | None = Field(default=None, serialization_alias="findingId")
+    event_type: str = Field(serialization_alias="eventType")
+    actor_user_id: str | None = Field(default=None, serialization_alias="actorUserId")
+    reason: str | None = None
+    created_at: datetime = Field(serialization_alias="createdAt")
+    details_json: dict[str, object] = Field(serialization_alias="detailsJson")
+
+
+class RedactionRunEventsResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    items: list[RedactionTimelineEventResponse]
+
+
+class RedactionPreviewStatusResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    page_id: str = Field(serialization_alias="pageId")
+    status: RedactionOutputStatusLiteral
+    preview_sha256: str | None = Field(default=None, serialization_alias="previewSha256")
+    generated_at: datetime | None = Field(default=None, serialization_alias="generatedAt")
+    failure_reason: str | None = Field(default=None, serialization_alias="failureReason")
+    run_output_status: RedactionOutputStatusLiteral | None = Field(
+        default=None,
+        serialization_alias="runOutputStatus",
+    )
+    run_output_manifest_sha256: str | None = Field(
+        default=None,
+        serialization_alias="runOutputManifestSha256",
+    )
+    run_output_readiness_state: RedactionRunOutputReadinessStateLiteral | None = Field(
+        default=None,
+        serialization_alias="runOutputReadinessState",
+    )
+    downstream_ready: bool = Field(serialization_alias="downstreamReady")
+
+
+class RedactionRunOutputResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    status: RedactionOutputStatusLiteral
+    review_status: RedactionRunReviewStatusLiteral = Field(serialization_alias="reviewStatus")
+    readiness_state: RedactionRunOutputReadinessStateLiteral = Field(
+        serialization_alias="readinessState"
+    )
+    downstream_ready: bool = Field(serialization_alias="downstreamReady")
+    output_manifest_sha256: str | None = Field(
+        default=None,
+        serialization_alias="outputManifestSha256",
+    )
+    page_count: int = Field(serialization_alias="pageCount")
+    started_at: datetime | None = Field(default=None, serialization_alias="startedAt")
+    generated_at: datetime | None = Field(default=None, serialization_alias="generatedAt")
+    canceled_by: str | None = Field(default=None, serialization_alias="canceledBy")
+    canceled_at: datetime | None = Field(default=None, serialization_alias="canceledAt")
+    failure_reason: str | None = Field(default=None, serialization_alias="failureReason")
+    created_at: datetime = Field(serialization_alias="createdAt")
+    updated_at: datetime = Field(serialization_alias="updatedAt")
+
+
+class RedactionOverviewResponse(BaseModel):
+    document_id: str = Field(serialization_alias="documentId")
+    project_id: str = Field(serialization_alias="projectId")
+    projection: RedactionProjectionResponse | None
+    active_run: RedactionRunResponse | None = Field(default=None, serialization_alias="activeRun")
+    latest_run: RedactionRunResponse | None = Field(default=None, serialization_alias="latestRun")
+    total_runs: int = Field(serialization_alias="totalRuns")
+    page_count: int = Field(serialization_alias="pageCount")
+    findings_by_category: dict[str, int] = Field(serialization_alias="findingsByCategory")
+    unresolved_findings: int = Field(serialization_alias="unresolvedFindings")
+    auto_applied_findings: int = Field(serialization_alias="autoAppliedFindings")
+    needs_review_findings: int = Field(serialization_alias="needsReviewFindings")
+    overridden_findings: int = Field(serialization_alias="overriddenFindings")
+    pages_blocked_for_review: int = Field(serialization_alias="pagesBlockedForReview")
+    preview_ready_pages: int = Field(serialization_alias="previewReadyPages")
+    preview_total_pages: int = Field(serialization_alias="previewTotalPages")
+    preview_failed_pages: int = Field(serialization_alias="previewFailedPages")
+
+
+class RedactionComparePageResponse(BaseModel):
+    page_id: str = Field(serialization_alias="pageId")
+    page_index: int = Field(serialization_alias="pageIndex")
+    base_finding_count: int = Field(serialization_alias="baseFindingCount")
+    candidate_finding_count: int = Field(serialization_alias="candidateFindingCount")
+    changed_decision_count: int = Field(serialization_alias="changedDecisionCount")
+    changed_action_count: int = Field(serialization_alias="changedActionCount")
+    base_decision_counts: dict[RedactionDecisionStatusLiteral, int] = Field(
+        serialization_alias="baseDecisionCounts"
+    )
+    candidate_decision_counts: dict[RedactionDecisionStatusLiteral, int] = Field(
+        serialization_alias="candidateDecisionCounts"
+    )
+    decision_status_deltas: dict[RedactionDecisionStatusLiteral, int] = Field(
+        serialization_alias="decisionStatusDeltas"
+    )
+    base_action_counts: dict[RedactionDecisionActionTypeLiteral, int] = Field(
+        serialization_alias="baseActionCounts"
+    )
+    candidate_action_counts: dict[RedactionDecisionActionTypeLiteral, int] = Field(
+        serialization_alias="candidateActionCounts"
+    )
+    action_type_deltas: dict[RedactionDecisionActionTypeLiteral, int] = Field(
+        serialization_alias="actionTypeDeltas"
+    )
+    action_compare_state: RedactionComparePageActionStateLiteral = Field(
+        serialization_alias="actionCompareState"
+    )
+    changed_review_status: bool = Field(serialization_alias="changedReviewStatus")
+    changed_second_review_status: bool = Field(
+        serialization_alias="changedSecondReviewStatus"
+    )
+    base_review: RedactionPageReviewResponse | None = Field(
+        default=None,
+        serialization_alias="baseReview",
+    )
+    candidate_review: RedactionPageReviewResponse | None = Field(
+        default=None,
+        serialization_alias="candidateReview",
+    )
+    base_preview_status: RedactionOutputStatusLiteral | None = Field(
+        default=None,
+        serialization_alias="basePreviewStatus",
+    )
+    candidate_preview_status: RedactionOutputStatusLiteral | None = Field(
+        default=None,
+        serialization_alias="candidatePreviewStatus",
+    )
+    preview_ready_delta: int = Field(serialization_alias="previewReadyDelta")
+
+
+class RedactionPreActivationWarningResponse(BaseModel):
+    code: RedactionPolicyWarningCodeLiteral
+    severity: RedactionPolicyWarningSeverityLiteral
+    message: str
+    affected_categories: list[str] = Field(serialization_alias="affectedCategories")
+
+
+class RedactionCompareResponse(BaseModel):
+    document_id: str = Field(serialization_alias="documentId")
+    project_id: str = Field(serialization_alias="projectId")
+    base_run: RedactionRunResponse = Field(serialization_alias="baseRun")
+    candidate_run: RedactionRunResponse = Field(serialization_alias="candidateRun")
+    changed_page_count: int = Field(serialization_alias="changedPageCount")
+    changed_decision_count: int = Field(serialization_alias="changedDecisionCount")
+    changed_action_count: int = Field(serialization_alias="changedActionCount")
+    compare_action_state: RedactionCompareActionStateLiteral = Field(
+        serialization_alias="compareActionState"
+    )
+    candidate_policy_status: RedactionPolicyStatusLiteral | None = Field(
+        default=None,
+        serialization_alias="candidatePolicyStatus",
+    )
+    comparison_only_candidate: bool = Field(serialization_alias="comparisonOnlyCandidate")
+    pre_activation_warnings: list[RedactionPreActivationWarningResponse] = Field(
+        serialization_alias="preActivationWarnings"
+    )
+    items: list[RedactionComparePageResponse]
+
+
+class ActivateRedactionRunResponse(BaseModel):
+    projection: RedactionProjectionResponse
+    run: RedactionRunResponse
+
+
+class GovernanceRunSummaryResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    project_id: str = Field(serialization_alias="projectId")
+    document_id: str = Field(serialization_alias="documentId")
+    run_status: RedactionRunStatusLiteral = Field(serialization_alias="runStatus")
+    review_status: RedactionRunReviewStatusLiteral | None = Field(
+        default=None,
+        serialization_alias="reviewStatus",
+    )
+    approved_snapshot_key: str | None = Field(
+        default=None,
+        serialization_alias="approvedSnapshotKey",
+    )
+    approved_snapshot_sha256: str | None = Field(
+        default=None,
+        serialization_alias="approvedSnapshotSha256",
+    )
+    run_output_status: RedactionOutputStatusLiteral | None = Field(
+        default=None,
+        serialization_alias="runOutputStatus",
+    )
+    run_output_manifest_sha256: str | None = Field(
+        default=None,
+        serialization_alias="runOutputManifestSha256",
+    )
+    run_created_at: datetime = Field(serialization_alias="runCreatedAt")
+    run_finished_at: datetime | None = Field(default=None, serialization_alias="runFinishedAt")
+    readiness_status: GovernanceReadinessStatusLiteral = Field(
+        serialization_alias="readinessStatus"
+    )
+    generation_status: GovernanceGenerationStatusLiteral = Field(
+        serialization_alias="generationStatus"
+    )
+    ready_manifest_id: str | None = Field(default=None, serialization_alias="readyManifestId")
+    ready_ledger_id: str | None = Field(default=None, serialization_alias="readyLedgerId")
+    latest_manifest_sha256: str | None = Field(
+        default=None,
+        serialization_alias="latestManifestSha256",
+    )
+    latest_ledger_sha256: str | None = Field(
+        default=None,
+        serialization_alias="latestLedgerSha256",
+    )
+    ledger_verification_status: GovernanceLedgerVerificationStatusLiteral = Field(
+        serialization_alias="ledgerVerificationStatus"
+    )
+    ready_at: datetime | None = Field(default=None, serialization_alias="readyAt")
+    last_error_code: str | None = Field(default=None, serialization_alias="lastErrorCode")
+    updated_at: datetime = Field(serialization_alias="updatedAt")
+
+
+class GovernanceReadinessProjectionResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    project_id: str = Field(serialization_alias="projectId")
+    document_id: str = Field(serialization_alias="documentId")
+    status: GovernanceReadinessStatusLiteral
+    generation_status: GovernanceGenerationStatusLiteral = Field(
+        serialization_alias="generationStatus"
+    )
+    manifest_id: str | None = Field(default=None, serialization_alias="manifestId")
+    ledger_id: str | None = Field(default=None, serialization_alias="ledgerId")
+    last_ledger_verification_run_id: str | None = Field(
+        default=None,
+        serialization_alias="lastLedgerVerificationRunId",
+    )
+    last_manifest_sha256: str | None = Field(
+        default=None,
+        serialization_alias="lastManifestSha256",
+    )
+    last_ledger_sha256: str | None = Field(
+        default=None,
+        serialization_alias="lastLedgerSha256",
+    )
+    ledger_verification_status: GovernanceLedgerVerificationStatusLiteral = Field(
+        serialization_alias="ledgerVerificationStatus"
+    )
+    ledger_verified_at: datetime | None = Field(
+        default=None,
+        serialization_alias="ledgerVerifiedAt",
+    )
+    ready_at: datetime | None = Field(default=None, serialization_alias="readyAt")
+    last_error_code: str | None = Field(default=None, serialization_alias="lastErrorCode")
+    updated_at: datetime = Field(serialization_alias="updatedAt")
+
+
+class GovernanceManifestAttemptResponse(BaseModel):
+    id: str
+    run_id: str = Field(serialization_alias="runId")
+    project_id: str = Field(serialization_alias="projectId")
+    document_id: str = Field(serialization_alias="documentId")
+    source_review_snapshot_key: str = Field(serialization_alias="sourceReviewSnapshotKey")
+    source_review_snapshot_sha256: str = Field(serialization_alias="sourceReviewSnapshotSha256")
+    attempt_number: int = Field(serialization_alias="attemptNumber")
+    supersedes_manifest_id: str | None = Field(
+        default=None,
+        serialization_alias="supersedesManifestId",
+    )
+    superseded_by_manifest_id: str | None = Field(
+        default=None,
+        serialization_alias="supersededByManifestId",
+    )
+    status: GovernanceArtifactStatusLiteral
+    manifest_key: str | None = Field(default=None, serialization_alias="manifestKey")
+    manifest_sha256: str | None = Field(default=None, serialization_alias="manifestSha256")
+    format_version: int = Field(serialization_alias="formatVersion")
+    started_at: datetime | None = Field(default=None, serialization_alias="startedAt")
+    finished_at: datetime | None = Field(default=None, serialization_alias="finishedAt")
+    canceled_by: str | None = Field(default=None, serialization_alias="canceledBy")
+    canceled_at: datetime | None = Field(default=None, serialization_alias="canceledAt")
+    failure_reason: str | None = Field(default=None, serialization_alias="failureReason")
+    created_by: str = Field(serialization_alias="createdBy")
+    created_at: datetime = Field(serialization_alias="createdAt")
+
+
+class GovernanceLedgerAttemptResponse(BaseModel):
+    id: str
+    run_id: str = Field(serialization_alias="runId")
+    project_id: str = Field(serialization_alias="projectId")
+    document_id: str = Field(serialization_alias="documentId")
+    source_review_snapshot_key: str = Field(serialization_alias="sourceReviewSnapshotKey")
+    source_review_snapshot_sha256: str = Field(serialization_alias="sourceReviewSnapshotSha256")
+    attempt_number: int = Field(serialization_alias="attemptNumber")
+    supersedes_ledger_id: str | None = Field(
+        default=None,
+        serialization_alias="supersedesLedgerId",
+    )
+    superseded_by_ledger_id: str | None = Field(
+        default=None,
+        serialization_alias="supersededByLedgerId",
+    )
+    status: GovernanceArtifactStatusLiteral
+    ledger_key: str | None = Field(default=None, serialization_alias="ledgerKey")
+    ledger_sha256: str | None = Field(default=None, serialization_alias="ledgerSha256")
+    hash_chain_version: str = Field(serialization_alias="hashChainVersion")
+    started_at: datetime | None = Field(default=None, serialization_alias="startedAt")
+    finished_at: datetime | None = Field(default=None, serialization_alias="finishedAt")
+    canceled_by: str | None = Field(default=None, serialization_alias="canceledBy")
+    canceled_at: datetime | None = Field(default=None, serialization_alias="canceledAt")
+    failure_reason: str | None = Field(default=None, serialization_alias="failureReason")
+    created_by: str = Field(serialization_alias="createdBy")
+    created_at: datetime = Field(serialization_alias="createdAt")
+
+
+class GovernanceRunOverviewResponse(BaseModel):
+    document_id: str = Field(serialization_alias="documentId")
+    project_id: str = Field(serialization_alias="projectId")
+    active_run_id: str | None = Field(default=None, serialization_alias="activeRunId")
+    run: GovernanceRunSummaryResponse
+    readiness: GovernanceReadinessProjectionResponse
+    manifest_attempts: list[GovernanceManifestAttemptResponse] = Field(
+        serialization_alias="manifestAttempts"
+    )
+    ledger_attempts: list[GovernanceLedgerAttemptResponse] = Field(
+        serialization_alias="ledgerAttempts"
+    )
+
+
+class GovernanceOverviewResponse(BaseModel):
+    document_id: str = Field(serialization_alias="documentId")
+    project_id: str = Field(serialization_alias="projectId")
+    active_run_id: str | None = Field(default=None, serialization_alias="activeRunId")
+    total_runs: int = Field(serialization_alias="totalRuns")
+    approved_runs: int = Field(serialization_alias="approvedRuns")
+    ready_runs: int = Field(serialization_alias="readyRuns")
+    pending_runs: int = Field(serialization_alias="pendingRuns")
+    failed_runs: int = Field(serialization_alias="failedRuns")
+    latest_run_id: str | None = Field(default=None, serialization_alias="latestRunId")
+    latest_ready_run_id: str | None = Field(
+        default=None,
+        serialization_alias="latestReadyRunId",
+    )
+    latest_run: GovernanceRunSummaryResponse | None = Field(
+        default=None,
+        serialization_alias="latestRun",
+    )
+    latest_ready_run: GovernanceRunSummaryResponse | None = Field(
+        default=None,
+        serialization_alias="latestReadyRun",
+    )
+
+
+class GovernanceRunsResponse(BaseModel):
+    document_id: str = Field(serialization_alias="documentId")
+    project_id: str = Field(serialization_alias="projectId")
+    active_run_id: str | None = Field(default=None, serialization_alias="activeRunId")
+    items: list[GovernanceRunSummaryResponse]
+
+
+class GovernanceRunEventResponse(BaseModel):
+    id: str
+    run_id: str = Field(serialization_alias="runId")
+    event_type: GovernanceRunEventTypeLiteral = Field(serialization_alias="eventType")
+    actor_user_id: str | None = Field(default=None, serialization_alias="actorUserId")
+    from_status: str | None = Field(default=None, serialization_alias="fromStatus")
+    to_status: str | None = Field(default=None, serialization_alias="toStatus")
+    reason: str | None = None
+    created_at: datetime = Field(serialization_alias="createdAt")
+    screening_safe: bool = Field(serialization_alias="screeningSafe")
+
+
+class GovernanceRunEventsResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    items: list[GovernanceRunEventResponse]
+
+
+class GovernanceManifestResponse(BaseModel):
+    overview: GovernanceRunOverviewResponse
+    latest_attempt: GovernanceManifestAttemptResponse | None = Field(
+        default=None,
+        serialization_alias="latestAttempt",
+    )
+    manifest_json: dict[str, object] | None = Field(
+        default=None,
+        serialization_alias="manifestJson",
+    )
+    stream_sha256: str | None = Field(default=None, serialization_alias="streamSha256")
+    hash_matches: bool = Field(serialization_alias="hashMatches")
+    internal_only: bool = Field(serialization_alias="internalOnly")
+    export_approved: bool = Field(serialization_alias="exportApproved")
+    not_export_approved: bool = Field(serialization_alias="notExportApproved")
+
+
+class GovernanceManifestStatusResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    status: GovernanceArtifactStatusLiteral
+    latest_attempt: GovernanceManifestAttemptResponse | None = Field(
+        default=None,
+        serialization_alias="latestAttempt",
+    )
+    attempt_count: int = Field(serialization_alias="attemptCount")
+    ready_manifest_id: str | None = Field(default=None, serialization_alias="readyManifestId")
+    latest_manifest_sha256: str | None = Field(
+        default=None,
+        serialization_alias="latestManifestSha256",
+    )
+    generation_status: GovernanceGenerationStatusLiteral = Field(
+        serialization_alias="generationStatus"
+    )
+    readiness_status: GovernanceReadinessStatusLiteral = Field(
+        serialization_alias="readinessStatus"
+    )
+    updated_at: datetime = Field(serialization_alias="updatedAt")
+
+
+class GovernanceManifestEntryResponse(BaseModel):
+    entry_id: str = Field(serialization_alias="entryId")
+    applied_action: str = Field(serialization_alias="appliedAction")
+    category: str
+    page_id: str = Field(serialization_alias="pageId")
+    page_index: int | None = Field(default=None, serialization_alias="pageIndex")
+    line_id: str | None = Field(default=None, serialization_alias="lineId")
+    location_ref: dict[str, object] = Field(serialization_alias="locationRef")
+    basis_primary: str = Field(serialization_alias="basisPrimary")
+    confidence: float | None = None
+    secondary_basis_summary: dict[str, object] | None = Field(
+        default=None,
+        serialization_alias="secondaryBasisSummary",
+    )
+    final_decision_state: str = Field(serialization_alias="finalDecisionState")
+    review_state: str = Field(serialization_alias="reviewState")
+    policy_snapshot_hash: str | None = Field(
+        default=None,
+        serialization_alias="policySnapshotHash",
+    )
+    policy_id: str | None = Field(default=None, serialization_alias="policyId")
+    policy_family_id: str | None = Field(default=None, serialization_alias="policyFamilyId")
+    policy_version: str | None = Field(default=None, serialization_alias="policyVersion")
+    decision_timestamp: str | None = Field(default=None, serialization_alias="decisionTimestamp")
+    decision_by: str | None = Field(default=None, serialization_alias="decisionBy")
+    decision_etag: str | None = Field(default=None, serialization_alias="decisionEtag")
+
+
+class GovernanceManifestEntriesResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    status: GovernanceArtifactStatusLiteral
+    manifest_id: str | None = Field(default=None, serialization_alias="manifestId")
+    manifest_sha256: str | None = Field(default=None, serialization_alias="manifestSha256")
+    source_review_snapshot_sha256: str | None = Field(
+        default=None,
+        serialization_alias="sourceReviewSnapshotSha256",
+    )
+    total_count: int = Field(serialization_alias="totalCount")
+    next_cursor: int | None = Field(default=None, serialization_alias="nextCursor")
+    internal_only: bool = Field(serialization_alias="internalOnly")
+    export_approved: bool = Field(serialization_alias="exportApproved")
+    not_export_approved: bool = Field(serialization_alias="notExportApproved")
+    items: list[GovernanceManifestEntryResponse]
+
+
+class GovernanceManifestHashResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    status: GovernanceArtifactStatusLiteral
+    manifest_id: str | None = Field(default=None, serialization_alias="manifestId")
+    manifest_sha256: str | None = Field(default=None, serialization_alias="manifestSha256")
+    stream_sha256: str | None = Field(default=None, serialization_alias="streamSha256")
+    hash_matches: bool = Field(serialization_alias="hashMatches")
+    internal_only: bool = Field(serialization_alias="internalOnly")
+    export_approved: bool = Field(serialization_alias="exportApproved")
+    not_export_approved: bool = Field(serialization_alias="notExportApproved")
+
+
+class GovernanceLedgerResponse(BaseModel):
+    overview: GovernanceRunOverviewResponse
+    latest_attempt: GovernanceLedgerAttemptResponse | None = Field(
+        default=None,
+        serialization_alias="latestAttempt",
+    )
+    ledger_json: dict[str, object] | None = Field(
+        default=None,
+        serialization_alias="ledgerJson",
+    )
+    stream_sha256: str | None = Field(default=None, serialization_alias="streamSha256")
+    hash_matches: bool = Field(serialization_alias="hashMatches")
+    internal_only: bool = Field(serialization_alias="internalOnly")
+
+
+class GovernanceLedgerStatusResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    status: GovernanceArtifactStatusLiteral
+    latest_attempt: GovernanceLedgerAttemptResponse | None = Field(
+        default=None,
+        serialization_alias="latestAttempt",
+    )
+    attempt_count: int = Field(serialization_alias="attemptCount")
+    ready_ledger_id: str | None = Field(default=None, serialization_alias="readyLedgerId")
+    latest_ledger_sha256: str | None = Field(
+        default=None,
+        serialization_alias="latestLedgerSha256",
+    )
+    generation_status: GovernanceGenerationStatusLiteral = Field(
+        serialization_alias="generationStatus"
+    )
+    readiness_status: GovernanceReadinessStatusLiteral = Field(
+        serialization_alias="readinessStatus"
+    )
+    ledger_verification_status: GovernanceLedgerVerificationStatusLiteral = Field(
+        serialization_alias="ledgerVerificationStatus"
+    )
+    updated_at: datetime = Field(serialization_alias="updatedAt")
+
+
+class GovernanceLedgerEntryResponse(BaseModel):
+    row_id: str = Field(serialization_alias="rowId")
+    row_index: int = Field(serialization_alias="rowIndex")
+    finding_id: str = Field(serialization_alias="findingId")
+    page_id: str = Field(serialization_alias="pageId")
+    page_index: int | None = Field(default=None, serialization_alias="pageIndex")
+    line_id: str | None = Field(default=None, serialization_alias="lineId")
+    category: str
+    action_type: str = Field(serialization_alias="actionType")
+    before_text_ref: dict[str, object] = Field(serialization_alias="beforeTextRef")
+    after_text_ref: dict[str, object] = Field(serialization_alias="afterTextRef")
+    detector_evidence: dict[str, object] = Field(serialization_alias="detectorEvidence")
+    assist_explanation_key: str | None = Field(
+        default=None,
+        serialization_alias="assistExplanationKey",
+    )
+    assist_explanation_sha256: str | None = Field(
+        default=None,
+        serialization_alias="assistExplanationSha256",
+    )
+    actor_user_id: str | None = Field(default=None, serialization_alias="actorUserId")
+    decision_timestamp: str | None = Field(
+        default=None,
+        serialization_alias="decisionTimestamp",
+    )
+    override_reason: str | None = Field(default=None, serialization_alias="overrideReason")
+    final_decision_state: str | None = Field(
+        default=None,
+        serialization_alias="finalDecisionState",
+    )
+    policy_snapshot_hash: str | None = Field(
+        default=None,
+        serialization_alias="policySnapshotHash",
+    )
+    policy_id: str | None = Field(default=None, serialization_alias="policyId")
+    policy_family_id: str | None = Field(default=None, serialization_alias="policyFamilyId")
+    policy_version: str | None = Field(default=None, serialization_alias="policyVersion")
+    prev_hash: str = Field(serialization_alias="prevHash")
+    row_hash: str = Field(serialization_alias="rowHash")
+
+
+class GovernanceLedgerEntriesResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    status: GovernanceArtifactStatusLiteral
+    view: GovernanceLedgerEntriesViewLiteral
+    ledger_id: str | None = Field(default=None, serialization_alias="ledgerId")
+    ledger_sha256: str | None = Field(default=None, serialization_alias="ledgerSha256")
+    hash_chain_version: str | None = Field(
+        default=None,
+        serialization_alias="hashChainVersion",
+    )
+    total_count: int = Field(serialization_alias="totalCount")
+    next_cursor: int | None = Field(default=None, serialization_alias="nextCursor")
+    verification_status: GovernanceLedgerVerificationStatusLiteral = Field(
+        serialization_alias="verificationStatus"
+    )
+    items: list[GovernanceLedgerEntryResponse]
+
+
+class GovernanceLedgerSummaryResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    status: GovernanceArtifactStatusLiteral
+    ledger_id: str | None = Field(default=None, serialization_alias="ledgerId")
+    ledger_sha256: str | None = Field(default=None, serialization_alias="ledgerSha256")
+    hash_chain_version: str | None = Field(
+        default=None,
+        serialization_alias="hashChainVersion",
+    )
+    row_count: int = Field(serialization_alias="rowCount")
+    hash_chain_head: str | None = Field(default=None, serialization_alias="hashChainHead")
+    hash_chain_valid: bool = Field(serialization_alias="hashChainValid")
+    verification_status: GovernanceLedgerVerificationStatusLiteral = Field(
+        serialization_alias="verificationStatus"
+    )
+    category_counts: dict[str, int] = Field(serialization_alias="categoryCounts")
+    action_counts: dict[str, int] = Field(serialization_alias="actionCounts")
+    override_count: int = Field(serialization_alias="overrideCount")
+    assist_reference_count: int = Field(serialization_alias="assistReferenceCount")
+    internal_only: bool = Field(serialization_alias="internalOnly")
+
+
+class GovernanceLedgerVerificationRunResponse(BaseModel):
+    id: str
+    run_id: str = Field(serialization_alias="runId")
+    attempt_number: int = Field(serialization_alias="attemptNumber")
+    supersedes_verification_run_id: str | None = Field(
+        default=None,
+        serialization_alias="supersedesVerificationRunId",
+    )
+    superseded_by_verification_run_id: str | None = Field(
+        default=None,
+        serialization_alias="supersededByVerificationRunId",
+    )
+    status: GovernanceArtifactStatusLiteral
+    verification_result: GovernanceLedgerVerificationResultLiteral | None = Field(
+        default=None,
+        serialization_alias="verificationResult",
+    )
+    result_json: dict[str, object] | None = Field(
+        default=None,
+        serialization_alias="resultJson",
+    )
+    started_at: datetime | None = Field(default=None, serialization_alias="startedAt")
+    finished_at: datetime | None = Field(default=None, serialization_alias="finishedAt")
+    canceled_by: str | None = Field(default=None, serialization_alias="canceledBy")
+    canceled_at: datetime | None = Field(default=None, serialization_alias="canceledAt")
+    failure_reason: str | None = Field(default=None, serialization_alias="failureReason")
+    created_by: str = Field(serialization_alias="createdBy")
+    created_at: datetime = Field(serialization_alias="createdAt")
+
+
+class GovernanceLedgerVerifyStatusResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    verification_status: GovernanceLedgerVerificationStatusLiteral = Field(
+        serialization_alias="verificationStatus"
+    )
+    attempt_count: int = Field(serialization_alias="attemptCount")
+    latest_attempt: GovernanceLedgerVerificationRunResponse | None = Field(
+        default=None,
+        serialization_alias="latestAttempt",
+    )
+    latest_completed_attempt: GovernanceLedgerVerificationRunResponse | None = Field(
+        default=None,
+        serialization_alias="latestCompletedAttempt",
+    )
+    ready_ledger_id: str | None = Field(default=None, serialization_alias="readyLedgerId")
+    latest_ledger_sha256: str | None = Field(
+        default=None,
+        serialization_alias="latestLedgerSha256",
+    )
+    last_verified_at: datetime | None = Field(default=None, serialization_alias="lastVerifiedAt")
+
+
+class GovernanceLedgerVerifyRunsResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    verification_status: GovernanceLedgerVerificationStatusLiteral = Field(
+        serialization_alias="verificationStatus"
+    )
+    items: list[GovernanceLedgerVerificationRunResponse]
+
+
+class GovernanceLedgerVerifyDetailResponse(BaseModel):
+    run_id: str = Field(serialization_alias="runId")
+    verification_status: GovernanceLedgerVerificationStatusLiteral = Field(
+        serialization_alias="verificationStatus"
+    )
+    attempt: GovernanceLedgerVerificationRunResponse
 
 
 def _as_document_response(record: DocumentRecord) -> DocumentResponse:
@@ -2772,6 +4216,82 @@ def _as_transcription_token_result_response(
     )
 
 
+def _as_transcription_rescue_source_response(
+    snapshot: DocumentTranscriptionRescueSourceSnapshot,
+) -> TranscriptionRescueSourceResponse:
+    return TranscriptionRescueSourceResponse(
+        source_ref_id=snapshot.source_ref_id,
+        source_kind=snapshot.source_kind,
+        candidate_kind=snapshot.candidate_kind,  # type: ignore[arg-type]
+        candidate_status=snapshot.candidate_status,  # type: ignore[arg-type]
+        token_count=snapshot.token_count,
+        has_transcription_output=snapshot.has_transcription_output,
+        confidence=snapshot.confidence,
+        source_signal=snapshot.source_signal,
+        geometry_json=dict(snapshot.geometry_json),
+    )
+
+
+def _as_transcription_rescue_page_status_response(
+    snapshot: DocumentTranscriptionRescuePageStatusSnapshot,
+) -> TranscriptionRescuePageStatusResponse:
+    return TranscriptionRescuePageStatusResponse(
+        run_id=snapshot.run_id,
+        page_id=snapshot.page_id,
+        page_index=snapshot.page_index,
+        page_recall_status=snapshot.page_recall_status,
+        rescue_source_count=snapshot.rescue_source_count,
+        rescue_transcribed_source_count=snapshot.rescue_transcribed_source_count,
+        rescue_unresolved_source_count=snapshot.rescue_unresolved_source_count,
+        readiness_state=snapshot.readiness_state,
+        blocker_reason_codes=list(snapshot.blocker_reason_codes),
+        resolution_status=snapshot.resolution_status,
+        resolution_reason=snapshot.resolution_reason,
+        resolution_updated_by=snapshot.resolution_updated_by,
+        resolution_updated_at=snapshot.resolution_updated_at,
+    )
+
+
+def _as_transcription_run_rescue_status_response(
+    snapshot: DocumentTranscriptionRunRescueStatusSnapshot,
+) -> TranscriptionRunRescueStatusResponse:
+    return TranscriptionRunRescueStatusResponse(
+        document_id=snapshot.document.id,
+        project_id=snapshot.document.project_id,
+        run_id=snapshot.run.id,
+        ready_for_activation=snapshot.ready_for_activation,
+        blocker_count=snapshot.blocker_count,
+        run_blocker_reason_codes=list(snapshot.run_blocker_reason_codes),
+        pages=[
+            _as_transcription_rescue_page_status_response(page)
+            for page in snapshot.pages
+        ],
+    )
+
+
+def _as_transcription_page_rescue_sources_response(
+    snapshot: DocumentTranscriptionPageRescueSourcesSnapshot,
+) -> TranscriptionPageRescueSourcesResponse:
+    return TranscriptionPageRescueSourcesResponse(
+        document_id=snapshot.document.id,
+        project_id=snapshot.document.project_id,
+        run_id=snapshot.run.id,
+        page_id=snapshot.page.id,
+        page_index=snapshot.page.page_index,
+        page_recall_status=snapshot.page_recall_status,
+        readiness_state=snapshot.readiness_state,
+        blocker_reason_codes=list(snapshot.blocker_reason_codes),
+        rescue_sources=[
+            _as_transcription_rescue_source_response(source)
+            for source in snapshot.rescue_sources
+        ],
+        resolution_status=snapshot.resolution_status,
+        resolution_reason=snapshot.resolution_reason,
+        resolution_updated_by=snapshot.resolution_updated_by,
+        resolution_updated_at=snapshot.resolution_updated_at,
+    )
+
+
 def _as_transcript_version_response(
     record: TranscriptVersionRecord,
 ) -> TranscriptVersionResponse:
@@ -2787,6 +4307,42 @@ def _as_transcript_version_response(
         editor_user_id=record.editor_user_id,
         edit_reason=record.edit_reason,
         created_at=record.created_at,
+    )
+
+
+def _as_transcript_version_lineage_response(
+    snapshot: DocumentTranscriptVersionLineageSnapshot,
+) -> TranscriptVersionLineageResponse:
+    source_type: TranscriptVersionSourceTypeLiteral
+    if snapshot.source_type in {
+        "ENGINE_OUTPUT",
+        "REVIEWER_CORRECTION",
+        "COMPARE_COMPOSED",
+    }:
+        source_type = snapshot.source_type
+    else:
+        source_type = "ENGINE_OUTPUT"
+    return TranscriptVersionLineageResponse(
+        version=_as_transcript_version_response(snapshot.version),
+        is_active=snapshot.is_active,
+        source_type=source_type,
+    )
+
+
+def _as_transcription_line_version_history_response(
+    *,
+    snapshot: DocumentTranscriptionLineVersionHistorySnapshot,
+) -> TranscriptionLineVersionHistoryResponse:
+    return TranscriptionLineVersionHistoryResponse(
+        document_id=snapshot.run.document_id,
+        project_id=snapshot.run.project_id,
+        run_id=snapshot.run.id,
+        page_id=snapshot.page.id,
+        line_id=snapshot.line.line_id,
+        line=_as_transcription_line_result_response(snapshot.line),
+        versions=[
+            _as_transcript_version_lineage_response(item) for item in snapshot.versions
+        ],
     )
 
 
@@ -2933,6 +4489,9 @@ def _as_transcription_compare_response(
         changed_confidence_count=snapshot.changed_confidence_count,
         base_engine_metadata=dict(snapshot.base_engine_metadata),
         candidate_engine_metadata=dict(snapshot.candidate_engine_metadata),
+        compare_decision_snapshot_hash=snapshot.compare_decision_snapshot_hash,
+        compare_decision_count=snapshot.compare_decision_count,
+        compare_decision_event_count=snapshot.compare_decision_event_count,
         items=[
             TranscriptionComparePageResponse(
                 page_id=item.page_id,
@@ -3011,6 +4570,25 @@ def _as_transcription_compare_response(
     )
 
 
+def _as_transcription_compare_finalize_response(
+    *,
+    snapshot: DocumentTranscriptionCompareFinalizeSnapshot,
+    active_run_id: str | None,
+) -> FinalizeTranscriptionCompareResponse:
+    return FinalizeTranscriptionCompareResponse(
+        document_id=snapshot.document.id,
+        project_id=snapshot.document.project_id,
+        base_run_id=snapshot.base_run.id,
+        candidate_run_id=snapshot.candidate_run.id,
+        composed_run=_as_transcription_run_response(
+            snapshot.composed_run,
+            active_run_id=active_run_id,
+        ),
+        compare_decision_snapshot_hash=snapshot.compare_decision_snapshot_hash,
+        page_scope=list(snapshot.page_scope),
+    )
+
+
 def _as_transcription_triage_page_response(
     record: DocumentTranscriptionTriagePageSnapshot,
 ) -> TranscriptionTriagePageResponse:
@@ -3075,6 +4653,979 @@ def _as_transcription_metrics_response(
         fallback_invocation_count=metrics.fallback_invocation_count,
         confidence_bands=metrics.confidence_bands,
     )
+
+
+def _as_redaction_run_response(
+    record: RedactionRunRecord,
+    *,
+    active_run_id: str | None = None,
+) -> RedactionRunResponse:
+    is_superseded = record.superseded_by_redaction_run_id is not None
+    return RedactionRunResponse(
+        id=record.id,
+        project_id=record.project_id,
+        document_id=record.document_id,
+        input_transcription_run_id=record.input_transcription_run_id,
+        input_layout_run_id=record.input_layout_run_id,
+        run_kind=record.run_kind,
+        supersedes_redaction_run_id=record.supersedes_redaction_run_id,
+        superseded_by_redaction_run_id=record.superseded_by_redaction_run_id,
+        policy_snapshot_id=record.policy_snapshot_id,
+        policy_snapshot_json=record.policy_snapshot_json,
+        policy_snapshot_hash=record.policy_snapshot_hash,
+        policy_id=record.policy_id,
+        policy_family_id=record.policy_family_id,
+        policy_version=record.policy_version,
+        detectors_version=record.detectors_version,
+        status=record.status,
+        created_by=record.created_by,
+        created_at=record.created_at,
+        started_at=record.started_at,
+        finished_at=record.finished_at,
+        failure_reason=record.failure_reason,
+        is_active_projection=active_run_id == record.id,
+        is_superseded=is_superseded,
+        is_current_attempt=not is_superseded,
+        is_historical_attempt=is_superseded,
+    )
+
+
+def _as_redaction_projection_response(
+    record: DocumentRedactionProjectionRecord,
+) -> RedactionProjectionResponse:
+    return RedactionProjectionResponse(
+        document_id=record.document_id,
+        project_id=record.project_id,
+        active_redaction_run_id=record.active_redaction_run_id,
+        active_transcription_run_id=record.active_transcription_run_id,
+        active_layout_run_id=record.active_layout_run_id,
+        active_policy_snapshot_id=record.active_policy_snapshot_id,
+        updated_at=record.updated_at,
+    )
+
+
+def _as_redaction_run_status_response(
+    record: RedactionRunRecord,
+) -> RedactionRunStatusResponse:
+    return RedactionRunStatusResponse(
+        run_id=record.id,
+        document_id=record.document_id,
+        status=record.status,
+        failure_reason=record.failure_reason,
+        started_at=record.started_at,
+        finished_at=record.finished_at,
+        created_at=record.created_at,
+        active=record.status in {"QUEUED", "RUNNING"},
+    )
+
+
+def _as_redaction_run_review_response(
+    record: RedactionRunReviewRecord,
+) -> RedactionRunReviewResponse:
+    return RedactionRunReviewResponse(
+        run_id=record.run_id,
+        review_status=record.review_status,
+        review_started_by=record.review_started_by,
+        review_started_at=record.review_started_at,
+        approved_by=record.approved_by,
+        approved_at=record.approved_at,
+        approved_snapshot_key=record.approved_snapshot_key,
+        approved_snapshot_sha256=record.approved_snapshot_sha256,
+        locked_at=record.locked_at,
+        updated_at=record.updated_at,
+    )
+
+
+def _as_redaction_finding_response(
+    record: RedactionFindingRecord,
+    *,
+    active_area_mask: RedactionAreaMaskRecord | None = None,
+) -> RedactionFindingResponse:
+    area_mask_geometry_json: dict[str, object] | None
+    if active_area_mask is not None:
+        area_mask_geometry_json = dict(active_area_mask.geometry_json)
+    elif record.area_mask_id is not None:
+        area_mask_geometry_json = {}
+    else:
+        area_mask_geometry_json = None
+    geometry_payload = build_finding_geometry_payload(
+        token_refs_json=record.token_refs_json,
+        bbox_refs=record.bbox_refs,
+        area_mask_geometry_json=area_mask_geometry_json,
+    )
+    return RedactionFindingResponse(
+        id=record.id,
+        run_id=record.run_id,
+        page_id=record.page_id,
+        line_id=record.line_id,
+        category=record.category,
+        span_start=record.span_start,
+        span_end=record.span_end,
+        span_basis_kind=record.span_basis_kind,
+        span_basis_ref=record.span_basis_ref,
+        confidence=record.confidence,
+        basis_primary=record.basis_primary,
+        basis_secondary_json=record.basis_secondary_json,
+        assist_explanation_key=record.assist_explanation_key,
+        assist_explanation_sha256=record.assist_explanation_sha256,
+        bbox_refs=record.bbox_refs,
+        token_refs_json=record.token_refs_json,
+        area_mask_id=record.area_mask_id,
+        decision_status=record.decision_status,
+        action_type=record.action_type,
+        override_risk_classification=record.override_risk_classification,
+        override_risk_reason_codes_json=record.override_risk_reason_codes_json,
+        decision_by=record.decision_by,
+        decision_at=record.decision_at,
+        decision_reason=record.decision_reason,
+        decision_etag=record.decision_etag,
+        updated_at=record.updated_at,
+        created_at=record.created_at,
+        geometry=RedactionFindingGeometryResponse(
+            anchor_kind=str(geometry_payload.get("anchorKind") or "NONE"),  # type: ignore[arg-type]
+            line_id=(
+                str(geometry_payload["lineId"])
+                if isinstance(geometry_payload.get("lineId"), str)
+                else None
+            ),
+            token_ids=[
+                str(token_id)
+                for token_id in geometry_payload.get("tokenIds", [])
+                if isinstance(token_id, str)
+            ],
+            boxes=[
+                RedactionFindingGeometryBoxResponse(
+                    x=float(box["x"]),
+                    y=float(box["y"]),
+                    width=float(box["width"]),
+                    height=float(box["height"]),
+                    source=str(box.get("source") or "BBOX_REF"),  # type: ignore[arg-type]
+                )
+                for box in geometry_payload.get("boxes", [])
+                if isinstance(box, dict)
+                and isinstance(box.get("x"), (int, float))
+                and isinstance(box.get("y"), (int, float))
+                and isinstance(box.get("width"), (int, float))
+                and isinstance(box.get("height"), (int, float))
+            ],
+            polygons=[
+                RedactionFindingGeometryPolygonResponse(
+                    points=[
+                        RedactionFindingGeometryPointResponse(
+                            x=float(point["x"]),
+                            y=float(point["y"]),
+                        )
+                        for point in polygon.get("points", [])
+                        if isinstance(point, dict)
+                        and isinstance(point.get("x"), (int, float))
+                        and isinstance(point.get("y"), (int, float))
+                    ],
+                    source=str(polygon.get("source") or "BBOX_REF"),  # type: ignore[arg-type]
+                )
+                for polygon in geometry_payload.get("polygons", [])
+                if isinstance(polygon, dict)
+                and isinstance(polygon.get("points"), list)
+            ],
+        ),
+        active_area_mask=(
+            _as_redaction_area_mask_response(active_area_mask)
+            if active_area_mask is not None
+            else None
+        ),
+    )
+
+
+def _as_redaction_page_review_response(
+    record: RedactionPageReviewRecord,
+) -> RedactionPageReviewResponse:
+    return RedactionPageReviewResponse(
+        run_id=record.run_id,
+        page_id=record.page_id,
+        review_status=record.review_status,
+        review_etag=record.review_etag,
+        first_reviewed_by=record.first_reviewed_by,
+        first_reviewed_at=record.first_reviewed_at,
+        requires_second_review=record.requires_second_review,
+        second_review_status=record.second_review_status,
+        second_reviewed_by=record.second_reviewed_by,
+        second_reviewed_at=record.second_reviewed_at,
+        updated_at=record.updated_at,
+    )
+
+
+def _as_redaction_run_page_response(
+    snapshot: DocumentRedactionRunPageSnapshot,
+) -> RedactionRunPageResponse:
+    return RedactionRunPageResponse(
+        run_id=snapshot.run_id,
+        page_id=snapshot.page_id,
+        page_index=snapshot.page_index,
+        finding_count=snapshot.finding_count,
+        unresolved_count=snapshot.unresolved_count,
+        review_status=snapshot.review_status,
+        review_etag=snapshot.review_etag,
+        requires_second_review=snapshot.requires_second_review,
+        second_review_status=snapshot.second_review_status,
+        second_reviewed_by=snapshot.second_reviewed_by,
+        second_reviewed_at=snapshot.second_reviewed_at,
+        last_reviewed_by=snapshot.last_reviewed_by,
+        last_reviewed_at=snapshot.last_reviewed_at,
+        preview_status=snapshot.preview_status,
+        top_findings=[_as_redaction_finding_response(item) for item in snapshot.top_findings],
+    )
+
+
+def _as_redaction_area_mask_response(
+    record: RedactionAreaMaskRecord,
+) -> RedactionAreaMaskResponse:
+    return RedactionAreaMaskResponse(
+        id=record.id,
+        run_id=record.run_id,
+        page_id=record.page_id,
+        geometry_json=record.geometry_json,
+        mask_reason=record.mask_reason,
+        version_etag=record.version_etag,
+        supersedes_area_mask_id=record.supersedes_area_mask_id,
+        superseded_by_area_mask_id=record.superseded_by_area_mask_id,
+        created_by=record.created_by,
+        created_at=record.created_at,
+        updated_at=record.updated_at,
+    )
+
+
+def _as_redaction_timeline_event_response(
+    record: DocumentRedactionRunTimelineEventSnapshot,
+) -> RedactionTimelineEventResponse:
+    return RedactionTimelineEventResponse(
+        source_table=record.source_table,
+        source_table_precedence=record.source_table_precedence,
+        event_id=record.event_id,
+        run_id=record.run_id,
+        page_id=record.page_id,
+        finding_id=record.finding_id,
+        event_type=record.event_type,
+        actor_user_id=record.actor_user_id,
+        reason=record.reason,
+        created_at=record.created_at,
+        details_json=record.details_json,
+    )
+
+
+def _as_redaction_preview_status_response(
+    snapshot: DocumentRedactionPreviewStatusSnapshot,
+) -> RedactionPreviewStatusResponse:
+    return RedactionPreviewStatusResponse(
+        run_id=snapshot.run_id,
+        page_id=snapshot.page_id,
+        status=snapshot.status,
+        preview_sha256=snapshot.preview_sha256,
+        generated_at=snapshot.generated_at,
+        failure_reason=snapshot.failure_reason,
+        run_output_status=snapshot.run_output_status,
+        run_output_manifest_sha256=snapshot.run_output_manifest_sha256,
+        run_output_readiness_state=snapshot.run_output_readiness_state,
+        downstream_ready=snapshot.downstream_ready,
+    )
+
+
+def _as_redaction_run_output_response(
+    snapshot: DocumentRedactionRunOutputSnapshot,
+) -> RedactionRunOutputResponse:
+    record = snapshot.run_output
+    return RedactionRunOutputResponse(
+        run_id=record.run_id,
+        status=record.status,
+        review_status=snapshot.review_status,
+        readiness_state=snapshot.readiness_state,
+        downstream_ready=snapshot.downstream_ready,
+        output_manifest_sha256=record.output_manifest_sha256,
+        page_count=record.page_count,
+        started_at=record.started_at,
+        generated_at=record.generated_at,
+        canceled_by=record.canceled_by,
+        canceled_at=record.canceled_at,
+        failure_reason=record.failure_reason,
+        created_at=record.created_at,
+        updated_at=record.updated_at,
+    )
+
+
+def _as_redaction_overview_response(
+    *,
+    snapshot: DocumentRedactionOverviewSnapshot,
+    active_run_id: str | None,
+) -> RedactionOverviewResponse:
+    return RedactionOverviewResponse(
+        document_id=snapshot.document.id,
+        project_id=snapshot.document.project_id,
+        projection=(
+            _as_redaction_projection_response(snapshot.projection)
+            if snapshot.projection is not None
+            else None
+        ),
+        active_run=(
+            _as_redaction_run_response(snapshot.active_run, active_run_id=active_run_id)
+            if snapshot.active_run is not None
+            else None
+        ),
+        latest_run=(
+            _as_redaction_run_response(snapshot.latest_run, active_run_id=active_run_id)
+            if snapshot.latest_run is not None
+            else None
+        ),
+        total_runs=snapshot.total_runs,
+        page_count=snapshot.page_count,
+        findings_by_category=snapshot.findings_by_category,
+        unresolved_findings=snapshot.unresolved_findings,
+        auto_applied_findings=snapshot.auto_applied_findings,
+        needs_review_findings=snapshot.needs_review_findings,
+        overridden_findings=snapshot.overridden_findings,
+        pages_blocked_for_review=snapshot.pages_blocked_for_review,
+        preview_ready_pages=snapshot.preview_ready_pages,
+        preview_total_pages=snapshot.preview_total_pages,
+        preview_failed_pages=snapshot.preview_failed_pages,
+    )
+
+
+def _as_redaction_compare_page_response(
+    snapshot: DocumentRedactionComparePageSnapshot,
+) -> RedactionComparePageResponse:
+    return RedactionComparePageResponse(
+        page_id=snapshot.page_id,
+        page_index=snapshot.page_index,
+        base_finding_count=snapshot.base_finding_count,
+        candidate_finding_count=snapshot.candidate_finding_count,
+        changed_decision_count=snapshot.changed_decision_count,
+        changed_action_count=snapshot.changed_action_count,
+        base_decision_counts=snapshot.base_decision_counts,
+        candidate_decision_counts=snapshot.candidate_decision_counts,
+        decision_status_deltas=snapshot.decision_status_deltas,
+        base_action_counts=snapshot.base_action_counts,
+        candidate_action_counts=snapshot.candidate_action_counts,
+        action_type_deltas=snapshot.action_type_deltas,
+        action_compare_state=snapshot.action_compare_state,
+        changed_review_status=snapshot.changed_review_status,
+        changed_second_review_status=snapshot.changed_second_review_status,
+        base_review=(
+            _as_redaction_page_review_response(snapshot.base_review)
+            if snapshot.base_review is not None
+            else None
+        ),
+        candidate_review=(
+            _as_redaction_page_review_response(snapshot.candidate_review)
+            if snapshot.candidate_review is not None
+            else None
+        ),
+        base_preview_status=snapshot.base_preview_status,
+        candidate_preview_status=snapshot.candidate_preview_status,
+        preview_ready_delta=snapshot.preview_ready_delta,
+    )
+
+
+def _as_redaction_pre_activation_warning_response(
+    snapshot: DocumentRedactionPolicyWarningSnapshot,
+) -> RedactionPreActivationWarningResponse:
+    return RedactionPreActivationWarningResponse(
+        code=snapshot.code,
+        severity=snapshot.severity,
+        message=snapshot.message,
+        affected_categories=list(snapshot.affected_categories),
+    )
+
+
+def _as_redaction_compare_response(
+    *,
+    snapshot: DocumentRedactionCompareSnapshot,
+    active_run_id: str | None,
+) -> RedactionCompareResponse:
+    return RedactionCompareResponse(
+        document_id=snapshot.document.id,
+        project_id=snapshot.document.project_id,
+        base_run=_as_redaction_run_response(
+            snapshot.base_run,
+            active_run_id=active_run_id,
+        ),
+        candidate_run=_as_redaction_run_response(
+            snapshot.candidate_run,
+            active_run_id=active_run_id,
+        ),
+        changed_page_count=snapshot.changed_page_count,
+        changed_decision_count=snapshot.changed_decision_count,
+        changed_action_count=snapshot.changed_action_count,
+        compare_action_state=snapshot.compare_action_state,
+        candidate_policy_status=snapshot.candidate_policy_status,
+        comparison_only_candidate=snapshot.comparison_only_candidate,
+        pre_activation_warnings=[
+            _as_redaction_pre_activation_warning_response(item)
+            for item in snapshot.pre_activation_warnings
+        ],
+        items=[_as_redaction_compare_page_response(item) for item in snapshot.pages],
+    )
+
+
+def _as_governance_run_summary_response(
+    record: GovernanceRunSummaryRecord,
+) -> GovernanceRunSummaryResponse:
+    return GovernanceRunSummaryResponse(
+        run_id=record.run_id,
+        project_id=record.project_id,
+        document_id=record.document_id,
+        run_status=record.run_status,
+        review_status=record.review_status,
+        approved_snapshot_key=record.approved_snapshot_key,
+        approved_snapshot_sha256=record.approved_snapshot_sha256,
+        run_output_status=record.run_output_status,
+        run_output_manifest_sha256=record.run_output_manifest_sha256,
+        run_created_at=record.run_created_at,
+        run_finished_at=record.run_finished_at,
+        readiness_status=record.readiness_status,
+        generation_status=record.generation_status,
+        ready_manifest_id=record.ready_manifest_id,
+        ready_ledger_id=record.ready_ledger_id,
+        latest_manifest_sha256=record.latest_manifest_sha256,
+        latest_ledger_sha256=record.latest_ledger_sha256,
+        ledger_verification_status=record.ledger_verification_status,
+        ready_at=record.ready_at,
+        last_error_code=record.last_error_code,
+        updated_at=record.updated_at,
+    )
+
+
+def _as_governance_readiness_projection_response(
+    snapshot: DocumentGovernanceRunOverviewSnapshot,
+) -> GovernanceReadinessProjectionResponse:
+    row = snapshot.readiness
+    return GovernanceReadinessProjectionResponse(
+        run_id=row.run_id,
+        project_id=row.project_id,
+        document_id=row.document_id,
+        status=row.status,
+        generation_status=row.generation_status,
+        manifest_id=row.manifest_id,
+        ledger_id=row.ledger_id,
+        last_ledger_verification_run_id=row.last_ledger_verification_run_id,
+        last_manifest_sha256=row.last_manifest_sha256,
+        last_ledger_sha256=row.last_ledger_sha256,
+        ledger_verification_status=row.ledger_verification_status,
+        ledger_verified_at=row.ledger_verified_at,
+        ready_at=row.ready_at,
+        last_error_code=row.last_error_code,
+        updated_at=row.updated_at,
+    )
+
+
+def _as_governance_manifest_attempt_response(
+    record: RedactionManifestRecord,
+) -> GovernanceManifestAttemptResponse:
+    return GovernanceManifestAttemptResponse(
+        id=record.id,
+        run_id=record.run_id,
+        project_id=record.project_id,
+        document_id=record.document_id,
+        source_review_snapshot_key=record.source_review_snapshot_key,
+        source_review_snapshot_sha256=record.source_review_snapshot_sha256,
+        attempt_number=record.attempt_number,
+        supersedes_manifest_id=record.supersedes_manifest_id,
+        superseded_by_manifest_id=record.superseded_by_manifest_id,
+        status=record.status,
+        manifest_key=record.manifest_key,
+        manifest_sha256=record.manifest_sha256,
+        format_version=record.format_version,
+        started_at=record.started_at,
+        finished_at=record.finished_at,
+        canceled_by=record.canceled_by,
+        canceled_at=record.canceled_at,
+        failure_reason=record.failure_reason,
+        created_by=record.created_by,
+        created_at=record.created_at,
+    )
+
+
+def _as_governance_ledger_attempt_response(
+    record: RedactionEvidenceLedgerRecord,
+) -> GovernanceLedgerAttemptResponse:
+    return GovernanceLedgerAttemptResponse(
+        id=record.id,
+        run_id=record.run_id,
+        project_id=record.project_id,
+        document_id=record.document_id,
+        source_review_snapshot_key=record.source_review_snapshot_key,
+        source_review_snapshot_sha256=record.source_review_snapshot_sha256,
+        attempt_number=record.attempt_number,
+        supersedes_ledger_id=record.supersedes_ledger_id,
+        superseded_by_ledger_id=record.superseded_by_ledger_id,
+        status=record.status,
+        ledger_key=record.ledger_key,
+        ledger_sha256=record.ledger_sha256,
+        hash_chain_version=record.hash_chain_version,
+        started_at=record.started_at,
+        finished_at=record.finished_at,
+        canceled_by=record.canceled_by,
+        canceled_at=record.canceled_at,
+        failure_reason=record.failure_reason,
+        created_by=record.created_by,
+        created_at=record.created_at,
+    )
+
+
+def _as_governance_run_overview_response(
+    snapshot: DocumentGovernanceRunOverviewSnapshot,
+) -> GovernanceRunOverviewResponse:
+    return GovernanceRunOverviewResponse(
+        document_id=snapshot.document.id,
+        project_id=snapshot.document.project_id,
+        active_run_id=snapshot.active_run_id,
+        run=_as_governance_run_summary_response(snapshot.run),
+        readiness=_as_governance_readiness_projection_response(snapshot),
+        manifest_attempts=[
+            _as_governance_manifest_attempt_response(item)
+            for item in snapshot.manifest_attempts
+        ],
+        ledger_attempts=[
+            _as_governance_ledger_attempt_response(item)
+            for item in snapshot.ledger_attempts
+        ],
+    )
+
+
+def _as_governance_overview_response(
+    snapshot: DocumentGovernanceOverviewSnapshot,
+) -> GovernanceOverviewResponse:
+    return GovernanceOverviewResponse(
+        document_id=snapshot.document.id,
+        project_id=snapshot.document.project_id,
+        active_run_id=snapshot.active_run_id,
+        total_runs=snapshot.total_runs,
+        approved_runs=snapshot.approved_runs,
+        ready_runs=snapshot.ready_runs,
+        pending_runs=snapshot.pending_runs,
+        failed_runs=snapshot.failed_runs,
+        latest_run_id=snapshot.latest_run_id,
+        latest_ready_run_id=snapshot.latest_ready_run_id,
+        latest_run=(
+            _as_governance_run_summary_response(snapshot.latest_run)
+            if snapshot.latest_run is not None
+            else None
+        ),
+        latest_ready_run=(
+            _as_governance_run_summary_response(snapshot.latest_ready_run)
+            if snapshot.latest_ready_run is not None
+            else None
+        ),
+    )
+
+
+def _as_governance_runs_response(
+    snapshot: DocumentGovernanceRunsSnapshot,
+) -> GovernanceRunsResponse:
+    return GovernanceRunsResponse(
+        document_id=snapshot.document.id,
+        project_id=snapshot.document.project_id,
+        active_run_id=snapshot.active_run_id,
+        items=[_as_governance_run_summary_response(row) for row in snapshot.runs],
+    )
+
+
+def _as_governance_events_response(
+    *,
+    run_id: str,
+    items: tuple[DocumentGovernanceEventSnapshot, ...],
+) -> GovernanceRunEventsResponse:
+    return GovernanceRunEventsResponse(
+        run_id=run_id,
+        items=[
+            GovernanceRunEventResponse(
+                id=item.id,
+                run_id=item.run_id,
+                event_type=item.event_type,
+                actor_user_id=item.actor_user_id,
+                from_status=item.from_status,
+                to_status=item.to_status,
+                reason=item.reason,
+                created_at=item.created_at,
+                screening_safe=item.screening_safe,
+            )
+            for item in items
+        ],
+    )
+
+
+def _as_governance_manifest_response(
+    snapshot: DocumentGovernanceManifestSnapshot,
+) -> GovernanceManifestResponse:
+    return GovernanceManifestResponse(
+        overview=_as_governance_run_overview_response(snapshot.overview),
+        latest_attempt=(
+            _as_governance_manifest_attempt_response(snapshot.latest_attempt)
+            if snapshot.latest_attempt is not None
+            else None
+        ),
+        manifest_json=(dict(snapshot.manifest_payload) if snapshot.manifest_payload is not None else None),
+        stream_sha256=snapshot.stream_sha256,
+        hash_matches=snapshot.hash_matches,
+        internal_only=snapshot.internal_only,
+        export_approved=snapshot.export_approved,
+        not_export_approved=snapshot.not_export_approved,
+    )
+
+
+def _as_governance_manifest_status_response(
+    snapshot: DocumentGovernanceManifestStatusSnapshot,
+) -> GovernanceManifestStatusResponse:
+    return GovernanceManifestStatusResponse(
+        run_id=snapshot.run_id,
+        status=snapshot.status,
+        latest_attempt=(
+            _as_governance_manifest_attempt_response(snapshot.latest_attempt)
+            if snapshot.latest_attempt is not None
+            else None
+        ),
+        attempt_count=snapshot.attempt_count,
+        ready_manifest_id=snapshot.ready_manifest_id,
+        latest_manifest_sha256=snapshot.latest_manifest_sha256,
+        generation_status=snapshot.generation_status,
+        readiness_status=snapshot.readiness_status,
+        updated_at=snapshot.updated_at,
+    )
+
+
+def _as_governance_manifest_entry_response(
+    record: Mapping[str, object],
+) -> GovernanceManifestEntryResponse:
+    return GovernanceManifestEntryResponse(
+        entry_id=str(record.get("entryId") or ""),
+        applied_action=str(record.get("appliedAction") or "MASK"),
+        category=str(record.get("category") or ""),
+        page_id=str(record.get("pageId") or ""),
+        page_index=record.get("pageIndex") if isinstance(record.get("pageIndex"), int) else None,
+        line_id=(
+            str(record["lineId"])
+            if isinstance(record.get("lineId"), str) and str(record["lineId"]).strip()
+            else None
+        ),
+        location_ref=(
+            dict(record["locationRef"])
+            if isinstance(record.get("locationRef"), Mapping)
+            else {}
+        ),
+        basis_primary=str(record.get("basisPrimary") or "UNKNOWN"),
+        confidence=(
+            float(record["confidence"])
+            if isinstance(record.get("confidence"), (int, float))
+            else None
+        ),
+        secondary_basis_summary=(
+            dict(record["secondaryBasisSummary"])
+            if isinstance(record.get("secondaryBasisSummary"), Mapping)
+            else None
+        ),
+        final_decision_state=str(record.get("finalDecisionState") or ""),
+        review_state=str(record.get("reviewState") or ""),
+        policy_snapshot_hash=(
+            str(record["policySnapshotHash"])
+            if isinstance(record.get("policySnapshotHash"), str)
+            else None
+        ),
+        policy_id=str(record["policyId"]) if isinstance(record.get("policyId"), str) else None,
+        policy_family_id=(
+            str(record["policyFamilyId"])
+            if isinstance(record.get("policyFamilyId"), str)
+            else None
+        ),
+        policy_version=(
+            str(record["policyVersion"])
+            if isinstance(record.get("policyVersion"), str)
+            else None
+        ),
+        decision_timestamp=(
+            str(record["decisionTimestamp"])
+            if isinstance(record.get("decisionTimestamp"), str)
+            else None
+        ),
+        decision_by=(
+            str(record["decisionBy"])
+            if isinstance(record.get("decisionBy"), str)
+            else None
+        ),
+        decision_etag=(
+            str(record["decisionEtag"])
+            if isinstance(record.get("decisionEtag"), str)
+            else None
+        ),
+    )
+
+
+def _as_governance_manifest_entries_response(
+    snapshot: DocumentGovernanceManifestEntriesSnapshot,
+) -> GovernanceManifestEntriesResponse:
+    return GovernanceManifestEntriesResponse(
+        run_id=snapshot.run_id,
+        status=snapshot.status,
+        manifest_id=snapshot.manifest_id,
+        manifest_sha256=snapshot.manifest_sha256,
+        source_review_snapshot_sha256=snapshot.source_review_snapshot_sha256,
+        total_count=snapshot.total_count,
+        next_cursor=snapshot.next_cursor,
+        internal_only=snapshot.internal_only,
+        export_approved=snapshot.export_approved,
+        not_export_approved=snapshot.not_export_approved,
+        items=[_as_governance_manifest_entry_response(item) for item in snapshot.items],
+    )
+
+
+def _as_governance_manifest_hash_response(
+    snapshot: DocumentGovernanceManifestHashSnapshot,
+) -> GovernanceManifestHashResponse:
+    return GovernanceManifestHashResponse(
+        run_id=snapshot.run_id,
+        status=snapshot.status,
+        manifest_id=snapshot.manifest_id,
+        manifest_sha256=snapshot.manifest_sha256,
+        stream_sha256=snapshot.stream_sha256,
+        hash_matches=snapshot.hash_matches,
+        internal_only=snapshot.internal_only,
+        export_approved=snapshot.export_approved,
+        not_export_approved=snapshot.not_export_approved,
+    )
+
+
+def _as_governance_ledger_response(
+    snapshot: DocumentGovernanceLedgerSnapshot,
+) -> GovernanceLedgerResponse:
+    return GovernanceLedgerResponse(
+        overview=_as_governance_run_overview_response(snapshot.overview),
+        latest_attempt=(
+            _as_governance_ledger_attempt_response(snapshot.latest_attempt)
+            if snapshot.latest_attempt is not None
+            else None
+        ),
+        ledger_json=(dict(snapshot.ledger_payload) if snapshot.ledger_payload is not None else None),
+        stream_sha256=snapshot.stream_sha256,
+        hash_matches=snapshot.hash_matches,
+        internal_only=snapshot.internal_only,
+    )
+
+
+def _as_governance_ledger_status_response(
+    snapshot: DocumentGovernanceLedgerStatusSnapshot,
+) -> GovernanceLedgerStatusResponse:
+    return GovernanceLedgerStatusResponse(
+        run_id=snapshot.run_id,
+        status=snapshot.status,
+        latest_attempt=(
+            _as_governance_ledger_attempt_response(snapshot.latest_attempt)
+            if snapshot.latest_attempt is not None
+            else None
+        ),
+        attempt_count=snapshot.attempt_count,
+        ready_ledger_id=snapshot.ready_ledger_id,
+        latest_ledger_sha256=snapshot.latest_ledger_sha256,
+        generation_status=snapshot.generation_status,
+        readiness_status=snapshot.readiness_status,
+        ledger_verification_status=snapshot.ledger_verification_status,
+        updated_at=snapshot.updated_at,
+    )
+
+
+def _as_governance_ledger_entry_response(
+    record: Mapping[str, object],
+) -> GovernanceLedgerEntryResponse:
+    return GovernanceLedgerEntryResponse(
+        row_id=str(record.get("rowId") or ""),
+        row_index=(
+            int(record["rowIndex"]) if isinstance(record.get("rowIndex"), int) else 0
+        ),
+        finding_id=str(record.get("findingId") or ""),
+        page_id=str(record.get("pageId") or ""),
+        page_index=record.get("pageIndex") if isinstance(record.get("pageIndex"), int) else None,
+        line_id=(
+            str(record["lineId"])
+            if isinstance(record.get("lineId"), str) and str(record["lineId"]).strip()
+            else None
+        ),
+        category=str(record.get("category") or ""),
+        action_type=str(record.get("actionType") or "MASK"),
+        before_text_ref=(
+            dict(record["beforeTextRef"])
+            if isinstance(record.get("beforeTextRef"), Mapping)
+            else {}
+        ),
+        after_text_ref=(
+            dict(record["afterTextRef"])
+            if isinstance(record.get("afterTextRef"), Mapping)
+            else {}
+        ),
+        detector_evidence=(
+            dict(record["detectorEvidence"])
+            if isinstance(record.get("detectorEvidence"), Mapping)
+            else {}
+        ),
+        assist_explanation_key=(
+            str(record["assistExplanationKey"])
+            if isinstance(record.get("assistExplanationKey"), str)
+            else None
+        ),
+        assist_explanation_sha256=(
+            str(record["assistExplanationSha256"])
+            if isinstance(record.get("assistExplanationSha256"), str)
+            else None
+        ),
+        actor_user_id=(
+            str(record["actorUserId"]) if isinstance(record.get("actorUserId"), str) else None
+        ),
+        decision_timestamp=(
+            str(record["decisionTimestamp"])
+            if isinstance(record.get("decisionTimestamp"), str)
+            else None
+        ),
+        override_reason=(
+            str(record["overrideReason"])
+            if isinstance(record.get("overrideReason"), str)
+            else None
+        ),
+        final_decision_state=(
+            str(record["finalDecisionState"])
+            if isinstance(record.get("finalDecisionState"), str)
+            else None
+        ),
+        policy_snapshot_hash=(
+            str(record["policySnapshotHash"])
+            if isinstance(record.get("policySnapshotHash"), str)
+            else None
+        ),
+        policy_id=str(record["policyId"]) if isinstance(record.get("policyId"), str) else None,
+        policy_family_id=(
+            str(record["policyFamilyId"])
+            if isinstance(record.get("policyFamilyId"), str)
+            else None
+        ),
+        policy_version=(
+            str(record["policyVersion"])
+            if isinstance(record.get("policyVersion"), str)
+            else None
+        ),
+        prev_hash=str(record.get("prevHash") or ""),
+        row_hash=str(record.get("rowHash") or ""),
+    )
+
+
+def _as_governance_ledger_entries_response(
+    snapshot: DocumentGovernanceLedgerEntriesSnapshot,
+) -> GovernanceLedgerEntriesResponse:
+    return GovernanceLedgerEntriesResponse(
+        run_id=snapshot.run_id,
+        status=snapshot.status,
+        view=snapshot.view,
+        ledger_id=snapshot.ledger_id,
+        ledger_sha256=snapshot.ledger_sha256,
+        hash_chain_version=snapshot.hash_chain_version,
+        total_count=snapshot.total_count,
+        next_cursor=snapshot.next_cursor,
+        verification_status=snapshot.verification_status,
+        items=[_as_governance_ledger_entry_response(item) for item in snapshot.items],
+    )
+
+
+def _as_governance_ledger_summary_response(
+    snapshot: DocumentGovernanceLedgerSummarySnapshot,
+) -> GovernanceLedgerSummaryResponse:
+    return GovernanceLedgerSummaryResponse(
+        run_id=snapshot.run_id,
+        status=snapshot.status,
+        ledger_id=snapshot.ledger_id,
+        ledger_sha256=snapshot.ledger_sha256,
+        hash_chain_version=snapshot.hash_chain_version,
+        row_count=snapshot.row_count,
+        hash_chain_head=snapshot.hash_chain_head,
+        hash_chain_valid=snapshot.hash_chain_valid,
+        verification_status=snapshot.verification_status,
+        category_counts=dict(snapshot.category_counts),
+        action_counts=dict(snapshot.action_counts),
+        override_count=snapshot.override_count,
+        assist_reference_count=snapshot.assist_reference_count,
+        internal_only=snapshot.internal_only,
+    )
+
+
+def _as_governance_ledger_verification_run_response(
+    record: LedgerVerificationRunRecord,
+) -> GovernanceLedgerVerificationRunResponse:
+    return GovernanceLedgerVerificationRunResponse(
+        id=record.id,
+        run_id=record.run_id,
+        attempt_number=record.attempt_number,
+        supersedes_verification_run_id=record.supersedes_verification_run_id,
+        superseded_by_verification_run_id=record.superseded_by_verification_run_id,
+        status=record.status,
+        verification_result=record.verification_result,
+        result_json=(dict(record.result_json) if record.result_json is not None else None),
+        started_at=record.started_at,
+        finished_at=record.finished_at,
+        canceled_by=record.canceled_by,
+        canceled_at=record.canceled_at,
+        failure_reason=record.failure_reason,
+        created_by=record.created_by,
+        created_at=record.created_at,
+    )
+
+
+def _as_governance_ledger_verify_status_response(
+    snapshot: DocumentGovernanceLedgerVerificationStatusSnapshot,
+) -> GovernanceLedgerVerifyStatusResponse:
+    return GovernanceLedgerVerifyStatusResponse(
+        run_id=snapshot.run_id,
+        verification_status=snapshot.verification_status,
+        attempt_count=snapshot.attempt_count,
+        latest_attempt=(
+            _as_governance_ledger_verification_run_response(snapshot.latest_attempt)
+            if snapshot.latest_attempt is not None
+            else None
+        ),
+        latest_completed_attempt=(
+            _as_governance_ledger_verification_run_response(snapshot.latest_completed_attempt)
+            if snapshot.latest_completed_attempt is not None
+            else None
+        ),
+        ready_ledger_id=snapshot.ready_ledger_id,
+        latest_ledger_sha256=snapshot.latest_ledger_sha256,
+        last_verified_at=snapshot.last_verified_at,
+    )
+
+
+def _as_governance_ledger_verify_runs_response(
+    snapshot: DocumentGovernanceLedgerVerificationRunsSnapshot,
+) -> GovernanceLedgerVerifyRunsResponse:
+    return GovernanceLedgerVerifyRunsResponse(
+        run_id=snapshot.run_id,
+        verification_status=snapshot.verification_status,
+        items=[_as_governance_ledger_verification_run_response(item) for item in snapshot.items],
+    )
+
+
+def _as_governance_ledger_verify_detail_response(
+    snapshot: DocumentGovernanceLedgerVerificationDetailSnapshot,
+) -> GovernanceLedgerVerifyDetailResponse:
+    return GovernanceLedgerVerifyDetailResponse(
+        run_id=snapshot.run_id,
+        verification_status=snapshot.verification_status,
+        attempt=_as_governance_ledger_verification_run_response(snapshot.attempt),
+    )
+
+
+def _resolve_redaction_context(
+    *,
+    current_user: SessionPrincipal,
+    project_id: str,
+    document_id: str,
+    document_service: DocumentService,
+) -> tuple[DocumentRedactionProjectionRecord | None, str | None]:
+    projection = document_service.get_redaction_projection(
+        current_user=current_user,
+        project_id=project_id,
+        document_id=document_id,
+    )
+    active_run_id = projection.active_redaction_run_id if projection is not None else None
+    return projection, active_run_id
 
 
 def _resolve_transcription_context(
@@ -3191,6 +5742,8 @@ def _raise_http_from_error(
             DocumentPreprocessAccessDeniedError,
             DocumentLayoutAccessDeniedError,
             DocumentTranscriptionAccessDeniedError,
+            DocumentRedactionAccessDeniedError,
+            DocumentGovernanceAccessDeniedError,
         ),
     ):
         audit_service.record_event_best_effort(
@@ -3215,6 +5768,8 @@ def _raise_http_from_error(
             DocumentPreprocessRunNotFoundError,
             DocumentLayoutRunNotFoundError,
             DocumentTranscriptionRunNotFoundError,
+            DocumentRedactionRunNotFoundError,
+            DocumentGovernanceRunNotFoundError,
             DocumentUploadSessionNotFoundError,
         ),
     ):
@@ -3227,6 +5782,8 @@ def _raise_http_from_error(
             DocumentPreprocessConflictError,
             DocumentLayoutConflictError,
             DocumentTranscriptionConflictError,
+            DocumentRedactionConflictError,
+            DocumentGovernanceConflictError,
             DocumentUploadSessionConflictError,
         ),
     ):
@@ -4130,7 +6687,7 @@ def get_project_document_preprocessing_overview(
             project_id=project_id,
             audit_service=audit_service,
             request_context=request_context,
-            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN", "AUDITOR"],
         )
 
     audit_service.record_event_best_effort(
@@ -4227,7 +6784,7 @@ def get_project_document_preprocessing_quality(
             project_id=project_id,
             audit_service=audit_service,
             request_context=request_context,
-            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN", "AUDITOR"],
         )
 
     audit_service.record_event_best_effort(
@@ -6794,6 +9351,9 @@ def compare_project_document_transcription_runs(
     document_id: str,
     base_run_id: str = Query(alias="baseRunId"),
     candidate_run_id: str = Query(alias="candidateRunId"),
+    page_number: int | None = Query(default=None, alias="page", ge=1),
+    line_id: str | None = Query(default=None, alias="lineId", min_length=1, max_length=200),
+    token_id: str | None = Query(default=None, alias="tokenId", min_length=1, max_length=200),
     current_user: SessionPrincipal = Depends(require_authenticated_user),
     request_context: AuditRequestContext = Depends(get_audit_request_context),
     audit_service: AuditService = Depends(get_audit_service),
@@ -6806,6 +9366,9 @@ def compare_project_document_transcription_runs(
             document_id=document_id,
             base_run_id=base_run_id,
             candidate_run_id=candidate_run_id,
+            page_number=page_number,
+            line_id=line_id,
+            token_id=token_id,
         )
         _, active_projection_run_id = _resolve_transcription_context(
             current_user=current_user,
@@ -6834,6 +9397,12 @@ def compare_project_document_transcription_runs(
             "base_run_id": base_run_id,
             "candidate_run_id": candidate_run_id,
             "page_count": len(snapshot.pages),
+            "page": page_number,
+            "line_id": line_id,
+            "token_id": token_id,
+            "compare_decision_snapshot_hash": snapshot.compare_decision_snapshot_hash,
+            "compare_decision_count": snapshot.compare_decision_count,
+            "compare_decision_event_count": snapshot.compare_decision_event_count,
         },
         request_context=request_context,
     )
@@ -6914,6 +9483,68 @@ def record_project_document_transcription_compare_decisions(
             _as_transcription_compare_decision_response(item)
             for item in persisted_items
         ],
+    )
+
+
+@router.post(
+    "/documents/{document_id}/transcription-runs/compare/finalize",
+    response_model=FinalizeTranscriptionCompareResponse,
+)
+def finalize_project_document_transcription_compare(
+    project_id: str,
+    document_id: str,
+    payload: FinalizeTranscriptionCompareRequest = Body(),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> FinalizeTranscriptionCompareResponse:
+    try:
+        snapshot = document_service.finalize_transcription_compare(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            base_run_id=payload.base_run_id,
+            candidate_run_id=payload.candidate_run_id,
+            page_ids=payload.page_ids,
+            expected_compare_decision_snapshot_hash=payload.expected_compare_decision_snapshot_hash,
+        )
+        _, active_projection_run_id = _resolve_transcription_context(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            document_service=document_service,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="TRANSCRIPTION_COMPARE_FINALIZED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="transcription_run",
+        object_id=snapshot.composed_run.id,
+        metadata={
+            "route": request_context.route_template,
+            "document_id": document_id,
+            "base_run_id": snapshot.base_run.id,
+            "candidate_run_id": snapshot.candidate_run.id,
+            "composed_run_id": snapshot.composed_run.id,
+            "compare_decision_snapshot_hash": snapshot.compare_decision_snapshot_hash,
+            "page_scope_count": len(snapshot.page_scope),
+        },
+        request_context=request_context,
+    )
+    return _as_transcription_compare_finalize_response(
+        snapshot=snapshot,
+        active_run_id=active_projection_run_id,
     )
 
 
@@ -7012,6 +9643,160 @@ def get_project_document_transcription_run_status(
 
 
 @router.get(
+    "/documents/{document_id}/transcription-runs/{run_id}/rescue-status",
+    response_model=TranscriptionRunRescueStatusResponse,
+)
+def get_project_document_transcription_run_rescue_status(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> TranscriptionRunRescueStatusResponse:
+    try:
+        snapshot = document_service.get_transcription_run_rescue_status(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="TRANSCRIPTION_RESCUE_STATUS_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="transcription_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "document_id": document_id,
+            "run_id": run_id,
+            "page_count": len(snapshot.pages),
+            "blocker_count": snapshot.blocker_count,
+            "ready_for_activation": snapshot.ready_for_activation,
+        },
+        request_context=request_context,
+    )
+    return _as_transcription_run_rescue_status_response(snapshot)
+
+
+@router.get(
+    "/documents/{document_id}/transcription-runs/{run_id}/pages/{page_id}/rescue-sources",
+    response_model=TranscriptionPageRescueSourcesResponse,
+)
+def get_project_document_transcription_run_page_rescue_sources(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    page_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> TranscriptionPageRescueSourcesResponse:
+    try:
+        snapshot = document_service.list_transcription_run_page_rescue_sources(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="TRANSCRIPTION_RESCUE_STATUS_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="page",
+        object_id=page_id,
+        metadata={
+            "route": request_context.route_template,
+            "document_id": document_id,
+            "run_id": run_id,
+            "page_id": page_id,
+            "rescue_source_count": len(snapshot.rescue_sources),
+            "readiness_state": snapshot.readiness_state,
+        },
+        request_context=request_context,
+    )
+    return _as_transcription_page_rescue_sources_response(snapshot)
+
+
+@router.patch(
+    "/documents/{document_id}/transcription-runs/{run_id}/pages/{page_id}/rescue-resolution",
+    response_model=TranscriptionPageRescueSourcesResponse,
+)
+def update_project_document_transcription_run_page_rescue_resolution(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    page_id: str,
+    payload: UpdateTranscriptionRescueResolutionRequest = Body(),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> TranscriptionPageRescueSourcesResponse:
+    try:
+        snapshot = document_service.update_transcription_page_rescue_resolution(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+            resolution_status=payload.resolution_status,
+            resolution_reason=payload.resolution_reason,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="TRANSCRIPTION_RESCUE_RESOLUTION_UPDATED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="page",
+        object_id=page_id,
+        metadata={
+            "route": request_context.route_template,
+            "document_id": document_id,
+            "run_id": run_id,
+            "page_id": page_id,
+            "resolution_status": payload.resolution_status,
+            "readiness_state": snapshot.readiness_state,
+        },
+        request_context=request_context,
+    )
+    return _as_transcription_page_rescue_sources_response(snapshot)
+
+
+@router.get(
     "/documents/{document_id}/transcription-runs/{run_id}/pages",
     response_model=TranscriptionRunPageListResponse,
 )
@@ -7101,6 +9886,43 @@ def activate_project_document_transcription_run(
             project_id=project_id,
             document_id=document_id,
             document_service=document_service,
+        )
+    except DocumentTranscriptionConflictError as error:
+        rescue_status = getattr(error, "rescue_status", None)
+        blocker_codes = tuple(getattr(error, "blocker_codes", ()))
+        blocker_count = (
+            rescue_status.blocker_count
+            if rescue_status is not None
+            else len(blocker_codes)
+        )
+        audit_service.record_event_best_effort(
+            event_type="TRANSCRIPTION_RUN_ACTIVATION_BLOCKED",
+            actor_user_id=current_user.user_id,
+            project_id=project_id,
+            object_type="transcription_run",
+            object_id=run_id,
+            metadata={
+                "route": request_context.route_template,
+                "run_id": run_id,
+                "document_id": document_id,
+                "reason": str(error),
+                "blocker_codes": list(blocker_codes),
+                "blocker_count": blocker_count,
+            },
+            request_context=request_context,
+        )
+        payload: dict[str, object] = {
+            "detail": str(error),
+            "blockerCodes": list(blocker_codes),
+            "blockerCount": blocker_count,
+        }
+        if rescue_status is not None:
+            payload["rescueStatus"] = _as_transcription_run_rescue_status_response(
+                rescue_status
+            ).model_dump(by_alias=True, mode="json")
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content=payload,
         )
     except Exception as error:  # noqa: BLE001
         _raise_http_from_error(
@@ -7274,6 +10096,115 @@ def list_project_document_transcription_run_page_lines(
         page_id=page_id,
         items=[_as_transcription_line_result_response(item) for item in items],
     )
+
+
+@router.get(
+    "/documents/{document_id}/transcription-runs/{run_id}/pages/{page_id}/lines/{line_id}/versions",
+    response_model=TranscriptionLineVersionHistoryResponse,
+)
+def list_project_document_transcription_line_versions(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    page_id: str,
+    line_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> TranscriptionLineVersionHistoryResponse:
+    try:
+        snapshot = document_service.list_transcription_line_versions(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+            line_id=line_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="TRANSCRIPT_LINE_VERSION_HISTORY_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="transcription_line",
+        object_id=line_id,
+        metadata={
+            "route": request_context.route_template,
+            "document_id": document_id,
+            "run_id": run_id,
+            "page_id": page_id,
+            "line_id": line_id,
+            "version_count": len(snapshot.versions),
+        },
+        request_context=request_context,
+    )
+    return _as_transcription_line_version_history_response(snapshot=snapshot)
+
+
+@router.get(
+    "/documents/{document_id}/transcription-runs/{run_id}/pages/{page_id}/lines/{line_id}/versions/{version_id}",
+    response_model=TranscriptVersionLineageResponse,
+)
+def get_project_document_transcription_line_version(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    page_id: str,
+    line_id: str,
+    version_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> TranscriptVersionLineageResponse:
+    try:
+        snapshot = document_service.get_transcription_line_version(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+            line_id=line_id,
+            version_id=version_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="TRANSCRIPT_LINE_VERSION_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="transcript_version",
+        object_id=version_id,
+        metadata={
+            "route": request_context.route_template,
+            "document_id": document_id,
+            "run_id": run_id,
+            "page_id": page_id,
+            "line_id": line_id,
+            "version_id": version_id,
+            "source_type": snapshot.source_type,
+        },
+        request_context=request_context,
+    )
+    return _as_transcript_version_lineage_response(snapshot)
 
 
 @router.patch(
@@ -7555,6 +10486,2626 @@ def list_project_document_transcription_run_page_tokens(
         items=[_as_transcription_token_result_response(item) for item in items],
     )
 
+
+@router.get(
+    "/documents/{document_id}/privacy/overview",
+    response_model=RedactionOverviewResponse,
+)
+def get_project_document_redaction_overview(
+    project_id: str,
+    document_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionOverviewResponse:
+    try:
+        snapshot = document_service.get_redaction_overview(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+        )
+        _, active_run_id = _resolve_redaction_context(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            document_service=document_service,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="PRIVACY_OVERVIEW_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="document",
+        object_id=document_id,
+        metadata={
+            "route": request_context.route_template,
+            "active_run_id": snapshot.active_run.id if snapshot.active_run else None,
+            "returned_count": snapshot.page_count,
+        },
+        request_context=request_context,
+    )
+    return _as_redaction_overview_response(
+        snapshot=snapshot,
+        active_run_id=active_run_id,
+    )
+
+
+@router.get(
+    "/documents/{document_id}/redaction-runs",
+    response_model=RedactionRunListResponse,
+)
+def list_project_document_redaction_runs(
+    project_id: str,
+    document_id: str,
+    cursor: int = Query(default=0, ge=0),
+    page_size: int = Query(default=50, alias="pageSize", ge=1, le=200),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionRunListResponse:
+    try:
+        items, next_cursor = document_service.list_redaction_runs(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            cursor=cursor,
+            page_size=page_size,
+        )
+        _, active_run_id = _resolve_redaction_context(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            document_service=document_service,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+    return RedactionRunListResponse(
+        items=[
+            _as_redaction_run_response(item, active_run_id=active_run_id)
+            for item in items
+        ],
+        next_cursor=next_cursor,
+    )
+
+
+@router.post(
+    "/documents/{document_id}/redaction-runs",
+    response_model=RedactionRunResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_project_document_redaction_run(
+    project_id: str,
+    document_id: str,
+    payload: CreateRedactionRunRequest = Body(default_factory=CreateRedactionRunRequest),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionRunResponse:
+    try:
+        run = document_service.create_redaction_run(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            input_transcription_run_id=payload.input_transcription_run_id,
+            input_layout_run_id=payload.input_layout_run_id,
+            run_kind=payload.run_kind,
+            supersedes_redaction_run_id=payload.supersedes_redaction_run_id,
+            detectors_version=payload.detectors_version,
+        )
+        _, active_run_id = _resolve_redaction_context(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            document_service=document_service,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_RUN_CREATED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run.id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run.id,
+            "document_id": run.document_id,
+            "run_kind": run.run_kind,
+            "detectors_version": run.detectors_version,
+        },
+        request_context=request_context,
+    )
+    if run.status in {"RUNNING", "SUCCEEDED", "FAILED", "CANCELED"}:
+        audit_service.record_event_best_effort(
+            event_type="REDACTION_RUN_STARTED",
+            actor_user_id=current_user.user_id,
+            project_id=project_id,
+            object_type="redaction_run",
+            object_id=run.id,
+            metadata={
+                "run_id": run.id,
+                "document_id": run.document_id,
+                "pipeline_version": run.detectors_version,
+            },
+            request_context=request_context,
+        )
+    if run.status == "SUCCEEDED":
+        audit_service.record_event_best_effort(
+            event_type="REDACTION_RUN_FINISHED",
+            actor_user_id=current_user.user_id,
+            project_id=project_id,
+            object_type="redaction_run",
+            object_id=run.id,
+            metadata={
+                "run_id": run.id,
+                "document_id": run.document_id,
+                "status": run.status,
+            },
+            request_context=request_context,
+        )
+    elif run.status == "FAILED":
+        audit_service.record_event_best_effort(
+            event_type="REDACTION_RUN_FAILED",
+            actor_user_id=current_user.user_id,
+            project_id=project_id,
+            object_type="redaction_run",
+            object_id=run.id,
+            metadata={
+                "run_id": run.id,
+                "document_id": run.document_id,
+                "reason": run.failure_reason,
+            },
+            request_context=request_context,
+        )
+    elif run.status == "CANCELED":
+        audit_service.record_event_best_effort(
+            event_type="REDACTION_RUN_CANCELED",
+            actor_user_id=current_user.user_id,
+            project_id=project_id,
+            object_type="redaction_run",
+            object_id=run.id,
+            metadata={
+                "run_id": run.id,
+                "document_id": run.document_id,
+            },
+            request_context=request_context,
+        )
+    return _as_redaction_run_response(run, active_run_id=active_run_id)
+
+
+@router.get(
+    "/documents/{document_id}/redaction-runs/active",
+    response_model=RedactionActiveRunResponse,
+)
+def get_project_document_active_redaction_run(
+    project_id: str,
+    document_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionActiveRunResponse:
+    try:
+        projection, run = document_service.get_active_redaction_run(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+        )
+        active_run_id = projection.active_redaction_run_id if projection else None
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_ACTIVE_RUN_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="document",
+        object_id=document_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run.id if run else None,
+        },
+        request_context=request_context,
+    )
+    return RedactionActiveRunResponse(
+        projection=(
+            _as_redaction_projection_response(projection)
+            if projection is not None
+            else None
+        ),
+        run=(
+            _as_redaction_run_response(run, active_run_id=active_run_id)
+            if run is not None
+            else None
+        ),
+    )
+
+
+@router.get(
+    "/documents/{document_id}/redaction-runs/compare",
+    response_model=RedactionCompareResponse,
+)
+def compare_project_document_redaction_runs(
+    project_id: str,
+    document_id: str,
+    base_run_id: str = Query(alias="baseRunId", min_length=1, max_length=120),
+    candidate_run_id: str = Query(
+        alias="candidateRunId",
+        min_length=1,
+        max_length=120,
+    ),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionCompareResponse:
+    try:
+        snapshot = document_service.compare_redaction_runs(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            base_run_id=base_run_id,
+            candidate_run_id=candidate_run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN", "AUDITOR"],
+        )
+    active_run_id: str | None = None
+    try:
+        _, active_run_id = _resolve_redaction_context(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            document_service=document_service,
+        )
+    except DocumentRedactionAccessDeniedError:
+        # Compare readers (e.g. AUDITOR) are allowed without broad privacy-workspace access.
+        active_run_id = None
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN", "AUDITOR"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="POLICY_RUN_COMPARE_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="document",
+        object_id=document_id,
+        metadata={
+            "route": request_context.route_template,
+            "base_run_id": base_run_id,
+            "candidate_run_id": candidate_run_id,
+            "changed_page_count": snapshot.changed_page_count,
+            "changed_decision_count": snapshot.changed_decision_count,
+            "comparison_only_candidate": snapshot.comparison_only_candidate,
+            "warning_count": len(snapshot.pre_activation_warnings),
+        },
+        request_context=request_context,
+    )
+    return _as_redaction_compare_response(
+        snapshot=snapshot,
+        active_run_id=active_run_id,
+    )
+
+
+@router.post(
+    "/documents/{document_id}/redaction-runs/{run_id}/rerun",
+    response_model=RedactionRunResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def rerun_project_document_redaction_run_with_policy(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    policy_id: str = Query(alias="policyId", min_length=1, max_length=120),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionRunResponse:
+    try:
+        rerun = document_service.request_policy_rerun(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            source_run_id=run_id,
+            policy_id=policy_id,
+        )
+        _, active_run_id = _resolve_redaction_context(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            document_service=document_service,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="POLICY_RERUN_REQUESTED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=rerun.id,
+        metadata={
+            "route": request_context.route_template,
+            "source_run_id": run_id,
+            "candidate_run_id": rerun.id,
+            "document_id": rerun.document_id,
+            "policy_id": rerun.policy_id,
+            "policy_family_id": rerun.policy_family_id,
+            "policy_version": rerun.policy_version,
+        },
+        request_context=request_context,
+    )
+    return _as_redaction_run_response(rerun, active_run_id=active_run_id)
+
+
+@router.get(
+    "/documents/{document_id}/redaction-runs/{run_id}",
+    response_model=RedactionRunResponse,
+)
+def get_project_document_redaction_run(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionRunResponse:
+    try:
+        run = document_service.get_redaction_run(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        _, active_run_id = _resolve_redaction_context(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            document_service=document_service,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="PRIVACY_RUN_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run.id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run.id,
+            "document_id": run.document_id,
+        },
+        request_context=request_context,
+    )
+    return _as_redaction_run_response(run, active_run_id=active_run_id)
+
+
+@router.get(
+    "/documents/{document_id}/redaction-runs/{run_id}/status",
+    response_model=RedactionRunStatusResponse,
+)
+def get_project_document_redaction_run_status(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionRunStatusResponse:
+    try:
+        run = document_service.get_redaction_run_status(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_RUN_STATUS_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run.id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run.id,
+            "document_id": run.document_id,
+            "status": run.status,
+        },
+        request_context=request_context,
+    )
+    return _as_redaction_run_status_response(run)
+
+
+@router.post(
+    "/documents/{document_id}/redaction-runs/{run_id}/cancel",
+    response_model=RedactionRunResponse,
+)
+def cancel_project_document_redaction_run(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionRunResponse:
+    try:
+        run = document_service.cancel_redaction_run(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        _, active_run_id = _resolve_redaction_context(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            document_service=document_service,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_RUN_CANCELED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run.id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run.id,
+            "document_id": run.document_id,
+        },
+        request_context=request_context,
+    )
+    return _as_redaction_run_response(run, active_run_id=active_run_id)
+
+
+@router.post(
+    "/documents/{document_id}/redaction-runs/{run_id}/activate",
+    response_model=ActivateRedactionRunResponse,
+)
+def activate_project_document_redaction_run(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> ActivateRedactionRunResponse:
+    try:
+        projection = document_service.activate_redaction_run(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        run = document_service.get_redaction_run(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_RUN_ACTIVATED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run.id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run.id,
+            "document_id": run.document_id,
+        },
+        request_context=request_context,
+    )
+    return ActivateRedactionRunResponse(
+        projection=_as_redaction_projection_response(projection),
+        run=_as_redaction_run_response(
+            run,
+            active_run_id=projection.active_redaction_run_id,
+        ),
+    )
+
+
+@router.get(
+    "/documents/{document_id}/redaction-runs/{run_id}/review",
+    response_model=RedactionRunReviewResponse,
+)
+def get_project_document_redaction_run_review(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionRunReviewResponse:
+    try:
+        review = document_service.get_redaction_run_review(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_RUN_REVIEW_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "review_status": review.review_status,
+        },
+        request_context=request_context,
+    )
+    return _as_redaction_run_review_response(review)
+
+
+@router.post(
+    "/documents/{document_id}/redaction-runs/{run_id}/start-review",
+    response_model=RedactionRunReviewResponse,
+)
+def start_project_document_redaction_run_review(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionRunReviewResponse:
+    try:
+        review = document_service.start_redaction_run_review(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_RUN_REVIEW_OPENED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "review_status": review.review_status,
+        },
+        request_context=request_context,
+    )
+    return _as_redaction_run_review_response(review)
+
+
+@router.post(
+    "/documents/{document_id}/redaction-runs/{run_id}/complete-review",
+    response_model=RedactionRunReviewResponse,
+)
+def complete_project_document_redaction_run_review(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    payload: CompleteRedactionRunReviewRequest = Body(),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionRunReviewResponse:
+    try:
+        review = document_service.complete_redaction_run_review(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            review_status=payload.review_status,
+            reason=payload.reason,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN"],
+        )
+
+    completion_event = (
+        "REDACTION_RUN_REVIEW_COMPLETED"
+        if review.review_status == "APPROVED"
+        else "REDACTION_RUN_REVIEW_CHANGES_REQUESTED"
+    )
+    audit_service.record_event_best_effort(
+        event_type=completion_event,
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "review_status": review.review_status,
+        },
+        request_context=request_context,
+    )
+    return _as_redaction_run_review_response(review)
+
+
+@router.get(
+    "/documents/{document_id}/redaction-runs/{run_id}/events",
+    response_model=RedactionRunEventsResponse,
+)
+def list_project_document_redaction_run_events(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionRunEventsResponse:
+    try:
+        items = document_service.list_redaction_run_events(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_RUN_EVENTS_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "returned_count": len(items),
+        },
+        request_context=request_context,
+    )
+    return RedactionRunEventsResponse(
+        run_id=run_id,
+        items=[_as_redaction_timeline_event_response(item) for item in items],
+    )
+
+
+@router.get(
+    "/documents/{document_id}/redaction-runs/{run_id}/pages",
+    response_model=RedactionRunPageListResponse,
+)
+def list_project_document_redaction_run_pages(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    category: str | None = Query(default=None),
+    unresolved_only: bool = Query(default=False, alias="unresolvedOnly"),
+    direct_identifiers_only: bool = Query(default=False, alias="directIdentifiersOnly"),
+    cursor: int = Query(default=0, ge=0),
+    page_size: int = Query(default=200, alias="pageSize", ge=1, le=500),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionRunPageListResponse:
+    try:
+        items, next_cursor = document_service.list_redaction_run_pages(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            category=category,
+            unresolved_only=unresolved_only,
+            direct_identifiers_only=direct_identifiers_only,
+            cursor=cursor,
+            page_size=page_size,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="PRIVACY_TRIAGE_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "cursor": cursor,
+            "returned_count": len(items),
+            "category": category,
+            "unresolved_only": unresolved_only,
+            "direct_identifiers_only": direct_identifiers_only,
+        },
+        request_context=request_context,
+    )
+    return RedactionRunPageListResponse(
+        run_id=run_id,
+        items=[_as_redaction_run_page_response(item) for item in items],
+        next_cursor=next_cursor,
+    )
+
+
+@router.get(
+    "/documents/{document_id}/redaction-runs/{run_id}/pages/{page_id}/findings",
+    response_model=RedactionFindingListResponse,
+)
+def list_project_document_redaction_run_page_findings(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    page_id: str,
+    category: str | None = Query(default=None),
+    unresolved_only: bool = Query(default=False, alias="unresolvedOnly"),
+    direct_identifiers_only: bool = Query(default=False, alias="directIdentifiersOnly"),
+    workspace_view: bool = Query(default=False, alias="workspaceView"),
+    finding_id: str | None = Query(default=None, alias="findingId"),
+    line_id: str | None = Query(default=None, alias="lineId"),
+    token_id: str | None = Query(default=None, alias="tokenId"),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionFindingListResponse:
+    try:
+        items = document_service.list_redaction_run_page_findings(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+            category=category,
+            unresolved_only=unresolved_only,
+            direct_identifiers_only=direct_identifiers_only,
+        )
+        area_masks = document_service.list_redaction_area_masks(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+    area_masks_by_id = {item.id: item for item in area_masks}
+
+    if workspace_view:
+        audit_service.record_event_best_effort(
+            event_type="PRIVACY_WORKSPACE_VIEWED",
+            actor_user_id=current_user.user_id,
+            project_id=project_id,
+            object_type="page",
+            object_id=page_id,
+            metadata={
+                "route": request_context.route_template,
+                "run_id": run_id,
+                "document_id": document_id,
+                "page_id": page_id,
+                "finding_id": finding_id,
+                "line_id": line_id,
+                "token_id": token_id,
+            },
+            request_context=request_context,
+        )
+    return RedactionFindingListResponse(
+        run_id=run_id,
+        page_id=page_id,
+        items=[
+            _as_redaction_finding_response(
+                item,
+                active_area_mask=(
+                    area_masks_by_id.get(item.area_mask_id) if item.area_mask_id else None
+                ),
+            )
+            for item in items
+        ],
+    )
+
+
+@router.get(
+    "/documents/{document_id}/redaction-runs/{run_id}/pages/{page_id}/findings/{finding_id}",
+    response_model=RedactionFindingResponse,
+)
+def get_project_document_redaction_run_page_finding(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    page_id: str,
+    finding_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionFindingResponse:
+    try:
+        finding = document_service.get_redaction_run_page_finding(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+            finding_id=finding_id,
+        )
+        active_area_mask = (
+            document_service.get_redaction_area_mask_by_id(
+                current_user=current_user,
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                mask_id=finding.area_mask_id,
+            )
+            if finding.area_mask_id is not None
+            else None
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_FINDING_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_finding",
+        object_id=finding.id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "page_id": page_id,
+            "finding_id": finding.id,
+        },
+        request_context=request_context,
+    )
+    return _as_redaction_finding_response(
+        finding,
+        active_area_mask=active_area_mask,
+    )
+
+
+@router.patch(
+    "/documents/{document_id}/redaction-runs/{run_id}/findings/{finding_id}",
+    response_model=RedactionFindingResponse,
+)
+def patch_project_document_redaction_finding(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    finding_id: str,
+    payload: PatchRedactionFindingRequest = Body(),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionFindingResponse:
+    active_area_mask: RedactionAreaMaskRecord | None = None
+    try:
+        finding = document_service.update_redaction_finding_decision(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            finding_id=finding_id,
+            expected_decision_etag=payload.decision_etag,
+            decision_status=payload.decision_status,
+            reason=payload.reason,
+            action_type=payload.action_type,
+        )
+        if finding.area_mask_id is not None:
+            active_area_mask = document_service.get_redaction_area_mask_by_id(
+                current_user=current_user,
+                project_id=project_id,
+                document_id=document_id,
+                run_id=run_id,
+                mask_id=finding.area_mask_id,
+            )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_FINDING_DECISION_CHANGED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_finding",
+        object_id=finding.id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "page_id": finding.page_id,
+            "finding_id": finding.id,
+            "decision_status": finding.decision_status,
+            "decision_etag": finding.decision_etag,
+        },
+        request_context=request_context,
+    )
+    audit_service.record_event_best_effort(
+        event_type="SAFEGUARDED_PREVIEW_REGENERATED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="page",
+        object_id=finding.page_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "page_id": finding.page_id,
+            "reason": "finding_decision_changed",
+        },
+            request_context=request_context,
+        )
+    return _as_redaction_finding_response(
+        finding,
+        active_area_mask=active_area_mask,
+    )
+
+
+@router.get(
+    "/documents/{document_id}/redaction-runs/{run_id}/pages/{page_id}/review",
+    response_model=RedactionPageReviewResponse,
+)
+def get_project_document_redaction_run_page_review(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    page_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionPageReviewResponse:
+    try:
+        review = document_service.get_redaction_run_page_review(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_PAGE_REVIEW_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="page",
+        object_id=page_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "page_id": page_id,
+            "review_status": review.review_status,
+        },
+        request_context=request_context,
+    )
+    return _as_redaction_page_review_response(review)
+
+
+@router.patch(
+    "/documents/{document_id}/redaction-runs/{run_id}/pages/{page_id}/review",
+    response_model=RedactionPageReviewResponse,
+)
+def patch_project_document_redaction_page_review(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    page_id: str,
+    payload: PatchRedactionPageReviewRequest = Body(),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionPageReviewResponse:
+    try:
+        review = document_service.update_redaction_page_review(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+            expected_review_etag=payload.review_etag,
+            review_status=payload.review_status,
+            reason=payload.reason,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_PAGE_REVIEW_UPDATED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="page",
+        object_id=page_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "page_id": page_id,
+            "review_status": review.review_status,
+            "review_etag": review.review_etag,
+        },
+        request_context=request_context,
+    )
+    audit_service.record_event_best_effort(
+        event_type="SAFEGUARDED_PREVIEW_REGENERATED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="page",
+        object_id=page_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "page_id": page_id,
+            "reason": "page_review_updated",
+        },
+        request_context=request_context,
+    )
+    return _as_redaction_page_review_response(review)
+
+
+@router.get(
+    "/documents/{document_id}/redaction-runs/{run_id}/pages/{page_id}/events",
+    response_model=RedactionRunEventsResponse,
+)
+def list_project_document_redaction_run_page_events(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    page_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionRunEventsResponse:
+    try:
+        items = document_service.list_redaction_run_page_events(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_PAGE_EVENTS_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="page",
+        object_id=page_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "page_id": page_id,
+            "returned_count": len(items),
+        },
+        request_context=request_context,
+    )
+    return RedactionRunEventsResponse(
+        run_id=run_id,
+        items=[_as_redaction_timeline_event_response(item) for item in items],
+    )
+
+
+@router.get(
+    "/documents/{document_id}/redaction-runs/{run_id}/pages/{page_id}/preview-status",
+    response_model=RedactionPreviewStatusResponse,
+)
+def get_project_document_redaction_page_preview_status(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    page_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionPreviewStatusResponse:
+    try:
+        snapshot = document_service.get_redaction_page_preview_status(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="SAFEGUARDED_PREVIEW_STATUS_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="page",
+        object_id=page_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "page_id": page_id,
+            "status": snapshot.status,
+        },
+        request_context=request_context,
+    )
+    return _as_redaction_preview_status_response(snapshot)
+
+
+@router.get("/documents/{document_id}/redaction-runs/{run_id}/pages/{page_id}/preview")
+def read_project_document_redaction_page_preview(
+    request: Request,
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    page_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> Response:
+    try:
+        preview_asset = document_service.read_redaction_page_preview(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "RESEARCHER", "REVIEWER", "ADMIN"],
+        )
+
+    etag = _format_etag(preview_asset.etag_seed)
+    response_headers = {
+        "Cache-Control": preview_asset.cache_control,
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Vary": PAGE_IMAGE_CACHE_VARY_HEADER,
+        "X-Content-Type-Options": "nosniff",
+    }
+    if etag:
+        response_headers["ETag"] = etag
+    not_modified = _if_none_match_matches(request.headers.get("if-none-match"), etag)
+
+    audit_service.record_event_best_effort(
+        event_type="SAFEGUARDED_PREVIEW_ACCESSED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="page",
+        object_id=page_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "page_id": page_id,
+            "not_modified": not_modified,
+        },
+        request_context=request_context,
+    )
+    if not_modified:
+        return Response(
+            status_code=status.HTTP_304_NOT_MODIFIED,
+            headers=response_headers,
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="SAFEGUARDED_PREVIEW_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="page",
+        object_id=page_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "page_id": page_id,
+            "media_type": preview_asset.media_type,
+        },
+        request_context=request_context,
+    )
+    return Response(
+        content=preview_asset.payload,
+        media_type=preview_asset.media_type,
+        headers=response_headers,
+    )
+
+
+@router.get(
+    "/documents/{document_id}/redaction-runs/{run_id}/output",
+    response_model=RedactionRunOutputResponse,
+)
+def get_project_document_redaction_run_output(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionRunOutputResponse:
+    try:
+        output = document_service.get_redaction_run_output(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN", "AUDITOR"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_RUN_OUTPUT_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "status": output.run_output.status,
+            "review_status": output.review_status,
+            "readiness_state": output.readiness_state,
+            "downstream_ready": output.downstream_ready,
+        },
+        request_context=request_context,
+    )
+    return _as_redaction_run_output_response(output)
+
+
+@router.get(
+    "/documents/{document_id}/redaction-runs/{run_id}/output/status",
+    response_model=RedactionRunOutputResponse,
+)
+def get_project_document_redaction_run_output_status(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> RedactionRunOutputResponse:
+    try:
+        output = document_service.get_redaction_run_output_status(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN", "AUDITOR"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_RUN_OUTPUT_STATUS_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "status": output.run_output.status,
+            "review_status": output.review_status,
+            "readiness_state": output.readiness_state,
+            "downstream_ready": output.downstream_ready,
+        },
+        request_context=request_context,
+    )
+    return _as_redaction_run_output_response(output)
+
+
+@router.get(
+    "/documents/{document_id}/governance/overview",
+    response_model=GovernanceOverviewResponse,
+)
+def get_project_document_governance_overview(
+    project_id: str,
+    document_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceOverviewResponse:
+    try:
+        overview = document_service.get_governance_overview(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN", "AUDITOR"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="GOVERNANCE_OVERVIEW_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="document",
+        object_id=document_id,
+        metadata={
+            "route": request_context.route_template,
+            "active_run_id": overview.active_run_id,
+            "total_runs": overview.total_runs,
+            "ready_runs": overview.ready_runs,
+        },
+        request_context=request_context,
+    )
+    return _as_governance_overview_response(overview)
+
+
+@router.get(
+    "/documents/{document_id}/governance/runs",
+    response_model=GovernanceRunsResponse,
+)
+def list_project_document_governance_runs(
+    project_id: str,
+    document_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceRunsResponse:
+    try:
+        snapshot = document_service.list_governance_runs(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN", "AUDITOR"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="GOVERNANCE_RUNS_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="document",
+        object_id=document_id,
+        metadata={
+            "route": request_context.route_template,
+            "active_run_id": snapshot.active_run_id,
+            "returned_count": len(snapshot.runs),
+        },
+        request_context=request_context,
+    )
+    return _as_governance_runs_response(snapshot)
+
+
+@router.get(
+    "/documents/{document_id}/governance/runs/{run_id}/overview",
+    response_model=GovernanceRunOverviewResponse,
+)
+def get_project_document_governance_run_overview(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceRunOverviewResponse:
+    try:
+        snapshot = document_service.get_governance_run_overview(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN", "AUDITOR"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="GOVERNANCE_RUN_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "manifest_attempt_count": len(snapshot.manifest_attempts),
+            "ledger_attempt_count": len(snapshot.ledger_attempts),
+            "readiness_status": snapshot.readiness.status,
+        },
+        request_context=request_context,
+    )
+    return _as_governance_run_overview_response(snapshot)
+
+
+@router.get(
+    "/documents/{document_id}/governance/runs/{run_id}/events",
+    response_model=GovernanceRunEventsResponse,
+)
+def list_project_document_governance_run_events(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceRunEventsResponse:
+    try:
+        items = document_service.list_governance_run_events(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN", "AUDITOR"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="GOVERNANCE_EVENTS_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "returned_count": len(items),
+        },
+        request_context=request_context,
+    )
+    return _as_governance_events_response(run_id=run_id, items=items)
+
+
+@router.get(
+    "/documents/{document_id}/governance/runs/{run_id}/manifest",
+    response_model=GovernanceManifestResponse,
+)
+def get_project_document_governance_run_manifest(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceManifestResponse:
+    try:
+        snapshot = document_service.get_governance_run_manifest(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN", "AUDITOR"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_MANIFEST_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "latest_attempt_id": (
+                snapshot.latest_attempt.id if snapshot.latest_attempt is not None else None
+            ),
+            "attempt_count": len(snapshot.overview.manifest_attempts),
+            "readiness_status": snapshot.overview.readiness.status,
+        },
+        request_context=request_context,
+    )
+    return _as_governance_manifest_response(snapshot)
+
+
+@router.get(
+    "/documents/{document_id}/governance/runs/{run_id}/manifest/status",
+    response_model=GovernanceManifestStatusResponse,
+)
+def get_project_document_governance_run_manifest_status(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceManifestStatusResponse:
+    try:
+        snapshot = document_service.get_governance_run_manifest_status(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN", "AUDITOR"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_MANIFEST_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "status": snapshot.status,
+            "attempt_count": snapshot.attempt_count,
+            "readiness_status": snapshot.readiness_status,
+        },
+        request_context=request_context,
+    )
+    return _as_governance_manifest_status_response(snapshot)
+
+
+@router.get(
+    "/documents/{document_id}/governance/runs/{run_id}/manifest/entries",
+    response_model=GovernanceManifestEntriesResponse,
+)
+def list_project_document_governance_run_manifest_entries(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    category: str | None = Query(default=None),
+    page: int | None = Query(default=None, ge=1),
+    review_state: str | None = Query(default=None, alias="reviewState"),
+    from_raw: str | None = Query(default=None, alias="from"),
+    to_raw: str | None = Query(default=None, alias="to"),
+    cursor: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=200),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceManifestEntriesResponse:
+    from_timestamp = _parse_datetime_filter(from_raw, param_name="from")
+    to_timestamp = _parse_datetime_filter(to_raw, param_name="to", upper_bound=True)
+    if (
+        isinstance(from_timestamp, datetime)
+        and isinstance(to_timestamp, datetime)
+        and from_timestamp > to_timestamp
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="'from' must be less than or equal to 'to'.",
+        )
+    try:
+        snapshot = document_service.list_governance_run_manifest_entries(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            category=category,
+            page=page,
+            review_state=review_state,
+            from_timestamp=from_timestamp,
+            to_timestamp=to_timestamp,
+            cursor=cursor,
+            limit=limit,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN", "AUDITOR"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_MANIFEST_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "status": snapshot.status,
+            "category_filter": category,
+            "page_filter": page,
+            "review_state_filter": review_state,
+            "from_filter": from_timestamp.isoformat() if from_timestamp else None,
+            "to_filter": to_timestamp.isoformat() if to_timestamp else None,
+            "cursor": cursor,
+            "limit": limit,
+            "returned_count": len(snapshot.items),
+            "total_count": snapshot.total_count,
+        },
+        request_context=request_context,
+    )
+    return _as_governance_manifest_entries_response(snapshot)
+
+
+@router.get(
+    "/documents/{document_id}/governance/runs/{run_id}/manifest/hash",
+    response_model=GovernanceManifestHashResponse,
+)
+def get_project_document_governance_run_manifest_hash(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceManifestHashResponse:
+    try:
+        snapshot = document_service.get_governance_run_manifest_hash(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN", "AUDITOR"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_MANIFEST_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "status": snapshot.status,
+            "manifest_id": snapshot.manifest_id,
+            "hash_matches": snapshot.hash_matches,
+        },
+        request_context=request_context,
+    )
+    return _as_governance_manifest_hash_response(snapshot)
+
+
+@router.get(
+    "/documents/{document_id}/governance/runs/{run_id}/ledger",
+    response_model=GovernanceLedgerResponse,
+)
+def get_project_document_governance_run_ledger(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceLedgerResponse:
+    try:
+        snapshot = document_service.get_governance_run_ledger(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["ADMIN", "AUDITOR"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_LEDGER_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "latest_attempt_id": (
+                snapshot.latest_attempt.id if snapshot.latest_attempt is not None else None
+            ),
+            "attempt_count": len(snapshot.overview.ledger_attempts),
+            "readiness_status": snapshot.overview.readiness.status,
+            "ledger_verification_status": snapshot.overview.readiness.ledger_verification_status,
+        },
+        request_context=request_context,
+    )
+    return _as_governance_ledger_response(snapshot)
+
+
+@router.get(
+    "/documents/{document_id}/governance/runs/{run_id}/ledger/status",
+    response_model=GovernanceLedgerStatusResponse,
+)
+def get_project_document_governance_run_ledger_status(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceLedgerStatusResponse:
+    try:
+        snapshot = document_service.get_governance_run_ledger_status(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["ADMIN", "AUDITOR"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_LEDGER_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "status": snapshot.status,
+            "attempt_count": snapshot.attempt_count,
+            "readiness_status": snapshot.readiness_status,
+            "ledger_verification_status": snapshot.ledger_verification_status,
+        },
+        request_context=request_context,
+    )
+    return _as_governance_ledger_status_response(snapshot)
+
+
+@router.get(
+    "/documents/{document_id}/governance/runs/{run_id}/ledger/entries",
+    response_model=GovernanceLedgerEntriesResponse,
+)
+def list_project_document_governance_run_ledger_entries(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    view: GovernanceLedgerEntriesViewLiteral = Query(default="list"),
+    cursor: int = Query(default=0, ge=0),
+    limit: int = Query(default=100, ge=1, le=200),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceLedgerEntriesResponse:
+    try:
+        snapshot = document_service.list_governance_run_ledger_entries(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            view=view,
+            cursor=cursor,
+            limit=limit,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["ADMIN", "AUDITOR"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_LEDGER_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "status": snapshot.status,
+            "attempt_count": snapshot.total_count,
+            "view": snapshot.view,
+            "cursor": cursor,
+            "limit": limit,
+            "returned_count": len(snapshot.items),
+            "readiness_status": snapshot.verification_status,
+            "ledger_verification_status": snapshot.verification_status,
+        },
+        request_context=request_context,
+    )
+    return _as_governance_ledger_entries_response(snapshot)
+
+
+@router.get(
+    "/documents/{document_id}/governance/runs/{run_id}/ledger/summary",
+    response_model=GovernanceLedgerSummaryResponse,
+)
+def get_project_document_governance_run_ledger_summary(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceLedgerSummaryResponse:
+    try:
+        snapshot = document_service.get_governance_run_ledger_summary(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["ADMIN", "AUDITOR"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_LEDGER_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "status": snapshot.status,
+            "attempt_count": snapshot.row_count,
+            "readiness_status": snapshot.verification_status,
+            "ledger_verification_status": snapshot.verification_status,
+        },
+        request_context=request_context,
+    )
+    return _as_governance_ledger_summary_response(snapshot)
+
+
+@router.post(
+    "/documents/{document_id}/governance/runs/{run_id}/ledger/verify",
+    response_model=GovernanceLedgerVerifyDetailResponse,
+)
+def post_project_document_governance_run_ledger_verify(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceLedgerVerifyDetailResponse:
+    try:
+        snapshot = document_service.request_governance_run_ledger_verification(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["ADMIN"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_LEDGER_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "verification_run_id": snapshot.attempt.id,
+            "status": snapshot.attempt.status,
+            "readiness_status": snapshot.verification_status,
+            "ledger_verification_status": snapshot.verification_status,
+        },
+        request_context=request_context,
+    )
+    return _as_governance_ledger_verify_detail_response(snapshot)
+
+
+@router.get(
+    "/documents/{document_id}/governance/runs/{run_id}/ledger/verify/status",
+    response_model=GovernanceLedgerVerifyStatusResponse,
+)
+def get_project_document_governance_run_ledger_verify_status(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceLedgerVerifyStatusResponse:
+    try:
+        snapshot = document_service.get_governance_run_ledger_verification_status(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["ADMIN", "AUDITOR"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_LEDGER_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "status": snapshot.latest_attempt.status if snapshot.latest_attempt else "UNAVAILABLE",
+            "attempt_count": snapshot.attempt_count,
+            "readiness_status": snapshot.verification_status,
+            "ledger_verification_status": snapshot.verification_status,
+        },
+        request_context=request_context,
+    )
+    return _as_governance_ledger_verify_status_response(snapshot)
+
+
+@router.get(
+    "/documents/{document_id}/governance/runs/{run_id}/ledger/verify/runs",
+    response_model=GovernanceLedgerVerifyRunsResponse,
+)
+def list_project_document_governance_run_ledger_verify_runs(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceLedgerVerifyRunsResponse:
+    try:
+        snapshot = document_service.list_governance_run_ledger_verification_runs(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["ADMIN", "AUDITOR"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_LEDGER_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "status": snapshot.items[0].status if snapshot.items else "UNAVAILABLE",
+            "attempt_count": len(snapshot.items),
+            "readiness_status": snapshot.verification_status,
+            "ledger_verification_status": snapshot.verification_status,
+        },
+        request_context=request_context,
+    )
+    return _as_governance_ledger_verify_runs_response(snapshot)
+
+
+@router.get(
+    "/documents/{document_id}/governance/runs/{run_id}/ledger/verify/{verification_run_id}",
+    response_model=GovernanceLedgerVerifyDetailResponse,
+)
+def get_project_document_governance_run_ledger_verify_run(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    verification_run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceLedgerVerifyDetailResponse:
+    try:
+        snapshot = document_service.get_governance_run_ledger_verification_run(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            verification_run_id=verification_run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["ADMIN", "AUDITOR"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_LEDGER_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "verification_run_id": verification_run_id,
+            "status": snapshot.attempt.status,
+            "readiness_status": snapshot.verification_status,
+            "ledger_verification_status": snapshot.verification_status,
+        },
+        request_context=request_context,
+    )
+    return _as_governance_ledger_verify_detail_response(snapshot)
+
+
+@router.get(
+    "/documents/{document_id}/governance/runs/{run_id}/ledger/verify/{verification_run_id}/status",
+    response_model=GovernanceLedgerVerifyDetailResponse,
+)
+def get_project_document_governance_run_ledger_verify_run_status(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    verification_run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceLedgerVerifyDetailResponse:
+    return get_project_document_governance_run_ledger_verify_run(
+        project_id=project_id,
+        document_id=document_id,
+        run_id=run_id,
+        verification_run_id=verification_run_id,
+        current_user=current_user,
+        request_context=request_context,
+        audit_service=audit_service,
+        document_service=document_service,
+    )
+
+
+@router.post(
+    "/documents/{document_id}/governance/runs/{run_id}/ledger/verify/{verification_run_id}/cancel",
+    response_model=GovernanceLedgerVerifyDetailResponse,
+)
+def post_project_document_governance_run_ledger_verify_run_cancel(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    verification_run_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> GovernanceLedgerVerifyDetailResponse:
+    try:
+        snapshot = document_service.cancel_governance_run_ledger_verification_run(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            verification_run_id=verification_run_id,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["ADMIN"],
+        )
+    audit_service.record_event_best_effort(
+        event_type="REDACTION_LEDGER_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="redaction_run",
+        object_id=run_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "verification_run_id": verification_run_id,
+            "status": snapshot.attempt.status,
+            "readiness_status": snapshot.verification_status,
+            "ledger_verification_status": snapshot.verification_status,
+        },
+        request_context=request_context,
+    )
+    return _as_governance_ledger_verify_detail_response(snapshot)
+
+
+@router.post(
+    "/documents/{document_id}/redaction-runs/{run_id}/pages/{page_id}/area-masks",
+    response_model=PatchRedactionAreaMaskResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_project_document_redaction_area_mask(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    page_id: str,
+    payload: CreateRedactionAreaMaskRequest = Body(),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> PatchRedactionAreaMaskResponse:
+    try:
+        area_mask, finding = document_service.create_redaction_area_mask(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+            geometry_json=payload.geometry_json,
+            mask_reason=payload.mask_reason,
+            finding_id=payload.finding_id,
+            expected_finding_decision_etag=payload.finding_decision_etag,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN"],
+        )
+
+    if finding is not None:
+        audit_service.record_event_best_effort(
+            event_type="REDACTION_FINDING_DECISION_CHANGED",
+            actor_user_id=current_user.user_id,
+            project_id=project_id,
+            object_type="redaction_finding",
+            object_id=finding.id,
+            metadata={
+                "route": request_context.route_template,
+                "run_id": run_id,
+                "page_id": finding.page_id,
+                "finding_id": finding.id,
+                "decision_status": finding.decision_status,
+                "decision_etag": finding.decision_etag,
+            },
+            request_context=request_context,
+        )
+    audit_service.record_event_best_effort(
+        event_type="SAFEGUARDED_PREVIEW_REGENERATED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="page",
+        object_id=area_mask.page_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "page_id": area_mask.page_id,
+            "reason": "area_mask_created",
+        },
+        request_context=request_context,
+    )
+    return PatchRedactionAreaMaskResponse(
+        area_mask=_as_redaction_area_mask_response(area_mask),
+        finding=(
+            _as_redaction_finding_response(
+                finding,
+                active_area_mask=area_mask,
+            )
+            if finding is not None
+            else None
+        ),
+    )
+
+
+@router.patch(
+    "/documents/{document_id}/redaction-runs/{run_id}/area-masks/{mask_id}",
+    response_model=PatchRedactionAreaMaskResponse,
+)
+def patch_project_document_redaction_area_mask(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    mask_id: str,
+    payload: PatchRedactionAreaMaskRequest = Body(),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> PatchRedactionAreaMaskResponse:
+    try:
+        area_mask, finding = document_service.revise_redaction_area_mask_by_id(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            mask_id=mask_id,
+            expected_version_etag=payload.version_etag,
+            geometry_json=payload.geometry_json,
+            mask_reason=payload.mask_reason,
+            finding_id=payload.finding_id,
+            expected_finding_decision_etag=payload.finding_decision_etag,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN"],
+        )
+
+    if finding is not None:
+        audit_service.record_event_best_effort(
+            event_type="REDACTION_FINDING_DECISION_CHANGED",
+            actor_user_id=current_user.user_id,
+            project_id=project_id,
+            object_type="redaction_finding",
+            object_id=finding.id,
+            metadata={
+                "route": request_context.route_template,
+                "run_id": run_id,
+                "page_id": finding.page_id,
+                "finding_id": finding.id,
+                "decision_status": finding.decision_status,
+                "decision_etag": finding.decision_etag,
+            },
+            request_context=request_context,
+        )
+    audit_service.record_event_best_effort(
+        event_type="SAFEGUARDED_PREVIEW_REGENERATED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="page",
+        object_id=area_mask.page_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "page_id": area_mask.page_id,
+            "reason": "area_mask_revised",
+        },
+        request_context=request_context,
+    )
+    return PatchRedactionAreaMaskResponse(
+        area_mask=_as_redaction_area_mask_response(area_mask),
+        finding=(
+            _as_redaction_finding_response(
+                finding,
+                active_area_mask=area_mask,
+            )
+            if finding is not None
+            else None
+        ),
+    )
+
+
+@router.patch(
+    "/documents/{document_id}/redaction-runs/{run_id}/pages/{page_id}/area-masks/{mask_id}",
+    response_model=PatchRedactionAreaMaskResponse,
+)
+def patch_project_document_redaction_area_mask_page_scoped(
+    project_id: str,
+    document_id: str,
+    run_id: str,
+    page_id: str,
+    mask_id: str,
+    payload: PatchRedactionAreaMaskRequest = Body(),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    document_service: DocumentService = Depends(get_document_service),
+) -> PatchRedactionAreaMaskResponse:
+    try:
+        area_mask, finding = document_service.revise_redaction_area_mask(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+            mask_id=mask_id,
+            expected_version_etag=payload.version_etag,
+            geometry_json=payload.geometry_json,
+            mask_reason=payload.mask_reason,
+            finding_id=payload.finding_id,
+            expected_finding_decision_etag=payload.finding_decision_etag,
+        )
+    except Exception as error:  # noqa: BLE001
+        _raise_http_from_error(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            audit_service=audit_service,
+            request_context=request_context,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN"],
+        )
+
+    if finding is not None:
+        audit_service.record_event_best_effort(
+            event_type="REDACTION_FINDING_DECISION_CHANGED",
+            actor_user_id=current_user.user_id,
+            project_id=project_id,
+            object_type="redaction_finding",
+            object_id=finding.id,
+            metadata={
+                "route": request_context.route_template,
+                "run_id": run_id,
+                "page_id": finding.page_id,
+                "finding_id": finding.id,
+                "decision_status": finding.decision_status,
+                "decision_etag": finding.decision_etag,
+            },
+            request_context=request_context,
+        )
+    audit_service.record_event_best_effort(
+        event_type="SAFEGUARDED_PREVIEW_REGENERATED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="page",
+        object_id=page_id,
+        metadata={
+            "route": request_context.route_template,
+            "run_id": run_id,
+            "page_id": page_id,
+            "reason": "area_mask_revised",
+        },
+        request_context=request_context,
+    )
+    return PatchRedactionAreaMaskResponse(
+        area_mask=_as_redaction_area_mask_response(area_mask),
+        finding=(
+            _as_redaction_finding_response(
+                finding,
+                active_area_mask=area_mask,
+            )
+            if finding is not None
+            else None
+        ),
+    )
 
 @router.post(
     "/documents/{document_id}/retry-extraction",

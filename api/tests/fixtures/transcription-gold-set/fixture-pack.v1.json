@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "fixturePackId": "transcription-gold-set-internal",
+  "fixturePackVersion": "v1",
+  "cases": [
+    {
+      "caseId": "line-ordinary-001",
+      "runId": "run-alpha",
+      "pageId": "page-1",
+      "lineId": "line-1",
+      "transcriptVersionId": "tv-1",
+      "sourceKind": "LINE",
+      "fallbackInvoked": false,
+      "referenceText": "dear diary",
+      "hypothesisText": "dear diary"
+    },
+    {
+      "caseId": "line-ordinary-002",
+      "runId": "run-alpha",
+      "pageId": "page-1",
+      "lineId": "line-2",
+      "transcriptVersionId": "tv-2",
+      "sourceKind": "LINE",
+      "fallbackInvoked": false,
+      "referenceText": "winter winds",
+      "hypothesisText": "winter winds."
+    },
+    {
+      "caseId": "rescue-candidate-001",
+      "runId": "run-beta",
+      "pageId": "page-2",
+      "lineId": null,
+      "transcriptVersionId": "tv-3",
+      "sourceKind": "RESCUE_CANDIDATE",
+      "fallbackInvoked": false,
+      "referenceText": "faint marginalia",
+      "hypothesisText": "faint margnalia"
+    },
+    {
+      "caseId": "page-window-fallback-001",
+      "runId": "run-beta",
+      "pageId": "page-2",
+      "lineId": null,
+      "transcriptVersionId": "tv-4",
+      "sourceKind": "PAGE_WINDOW",
+      "fallbackInvoked": true,
+      "referenceText": "smudged note here",
+      "hypothesisText": "smudge note here"
+    }
+  ]
+}

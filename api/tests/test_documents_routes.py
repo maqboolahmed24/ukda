@@ -10,6 +10,7 @@ from app.audit.service import get_audit_service
 from app.auth.dependencies import require_authenticated_user
 from app.auth.models import SessionPrincipal
 from app.documents.models import (
+    TranscriptionCompareDecisionEventRecord,
     TranscriptionCompareDecisionRecord,
     DocumentTranscriptionProjectionRecord,
     LineTranscriptionResultRecord,
@@ -42,20 +43,27 @@ from app.documents.models import (
 )
 from app.documents.service import (
     DocumentTranscriptionAccessDeniedError,
+    DocumentTranscriptionCompareFinalizeSnapshot,
     DocumentTranscriptionCompareLineDiffSnapshot,
     DocumentTranscriptionComparePageSnapshot,
     DocumentTranscriptionCompareSnapshot,
     DocumentTranscriptionCompareTokenDiffSnapshot,
     DocumentTranscriptionConflictError,
     DocumentTranscriptionLineCorrectionSnapshot,
+    DocumentTranscriptionLineVersionHistorySnapshot,
     DocumentTranscriptionLowConfidencePageSnapshot,
     DocumentTranscriptionMetricsSnapshot,
     DocumentTranscriptionOverviewSnapshot,
+    DocumentTranscriptionPageRescueSourcesSnapshot,
+    DocumentTranscriptionRescuePageStatusSnapshot,
+    DocumentTranscriptionRescueSourceSnapshot,
     DocumentTranscriptionRunNotFoundError,
+    DocumentTranscriptionRunRescueStatusSnapshot,
     DocumentTranscriptionTriagePageSnapshot,
     DocumentTranscriptionVariantLayerSnapshot,
     DocumentTranscriptionVariantLayersSnapshot,
     DocumentTranscriptionVariantSuggestionDecisionSnapshot,
+    DocumentTranscriptVersionLineageSnapshot,
     DocumentLayoutAccessDeniedError,
     DocumentLayoutConflictError,
     DocumentLayoutContextWindowAsset,
@@ -1215,8 +1223,27 @@ class FakeDocumentService:
                     created_at=now - timedelta(hours=2),
                     updated_at=now - timedelta(hours=2),
                 ),
+                TokenTranscriptionResultRecord(
+                    run_id="transcription-run-1",
+                    page_id="page-2",
+                    line_id="line-3",
+                    token_id="token-8",
+                    token_index=3,
+                    token_text="marginalia",
+                    token_confidence=0.63,
+                    bbox_json={"x": 150, "y": 24, "w": 70, "h": 12},
+                    polygon_json=None,
+                    source_kind="RESCUE_CANDIDATE",
+                    source_ref_id="resc-0002-001-a",
+                    projection_basis="ENGINE_OUTPUT",
+                    created_at=now - timedelta(hours=2),
+                    updated_at=now - timedelta(hours=2),
+                ),
             ],
         }
+        self._transcription_rescue_resolutions: dict[
+            tuple[str, str], dict[str, object]
+        ] = {}
         self._transcription_projection: dict[str, DocumentTranscriptionProjectionRecord] = {
             "doc-2": DocumentTranscriptionProjectionRecord(
                 document_id="doc-2",
@@ -1235,6 +1262,9 @@ class FakeDocumentService:
             "doc-2": "pre-run-2"
         }
         self._transcription_compare_decisions: list[TranscriptionCompareDecisionRecord] = []
+        self._transcription_compare_decision_events: list[
+            TranscriptionCompareDecisionEventRecord
+        ] = []
         self._transcript_versions: dict[
             tuple[str, str, str], list[TranscriptVersionRecord]
         ] = {
@@ -4386,6 +4416,9 @@ class FakeDocumentService:
         document_id: str,
         base_run_id: str,
         candidate_run_id: str,
+        page_number: int | None = None,
+        line_id: str | None = None,
+        token_id: str | None = None,
     ) -> DocumentTranscriptionCompareSnapshot:
         self._require_transcription_view_access(
             current_user=current_user,
@@ -4418,16 +4451,71 @@ class FakeDocumentService:
             row.page_id: row for row in self._transcription_pages.get(candidate_run.id, [])
         }
         page_ids = sorted(set(base_pages) | set(candidate_pages))
-        decision_index = {
-            (item.page_id, item.line_id, item.token_id): item
+        selected_page_ids: set[str] | None = None
+        if isinstance(page_number, int):
+            if page_number < 1:
+                raise DocumentValidationError("page must be 1 or greater.")
+            selected_page_ids = {
+                page_id
+                for page_id in page_ids
+                if (
+                    (
+                        base_pages.get(page_id).page_index
+                        if base_pages.get(page_id) is not None
+                        else candidate_pages.get(page_id).page_index
+                    )
+                    + 1
+                    == page_number
+                )
+            }
+            if not selected_page_ids:
+                raise DocumentPageNotFoundError(
+                    "Compared page target was not found for selected runs."
+                )
+
+        normalized_line_id = line_id.strip() if isinstance(line_id, str) and line_id.strip() else None
+        normalized_token_id = token_id.strip() if isinstance(token_id, str) and token_id.strip() else None
+
+        decisions = [
+            item
             for item in self._transcription_compare_decisions
             if item.base_run_id == base_run_id and item.candidate_run_id == candidate_run_id
+        ]
+        if selected_page_ids is not None:
+            decisions = [item for item in decisions if item.page_id in selected_page_ids]
+        if normalized_line_id is not None:
+            decisions = [item for item in decisions if item.line_id == normalized_line_id]
+        if normalized_token_id is not None:
+            decisions = [item for item in decisions if item.token_id == normalized_token_id]
+        decision_index = {
+            (item.page_id, item.line_id, item.token_id): item for item in decisions
         }
+        decision_events = [
+            item
+            for item in self._transcription_compare_decision_events
+            if item.base_run_id == base_run_id and item.candidate_run_id == candidate_run_id
+        ]
+        if selected_page_ids is not None:
+            decision_events = [
+                item for item in decision_events if item.page_id in selected_page_ids
+            ]
+        if normalized_line_id is not None:
+            decision_events = [
+                item for item in decision_events if item.line_id == normalized_line_id
+            ]
+        if normalized_token_id is not None:
+            decision_events = [
+                item for item in decision_events if item.token_id == normalized_token_id
+            ]
         pages: list[DocumentTranscriptionComparePageSnapshot] = []
         changed_lines = 0
         changed_tokens = 0
         changed_confidence = 0
+        matched_line_filter = normalized_line_id is None
+        matched_token_filter = normalized_token_id is None
         for page_id in page_ids:
+            if selected_page_ids is not None and page_id not in selected_page_ids:
+                continue
             base_page = base_pages.get(page_id)
             candidate_page = candidate_pages.get(page_id)
             page_index = (
@@ -4444,8 +4532,13 @@ class FakeDocumentService:
                 for row in self._transcription_lines.get((candidate_run.id, page_id), [])
             }
             line_ids = sorted(set(base_lines) | set(candidate_lines))
+            if normalized_line_id is not None:
+                line_ids = [item for item in line_ids if item == normalized_line_id]
+            if not line_ids and normalized_line_id is not None:
+                continue
             line_diffs: list[DocumentTranscriptionCompareLineDiffSnapshot] = []
             for line_id in line_ids:
+                matched_line_filter = True
                 base_line = base_lines.get(line_id)
                 candidate_line = candidate_lines.get(line_id)
                 confidence_delta = (
@@ -4488,8 +4581,13 @@ class FakeDocumentService:
                 for row in self._transcription_tokens.get((candidate_run.id, page_id), [])
             }
             token_ids = sorted(set(base_tokens) | set(candidate_tokens))
+            if normalized_token_id is not None:
+                token_ids = [item for item in token_ids if item == normalized_token_id]
+            if not token_ids and normalized_token_id is not None:
+                continue
             token_diffs: list[DocumentTranscriptionCompareTokenDiffSnapshot] = []
             for token_id in token_ids:
+                matched_token_filter = True
                 base_token = base_tokens.get(token_id)
                 candidate_token = candidate_tokens.get(token_id)
                 confidence_delta = (
@@ -4515,6 +4613,8 @@ class FakeDocumentService:
                     if base_token is not None
                     else candidate_token.line_id if candidate_token is not None else None
                 )
+                if normalized_line_id is not None and line_id != normalized_line_id:
+                    continue
                 decision = decision_index.get((page_id, line_id, token_id))
                 token_diffs.append(
                     DocumentTranscriptionCompareTokenDiffSnapshot(
@@ -4534,6 +4634,12 @@ class FakeDocumentService:
                         current_decision=decision,
                     )
                 )
+            if (
+                (normalized_line_id is not None or normalized_token_id is not None)
+                and not line_diffs
+                and not token_diffs
+            ):
+                continue
             pages.append(
                 DocumentTranscriptionComparePageSnapshot(
                     page_id=page_id,
@@ -4565,6 +4671,17 @@ class FakeDocumentService:
                     },
                 )
             )
+        if not matched_line_filter:
+            raise DocumentPageNotFoundError("Compared line target was not found.")
+        if not matched_token_filter:
+            raise DocumentPageNotFoundError("Compared token target was not found.")
+        decision_snapshot_hash = hashlib.sha256(
+            (
+                "|".join(sorted(item.id for item in decisions))
+                + "||"
+                + "|".join(sorted(item.id for item in decision_events))
+            ).encode("utf-8")
+        ).hexdigest()
         return DocumentTranscriptionCompareSnapshot(
             document=document,
             base_run=base_run,
@@ -4583,6 +4700,9 @@ class FakeDocumentService:
                 "modelId": candidate_run.model_id,
                 "runId": candidate_run.id,
             },
+            compare_decision_snapshot_hash=decision_snapshot_hash,
+            compare_decision_count=len(decisions),
+            compare_decision_event_count=len(decision_events),
         )
 
     def record_transcription_compare_decisions(
@@ -4656,6 +4776,7 @@ class FakeDocumentService:
                     raise DocumentTranscriptionConflictError(
                         "decisionEtag cannot be provided for a new compare decision."
                     )
+                event_time = now
                 created = TranscriptionCompareDecisionRecord(
                     id=f"cmp-decision-{len(self._transcription_compare_decisions) + 1}",
                     document_id=document_id,
@@ -4677,12 +4798,30 @@ class FakeDocumentService:
                     updated_at=now,
                 )
                 self._transcription_compare_decisions.append(created)
+                self._transcription_compare_decision_events.append(
+                    TranscriptionCompareDecisionEventRecord(
+                        id=f"cmp-event-{len(self._transcription_compare_decision_events) + 1}",
+                        decision_id=created.id,
+                        document_id=document_id,
+                        base_run_id=base_run_id,
+                        candidate_run_id=candidate_run_id,
+                        page_id=page_id,
+                        line_id=line_id,
+                        token_id=token_id,
+                        from_decision=None,
+                        to_decision=decision,  # type: ignore[arg-type]
+                        actor_user_id=current_user.user_id,
+                        reason=decision_reason,
+                        created_at=event_time,
+                    )
+                )
                 persisted.append(created)
                 continue
             if decision_etag is None or decision_etag != existing.decision_etag:
                 raise DocumentTranscriptionConflictError(
                     "decisionEtag is stale for this compare decision target."
                 )
+            event_time = now
             updated = replace(
                 existing,
                 decision=decision,  # type: ignore[arg-type]
@@ -4698,8 +4837,235 @@ class FakeDocumentService:
                 updated if row.id == existing.id else row
                 for row in self._transcription_compare_decisions
             ]
+            self._transcription_compare_decision_events.append(
+                TranscriptionCompareDecisionEventRecord(
+                    id=f"cmp-event-{len(self._transcription_compare_decision_events) + 1}",
+                    decision_id=existing.id,
+                    document_id=document_id,
+                    base_run_id=base_run_id,
+                    candidate_run_id=candidate_run_id,
+                    page_id=page_id,
+                    line_id=line_id,
+                    token_id=token_id,
+                    from_decision=existing.decision,
+                    to_decision=decision,  # type: ignore[arg-type]
+                    actor_user_id=current_user.user_id,
+                    reason=decision_reason,
+                    created_at=event_time,
+                )
+            )
             persisted.append(updated)
         return persisted
+
+    def finalize_transcription_compare(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        base_run_id: str,
+        candidate_run_id: str,
+        page_ids: list[str] | None = None,
+        expected_compare_decision_snapshot_hash: str | None = None,
+    ) -> DocumentTranscriptionCompareFinalizeSnapshot:
+        self._require_transcription_mutation_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        compare_snapshot = self.compare_transcription_runs(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            base_run_id=base_run_id,
+            candidate_run_id=candidate_run_id,
+            page_number=None,
+            line_id=None,
+            token_id=None,
+        )
+        decisions = [
+            item
+            for item in self._transcription_compare_decisions
+            if item.base_run_id == base_run_id and item.candidate_run_id == candidate_run_id
+        ]
+        normalized_page_ids = sorted(
+            {
+                item.strip()
+                for item in (page_ids or [])
+                if isinstance(item, str) and item.strip()
+            }
+        )
+        if normalized_page_ids:
+            decisions = [item for item in decisions if item.page_id in normalized_page_ids]
+        if not decisions:
+            raise DocumentTranscriptionConflictError(
+                "Compare finalization requires at least one explicit compare decision."
+            )
+        if (
+            isinstance(expected_compare_decision_snapshot_hash, str)
+            and expected_compare_decision_snapshot_hash.strip()
+            and expected_compare_decision_snapshot_hash.strip()
+            != compare_snapshot.compare_decision_snapshot_hash
+        ):
+            raise DocumentTranscriptionConflictError(
+                "Compare decision snapshot is stale; refresh compare before finalizing."
+            )
+
+        now = datetime.now(UTC)
+        self._transcription_run_sequence += 1
+        new_run_id = f"transcription-run-{self._transcription_run_sequence}"
+        base_run = self._get_transcription_run_or_raise(
+            document_id=document_id, run_id=base_run_id
+        )
+        candidate_run = self._get_transcription_run_or_raise(
+            document_id=document_id, run_id=candidate_run_id
+        )
+        composed_run = TranscriptionRunRecord(
+            id=new_run_id,
+            project_id=project_id,
+            document_id=document_id,
+            input_preprocess_run_id=base_run.input_preprocess_run_id,
+            input_layout_run_id=base_run.input_layout_run_id,
+            input_layout_snapshot_hash=base_run.input_layout_snapshot_hash,
+            engine="REVIEW_COMPOSED",
+            model_id=base_run.model_id,
+            project_model_assignment_id=None,
+            prompt_template_id=None,
+            prompt_template_sha256=None,
+            response_schema_version=base_run.response_schema_version,
+            confidence_basis="READ_AGREEMENT",
+            confidence_calibration_version=base_run.confidence_calibration_version,
+            params_json={
+                **dict(base_run.params_json),
+                "baseRunId": base_run_id,
+                "candidateRunId": candidate_run_id,
+                "compareDecisionSnapshotHash": compare_snapshot.compare_decision_snapshot_hash,
+                "pageScope": normalized_page_ids,
+                "finalizedBy": current_user.user_id,
+                "finalizedAt": now.isoformat(),
+            },
+            pipeline_version=base_run.pipeline_version,
+            container_digest=base_run.container_digest,
+            attempt_number=max(
+                (item.attempt_number for item in self._transcription_runs.get(document_id, [])),
+                default=0,
+            )
+            + 1,
+            supersedes_transcription_run_id=None,
+            superseded_by_transcription_run_id=None,
+            status="SUCCEEDED",
+            created_by=current_user.user_id,
+            created_at=now,
+            started_at=now,
+            finished_at=now,
+            canceled_by=None,
+            canceled_at=None,
+            failure_reason=None,
+        )
+        self._transcription_runs.setdefault(document_id, []).insert(0, composed_run)
+
+        pages = []
+        base_pages = {item.page_id: item for item in self._transcription_pages.get(base_run_id, [])}
+        candidate_pages = {
+            item.page_id: item for item in self._transcription_pages.get(candidate_run_id, [])
+        }
+        for page_id in sorted(set(base_pages) | set(candidate_pages)):
+            if normalized_page_ids and page_id not in normalized_page_ids:
+                continue
+            source_page = candidate_pages.get(page_id) or base_pages.get(page_id)
+            if source_page is None:
+                continue
+            pages.append(
+                replace(
+                    source_page,
+                    run_id=new_run_id,
+                    status="SUCCEEDED",
+                    pagexml_out_key=(
+                        f"controlled/derived/{project_id}/{document_id}/transcription/"
+                        f"{new_run_id}/{page_id}/page.xml"
+                    ),
+                    pagexml_out_sha256=f"sha-{new_run_id}-{page_id}",
+                    raw_model_response_key=(
+                        f"controlled/derived/{project_id}/{document_id}/transcription/"
+                        f"{new_run_id}/{page_id}/model-response.json"
+                    ),
+                    raw_model_response_sha256=f"sha-raw-{new_run_id}-{page_id}",
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+        self._transcription_pages[new_run_id] = pages
+
+        decision_index = {
+            (item.page_id, item.line_id, item.token_id): item for item in decisions
+        }
+        for page in pages:
+            base_lines = list(self._transcription_lines.get((base_run_id, page.page_id), []))
+            candidate_lines = {
+                item.line_id: item
+                for item in self._transcription_lines.get((candidate_run_id, page.page_id), [])
+            }
+            composed_lines: list[LineTranscriptionResultRecord] = []
+            for line in base_lines:
+                decision = decision_index.get((page.page_id, line.line_id, None))
+                source_line = (
+                    candidate_lines.get(line.line_id)
+                    if decision is not None
+                    and decision.decision == "PROMOTE_CANDIDATE"
+                    and candidate_lines.get(line.line_id) is not None
+                    else line
+                )
+                composed_lines.append(
+                    replace(
+                        source_line,
+                        run_id=new_run_id,
+                        page_id=page.page_id,
+                        active_transcript_version_id=None,
+                        version_etag=f"{source_line.version_etag}-composed",
+                        created_at=now,
+                        updated_at=now,
+                    )
+                )
+            self._transcription_lines[(new_run_id, page.page_id)] = composed_lines
+
+            base_tokens = list(self._transcription_tokens.get((base_run_id, page.page_id), []))
+            candidate_tokens = {
+                item.token_id: item
+                for item in self._transcription_tokens.get((candidate_run_id, page.page_id), [])
+            }
+            composed_tokens: list[TokenTranscriptionResultRecord] = []
+            for token in base_tokens:
+                decision = decision_index.get((page.page_id, token.line_id, token.token_id))
+                source_token = (
+                    candidate_tokens.get(token.token_id)
+                    if decision is not None
+                    and decision.decision == "PROMOTE_CANDIDATE"
+                    and candidate_tokens.get(token.token_id) is not None
+                    else token
+                )
+                composed_tokens.append(
+                    replace(
+                        source_token,
+                        run_id=new_run_id,
+                        page_id=page.page_id,
+                        created_at=now,
+                        updated_at=now,
+                    )
+                )
+            self._transcription_tokens[(new_run_id, page.page_id)] = composed_tokens
+
+        document = self.get_document(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+        )
+        return DocumentTranscriptionCompareFinalizeSnapshot(
+            document=document,
+            base_run=base_run,
+            candidate_run=candidate_run,
+            composed_run=composed_run,
+            compare_decision_snapshot_hash=compare_snapshot.compare_decision_snapshot_hash,
+            page_scope=tuple(normalized_page_ids),
+        )
 
     def cancel_transcription_run(
         self,
@@ -4791,6 +5157,26 @@ class FakeDocumentService:
             raise DocumentTranscriptionConflictError(
                 "Transcription run snapshot hash no longer matches active layout basis."
             )
+        rescue_status = self.get_transcription_run_rescue_status(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        if not rescue_status.ready_for_activation:
+            blocked_pages = [
+                row.page_index + 1
+                for row in rescue_status.pages
+                if row.blocker_reason_codes
+            ]
+            conflict = DocumentTranscriptionConflictError(
+                "RESCUE_UNRESOLVED: Activation requires resolved rescue/manual-review readiness before promotion."
+            )
+            setattr(conflict, "rescue_status", rescue_status)
+            setattr(conflict, "blocker_codes", tuple(rescue_status.run_blocker_reason_codes))
+            if blocked_pages:
+                raise conflict
+            raise conflict
         layout_rows = list(self._layout_pages.get(run.input_layout_run_id, []))
         required_pages = [
             row for row in layout_rows if row.page_recall_status != "NEEDS_MANUAL_REVIEW"
@@ -4798,15 +5184,19 @@ class FakeDocumentService:
         for page_row in required_pages:
             page_tokens = self._transcription_tokens.get((run.id, page_row.page_id), [])
             if len(page_tokens) == 0:
-                raise DocumentTranscriptionConflictError(
+                conflict = DocumentTranscriptionConflictError(
                     "Activation requires token anchors for all eligible pages; "
                     f"missing anchors on page {page_row.page_index + 1}."
                 )
+                setattr(conflict, "blocker_codes", ("TOKEN_ANCHOR_MISSING",))
+                raise conflict
             page_lines = self._transcription_lines.get((run.id, page_row.page_id), [])
             if any(line.token_anchor_status != "CURRENT" for line in page_lines):
-                raise DocumentTranscriptionConflictError(
+                conflict = DocumentTranscriptionConflictError(
                     "Activation requires CURRENT token-anchor status for all eligible lines."
                 )
+                setattr(conflict, "blocker_codes", ("TOKEN_ANCHOR_STALE",))
+                raise conflict
         projection = DocumentTranscriptionProjectionRecord(
             document_id=document_id,
             project_id=project_id,
@@ -4824,6 +5214,286 @@ class FakeDocumentService:
             run.input_preprocess_run_id
         )
         return projection
+
+    @staticmethod
+    def _is_manual_override_resolution(resolution: dict[str, object] | None) -> bool:
+        if not isinstance(resolution, dict):
+            return False
+        return resolution.get("resolution_status") == "MANUAL_REVIEW_RESOLVED"
+
+    def _build_transcription_page_rescue_status(
+        self,
+        *,
+        run: TranscriptionRunRecord,
+        page_row: PageLayoutResultRecord,
+    ) -> DocumentTranscriptionRescuePageStatusSnapshot:
+        candidates = list(
+            self._layout_rescue_candidates.get((run.input_layout_run_id, page_row.page_id), [])
+        )
+        tokens = list(self._transcription_tokens.get((run.id, page_row.page_id), []))
+        page_transcription = next(
+            (
+                row
+                for row in self._transcription_pages.get(run.id, [])
+                if row.page_id == page_row.page_id
+            ),
+            None,
+        )
+        resolution = self._transcription_rescue_resolutions.get((run.id, page_row.page_id))
+        manual_override = self._is_manual_override_resolution(resolution)
+
+        eligible = [item for item in candidates if item.status in {"ACCEPTED", "RESOLVED"}]
+        rescue_source_count = len(eligible)
+        rescue_transcribed_source_count = 0
+        for candidate in eligible:
+            source_kind = (
+                "RESCUE_CANDIDATE"
+                if candidate.candidate_kind == "LINE_EXPANSION"
+                else "PAGE_WINDOW"
+            )
+            if any(
+                token.source_kind == source_kind and token.source_ref_id == candidate.id
+                for token in tokens
+            ):
+                rescue_transcribed_source_count += 1
+        rescue_unresolved_source_count = max(
+            0, rescue_source_count - rescue_transcribed_source_count
+        )
+        blocker_reason_codes: list[str] = []
+        if page_transcription is None or page_transcription.status != "SUCCEEDED":
+            blocker_reason_codes.append("PAGE_TRANSCRIPTION_NOT_SUCCEEDED")
+        if page_row.page_recall_status == "NEEDS_RESCUE":
+            if rescue_source_count <= 0 and not manual_override:
+                blocker_reason_codes.append("RESCUE_SOURCE_MISSING")
+            elif rescue_unresolved_source_count > 0 and not manual_override:
+                blocker_reason_codes.append("RESCUE_SOURCE_UNTRANSCRIBED")
+        if (
+            page_row.page_recall_status == "NEEDS_MANUAL_REVIEW"
+            and not manual_override
+        ):
+            blocker_reason_codes.append("MANUAL_REVIEW_RESOLUTION_REQUIRED")
+        deduped_codes = tuple(dict.fromkeys(blocker_reason_codes))
+        if not deduped_codes:
+            readiness_state = "READY"
+        elif "MANUAL_REVIEW_RESOLUTION_REQUIRED" in deduped_codes:
+            readiness_state = "BLOCKED_MANUAL_REVIEW"
+        elif any(
+            code in {"RESCUE_SOURCE_MISSING", "RESCUE_SOURCE_UNTRANSCRIBED"}
+            for code in deduped_codes
+        ):
+            readiness_state = "BLOCKED_RESCUE"
+        else:
+            readiness_state = "BLOCKED_PAGE_STATUS"
+
+        return DocumentTranscriptionRescuePageStatusSnapshot(
+            run_id=run.id,
+            page_id=page_row.page_id,
+            page_index=page_row.page_index,
+            page_recall_status=page_row.page_recall_status,
+            rescue_source_count=rescue_source_count,
+            rescue_transcribed_source_count=rescue_transcribed_source_count,
+            rescue_unresolved_source_count=rescue_unresolved_source_count,
+            readiness_state=readiness_state,
+            blocker_reason_codes=deduped_codes,  # type: ignore[arg-type]
+            resolution_status=(
+                resolution.get("resolution_status")
+                if isinstance(resolution, dict)
+                else None
+            ),  # type: ignore[arg-type]
+            resolution_reason=(
+                resolution.get("resolution_reason")
+                if isinstance(resolution, dict)
+                else None
+            ),  # type: ignore[arg-type]
+            resolution_updated_by=(
+                resolution.get("updated_by")
+                if isinstance(resolution, dict)
+                else None
+            ),  # type: ignore[arg-type]
+            resolution_updated_at=(
+                resolution.get("updated_at")
+                if isinstance(resolution, dict)
+                else None
+            ),  # type: ignore[arg-type]
+        )
+
+    def get_transcription_run_rescue_status(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+    ) -> DocumentTranscriptionRunRescueStatusSnapshot:
+        self._require_transcription_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        document = self.get_document(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+        )
+        run = self.get_transcription_run(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        layout_rows = list(self._layout_pages.get(run.input_layout_run_id, []))
+        page_snapshots = tuple(
+            self._build_transcription_page_rescue_status(run=run, page_row=row)
+            for row in layout_rows
+        )
+        run_blocker_reason_codes: list[str] = []
+        if run.status != "SUCCEEDED":
+            run_blocker_reason_codes.append("RUN_NOT_SUCCEEDED")
+        for row in page_snapshots:
+            run_blocker_reason_codes.extend(row.blocker_reason_codes)
+        deduped = tuple(dict.fromkeys(run_blocker_reason_codes))
+        return DocumentTranscriptionRunRescueStatusSnapshot(
+            document=document,
+            run=run,
+            ready_for_activation=len(deduped) == 0,
+            blocker_count=len(deduped) + sum(1 for row in page_snapshots if row.blocker_reason_codes),
+            run_blocker_reason_codes=deduped,  # type: ignore[arg-type]
+            pages=page_snapshots,
+        )
+
+    def list_transcription_run_page_rescue_sources(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+    ) -> DocumentTranscriptionPageRescueSourcesSnapshot:
+        self._require_transcription_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        document = self.get_document(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+        )
+        run = self.get_transcription_run(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        page = self.get_document_page(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            page_id=page_id,
+        )
+        layout_row = next(
+            (
+                row
+                for row in self._layout_pages.get(run.input_layout_run_id, [])
+                if row.page_id == page_id
+            ),
+            None,
+        )
+        if layout_row is None:
+            raise DocumentPageNotFoundError("Layout page result backing this run was not found.")
+        page_status = self._build_transcription_page_rescue_status(
+            run=run,
+            page_row=layout_row,
+        )
+        tokens = list(self._transcription_tokens.get((run.id, page_id), []))
+        rescue_sources: list[DocumentTranscriptionRescueSourceSnapshot] = []
+        for candidate in self._layout_rescue_candidates.get((run.input_layout_run_id, page_id), []):
+            source_kind = (
+                "RESCUE_CANDIDATE"
+                if candidate.candidate_kind == "LINE_EXPANSION"
+                else "PAGE_WINDOW"
+            )
+            token_count = sum(
+                1
+                for token in tokens
+                if token.source_kind == source_kind and token.source_ref_id == candidate.id
+            )
+            rescue_sources.append(
+                DocumentTranscriptionRescueSourceSnapshot(
+                    source_ref_id=candidate.id,
+                    source_kind=source_kind,  # type: ignore[arg-type]
+                    candidate_kind=candidate.candidate_kind,
+                    candidate_status=candidate.status,
+                    token_count=token_count,
+                    has_transcription_output=token_count > 0,
+                    confidence=candidate.confidence,
+                    source_signal=candidate.source_signal,
+                    geometry_json=dict(candidate.geometry_json),
+                )
+            )
+        return DocumentTranscriptionPageRescueSourcesSnapshot(
+            document=document,
+            run=run,
+            page=page,
+            page_recall_status=page_status.page_recall_status,
+            readiness_state=page_status.readiness_state,
+            blocker_reason_codes=page_status.blocker_reason_codes,
+            rescue_sources=tuple(rescue_sources),
+            resolution_status=page_status.resolution_status,
+            resolution_reason=page_status.resolution_reason,
+            resolution_updated_by=page_status.resolution_updated_by,
+            resolution_updated_at=page_status.resolution_updated_at,
+        )
+
+    def update_transcription_page_rescue_resolution(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        resolution_status: str,
+        resolution_reason: str | None = None,
+    ) -> DocumentTranscriptionPageRescueSourcesSnapshot:
+        self._require_transcription_mutation_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        if resolution_status not in {"RESCUE_VERIFIED", "MANUAL_REVIEW_RESOLVED"}:
+            raise DocumentValidationError("resolutionStatus is invalid.")
+        run = self.get_transcription_run(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        layout_row = next(
+            (
+                row
+                for row in self._layout_pages.get(run.input_layout_run_id, [])
+                if row.page_id == page_id
+            ),
+            None,
+        )
+        if layout_row is None:
+            raise DocumentPageNotFoundError("Layout page result not found.")
+        if layout_row.page_recall_status == "COMPLETE":
+            raise DocumentTranscriptionConflictError(
+                "Rescue resolution is only valid for NEEDS_RESCUE or NEEDS_MANUAL_REVIEW pages."
+            )
+        self._transcription_rescue_resolutions[(run.id, page_id)] = {
+            "resolution_status": resolution_status,
+            "resolution_reason": resolution_reason.strip() if isinstance(resolution_reason, str) and resolution_reason.strip() else None,
+            "updated_by": current_user.user_id,
+            "updated_at": datetime.now(UTC),
+        }
+        return self.list_transcription_run_page_rescue_sources(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run.id,
+            page_id=page_id,
+        )
 
     def list_transcription_run_pages(
         self,
@@ -4878,6 +5548,88 @@ class FakeDocumentService:
         if not any(page.page_id == page_id for page in page_rows):
             raise DocumentPageNotFoundError("Transcription page result not found.")
         return list(self._transcription_lines.get((run_id, page_id), []))
+
+    def list_transcription_line_versions(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        line_id: str,
+    ) -> DocumentTranscriptionLineVersionHistorySnapshot:
+        self._require_transcription_view_access(
+            current_user=current_user,
+            project_id=project_id,
+        )
+        run = self.get_transcription_run(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+        )
+        page = self.get_document_page(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            page_id=page_id,
+        )
+        line_rows = self.list_transcription_run_page_lines(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+        line = next((item for item in line_rows if item.line_id == line_id), None)
+        if line is None:
+            raise DocumentPageNotFoundError("Transcription line result not found.")
+        versions = list(self._transcript_versions.get((run_id, page_id, line_id), []))
+        snapshots = tuple(
+            DocumentTranscriptVersionLineageSnapshot(
+                version=version,
+                is_active=version.id == line.active_transcript_version_id,
+                source_type=(
+                    "COMPARE_COMPOSED"
+                    if run.engine == "REVIEW_COMPOSED"
+                    else "ENGINE_OUTPUT"
+                    if version.base_version_id is None
+                    else "REVIEWER_CORRECTION"
+                ),
+            )
+            for version in versions
+        )
+        return DocumentTranscriptionLineVersionHistorySnapshot(
+            run=run,
+            page=page,
+            line=line,
+            versions=snapshots,
+        )
+
+    def get_transcription_line_version(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        line_id: str,
+        version_id: str,
+    ) -> DocumentTranscriptVersionLineageSnapshot:
+        history = self.list_transcription_line_versions(
+            current_user=current_user,
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+            line_id=line_id,
+        )
+        for item in history.versions:
+            if item.version.id == version_id:
+                return item
+        raise DocumentPageNotFoundError("Transcript version was not found.")
 
     def list_transcription_run_page_tokens(
         self,
@@ -6883,6 +7635,110 @@ def test_transcription_triage_assignment_patch_enforces_rbac_and_emits_audit() -
     assert "TRANSCRIPTION_TRIAGE_ASSIGNMENT_UPDATED" in event_types
 
 
+def test_transcription_rescue_status_routes_and_resolution_patch_emit_audit() -> None:
+    spy = SpyAuditService()
+    fake = FakeDocumentService()
+    app.dependency_overrides[require_authenticated_user] = lambda: _principal(user_id="user-3")
+    app.dependency_overrides[get_audit_service] = lambda: spy
+    app.dependency_overrides[get_document_service] = lambda: fake
+
+    run_status_response = client.get(
+        "/projects/project-1/documents/doc-2/transcription-runs/transcription-run-1/rescue-status"
+    )
+    assert run_status_response.status_code == 200
+    run_status_payload = run_status_response.json()
+    assert run_status_payload["runId"] == "transcription-run-1"
+    assert run_status_payload["readyForActivation"] is True
+    assert len(run_status_payload["pages"]) == 2
+
+    page_status_response = client.get(
+        "/projects/project-1/documents/doc-2/transcription-runs/transcription-run-1/pages/page-2/rescue-sources"
+    )
+    assert page_status_response.status_code == 200
+    page_status_payload = page_status_response.json()
+    assert page_status_payload["pageId"] == "page-2"
+    assert page_status_payload["readinessState"] == "READY"
+    assert len(page_status_payload["rescueSources"]) == 2
+    accepted = next(
+        row
+        for row in page_status_payload["rescueSources"]
+        if row["candidateStatus"] == "ACCEPTED"
+    )
+    assert accepted["hasTranscriptionOutput"] is True
+    assert accepted["sourceKind"] == "RESCUE_CANDIDATE"
+
+    fake._transcription_tokens[("transcription-run-1", "page-2")] = [  # noqa: SLF001
+        row
+        for row in fake._transcription_tokens[("transcription-run-1", "page-2")]  # noqa: SLF001
+        if row.source_kind == "LINE"
+    ]
+    blocked_run_status_response = client.get(
+        "/projects/project-1/documents/doc-2/transcription-runs/transcription-run-1/rescue-status"
+    )
+    assert blocked_run_status_response.status_code == 200
+    blocked_payload = blocked_run_status_response.json()
+    assert blocked_payload["readyForActivation"] is False
+    blocked_page = next(
+        row for row in blocked_payload["pages"] if row["pageId"] == "page-2"
+    )
+    assert "RESCUE_SOURCE_UNTRANSCRIBED" in blocked_page["blockerReasonCodes"]
+
+    patched_resolution = client.patch(
+        "/projects/project-1/documents/doc-2/transcription-runs/transcription-run-1/pages/page-2/rescue-resolution",
+        json={
+            "resolutionStatus": "MANUAL_REVIEW_RESOLVED",
+            "resolutionReason": "Escalated and verified manually."
+        },
+    )
+    assert patched_resolution.status_code == 200
+    patched_payload = patched_resolution.json()
+    assert patched_payload["readinessState"] == "READY"
+    assert patched_payload["resolutionStatus"] == "MANUAL_REVIEW_RESOLVED"
+    assert patched_payload["resolutionUpdatedBy"] == "user-3"
+
+    event_types = [entry.get("event_type") for entry in spy.recorded]
+    assert "TRANSCRIPTION_RESCUE_STATUS_VIEWED" in event_types
+    assert "TRANSCRIPTION_RESCUE_RESOLUTION_UPDATED" in event_types
+
+
+def test_transcription_rescue_resolution_patch_enforces_rbac() -> None:
+    app.dependency_overrides[require_authenticated_user] = lambda: _principal(user_id="user-2")
+    app.dependency_overrides[get_audit_service] = lambda: SpyAuditService()
+    app.dependency_overrides[get_document_service] = lambda: FakeDocumentService()
+
+    response = client.patch(
+        "/projects/project-1/documents/doc-2/transcription-runs/transcription-run-1/pages/page-2/rescue-resolution",
+        json={"resolutionStatus": "MANUAL_REVIEW_RESOLVED"},
+    )
+    assert response.status_code == 403
+
+
+def test_transcription_activation_blocked_when_rescue_unresolved() -> None:
+    spy = SpyAuditService()
+    fake = FakeDocumentService()
+    app.dependency_overrides[require_authenticated_user] = lambda: _principal(user_id="user-3")
+    app.dependency_overrides[get_audit_service] = lambda: spy
+    app.dependency_overrides[get_document_service] = lambda: fake
+
+    fake._transcription_tokens[("transcription-run-1", "page-2")] = [  # noqa: SLF001
+        row
+        for row in fake._transcription_tokens[("transcription-run-1", "page-2")]  # noqa: SLF001
+        if row.source_kind == "LINE"
+    ]
+
+    response = client.post(
+        "/projects/project-1/documents/doc-2/transcription-runs/transcription-run-1/activate"
+    )
+    assert response.status_code == 409
+    payload = response.json()
+    assert "RESCUE_UNRESOLVED" in payload["detail"]
+    assert "RESCUE_SOURCE_UNTRANSCRIBED" in payload["blockerCodes"]
+    assert payload["rescueStatus"]["readyForActivation"] is False
+
+    event_types = [entry.get("event_type") for entry in spy.recorded]
+    assert "TRANSCRIPTION_RUN_ACTIVATION_BLOCKED" in event_types
+
+
 def test_transcription_mutations_enforce_rbac_and_projection_rules() -> None:
     spy = SpyAuditService()
     fake = FakeDocumentService()
@@ -6928,17 +7784,23 @@ def test_transcription_mutations_enforce_rbac_and_projection_rules() -> None:
     assert activated_payload["run"]["id"] == "transcription-run-1"
     assert activated_payload["run"]["isActiveProjection"] is True
 
-    fake._transcription_tokens[("transcription-run-1", "page-2")] = []  # noqa: SLF001
+    stale_line = fake._transcription_lines[("transcription-run-1", "page-2")][0]  # noqa: SLF001
+    fake._transcription_lines[("transcription-run-1", "page-2")][0] = replace(  # noqa: SLF001
+        stale_line,
+        token_anchor_status="REFRESH_REQUIRED",
+    )
     blocked_by_anchor = client.post(
         "/projects/project-1/documents/doc-2/transcription-runs/transcription-run-1/activate"
     )
     assert blocked_by_anchor.status_code == 409
-    assert "token anchors" in blocked_by_anchor.json()["detail"].lower()
+    assert "token-anchor" in blocked_by_anchor.json()["detail"].lower()
+    assert "TOKEN_ANCHOR_STALE" in blocked_by_anchor.json()["blockerCodes"]
 
     event_types = {entry.get("event_type") for entry in spy.recorded}
     assert "TRANSCRIPTION_RUN_CREATED" in event_types
     assert "TRANSCRIPTION_RUN_CANCELED" in event_types
     assert "TRANSCRIPTION_RUN_ACTIVATED" in event_types
+    assert "TRANSCRIPTION_RUN_ACTIVATION_BLOCKED" in event_types
 
 
 def test_transcription_line_correction_and_variant_routes_emit_expected_audit_events() -> None:
@@ -7194,6 +8056,239 @@ def test_transcription_fallback_compare_and_decision_routes_emit_expected_audit_
     assert "TRANSCRIPTION_FALLBACK_RUN_CANCELED" in event_types
 
 
+def test_transcription_compare_supports_page_line_token_filters_and_audit_metadata() -> None:
+    spy = SpyAuditService()
+    app.dependency_overrides[get_audit_service] = lambda: spy
+    app.dependency_overrides[get_document_service] = lambda: FakeDocumentService()
+    app.dependency_overrides[require_authenticated_user] = lambda: _principal(user_id="user-3")
+
+    response = client.get(
+        "/projects/project-1/documents/doc-2/transcription-runs/compare",
+        params={
+            "baseRunId": "transcription-run-1",
+            "candidateRunId": "transcription-run-2",
+            "page": 1,
+            "lineId": "line-1",
+            "tokenId": "token-1",
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["items"]
+    assert all(item["pageIndex"] == 0 for item in payload["items"])
+    assert all(
+        diff["lineId"] == "line-1"
+        for item in payload["items"]
+        for diff in item["lineDiffs"]
+    )
+    assert all(
+        diff["tokenId"] == "token-1"
+        for item in payload["items"]
+        for diff in item["tokenDiffs"]
+    )
+    assert isinstance(payload["compareDecisionSnapshotHash"], str)
+    assert payload["compareDecisionCount"] == 0
+    assert payload["compareDecisionEventCount"] == 0
+
+    compare_event = next(
+        entry
+        for entry in spy.recorded
+        if entry.get("event_type") == "TRANSCRIPTION_RUN_COMPARE_VIEWED"
+    )
+    assert compare_event["metadata"]["page"] == 1
+    assert compare_event["metadata"]["line_id"] == "line-1"
+    assert compare_event["metadata"]["token_id"] == "token-1"
+    assert compare_event["metadata"]["compare_decision_count"] == 0
+    assert compare_event["metadata"]["compare_decision_event_count"] == 0
+
+
+def test_transcription_line_version_routes_return_lineage_and_emit_audit_events() -> None:
+    spy = SpyAuditService()
+    app.dependency_overrides[get_audit_service] = lambda: spy
+    app.dependency_overrides[get_document_service] = lambda: FakeDocumentService()
+    app.dependency_overrides[require_authenticated_user] = lambda: _principal(user_id="user-3")
+
+    history = client.get(
+        "/projects/project-1/documents/doc-2/transcription-runs/transcription-run-1/pages/page-1/lines/line-1/versions"
+    )
+    assert history.status_code == 200
+    history_payload = history.json()
+    assert history_payload["lineId"] == "line-1"
+    assert len(history_payload["versions"]) == 1
+    assert history_payload["versions"][0]["sourceType"] == "ENGINE_OUTPUT"
+    assert history_payload["versions"][0]["isActive"] is True
+
+    version_id = history_payload["versions"][0]["version"]["id"]
+    version = client.get(
+        (
+            "/projects/project-1/documents/doc-2/transcription-runs/transcription-run-1/"
+            f"pages/page-1/lines/line-1/versions/{version_id}"
+        )
+    )
+    assert version.status_code == 200
+    version_payload = version.json()
+    assert version_payload["version"]["id"] == version_id
+    assert version_payload["sourceType"] == "ENGINE_OUTPUT"
+
+    event_types = [entry.get("event_type") for entry in spy.recorded]
+    assert "TRANSCRIPT_LINE_VERSION_HISTORY_VIEWED" in event_types
+    assert "TRANSCRIPT_LINE_VERSION_VIEWED" in event_types
+    history_event = next(
+        entry
+        for entry in spy.recorded
+        if entry.get("event_type") == "TRANSCRIPT_LINE_VERSION_HISTORY_VIEWED"
+    )
+    assert history_event["metadata"]["line_id"] == "line-1"
+    version_event = next(
+        entry
+        for entry in spy.recorded
+        if entry.get("event_type") == "TRANSCRIPT_LINE_VERSION_VIEWED"
+    )
+    assert version_event["metadata"]["version_id"] == version_id
+    assert version_event["metadata"]["source_type"] == "ENGINE_OUTPUT"
+
+
+def test_transcription_compare_finalize_creates_review_composed_run_and_keeps_sources_immutable() -> None:
+    spy = SpyAuditService()
+    fake = FakeDocumentService()
+    app.dependency_overrides[get_audit_service] = lambda: spy
+    app.dependency_overrides[get_document_service] = lambda: fake
+    app.dependency_overrides[require_authenticated_user] = lambda: _principal(user_id="user-3")
+
+    before_runs = client.get("/projects/project-1/documents/doc-2/transcription-runs")
+    assert before_runs.status_code == 200
+    before_items = before_runs.json()["items"]
+    before_ids = [item["id"] for item in before_items]
+
+    decision = client.post(
+        "/projects/project-1/documents/doc-2/transcription-runs/compare/decisions",
+        json={
+            "baseRunId": "transcription-run-1",
+            "candidateRunId": "transcription-run-2",
+            "items": [
+                {
+                    "pageId": "page-1",
+                    "lineId": "line-1",
+                    "decision": "PROMOTE_CANDIDATE",
+                    "decisionReason": "Candidate line is clearer.",
+                }
+            ],
+        },
+    )
+    assert decision.status_code == 200
+
+    compare = client.get(
+        "/projects/project-1/documents/doc-2/transcription-runs/compare",
+        params={
+            "baseRunId": "transcription-run-1",
+            "candidateRunId": "transcription-run-2",
+        },
+    )
+    assert compare.status_code == 200
+    compare_hash = compare.json()["compareDecisionSnapshotHash"]
+
+    finalize = client.post(
+        "/projects/project-1/documents/doc-2/transcription-runs/compare/finalize",
+        json={
+            "baseRunId": "transcription-run-1",
+            "candidateRunId": "transcription-run-2",
+            "pageIds": ["page-1"],
+            "expectedCompareDecisionSnapshotHash": compare_hash,
+        },
+    )
+    assert finalize.status_code == 200
+    finalize_payload = finalize.json()
+    assert finalize_payload["baseRunId"] == "transcription-run-1"
+    assert finalize_payload["candidateRunId"] == "transcription-run-2"
+    assert finalize_payload["pageScope"] == ["page-1"]
+    assert finalize_payload["compareDecisionSnapshotHash"] == compare_hash
+    assert finalize_payload["composedRun"]["engine"] == "REVIEW_COMPOSED"
+
+    composed_run_id = finalize_payload["composedRun"]["id"]
+    assert composed_run_id not in before_ids
+
+    after_runs = client.get("/projects/project-1/documents/doc-2/transcription-runs")
+    assert after_runs.status_code == 200
+    after_items = after_runs.json()["items"]
+    after_ids = [item["id"] for item in after_items]
+    assert len(after_items) == len(before_items) + 1
+    for run_id in before_ids:
+        assert run_id in after_ids
+
+    base_run = client.get(
+        "/projects/project-1/documents/doc-2/transcription-runs/transcription-run-1"
+    )
+    candidate_run = client.get(
+        "/projects/project-1/documents/doc-2/transcription-runs/transcription-run-2"
+    )
+    composed_run = client.get(
+        f"/projects/project-1/documents/doc-2/transcription-runs/{composed_run_id}"
+    )
+    assert base_run.status_code == 200
+    assert candidate_run.status_code == 200
+    assert composed_run.status_code == 200
+    assert base_run.json()["engine"] == "VLM_LINE_CONTEXT"
+    assert candidate_run.json()["engine"] == "VLM_LINE_CONTEXT"
+    assert composed_run.json()["engine"] == "REVIEW_COMPOSED"
+    assert composed_run.json()["paramsJson"]["baseRunId"] == "transcription-run-1"
+    assert composed_run.json()["paramsJson"]["candidateRunId"] == "transcription-run-2"
+    assert (
+        composed_run.json()["paramsJson"]["compareDecisionSnapshotHash"] == compare_hash
+    )
+
+    finalize_event = next(
+        entry
+        for entry in spy.recorded
+        if entry.get("event_type") == "TRANSCRIPTION_COMPARE_FINALIZED"
+    )
+    assert finalize_event["object_id"] == composed_run_id
+    assert finalize_event["metadata"]["base_run_id"] == "transcription-run-1"
+    assert finalize_event["metadata"]["candidate_run_id"] == "transcription-run-2"
+    assert finalize_event["metadata"]["page_scope_count"] == 1
+
+
+def test_transcription_compare_finalize_rejects_stale_snapshot_hash() -> None:
+    fake = FakeDocumentService()
+    app.dependency_overrides[get_audit_service] = lambda: SpyAuditService()
+    app.dependency_overrides[get_document_service] = lambda: fake
+    app.dependency_overrides[require_authenticated_user] = lambda: _principal(user_id="user-3")
+
+    before_runs = client.get("/projects/project-1/documents/doc-2/transcription-runs")
+    assert before_runs.status_code == 200
+    before_count = len(before_runs.json()["items"])
+
+    decision = client.post(
+        "/projects/project-1/documents/doc-2/transcription-runs/compare/decisions",
+        json={
+            "baseRunId": "transcription-run-1",
+            "candidateRunId": "transcription-run-2",
+            "items": [
+                {
+                    "pageId": "page-1",
+                    "lineId": "line-1",
+                    "decision": "KEEP_BASE",
+                }
+            ],
+        },
+    )
+    assert decision.status_code == 200
+
+    finalize = client.post(
+        "/projects/project-1/documents/doc-2/transcription-runs/compare/finalize",
+        json={
+            "baseRunId": "transcription-run-1",
+            "candidateRunId": "transcription-run-2",
+            "expectedCompareDecisionSnapshotHash": "deadbeef",
+        },
+    )
+    assert finalize.status_code == 409
+    assert "stale" in finalize.json()["detail"].lower()
+
+    after_runs = client.get("/projects/project-1/documents/doc-2/transcription-runs")
+    assert after_runs.status_code == 200
+    assert len(after_runs.json()["items"]) == before_count
+
+
 def test_transcription_compare_rejects_basis_mismatch() -> None:
     fake = FakeDocumentService()
     app.dependency_overrides[get_audit_service] = lambda: SpyAuditService()
@@ -7258,6 +8353,15 @@ def test_transcription_fallback_and_compare_mutations_enforce_rbac() -> None:
         },
     )
     assert compare_decision_denied.status_code == 403
+
+    compare_finalize_denied = client.post(
+        "/projects/project-1/documents/doc-2/transcription-runs/compare/finalize",
+        json={
+            "baseRunId": "transcription-run-1",
+            "candidateRunId": "transcription-run-2",
+        },
+    )
+    assert compare_finalize_denied.status_code == 403
 
 def test_retry_extraction_enforces_access_and_creates_lineage() -> None:
     spy = SpyAuditService()

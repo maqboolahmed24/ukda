@@ -105,7 +105,7 @@ async function requestUkdeApi<T>(
       errorClass: error instanceof Error ? error.name : "unknown",
       method: options.method,
       path: options.path
-    });
+    }, { level: "warn" });
     return {
       ok: false,
       status: 503,
@@ -217,7 +217,7 @@ export async function requestServerApi<T>(
       method,
       path,
       status: result.status
-    });
+    }, { level: "warn" });
   }
   return result;
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type {
   CorrectDocumentTranscriptionLineResponse,
   DocumentLayoutPageOverlay,
+  DocumentTranscriptionLineVersionHistoryResponse,
   DocumentTranscriptionLineResult,
   DocumentTranscriptionPageResult,
   DocumentTranscriptionRun,
@@ -332,6 +333,11 @@ export function DocumentTranscriptionWorkspaceSurface({
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<{ detail: string; lineId: string } | null>(null);
+  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [lineHistory, setLineHistory] =
+    useState<DocumentTranscriptionLineVersionHistoryResponse | null>(null);
 
   const lineById = useMemo(
     () => new Map(lineRows.map((line) => [line.lineId, line])),
@@ -376,6 +382,10 @@ export function DocumentTranscriptionWorkspaceSurface({
     setConflict(null);
     setNotice(null);
     setError(null);
+    setHistoryDrawerOpen(false);
+    setHistoryLoading(false);
+    setHistoryError(null);
+    setLineHistory(null);
     setLineListScrollTop(0);
     if (lineListRef.current) {
       lineListRef.current.scrollTop = 0;
@@ -888,6 +898,29 @@ export function DocumentTranscriptionWorkspaceSurface({
     selectedTokenId
   ]);
 
+  const openLineHistory = useCallback(
+    async (lineId: string) => {
+      setHistoryDrawerOpen(true);
+      setHistoryLoading(true);
+      setHistoryError(null);
+      const response =
+        await requestBrowserApi<DocumentTranscriptionLineVersionHistoryResponse>({
+          cacheClass: "operations-live",
+          method: "GET",
+          path: `/projects/${projectId}/documents/${documentId}/transcription-runs/${runId}/pages/${pageId}/lines/${lineId}/versions`
+        });
+      if (!response.ok || !response.data) {
+        setLineHistory(null);
+        setHistoryError(response.detail ?? "Line version history unavailable.");
+        setHistoryLoading(false);
+        return;
+      }
+      setLineHistory(response.data);
+      setHistoryLoading(false);
+    },
+    [documentId, pageId, projectId, runId]
+  );
+
   const saveLine = useCallback(
     async (lineId: string, moveAfterSave: boolean) => {
       if (!canEdit || variantView !== "DIPLOMATIC") {
@@ -1222,6 +1255,18 @@ export function DocumentTranscriptionWorkspaceSurface({
           <button
             className="secondaryButton"
             type="button"
+            onClick={() => {
+              if (selectedLine) {
+                void openLineHistory(selectedLine.lineId);
+              }
+            }}
+            disabled={!selectedLine}
+          >
+            Line history
+          </button>
+          <button
+            className="secondaryButton"
+            type="button"
             onClick={() => setHighlightLowConfidence((value) => !value)}
           >
             {highlightLowConfidence ? "Hide low-confidence highlight" : "Highlight low-confidence"}
@@ -1548,6 +1593,15 @@ export function DocumentTranscriptionWorkspaceSurface({
                       >
                         Discard
                       </button>
+                      <button
+                        className="secondaryButton"
+                        type="button"
+                        onClick={() => {
+                          void openLineHistory(line.lineId);
+                        }}
+                      >
+                        History
+                      </button>
                     </div>
                   </article>
                 );
@@ -1859,6 +1913,60 @@ export function DocumentTranscriptionWorkspaceSurface({
             kind="empty"
             title="No selected line"
             description="Select a line from the list or overlay."
+          />
+        )}
+      </DetailsDrawer>
+
+      <DetailsDrawer
+        description="Line version history drawer"
+        open={historyDrawerOpen}
+        onClose={() => setHistoryDrawerOpen(false)}
+        title="Line version history"
+      >
+        {historyLoading ? (
+          <SectionState
+            kind="loading"
+            title="Loading line history"
+            description="Fetching immutable transcript version lineage for this line."
+          />
+        ) : historyError ? (
+          <SectionState
+            kind="degraded"
+            title="Line history unavailable"
+            description={historyError}
+          />
+        ) : lineHistory ? (
+          <div className="transcriptionDrawerEditor">
+            <p className="ukde-muted">
+              Run {lineHistory.runId} · Page {pageNumber} · Line {lineHistory.lineId}
+            </p>
+            <ul className="timelineList">
+              {lineHistory.versions.map((entry) => (
+                <li key={entry.version.id}>
+                  <div className="auditIntegrityRow">
+                    <strong>{entry.version.id}</strong>
+                    <div className="buttonRow">
+                      <StatusChip tone={entry.isActive ? "success" : "neutral"}>
+                        {entry.isActive ? "Active" : "Superseded"}
+                      </StatusChip>
+                      <StatusChip tone="neutral">{entry.sourceType}</StatusChip>
+                    </div>
+                  </div>
+                  <p className="ukde-muted">{entry.version.textDiplomatic}</p>
+                  <p className="ukde-muted">
+                    Edited by {entry.version.editorUserId} at{" "}
+                    {new Date(entry.version.createdAt).toISOString()}
+                    {entry.version.editReason ? ` · ${entry.version.editReason}` : ""}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <SectionState
+            kind="empty"
+            title="No version history selected"
+            description="Select a line and open history to inspect immutable transcript lineage."
           />
         )}
       </DetailsDrawer>

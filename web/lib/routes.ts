@@ -15,6 +15,9 @@ export type ViewerComparePair =
   | "gray_binary";
 export type LayoutTab = "overview" | "triage" | "runs";
 export type TranscriptionTab = "overview" | "triage" | "runs" | "artefacts";
+export type PrivacyTab = "overview" | "triage" | "runs";
+export type GovernanceTab = "overview" | "runs" | "manifest" | "ledger";
+export type PrivacyWorkspaceMode = "controlled" | "safeguarded";
 export type TranscriptionSourceKind =
   | "LINE"
   | "RESCUE_CANDIDATE"
@@ -320,6 +323,172 @@ export function projectDocumentTranscriptionComparePath(
   });
 }
 
+export function projectDocumentPrivacyPath(
+  projectId: string,
+  documentId: string,
+  options?: { runId?: string | null; tab?: PrivacyTab | null }
+): string {
+  const tab = options?.tab;
+  return withQuery(`${projectDocumentPath(projectId, documentId)}/privacy`, {
+    runId:
+      options?.runId && options.runId.trim().length > 0
+        ? options.runId.trim()
+        : undefined,
+    tab: tab && tab !== "overview" ? tab : undefined
+  });
+}
+
+export function projectDocumentPrivacyRunPath(
+  projectId: string,
+  documentId: string,
+  runId: string
+): string {
+  return `${projectDocumentPath(projectId, documentId)}/privacy/runs/${encodePathSegment(runId)}`;
+}
+
+export function projectDocumentPrivacyRunEventsPath(
+  projectId: string,
+  documentId: string,
+  runId: string
+): string {
+  return `${projectDocumentPrivacyRunPath(projectId, documentId, runId)}/events`;
+}
+
+export function projectDocumentPrivacyWorkspacePath(
+  projectId: string,
+  documentId: string,
+  options?: {
+    findingId?: string | null;
+    lineId?: string | null;
+    mode?: PrivacyWorkspaceMode | null;
+    page?: number | null;
+    runId?: string | null;
+    tokenId?: string | null;
+  }
+): string {
+  const page =
+    typeof options?.page === "number" && Number.isFinite(options.page)
+      ? Math.max(1, Math.round(options.page))
+      : undefined;
+  return withQuery(`${projectDocumentPath(projectId, documentId)}/privacy/workspace`, {
+    page,
+    runId:
+      options?.runId && options.runId.trim().length > 0
+        ? options.runId.trim()
+        : undefined,
+    findingId:
+      options?.findingId && options.findingId.trim().length > 0
+        ? options.findingId.trim()
+        : undefined,
+    lineId:
+      options?.lineId && options.lineId.trim().length > 0
+        ? options.lineId.trim()
+        : undefined,
+    mode:
+      options?.mode === "controlled" || options?.mode === "safeguarded"
+        ? options.mode
+        : undefined,
+    tokenId:
+      options?.tokenId && options.tokenId.trim().length > 0
+        ? options.tokenId.trim()
+        : undefined
+  });
+}
+
+export function projectDocumentPrivacyComparePath(
+  projectId: string,
+  documentId: string,
+  baseRunId?: string | null,
+  candidateRunId?: string | null,
+  options?: {
+    findingId?: string | null;
+    lineId?: string | null;
+    page?: number | null;
+    tokenId?: string | null;
+  }
+): string {
+  const page =
+    typeof options?.page === "number" && Number.isFinite(options.page)
+      ? Math.max(1, Math.round(options.page))
+      : undefined;
+  return withQuery(`${projectDocumentPath(projectId, documentId)}/privacy/compare`, {
+    baseRunId: baseRunId && baseRunId.trim().length > 0 ? baseRunId.trim() : undefined,
+    candidateRunId:
+      candidateRunId && candidateRunId.trim().length > 0
+        ? candidateRunId.trim()
+        : undefined,
+    page,
+    findingId:
+      options?.findingId && options.findingId.trim().length > 0
+        ? options.findingId.trim()
+        : undefined,
+    lineId:
+      options?.lineId && options.lineId.trim().length > 0
+        ? options.lineId.trim()
+        : undefined,
+    tokenId:
+      options?.tokenId && options.tokenId.trim().length > 0
+        ? options.tokenId.trim()
+        : undefined
+  });
+}
+
+export function projectDocumentPrivacyPreviewPath(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  pageId: string
+): string {
+  return `${projectDocumentPath(projectId, documentId)}/privacy/runs/${encodePathSegment(runId)}/pages/${encodePathSegment(pageId)}/preview`;
+}
+
+export function projectDocumentGovernancePath(
+  projectId: string,
+  documentId: string,
+  options?: { runId?: string | null; tab?: GovernanceTab | null }
+): string {
+  const tab = options?.tab;
+  return withQuery(`${projectDocumentPath(projectId, documentId)}/governance`, {
+    runId:
+      options?.runId && options.runId.trim().length > 0
+        ? options.runId.trim()
+        : undefined,
+    tab: tab && tab !== "overview" ? tab : undefined
+  });
+}
+
+export function projectDocumentGovernanceRunOverviewPath(
+  projectId: string,
+  documentId: string,
+  runId: string
+): string {
+  return `${projectDocumentPath(projectId, documentId)}/governance/runs/${encodePathSegment(runId)}/overview`;
+}
+
+export function projectDocumentGovernanceRunManifestPath(
+  projectId: string,
+  documentId: string,
+  runId: string
+): string {
+  return `${projectDocumentPath(projectId, documentId)}/governance/runs/${encodePathSegment(runId)}/manifest`;
+}
+
+export function projectDocumentGovernanceRunLedgerPath(
+  projectId: string,
+  documentId: string,
+  runId: string
+): string {
+  return `${projectDocumentPath(projectId, documentId)}/governance/runs/${encodePathSegment(runId)}/ledger`;
+}
+
+export function projectDocumentGovernanceRunEventsPath(
+  projectId: string,
+  documentId: string,
+  runId: string
+): string {
+  return `${projectDocumentPath(projectId, documentId)}/governance/runs/${encodePathSegment(runId)}/events`;
+}
+
 function normalizeViewerZoom(value: number | null | undefined): number | undefined {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return undefined;
@@ -414,4 +583,93 @@ export function projectModelAssignmentDatasetsPath(
   assignmentId: string
 ): string {
   return `${projectModelAssignmentPath(projectId, assignmentId)}/datasets`;
+}
+
+export function projectPoliciesPath(projectId: string): string {
+  return `${projectAnchorPath(projectId)}/policies`;
+}
+
+export function projectIndexesPath(projectId: string): string {
+  return `${projectAnchorPath(projectId)}/indexes`;
+}
+
+export function projectSearchPath(projectId: string): string {
+  return `${projectAnchorPath(projectId)}/search`;
+}
+
+export function projectEntitiesPath(projectId: string): string {
+  return `${projectAnchorPath(projectId)}/entities`;
+}
+
+export function projectEntityPath(projectId: string, entityId: string): string {
+  return `${projectEntitiesPath(projectId)}/${encodePathSegment(entityId)}`;
+}
+
+export function projectSearchIndexPath(projectId: string, indexId: string): string {
+  return `${projectIndexesPath(projectId)}/search/${encodePathSegment(indexId)}`;
+}
+
+export function projectEntityIndexPath(projectId: string, indexId: string): string {
+  return `${projectIndexesPath(projectId)}/entity/${encodePathSegment(indexId)}`;
+}
+
+export function projectDerivativeIndexPath(projectId: string, indexId: string): string {
+  return `${projectIndexesPath(projectId)}/derivative/${encodePathSegment(indexId)}`;
+}
+
+export function projectPoliciesActivePath(projectId: string): string {
+  return `${projectPoliciesPath(projectId)}/active`;
+}
+
+export function projectPolicyPath(projectId: string, policyId: string): string {
+  return `${projectPoliciesPath(projectId)}/${encodePathSegment(policyId)}`;
+}
+
+export function projectPolicyComparePath(
+  projectId: string,
+  policyId: string,
+  options?: {
+    against?: string | null;
+    againstBaselineSnapshotId?: string | null;
+  }
+): string {
+  const against =
+    options?.against && options.against.trim().length > 0
+      ? options.against.trim()
+      : null;
+  const againstBaselineSnapshotId =
+    options?.againstBaselineSnapshotId &&
+    options.againstBaselineSnapshotId.trim().length > 0
+      ? options.againstBaselineSnapshotId.trim()
+      : null;
+
+  if (against) {
+    return withQuery(`${projectPolicyPath(projectId, policyId)}/compare`, {
+      against
+    });
+  }
+  if (againstBaselineSnapshotId) {
+    return withQuery(`${projectPolicyPath(projectId, policyId)}/compare`, {
+      againstBaselineSnapshotId
+    });
+  }
+  return `${projectPolicyPath(projectId, policyId)}/compare`;
+}
+
+export function projectPseudonymRegistryPath(projectId: string): string {
+  return `${projectAnchorPath(projectId)}/pseudonym-registry`;
+}
+
+export function projectPseudonymRegistryEntryPath(
+  projectId: string,
+  entryId: string
+): string {
+  return `${projectPseudonymRegistryPath(projectId)}/${encodePathSegment(entryId)}`;
+}
+
+export function projectPseudonymRegistryEntryEventsPath(
+  projectId: string,
+  entryId: string
+): string {
+  return `${projectPseudonymRegistryEntryPath(projectId, entryId)}/events`;
 }

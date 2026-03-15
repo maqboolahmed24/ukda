@@ -23,6 +23,10 @@ dev = [
   "pytest==9.0.2"
 ]
 
+[project.scripts]
+ukde-bundle-verify = "app.exports.bundle_verify_cli:run_cli"
+ukde-provenance-replay = "app.exports.replay_cli:run_cli"
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*"]

@@ -2,6 +2,20 @@ import { describe, expect, test } from "vitest";
 
 import {
   approvedModelsPath,
+  projectDerivativeIndexPath,
+  projectEntitiesPath,
+  projectEntityPath,
+  projectEntityIndexPath,
+  projectIndexesPath,
+  projectSearchPath,
+  projectPoliciesActivePath,
+  projectPoliciesPath,
+  projectPolicyComparePath,
+  projectPolicyPath,
+  projectSearchIndexPath,
+  projectPseudonymRegistryEntryEventsPath,
+  projectPseudonymRegistryEntryPath,
+  projectPseudonymRegistryPath,
   projectModelAssignmentDatasetsPath,
   projectModelAssignmentPath,
   projectModelAssignmentsPath,
@@ -306,5 +320,72 @@ describe("model assignment route helpers", () => {
     expect(projectModelAssignmentDatasetsPath("project-1", "assignment-1")).toBe(
       "/projects/project-1/model-assignments/assignment-1/datasets"
     );
+  });
+});
+
+describe("policy route helpers", () => {
+  test("builds project policy route family", () => {
+    expect(projectPoliciesPath("project-1")).toBe("/projects/project-1/policies");
+    expect(projectPoliciesActivePath("project-1")).toBe(
+      "/projects/project-1/policies/active"
+    );
+    expect(projectPolicyPath("project-1", "policy-1")).toBe(
+      "/projects/project-1/policies/policy-1"
+    );
+  });
+
+  test("generates compare links with exactly one target", () => {
+    expect(
+      projectPolicyComparePath("project-1", "policy-1", {
+        against: "policy-0"
+      })
+    ).toBe("/projects/project-1/policies/policy-1/compare?against=policy-0");
+    expect(
+      projectPolicyComparePath("project-1", "policy-1", {
+        againstBaselineSnapshotId: "baseline-phase0-v1"
+      })
+    ).toBe(
+      "/projects/project-1/policies/policy-1/compare?againstBaselineSnapshotId=baseline-phase0-v1"
+    );
+    expect(
+      projectPolicyComparePath("project-1", "policy-1", {
+        against: "policy-0",
+        againstBaselineSnapshotId: "baseline-phase0-v1"
+      })
+    ).toBe("/projects/project-1/policies/policy-1/compare?against=policy-0");
+  });
+});
+
+describe("index route helpers", () => {
+  test("builds project index route family", () => {
+    expect(projectIndexesPath("project-1")).toBe("/projects/project-1/indexes");
+    expect(projectSearchPath("project-1")).toBe("/projects/project-1/search");
+    expect(projectEntitiesPath("project-1")).toBe("/projects/project-1/entities");
+    expect(projectEntityPath("project-1", "entity-5")).toBe(
+      "/projects/project-1/entities/entity-5"
+    );
+    expect(projectSearchIndexPath("project-1", "search-5")).toBe(
+      "/projects/project-1/indexes/search/search-5"
+    );
+    expect(projectEntityIndexPath("project-1", "entity-5")).toBe(
+      "/projects/project-1/indexes/entity/entity-5"
+    );
+    expect(projectDerivativeIndexPath("project-1", "derivative-5")).toBe(
+      "/projects/project-1/indexes/derivative/derivative-5"
+    );
+  });
+});
+
+describe("pseudonym registry route helpers", () => {
+  test("builds project pseudonym-registry route family", () => {
+    expect(projectPseudonymRegistryPath("project-1")).toBe(
+      "/projects/project-1/pseudonym-registry"
+    );
+    expect(
+      projectPseudonymRegistryEntryPath("project-1", "entry-1")
+    ).toBe("/projects/project-1/pseudonym-registry/entry-1");
+    expect(
+      projectPseudonymRegistryEntryEventsPath("project-1", "entry-1")
+    ).toBe("/projects/project-1/pseudonym-registry/entry-1/events");
   });
 });

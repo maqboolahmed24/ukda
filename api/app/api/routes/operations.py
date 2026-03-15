@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from app.audit.dependencies import get_audit_request_context
@@ -9,6 +9,12 @@ from app.audit.models import AuditRequestContext
 from app.audit.service import AuditService, get_audit_service
 from app.auth.dependencies import require_authenticated_user, require_platform_roles
 from app.auth.models import SessionPrincipal
+from app.exports.service import (
+    ExportAccessDeniedError,
+    ExportService,
+    get_export_service,
+)
+from app.exports.store import ExportStoreUnavailableError
 from app.telemetry.service import (
     AlertItem,
     ExporterStatus,
@@ -44,6 +50,66 @@ class OperationsExporterStatusResponse(BaseModel):
     endpoint: str | None = None
     state: str
     detail: str
+
+
+class OperationsExportAgingSummaryResponse(BaseModel):
+    unstarted: int
+    no_sla: int = Field(serialization_alias="noSla")
+    on_track: int = Field(serialization_alias="onTrack")
+    due_soon: int = Field(serialization_alias="dueSoon")
+    overdue: int
+    stale_open: int = Field(serialization_alias="staleOpen")
+
+
+class OperationsExportReminderSummaryResponse(BaseModel):
+    due: int
+    sent_last_24h: int = Field(serialization_alias="sentLast24h")
+    total: int
+
+
+class OperationsExportEscalationSummaryResponse(BaseModel):
+    due: int
+    open_escalated: int = Field(serialization_alias="openEscalated")
+    total: int
+
+
+class OperationsExportRetentionSummaryResponse(BaseModel):
+    pending_count: int = Field(serialization_alias="pendingCount")
+    pending_window_days: int = Field(serialization_alias="pendingWindowDays")
+
+
+class OperationsExportTerminalSummaryResponse(BaseModel):
+    approved: int
+    exported: int
+    rejected: int
+    returned: int
+
+
+class OperationsExportPolicySummaryResponse(BaseModel):
+    sla_hours: int = Field(serialization_alias="slaHours")
+    reminder_after_hours: int = Field(serialization_alias="reminderAfterHours")
+    reminder_cooldown_hours: int = Field(serialization_alias="reminderCooldownHours")
+    escalation_after_sla_hours: int = Field(serialization_alias="escalationAfterSlaHours")
+    escalation_cooldown_hours: int = Field(serialization_alias="escalationCooldownHours")
+    stale_open_after_days: int = Field(serialization_alias="staleOpenAfterDays")
+    retention_stale_open_days: int = Field(serialization_alias="retentionStaleOpenDays")
+    retention_terminal_approved_days: int = Field(
+        serialization_alias="retentionTerminalApprovedDays"
+    )
+    retention_terminal_other_days: int = Field(
+        serialization_alias="retentionTerminalOtherDays"
+    )
+
+
+class OperationsExportStatusResponse(BaseModel):
+    generated_at: datetime = Field(serialization_alias="generatedAt")
+    open_request_count: int = Field(serialization_alias="openRequestCount")
+    aging: OperationsExportAgingSummaryResponse
+    reminders: OperationsExportReminderSummaryResponse
+    escalations: OperationsExportEscalationSummaryResponse
+    retention: OperationsExportRetentionSummaryResponse
+    terminal: OperationsExportTerminalSummaryResponse
+    policy: OperationsExportPolicySummaryResponse
 
 
 class OperationsOverviewResponse(BaseModel):
@@ -142,6 +208,20 @@ def _as_exporter_status(status: ExporterStatus) -> OperationsExporterStatusRespo
     )
 
 
+def _raise_operations_export_status_error(error: Exception) -> None:
+    if isinstance(error, ExportAccessDeniedError):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
+    if isinstance(error, ExportStoreUnavailableError):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Export operations status is unavailable.",
+        ) from error
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=str(error),
+    ) from error
+
+
 def _as_slo(item: SloItem) -> OperationsSloResponse:
     return OperationsSloResponse(
         key=item.key,
@@ -220,6 +300,77 @@ def operations_overview(
         queue_depth_detail=snapshot.queue_depth_detail,
         exporter=_as_exporter_status(snapshot.exporter_status),
         top_routes=[_as_route_metric(metric) for metric in snapshot.route_metrics],
+    )
+
+
+@router.get(
+    "/export-status",
+    response_model=OperationsExportStatusResponse,
+    dependencies=[Depends(require_platform_roles("ADMIN", "AUDITOR"))],
+)
+def operations_export_status(
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    export_service: ExportService = Depends(get_export_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> OperationsExportStatusResponse:
+    try:
+        snapshot = export_service.get_export_operations_status(current_user=current_user)
+    except Exception as error:  # pragma: no cover - mapped to typed HTTP failure
+        _raise_operations_export_status_error(error)
+    audit_service.record_event_best_effort(
+        event_type="OPERATIONS_EXPORT_STATUS_VIEWED",
+        actor_user_id=current_user.user_id,
+        metadata={
+            "open_request_count": snapshot.open_request_count,
+            "overdue_count": snapshot.aging_overdue_count,
+            "escalation_due_count": snapshot.escalation_due_count,
+            "retention_pending_count": snapshot.retention_pending_count,
+        },
+        request_context=request_context,
+    )
+    return OperationsExportStatusResponse(
+        generated_at=snapshot.generated_at,
+        open_request_count=snapshot.open_request_count,
+        aging=OperationsExportAgingSummaryResponse(
+            unstarted=snapshot.aging_unstarted_count,
+            no_sla=snapshot.aging_no_sla_count,
+            on_track=snapshot.aging_on_track_count,
+            due_soon=snapshot.aging_due_soon_count,
+            overdue=snapshot.aging_overdue_count,
+            stale_open=snapshot.stale_open_count,
+        ),
+        reminders=OperationsExportReminderSummaryResponse(
+            due=snapshot.reminder_due_count,
+            sent_last_24h=snapshot.reminders_sent_last_24h,
+            total=snapshot.reminders_sent_total,
+        ),
+        escalations=OperationsExportEscalationSummaryResponse(
+            due=snapshot.escalation_due_count,
+            open_escalated=snapshot.escalated_open_count,
+            total=snapshot.escalations_total,
+        ),
+        retention=OperationsExportRetentionSummaryResponse(
+            pending_count=snapshot.retention_pending_count,
+            pending_window_days=snapshot.retention_pending_window_days,
+        ),
+        terminal=OperationsExportTerminalSummaryResponse(
+            approved=snapshot.terminal_approved_count,
+            exported=snapshot.terminal_exported_count,
+            rejected=snapshot.terminal_rejected_count,
+            returned=snapshot.terminal_returned_count,
+        ),
+        policy=OperationsExportPolicySummaryResponse(
+            sla_hours=snapshot.policy_sla_hours,
+            reminder_after_hours=snapshot.policy_reminder_after_hours,
+            reminder_cooldown_hours=snapshot.policy_reminder_cooldown_hours,
+            escalation_after_sla_hours=snapshot.policy_escalation_after_sla_hours,
+            escalation_cooldown_hours=snapshot.policy_escalation_cooldown_hours,
+            stale_open_after_days=snapshot.policy_stale_open_after_days,
+            retention_stale_open_days=snapshot.policy_retention_stale_open_days,
+            retention_terminal_approved_days=snapshot.policy_retention_terminal_approved_days,
+            retention_terminal_other_days=snapshot.policy_retention_terminal_other_days,
+        ),
     )
 
 

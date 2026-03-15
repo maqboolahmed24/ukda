@@ -76,6 +76,51 @@ export default async function ProjectsPage({
       <section className="projectsIndexGrid">
         <article
           className="projectsPanel ukde-panel"
+          aria-labelledby="my-projects-title"
+        >
+          <div className="projectsPanelHeader">
+            <p className="ukde-eyebrow">Memberships</p>
+            <h2 id="my-projects-title">My project workspaces</h2>
+          </div>
+
+          {projects.length === 0 ? (
+            <SectionState
+              className="emptyProjectState"
+              kind="zero"
+              title="No project memberships yet"
+              description="Create the first project to start the workspace lifecycle."
+            />
+          ) : (
+            <ul className="projectList">
+              {projects.map((project) => (
+                <li key={project.id}>
+                  <Link
+                    className="projectCard"
+                    href={`/projects/${project.id}/overview`}
+                  >
+                    <div>
+                      <h3>{project.name}</h3>
+                      <p className="ukde-muted">{project.purpose}</p>
+                    </div>
+                    <div className="projectCardMeta">
+                      <span className="ukde-badge">
+                        {accessTierLabels[project.intendedAccessTier]}
+                      </span>
+                      {project.currentUserRole ? (
+                        <span className="ukde-badge">
+                          {projectRoleLabels[project.currentUserRole]}
+                        </span>
+                      ) : null}
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+
+        <article
+          className="projectsPanel ukde-panel"
           aria-labelledby="create-project-title"
         >
           <div className="projectsPanelHeader">
@@ -127,51 +172,6 @@ export default async function ProjectsPage({
               Create project
             </button>
           </form>
-        </article>
-
-        <article
-          className="projectsPanel ukde-panel"
-          aria-labelledby="my-projects-title"
-        >
-          <div className="projectsPanelHeader">
-            <p className="ukde-eyebrow">Memberships</p>
-            <h2 id="my-projects-title">My project workspaces</h2>
-          </div>
-
-          {projects.length === 0 ? (
-            <SectionState
-              className="emptyProjectState"
-              kind="zero"
-              title="No project memberships yet"
-              description="Create the first project to start the workspace lifecycle."
-            />
-          ) : (
-            <ul className="projectList">
-              {projects.map((project) => (
-                <li key={project.id}>
-                  <Link
-                    className="projectCard"
-                    href={`/projects/${project.id}/overview`}
-                  >
-                    <div>
-                      <h3>{project.name}</h3>
-                      <p className="ukde-muted">{project.purpose}</p>
-                    </div>
-                    <div className="projectCardMeta">
-                      <span className="ukde-badge">
-                        {accessTierLabels[project.intendedAccessTier]}
-                      </span>
-                      {project.currentUserRole ? (
-                        <span className="ukde-badge">
-                          {projectRoleLabels[project.currentUserRole]}
-                        </span>
-                      ) : null}
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
         </article>
       </section>
     </main>

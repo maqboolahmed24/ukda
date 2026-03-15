@@ -1,9 +1,12 @@
 import type {
   ActivateDocumentLayoutRunResponse,
   ActivateDocumentPreprocessRunResponse,
+  ActivateDocumentRedactionRunResponse,
   ActivateDocumentTranscriptionRunResponse,
+  CompleteDocumentRedactionRunReviewRequest,
   CreateDocumentLayoutRunRequest,
   CreateDocumentPreprocessRunRequest,
+  CreateDocumentRedactionRunRequest,
   CreateDocumentTranscriptionFallbackRunRequest,
   CreateDocumentTranscriptionRunRequest,
   DocumentLayoutActiveRunResponse,
@@ -28,21 +31,56 @@ import type {
   DocumentPreprocessRunListResponse,
   DocumentPreprocessRunPageListResponse,
   DocumentPreprocessRunStatusResponse,
+  DocumentRedactionActiveRunResponse,
+  DocumentRedactionCompareResponse,
+  DocumentRedactionFinding,
+  DocumentRedactionFindingListResponse,
+  DocumentGovernanceLedgerResponse,
+  DocumentGovernanceLedgerEntriesResponse,
+  DocumentGovernanceLedgerSummaryResponse,
+  DocumentGovernanceLedgerVerifyDetailResponse,
+  DocumentGovernanceLedgerVerifyRunsResponse,
+  DocumentGovernanceLedgerVerifyStatusResponse,
+  DocumentGovernanceLedgerStatusResponse,
+  DocumentGovernanceManifestEntriesResponse,
+  DocumentGovernanceManifestHashResponse,
+  DocumentGovernanceManifestResponse,
+  DocumentGovernanceManifestStatusResponse,
+  DocumentGovernanceOverviewResponse,
+  DocumentGovernanceRunEventsResponse,
+  DocumentGovernanceRunOverviewResponse,
+  DocumentGovernanceRunsResponse,
+  DocumentRedactionOverviewResponse,
+  DocumentRedactionPageReview,
+  DocumentRedactionPreviewStatusResponse,
+  DocumentRedactionRun,
+  DocumentRedactionRunEventsResponse,
+  DocumentRedactionRunListResponse,
+  DocumentRedactionRunOutput,
+  DocumentRedactionRunPageListResponse,
+  DocumentRedactionRunReview,
+  DocumentRedactionRunStatusResponse,
   DocumentTranscriptionActiveRunResponse,
   DocumentTranscriptionCompareResponse,
+  DocumentTranscriptionLineVersionHistoryResponse,
   CorrectDocumentTranscriptionLineRequest,
   CorrectDocumentTranscriptionLineResponse,
+  FinalizeDocumentTranscriptionCompareRequest,
+  FinalizeDocumentTranscriptionCompareResponse,
   DocumentTranscriptionLineResultListResponse,
   DocumentTranscriptionMetricsResponse,
   DocumentTranscriptionOverviewResponse,
   DocumentTranscriptionRun,
   DocumentTranscriptionRunListResponse,
   DocumentTranscriptionRunPageListResponse,
+  DocumentTranscriptionRunRescueStatusResponse,
   DocumentTranscriptionRunStatusResponse,
   DocumentTranscriptionTokenResultListResponse,
   DocumentTranscriptionTriageResponse,
+  DocumentTranscriptionPageRescueSourcesResponse,
   UpdateDocumentTranscriptionTriageAssignmentRequest,
   UpdateDocumentTranscriptionTriageAssignmentResponse,
+  UpdateDocumentTranscriptionRescueResolutionRequest,
   RecordTranscriptVariantSuggestionDecisionRequest,
   RecordTranscriptVariantSuggestionDecisionResponse,
   PageLayoutResultStatus,
@@ -69,6 +107,12 @@ import type {
   ProjectDocumentListResponse,
   RecordDocumentTranscriptionCompareDecisionsRequest,
   RecordDocumentTranscriptionCompareDecisionsResponse,
+  CreateDocumentRedactionAreaMaskRequest,
+  PatchDocumentRedactionAreaMaskRequest,
+  PatchDocumentRedactionAreaMaskResponse,
+  PatchDocumentRedactionFindingRequest,
+  PatchDocumentRedactionPageReviewRequest,
+  TranscriptVersionLineage,
   SortDirection
 } from "@ukde/contracts";
 
@@ -166,8 +210,60 @@ export interface ProjectDocumentTranscriptionVariantLayersFilters {
   variantKind?: TranscriptVariantKind;
 }
 
+export interface ProjectDocumentTranscriptionCompareFilters {
+  lineId?: string;
+  page?: number;
+  tokenId?: string;
+}
+
+export interface ProjectDocumentRedactionRunListFilters {
+  cursor?: number;
+  pageSize?: number;
+}
+
+export interface ProjectDocumentRedactionRunPagesFilters {
+  category?: string;
+  cursor?: number;
+  directIdentifiersOnly?: boolean;
+  pageSize?: number;
+  unresolvedOnly?: boolean;
+}
+
+export interface ProjectDocumentRedactionRunPageFindingsFilters {
+  category?: string;
+  directIdentifiersOnly?: boolean;
+  findingId?: string;
+  lineId?: string;
+  tokenId?: string;
+  unresolvedOnly?: boolean;
+  workspaceView?: boolean;
+}
+
+export interface ProjectDocumentRedactionCompareFilters {
+  findingId?: string;
+  lineId?: string;
+  page?: number;
+  tokenId?: string;
+}
+
 export interface ProjectDocumentPageVariantsFilters {
   runId?: string;
+}
+
+export interface ProjectDocumentGovernanceManifestEntriesFilters {
+  category?: string;
+  cursor?: number;
+  from?: string;
+  limit?: number;
+  page?: number;
+  reviewState?: string;
+  to?: string;
+}
+
+export interface ProjectDocumentGovernanceLedgerEntriesFilters {
+  cursor?: number;
+  limit?: number;
+  view?: "list" | "timeline";
 }
 
 async function requestDocumentApi<T>(
@@ -334,6 +430,57 @@ function toTranscriptionVariantLayersQueryString(
   return query ? `?${query}` : "";
 }
 
+function toGovernanceManifestEntriesQueryString(
+  filters: ProjectDocumentGovernanceManifestEntriesFilters
+): string {
+  const params = new URLSearchParams();
+  if (typeof filters.category === "string" && filters.category.trim().length > 0) {
+    params.set("category", filters.category.trim());
+  }
+  if (
+    typeof filters.reviewState === "string" &&
+    filters.reviewState.trim().length > 0
+  ) {
+    params.set("reviewState", filters.reviewState.trim());
+  }
+  if (typeof filters.page === "number" && Number.isFinite(filters.page)) {
+    params.set("page", String(Math.max(1, Math.round(filters.page))));
+  }
+  if (typeof filters.from === "string" && filters.from.trim().length > 0) {
+    params.set("from", filters.from.trim());
+  }
+  if (typeof filters.to === "string" && filters.to.trim().length > 0) {
+    params.set("to", filters.to.trim());
+  }
+  if (typeof filters.cursor === "number" && Number.isFinite(filters.cursor)) {
+    params.set("cursor", String(Math.max(0, Math.floor(filters.cursor))));
+  }
+  if (typeof filters.limit === "number" && Number.isFinite(filters.limit)) {
+    params.set("limit", String(Math.max(1, Math.floor(filters.limit))));
+  }
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+function toGovernanceLedgerEntriesQueryString(
+  filters: ProjectDocumentGovernanceLedgerEntriesFilters
+): string {
+  const params = new URLSearchParams();
+  if (filters.view === "timeline") {
+    params.set("view", "timeline");
+  } else if (filters.view === "list") {
+    params.set("view", "list");
+  }
+  if (typeof filters.cursor === "number" && Number.isFinite(filters.cursor)) {
+    params.set("cursor", String(Math.max(0, Math.floor(filters.cursor))));
+  }
+  if (typeof filters.limit === "number" && Number.isFinite(filters.limit)) {
+    params.set("limit", String(Math.max(1, Math.floor(filters.limit))));
+  }
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
 function toTranscriptionLineQueryString(
   filters: ProjectDocumentTranscriptionRunPageLinesFilters
 ): string {
@@ -367,6 +514,102 @@ function toTranscriptionLineQueryString(
   }
   const query = params.toString();
   return query ? `?${query}` : "";
+}
+
+function toRedactionRunQueryString(
+  filters: ProjectDocumentRedactionRunListFilters
+): string {
+  const params = new URLSearchParams();
+  if (typeof filters.cursor === "number") {
+    params.set("cursor", String(filters.cursor));
+  }
+  if (typeof filters.pageSize === "number") {
+    params.set("pageSize", String(filters.pageSize));
+  }
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+function toRedactionRunPagesQueryString(
+  filters: ProjectDocumentRedactionRunPagesFilters
+): string {
+  const params = new URLSearchParams();
+  if (typeof filters.category === "string" && filters.category.trim().length > 0) {
+    params.set("category", filters.category.trim());
+  }
+  if (typeof filters.unresolvedOnly === "boolean") {
+    params.set("unresolvedOnly", filters.unresolvedOnly ? "true" : "false");
+  }
+  if (typeof filters.directIdentifiersOnly === "boolean") {
+    params.set(
+      "directIdentifiersOnly",
+      filters.directIdentifiersOnly ? "true" : "false"
+    );
+  }
+  if (typeof filters.cursor === "number") {
+    params.set("cursor", String(filters.cursor));
+  }
+  if (typeof filters.pageSize === "number") {
+    params.set("pageSize", String(filters.pageSize));
+  }
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+function toRedactionFindingsQueryString(
+  filters: ProjectDocumentRedactionRunPageFindingsFilters
+): string {
+  const params = new URLSearchParams();
+  if (typeof filters.category === "string" && filters.category.trim().length > 0) {
+    params.set("category", filters.category.trim());
+  }
+  if (typeof filters.unresolvedOnly === "boolean") {
+    params.set("unresolvedOnly", filters.unresolvedOnly ? "true" : "false");
+  }
+  if (typeof filters.directIdentifiersOnly === "boolean") {
+    params.set(
+      "directIdentifiersOnly",
+      filters.directIdentifiersOnly ? "true" : "false"
+    );
+  }
+  if (typeof filters.workspaceView === "boolean" && filters.workspaceView) {
+    params.set("workspaceView", "true");
+  }
+  if (typeof filters.findingId === "string" && filters.findingId.trim().length > 0) {
+    params.set("findingId", filters.findingId.trim());
+  }
+  if (typeof filters.lineId === "string" && filters.lineId.trim().length > 0) {
+    params.set("lineId", filters.lineId.trim());
+  }
+  if (typeof filters.tokenId === "string" && filters.tokenId.trim().length > 0) {
+    params.set("tokenId", filters.tokenId.trim());
+  }
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+function toRedactionCompareQueryString(
+  baseRunId: string,
+  candidateRunId: string,
+  filters: ProjectDocumentRedactionCompareFilters
+): string {
+  const params = new URLSearchParams({
+    baseRunId,
+    candidateRunId
+  });
+  if (typeof filters.page === "number" && Number.isFinite(filters.page)) {
+    params.set("page", String(Math.max(1, Math.round(filters.page))));
+  }
+  if (typeof filters.findingId === "string" && filters.findingId.trim().length > 0) {
+    params.set("findingId", filters.findingId.trim());
+  }
+  if (typeof filters.lineId === "string" && filters.lineId.trim().length > 0) {
+    params.set("lineId", filters.lineId.trim());
+  }
+  if (typeof filters.tokenId === "string" && filters.tokenId.trim().length > 0) {
+    params.set("tokenId", filters.tokenId.trim());
+  }
+  return `?${params.toString()}`;
 }
 
 export async function listProjectDocuments(
@@ -1001,12 +1244,22 @@ export async function compareProjectDocumentTranscriptionRuns(
   projectId: string,
   documentId: string,
   baseRunId: string,
-  candidateRunId: string
+  candidateRunId: string,
+  filters: ProjectDocumentTranscriptionCompareFilters = {}
 ): Promise<DocumentApiResult<DocumentTranscriptionCompareResponse>> {
   const query = new URLSearchParams({
     baseRunId,
     candidateRunId
   });
+  if (typeof filters.page === "number" && Number.isFinite(filters.page)) {
+    query.set("page", String(Math.max(1, Math.round(filters.page))));
+  }
+  if (typeof filters.lineId === "string" && filters.lineId.trim().length > 0) {
+    query.set("lineId", filters.lineId.trim());
+  }
+  if (typeof filters.tokenId === "string" && filters.tokenId.trim().length > 0) {
+    query.set("tokenId", filters.tokenId.trim());
+  }
   return requestDocumentApi<DocumentTranscriptionCompareResponse>(
     `/projects/${projectId}/documents/${documentId}/transcription-runs/compare?${query.toString()}`,
     {
@@ -1047,6 +1300,33 @@ export async function getProjectDocumentTranscriptionRunStatus(
         documentId,
         runId
       )
+    }
+  );
+}
+
+export async function getProjectDocumentTranscriptionRunRescueStatus(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentTranscriptionRunRescueStatusResponse>> {
+  return requestDocumentApi<DocumentTranscriptionRunRescueStatusResponse>(
+    `/projects/${projectId}/documents/${documentId}/transcription-runs/${runId}/rescue-status`,
+    {
+      cacheClass: "operations-live"
+    }
+  );
+}
+
+export async function getProjectDocumentTranscriptionRunPageRescueSources(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  pageId: string
+): Promise<DocumentApiResult<DocumentTranscriptionPageRescueSourcesResponse>> {
+  return requestDocumentApi<DocumentTranscriptionPageRescueSourcesResponse>(
+    `/projects/${projectId}/documents/${documentId}/transcription-runs/${runId}/pages/${pageId}/rescue-sources`,
+    {
+      cacheClass: "operations-live"
     }
   );
 }
@@ -1130,6 +1410,37 @@ export async function correctProjectDocumentTranscriptionLine(
   );
 }
 
+export async function listProjectDocumentTranscriptionLineVersions(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  pageId: string,
+  lineId: string
+): Promise<DocumentApiResult<DocumentTranscriptionLineVersionHistoryResponse>> {
+  return requestDocumentApi<DocumentTranscriptionLineVersionHistoryResponse>(
+    `/projects/${projectId}/documents/${documentId}/transcription-runs/${runId}/pages/${pageId}/lines/${lineId}/versions`,
+    {
+      cacheClass: "operations-live"
+    }
+  );
+}
+
+export async function getProjectDocumentTranscriptionLineVersion(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  pageId: string,
+  lineId: string,
+  versionId: string
+): Promise<DocumentApiResult<TranscriptVersionLineage>> {
+  return requestDocumentApi<TranscriptVersionLineage>(
+    `/projects/${projectId}/documents/${documentId}/transcription-runs/${runId}/pages/${pageId}/lines/${lineId}/versions/${versionId}`,
+    {
+      cacheClass: "operations-live"
+    }
+  );
+}
+
 export async function listProjectDocumentTranscriptionRunPageVariantLayers(
   projectId: string,
   documentId: string,
@@ -1194,6 +1505,21 @@ export async function recordProjectDocumentTranscriptionCompareDecisions(
   );
 }
 
+export async function finalizeProjectDocumentTranscriptionCompare(
+  projectId: string,
+  documentId: string,
+  payload: FinalizeDocumentTranscriptionCompareRequest
+): Promise<DocumentApiResult<FinalizeDocumentTranscriptionCompareResponse>> {
+  return requestDocumentApi<FinalizeDocumentTranscriptionCompareResponse>(
+    `/projects/${projectId}/documents/${documentId}/transcription-runs/compare/finalize`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }
+  );
+}
+
 export async function cancelProjectDocumentTranscriptionRun(
   projectId: string,
   documentId: string,
@@ -1216,6 +1542,747 @@ export async function activateProjectDocumentTranscriptionRun(
     `/projects/${projectId}/documents/${documentId}/transcription-runs/${runId}/activate`,
     {
       method: "POST"
+    }
+  );
+}
+
+export async function updateProjectDocumentTranscriptionRunPageRescueResolution(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  pageId: string,
+  payload: UpdateDocumentTranscriptionRescueResolutionRequest
+): Promise<DocumentApiResult<DocumentTranscriptionPageRescueSourcesResponse>> {
+  return requestDocumentApi<DocumentTranscriptionPageRescueSourcesResponse>(
+    `/projects/${projectId}/documents/${documentId}/transcription-runs/${runId}/pages/${pageId}/rescue-resolution`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }
+  );
+}
+
+export async function getProjectDocumentRedactionOverview(
+  projectId: string,
+  documentId: string
+): Promise<DocumentApiResult<DocumentRedactionOverviewResponse>> {
+  return requestDocumentApi<DocumentRedactionOverviewResponse>(
+    `/projects/${projectId}/documents/${documentId}/privacy/overview`,
+    {
+      cacheClass: "operations-live",
+      queryKey: queryKeys.documents.redactionOverview(projectId, documentId)
+    }
+  );
+}
+
+export async function listProjectDocumentRedactionRuns(
+  projectId: string,
+  documentId: string,
+  filters: ProjectDocumentRedactionRunListFilters = {}
+): Promise<DocumentApiResult<DocumentRedactionRunListResponse>> {
+  return requestDocumentApi<DocumentRedactionRunListResponse>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs${toRedactionRunQueryString(filters)}`,
+    {
+      cacheClass: "operations-live",
+      queryKey: queryKeys.documents.redactionRuns(projectId, documentId, filters)
+    }
+  );
+}
+
+export async function createProjectDocumentRedactionRun(
+  projectId: string,
+  documentId: string,
+  payload: CreateDocumentRedactionRunRequest = {}
+): Promise<DocumentApiResult<DocumentRedactionRun>> {
+  return requestDocumentApi<DocumentRedactionRun>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }
+  );
+}
+
+export async function rerunProjectDocumentRedactionRunWithPolicy(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  policyId: string
+): Promise<DocumentApiResult<DocumentRedactionRun>> {
+  const normalizedPolicyId = policyId.trim();
+  return requestDocumentApi<DocumentRedactionRun>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/rerun?policyId=${encodeURIComponent(normalizedPolicyId)}`,
+    {
+      method: "POST"
+    }
+  );
+}
+
+export async function getProjectDocumentActiveRedactionRun(
+  projectId: string,
+  documentId: string
+): Promise<DocumentApiResult<DocumentRedactionActiveRunResponse>> {
+  return requestDocumentApi<DocumentRedactionActiveRunResponse>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/active`,
+    {
+      cacheClass: "operations-live",
+      queryKey: queryKeys.documents.redactionActiveRun(projectId, documentId)
+    }
+  );
+}
+
+export async function compareProjectDocumentRedactionRuns(
+  projectId: string,
+  documentId: string,
+  baseRunId: string,
+  candidateRunId: string,
+  filters: ProjectDocumentRedactionCompareFilters = {}
+): Promise<DocumentApiResult<DocumentRedactionCompareResponse>> {
+  return requestDocumentApi<DocumentRedactionCompareResponse>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/compare${toRedactionCompareQueryString(baseRunId, candidateRunId, filters)}`,
+    {
+      cacheClass: "operations-live",
+      queryKey: queryKeys.documents.redactionCompare(
+        projectId,
+        documentId,
+        baseRunId,
+        candidateRunId,
+        filters
+      )
+    }
+  );
+}
+
+export async function getProjectDocumentRedactionRun(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentRedactionRun>> {
+  return requestDocumentApi<DocumentRedactionRun>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}`,
+    {
+      cacheClass: "operations-live",
+      queryKey: queryKeys.documents.redactionRunDetail(projectId, documentId, runId)
+    }
+  );
+}
+
+export async function getProjectDocumentRedactionRunStatus(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentRedactionRunStatusResponse>> {
+  return requestDocumentApi<DocumentRedactionRunStatusResponse>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/status`,
+    {
+      cacheClass: "operations-live",
+      queryKey: queryKeys.documents.redactionRunStatus(projectId, documentId, runId)
+    }
+  );
+}
+
+export async function cancelProjectDocumentRedactionRun(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentRedactionRun>> {
+  return requestDocumentApi<DocumentRedactionRun>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/cancel`,
+    {
+      method: "POST"
+    }
+  );
+}
+
+export async function activateProjectDocumentRedactionRun(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<ActivateDocumentRedactionRunResponse>> {
+  return requestDocumentApi<ActivateDocumentRedactionRunResponse>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/activate`,
+    {
+      method: "POST"
+    }
+  );
+}
+
+export async function getProjectDocumentRedactionRunReview(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentRedactionRunReview>> {
+  return requestDocumentApi<DocumentRedactionRunReview>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/review`,
+    {
+      cacheClass: "operations-live",
+      queryKey: queryKeys.documents.redactionRunReview(projectId, documentId, runId)
+    }
+  );
+}
+
+export async function startProjectDocumentRedactionRunReview(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentRedactionRunReview>> {
+  return requestDocumentApi<DocumentRedactionRunReview>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/start-review`,
+    {
+      method: "POST"
+    }
+  );
+}
+
+export async function completeProjectDocumentRedactionRunReview(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  payload: CompleteDocumentRedactionRunReviewRequest
+): Promise<DocumentApiResult<DocumentRedactionRunReview>> {
+  return requestDocumentApi<DocumentRedactionRunReview>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/complete-review`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }
+  );
+}
+
+export async function listProjectDocumentRedactionRunEvents(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentRedactionRunEventsResponse>> {
+  return requestDocumentApi<DocumentRedactionRunEventsResponse>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/events`,
+    {
+      cacheClass: "operations-live",
+      queryKey: queryKeys.documents.redactionRunEvents(projectId, documentId, runId)
+    }
+  );
+}
+
+export async function listProjectDocumentRedactionRunPages(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  filters: ProjectDocumentRedactionRunPagesFilters = {}
+): Promise<DocumentApiResult<DocumentRedactionRunPageListResponse>> {
+  return requestDocumentApi<DocumentRedactionRunPageListResponse>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/pages${toRedactionRunPagesQueryString(filters)}`,
+    {
+      cacheClass: "operations-live",
+      queryKey: queryKeys.documents.redactionRunPages(
+        projectId,
+        documentId,
+        runId,
+        filters
+      )
+    }
+  );
+}
+
+export async function listProjectDocumentRedactionRunPageFindings(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  pageId: string,
+  filters: ProjectDocumentRedactionRunPageFindingsFilters = {}
+): Promise<DocumentApiResult<DocumentRedactionFindingListResponse>> {
+  return requestDocumentApi<DocumentRedactionFindingListResponse>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/pages/${pageId}/findings${toRedactionFindingsQueryString(filters)}`,
+    {
+      cacheClass: "operations-live",
+      queryKey: queryKeys.documents.redactionRunPageFindings(
+        projectId,
+        documentId,
+        runId,
+        pageId,
+        filters
+      )
+    }
+  );
+}
+
+export async function getProjectDocumentRedactionRunPageFinding(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  pageId: string,
+  findingId: string
+): Promise<DocumentApiResult<DocumentRedactionFinding>> {
+  return requestDocumentApi<DocumentRedactionFinding>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/pages/${pageId}/findings/${findingId}`,
+    {
+      cacheClass: "operations-live",
+      queryKey: queryKeys.documents.redactionRunPageFinding(
+        projectId,
+        documentId,
+        runId,
+        pageId,
+        findingId
+      )
+    }
+  );
+}
+
+export async function patchProjectDocumentRedactionFinding(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  findingId: string,
+  payload: PatchDocumentRedactionFindingRequest
+): Promise<DocumentApiResult<DocumentRedactionFinding>> {
+  return requestDocumentApi<DocumentRedactionFinding>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/findings/${findingId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }
+  );
+}
+
+export async function getProjectDocumentRedactionRunPageReview(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  pageId: string
+): Promise<DocumentApiResult<DocumentRedactionPageReview>> {
+  return requestDocumentApi<DocumentRedactionPageReview>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/pages/${pageId}/review`,
+    {
+      cacheClass: "operations-live",
+      queryKey: queryKeys.documents.redactionRunPageReview(
+        projectId,
+        documentId,
+        runId,
+        pageId
+      )
+    }
+  );
+}
+
+export async function patchProjectDocumentRedactionPageReview(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  pageId: string,
+  payload: PatchDocumentRedactionPageReviewRequest
+): Promise<DocumentApiResult<DocumentRedactionPageReview>> {
+  return requestDocumentApi<DocumentRedactionPageReview>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/pages/${pageId}/review`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }
+  );
+}
+
+export async function listProjectDocumentRedactionRunPageEvents(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  pageId: string
+): Promise<DocumentApiResult<DocumentRedactionRunEventsResponse>> {
+  return requestDocumentApi<DocumentRedactionRunEventsResponse>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/pages/${pageId}/events`,
+    {
+      cacheClass: "operations-live",
+      queryKey: queryKeys.documents.redactionRunPageEvents(
+        projectId,
+        documentId,
+        runId,
+        pageId
+      )
+    }
+  );
+}
+
+export async function getProjectDocumentRedactionRunPagePreviewStatus(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  pageId: string
+): Promise<DocumentApiResult<DocumentRedactionPreviewStatusResponse>> {
+  return requestDocumentApi<DocumentRedactionPreviewStatusResponse>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/pages/${pageId}/preview-status`,
+    {
+      cacheClass: "operations-live",
+      queryKey: queryKeys.documents.redactionRunPagePreviewStatus(
+        projectId,
+        documentId,
+        runId,
+        pageId
+      )
+    }
+  );
+}
+
+export async function getProjectDocumentRedactionRunOutput(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentRedactionRunOutput>> {
+  return requestDocumentApi<DocumentRedactionRunOutput>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/output`,
+    {
+      cacheClass: "operations-live",
+      queryKey: queryKeys.documents.redactionRunOutput(projectId, documentId, runId)
+    }
+  );
+}
+
+export async function getProjectDocumentRedactionRunOutputStatus(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentRedactionRunOutput>> {
+  return requestDocumentApi<DocumentRedactionRunOutput>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/output/status`,
+    {
+      cacheClass: "operations-live",
+      queryKey: queryKeys.documents.redactionRunOutputStatus(
+        projectId,
+        documentId,
+        runId
+      )
+    }
+  );
+}
+
+export async function getProjectDocumentGovernanceOverview(
+  projectId: string,
+  documentId: string
+): Promise<DocumentApiResult<DocumentGovernanceOverviewResponse>> {
+  return requestDocumentApi<DocumentGovernanceOverviewResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/overview`,
+    {
+      cacheClass: "governance-event",
+      queryKey: queryKeys.documents.governanceOverview(projectId, documentId)
+    }
+  );
+}
+
+export async function listProjectDocumentGovernanceRuns(
+  projectId: string,
+  documentId: string
+): Promise<DocumentApiResult<DocumentGovernanceRunsResponse>> {
+  return requestDocumentApi<DocumentGovernanceRunsResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/runs`,
+    {
+      cacheClass: "governance-event",
+      queryKey: queryKeys.documents.governanceRuns(projectId, documentId)
+    }
+  );
+}
+
+export async function getProjectDocumentGovernanceRunOverview(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentGovernanceRunOverviewResponse>> {
+  return requestDocumentApi<DocumentGovernanceRunOverviewResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/runs/${runId}/overview`,
+    {
+      cacheClass: "governance-event",
+      queryKey: queryKeys.documents.governanceRunOverview(projectId, documentId, runId)
+    }
+  );
+}
+
+export async function listProjectDocumentGovernanceRunEvents(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentGovernanceRunEventsResponse>> {
+  return requestDocumentApi<DocumentGovernanceRunEventsResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/runs/${runId}/events`,
+    {
+      cacheClass: "governance-event",
+      queryKey: queryKeys.documents.governanceRunEvents(projectId, documentId, runId)
+    }
+  );
+}
+
+export async function getProjectDocumentGovernanceRunManifest(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentGovernanceManifestResponse>> {
+  return requestDocumentApi<DocumentGovernanceManifestResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/runs/${runId}/manifest`,
+    {
+      cacheClass: "governance-event",
+      queryKey: queryKeys.documents.governanceRunManifest(projectId, documentId, runId)
+    }
+  );
+}
+
+export async function getProjectDocumentGovernanceRunManifestStatus(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentGovernanceManifestStatusResponse>> {
+  return requestDocumentApi<DocumentGovernanceManifestStatusResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/runs/${runId}/manifest/status`,
+    {
+      cacheClass: "governance-event",
+      queryKey: queryKeys.documents.governanceRunManifestStatus(projectId, documentId, runId)
+    }
+  );
+}
+
+export async function listProjectDocumentGovernanceRunManifestEntries(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  filters: ProjectDocumentGovernanceManifestEntriesFilters = {}
+): Promise<DocumentApiResult<DocumentGovernanceManifestEntriesResponse>> {
+  const query = toGovernanceManifestEntriesQueryString(filters);
+  return requestDocumentApi<DocumentGovernanceManifestEntriesResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/runs/${runId}/manifest/entries${query}`,
+    {
+      cacheClass: "governance-event",
+      queryKey: queryKeys.documents.governanceRunManifestEntries(
+        projectId,
+        documentId,
+        runId,
+        {
+          category: filters.category,
+          cursor: filters.cursor,
+          from: filters.from,
+          limit: filters.limit,
+          page: filters.page,
+          reviewState: filters.reviewState,
+          to: filters.to
+        }
+      )
+    }
+  );
+}
+
+export async function getProjectDocumentGovernanceRunManifestHash(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentGovernanceManifestHashResponse>> {
+  return requestDocumentApi<DocumentGovernanceManifestHashResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/runs/${runId}/manifest/hash`,
+    {
+      cacheClass: "governance-event",
+      queryKey: queryKeys.documents.governanceRunManifestHash(projectId, documentId, runId)
+    }
+  );
+}
+
+export async function getProjectDocumentGovernanceRunLedger(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentGovernanceLedgerResponse>> {
+  return requestDocumentApi<DocumentGovernanceLedgerResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/runs/${runId}/ledger`,
+    {
+      cacheClass: "governance-event",
+      queryKey: queryKeys.documents.governanceRunLedger(projectId, documentId, runId)
+    }
+  );
+}
+
+export async function getProjectDocumentGovernanceRunLedgerStatus(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentGovernanceLedgerStatusResponse>> {
+  return requestDocumentApi<DocumentGovernanceLedgerStatusResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/runs/${runId}/ledger/status`,
+    {
+      cacheClass: "governance-event",
+      queryKey: queryKeys.documents.governanceRunLedgerStatus(projectId, documentId, runId)
+    }
+  );
+}
+
+export async function listProjectDocumentGovernanceRunLedgerEntries(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  filters: ProjectDocumentGovernanceLedgerEntriesFilters = {}
+): Promise<DocumentApiResult<DocumentGovernanceLedgerEntriesResponse>> {
+  const query = toGovernanceLedgerEntriesQueryString(filters);
+  return requestDocumentApi<DocumentGovernanceLedgerEntriesResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/runs/${runId}/ledger/entries${query}`,
+    {
+      cacheClass: "governance-event",
+      queryKey: queryKeys.documents.governanceRunLedgerEntries(
+        projectId,
+        documentId,
+        runId,
+        {
+          cursor: filters.cursor,
+          limit: filters.limit,
+          view: filters.view
+        }
+      )
+    }
+  );
+}
+
+export async function getProjectDocumentGovernanceRunLedgerSummary(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentGovernanceLedgerSummaryResponse>> {
+  return requestDocumentApi<DocumentGovernanceLedgerSummaryResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/runs/${runId}/ledger/summary`,
+    {
+      cacheClass: "governance-event",
+      queryKey: queryKeys.documents.governanceRunLedgerSummary(projectId, documentId, runId)
+    }
+  );
+}
+
+export async function postProjectDocumentGovernanceRunLedgerVerify(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentGovernanceLedgerVerifyDetailResponse>> {
+  return requestDocumentApi<DocumentGovernanceLedgerVerifyDetailResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/runs/${runId}/ledger/verify`,
+    {
+      method: "POST",
+      cacheClass: "governance-event"
+    }
+  );
+}
+
+export async function getProjectDocumentGovernanceRunLedgerVerifyStatus(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentGovernanceLedgerVerifyStatusResponse>> {
+  return requestDocumentApi<DocumentGovernanceLedgerVerifyStatusResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/runs/${runId}/ledger/verify/status`,
+    {
+      cacheClass: "governance-event",
+      queryKey: queryKeys.documents.governanceRunLedgerVerifyStatus(
+        projectId,
+        documentId,
+        runId
+      )
+    }
+  );
+}
+
+export async function listProjectDocumentGovernanceRunLedgerVerifyRuns(
+  projectId: string,
+  documentId: string,
+  runId: string
+): Promise<DocumentApiResult<DocumentGovernanceLedgerVerifyRunsResponse>> {
+  return requestDocumentApi<DocumentGovernanceLedgerVerifyRunsResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/runs/${runId}/ledger/verify/runs`,
+    {
+      cacheClass: "governance-event",
+      queryKey: queryKeys.documents.governanceRunLedgerVerifyRuns(
+        projectId,
+        documentId,
+        runId
+      )
+    }
+  );
+}
+
+export async function getProjectDocumentGovernanceRunLedgerVerifyRun(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  verificationRunId: string
+): Promise<DocumentApiResult<DocumentGovernanceLedgerVerifyDetailResponse>> {
+  return requestDocumentApi<DocumentGovernanceLedgerVerifyDetailResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/runs/${runId}/ledger/verify/${verificationRunId}`,
+    {
+      cacheClass: "governance-event",
+      queryKey: queryKeys.documents.governanceRunLedgerVerifyRun(
+        projectId,
+        documentId,
+        runId,
+        verificationRunId
+      )
+    }
+  );
+}
+
+export async function getProjectDocumentGovernanceRunLedgerVerifyRunStatus(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  verificationRunId: string
+): Promise<DocumentApiResult<DocumentGovernanceLedgerVerifyDetailResponse>> {
+  return requestDocumentApi<DocumentGovernanceLedgerVerifyDetailResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/runs/${runId}/ledger/verify/${verificationRunId}/status`,
+    {
+      cacheClass: "governance-event",
+      queryKey: queryKeys.documents.governanceRunLedgerVerifyRunStatus(
+        projectId,
+        documentId,
+        runId,
+        verificationRunId
+      )
+    }
+  );
+}
+
+export async function postProjectDocumentGovernanceRunLedgerVerifyRunCancel(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  verificationRunId: string
+): Promise<DocumentApiResult<DocumentGovernanceLedgerVerifyDetailResponse>> {
+  return requestDocumentApi<DocumentGovernanceLedgerVerifyDetailResponse>(
+    `/projects/${projectId}/documents/${documentId}/governance/runs/${runId}/ledger/verify/${verificationRunId}/cancel`,
+    {
+      method: "POST",
+      cacheClass: "governance-event"
+    }
+  );
+}
+
+export async function patchProjectDocumentRedactionAreaMask(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  maskId: string,
+  payload: PatchDocumentRedactionAreaMaskRequest
+): Promise<DocumentApiResult<PatchDocumentRedactionAreaMaskResponse>> {
+  return requestDocumentApi<PatchDocumentRedactionAreaMaskResponse>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/area-masks/${maskId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }
+  );
+}
+
+export async function createProjectDocumentRedactionAreaMask(
+  projectId: string,
+  documentId: string,
+  runId: string,
+  pageId: string,
+  payload: CreateDocumentRedactionAreaMaskRequest
+): Promise<DocumentApiResult<PatchDocumentRedactionAreaMaskResponse>> {
+  return requestDocumentApi<PatchDocumentRedactionAreaMaskResponse>(
+    `/projects/${projectId}/documents/${documentId}/redaction-runs/${runId}/pages/${pageId}/area-masks`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
     }
   );
 }

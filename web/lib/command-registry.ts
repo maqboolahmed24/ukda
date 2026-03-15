@@ -17,8 +17,13 @@ import {
   projectAnchorPath,
   projectDocumentImportPath,
   projectDocumentsPath,
+  projectEntitiesPath,
+  projectIndexesPath,
   projectJobsPath,
   projectModelAssignmentsPath,
+  projectPoliciesPath,
+  projectPseudonymRegistryPath,
+  projectSearchPath,
   projectOverviewPath,
   projectSettingsPath,
   projectsPath
@@ -140,6 +145,69 @@ const BASE_COMMAND_SPECS: BaseCommandSpec[] = [
     requiresProjectMembership: true,
     resolveHref: ({ currentProject }) =>
       currentProject ? projectModelAssignmentsPath(currentProject.id) : null,
+    scope: "project"
+  },
+  {
+    description: "Open project full-text search and hit provenance surface.",
+    group: "Workspace",
+    id: "project.search",
+    keywords: ["project", "search", "query", "results", "tokens"],
+    label: "Open project search",
+    requiresCurrentProject: true,
+    requiresProjectMembership: true,
+    resolveHref: ({ currentProject }) =>
+      currentProject ? projectSearchPath(currentProject.id) : null,
+    scope: "project"
+  },
+  {
+    description:
+      "Open governed entity discovery with active generation lineage and occurrence provenance.",
+    group: "Workspace",
+    id: "project.entities",
+    keywords: ["project", "entities", "entity", "occurrences", "lineage"],
+    label: "Open entities",
+    requiresCurrentProject: true,
+    requiresProjectMembership: true,
+    resolveHref: ({ currentProject }) =>
+      currentProject ? projectEntitiesPath(currentProject.id) : null,
+    scope: "project"
+  },
+  {
+    description:
+      "Open versioned search/entity/derivative index lineage and active projection controls.",
+    group: "Workspace",
+    id: "project.indexes",
+    keywords: ["project", "indexes", "search", "entity", "derivative"],
+    label: "Open indexes",
+    requiresCurrentProject: true,
+    requiresProjectMembership: true,
+    resolveHref: ({ currentProject }) =>
+      currentProject ? projectIndexesPath(currentProject.id) : null,
+    scope: "project"
+  },
+  {
+    description: "Open policy lineage, validation, compare, and activation surfaces.",
+    group: "Workspace",
+    id: "project.policies",
+    keywords: ["project", "policies", "lineage", "compare", "validation"],
+    label: "Open policies",
+    requiresCurrentProject: true,
+    requiresProjectMembership: true,
+    resolveHref: ({ currentProject }) =>
+      currentProject ? projectPoliciesPath(currentProject.id) : null,
+    scope: "project"
+  },
+  {
+    description:
+      "Open controlled-only pseudonym registry entries and lineage events.",
+    group: "Workspace",
+    id: "project.pseudonym-registry",
+    keywords: ["project", "pseudonym", "registry", "aliasing", "lineage"],
+    label: "Open pseudonym registry",
+    requiresCurrentProject: true,
+    requiresProjectMembership: true,
+    resolveHref: ({ currentProject }) =>
+      currentProject ? projectPseudonymRegistryPath(currentProject.id) : null,
     scope: "project"
   },
   {
@@ -272,7 +340,12 @@ const PROJECT_SECTION_PATHS = [
   "overview",
   "documents",
   "documents/import",
+  "search",
+  "entities",
   "model-assignments",
+  "indexes",
+  "policies",
+  "pseudonym-registry",
   "jobs",
   "activity",
   "settings",
@@ -296,7 +369,8 @@ function resolveCurrentProjectSection(pathname: string): string | null {
   if (!pathname.startsWith("/projects/")) {
     return null;
   }
-  const normalized = pathname.replace(/\/+$/, "");
+  const normalizedPath = pathname.split(/[?#]/, 1)[0] ?? pathname;
+  const normalized = normalizedPath.replace(/\/+$/, "");
   const segments = normalized.split("/").filter(Boolean);
   if (segments[0] !== "projects" || !segments[1]) {
     return null;
@@ -317,6 +391,9 @@ function resolveCurrentProjectSection(pathname: string): string | null {
   if (
     section === "documents" ||
     section === "model-assignments" ||
+    section === "indexes" ||
+    section === "policies" ||
+    section === "pseudonym-registry" ||
     section === "jobs" ||
     section === "activity" ||
     section === "overview" ||
@@ -342,8 +419,18 @@ function resolveSectionPathForProject(
       return projectDocumentsPath(targetProject.id);
     case "documents/import":
       return projectDocumentImportPath(targetProject.id);
+    case "search":
+      return projectSearchPath(targetProject.id);
+    case "entities":
+      return projectEntitiesPath(targetProject.id);
     case "model-assignments":
       return projectModelAssignmentsPath(targetProject.id);
+    case "indexes":
+      return projectIndexesPath(targetProject.id);
+    case "policies":
+      return projectPoliciesPath(targetProject.id);
+    case "pseudonym-registry":
+      return projectPseudonymRegistryPath(targetProject.id);
     case "jobs":
       return projectJobsPath(targetProject.id);
     case "activity":

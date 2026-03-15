@@ -13,10 +13,14 @@ import {
   projectDocumentTranscriptionRunPath,
   projectDocumentTranscriptionWorkspacePath,
   projectDocumentViewerPath,
+  projectDerivativeIndexPath,
   projectDocumentsPath,
+  projectEntityIndexPath,
+  projectIndexesPath,
   projectJobPath,
   projectJobsPath,
   projectOverviewPath,
+  projectSearchIndexPath,
   projectSettingsPath,
   projectsPath
 } from "../routes";
@@ -34,6 +38,9 @@ export type MutationRuleId =
   | "documents.preprocess.activate"
   | "documents.transcription.activate"
   | "documents.retry-extraction"
+  | "indexes.rebuild"
+  | "indexes.cancel"
+  | "indexes.activate"
   | "jobs.enqueue"
   | "jobs.retry"
   | "jobs.cancel";
@@ -43,6 +50,8 @@ export type MutationOptimism = "none";
 export interface MutationRuleContext {
   createdProjectId?: string;
   documentId?: string;
+  indexId?: string;
+  indexKind?: "SEARCH" | "ENTITY" | "DERIVATIVE";
   jobId?: string;
   projectId?: string;
   runId?: string;
@@ -106,6 +115,24 @@ export const mutationRules: Record<MutationRuleId, MutationRule> = {
   "documents.transcription.activate": {
     description:
       "Transcription activation updates canonical transcription projection and downstream redaction basis state; all projection-sensitive transcription surfaces must refresh from server truth.",
+    optimism: "none",
+    routeScope: "project"
+  },
+  "indexes.rebuild": {
+    description:
+      "Index rebuild requests are deduplicated server-side and must revalidate projection and lineage surfaces after confirmation.",
+    optimism: "none",
+    routeScope: "project"
+  },
+  "indexes.cancel": {
+    description:
+      "Index cancellation is lifecycle-gated and auditable; UI refresh follows confirmed backend status transitions.",
+    optimism: "none",
+    routeScope: "project"
+  },
+  "indexes.activate": {
+    description:
+      "Index activation only updates explicit project index projections and requires authoritative backend confirmation.",
     optimism: "none",
     routeScope: "project"
   },
@@ -296,6 +323,24 @@ export function resolveMutationRevalidationPaths(
         : context.projectId
           ? [projectDocumentsPath(context.projectId)]
           : [];
+    case "indexes.rebuild":
+    case "indexes.cancel":
+    case "indexes.activate": {
+      if (!context.projectId) {
+        return [];
+      }
+      const shared = [projectIndexesPath(context.projectId)];
+      if (!context.indexId || !context.indexKind) {
+        return shared;
+      }
+      if (context.indexKind === "SEARCH") {
+        return [...shared, projectSearchIndexPath(context.projectId, context.indexId)];
+      }
+      if (context.indexKind === "ENTITY") {
+        return [...shared, projectEntityIndexPath(context.projectId, context.indexId)];
+      }
+      return [...shared, projectDerivativeIndexPath(context.projectId, context.indexId)];
+    }
     case "jobs.retry":
     case "jobs.cancel":
       return context.projectId && context.jobId

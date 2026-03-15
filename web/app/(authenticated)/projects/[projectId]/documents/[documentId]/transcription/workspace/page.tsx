@@ -17,6 +17,7 @@ import {
 } from "../../../../../../../../lib/documents";
 import { getProjectWorkspace } from "../../../../../../../../lib/projects";
 import {
+  projectDocumentTranscriptionComparePath,
   projectDocumentTranscriptionPath,
   projectsPath,
   type TranscriptionWorkspaceMode
@@ -150,6 +151,10 @@ export default async function ProjectDocumentTranscriptionWorkspacePage({
       : null;
   const selectedRunId = requestedRunId ?? activeRunId ?? (runs[0]?.id ?? null);
   const selectedRun = runs.find((run) => run.id === selectedRunId) ?? null;
+  const compareTargetRun =
+    selectedRunId !== null
+      ? runs.find((run) => run.id !== selectedRunId) ?? null
+      : null;
 
   if (selectedRunId === null || selectedRun === null) {
     return (
@@ -339,6 +344,24 @@ export default async function ProjectDocumentTranscriptionWorkspacePage({
           >
             Runs
           </Link>
+          {compareTargetRun ? (
+            <Link
+              className="secondaryButton"
+              href={projectDocumentTranscriptionComparePath(
+                projectId,
+                document.id,
+                selectedRunId,
+                compareTargetRun.id,
+                {
+                  page: resolvedPage,
+                  lineId: requestedLineId,
+                  tokenId: requestedTokenId
+                }
+              )}
+            >
+              Compare generations
+            </Link>
+          ) : null}
         </div>
       </section>
 

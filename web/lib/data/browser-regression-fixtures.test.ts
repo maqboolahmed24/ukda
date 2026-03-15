@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type {
+  DocumentGovernanceLedgerStatusResponse,
+  DocumentGovernanceLedgerVerifyDetailResponse,
+  DocumentGovernanceManifestEntriesResponse,
   DocumentPageVariantsResponse,
   DocumentPreprocessActiveRunResponse,
   DocumentPreprocessCompareResponse,
@@ -8,6 +11,11 @@ import type {
   DocumentPreprocessRunListResponse,
   DocumentPreprocessRunPageListResponse,
   DocumentPreprocessRunStatusResponse,
+  ProjectEntityDetailResponse,
+  ProjectEntityListResponse,
+  ProjectEntityOccurrencesResponse,
+  ProjectSearchResponse,
+  ProjectSearchResultOpenResponse,
   ProjectDocumentPageDetail
 } from "@ukde/contracts";
 
@@ -190,5 +198,216 @@ describe("browser regression fixtures document page patch support", () => {
     expect(runPagesResult?.ok).toBe(true);
     expect(runPagesResult?.data?.runId).toBe("pre-run-fixture-002");
     expect(runPagesResult?.data?.items.length).toBeGreaterThan(0);
+  });
+
+  it("serves governance manifest entries for reviewer profile and blocks researcher profile", () => {
+    process.env[MODE_FLAG] = "1";
+    const reviewerToken = getBrowserFixtureSessionToken("reviewer");
+    const researcherToken = getBrowserFixtureSessionToken("researcher");
+    const path =
+      "/projects/project-fixture-alpha/documents/doc-fixture-002/governance/runs/redaction-run-fixture-001/manifest/entries?category=PERSON_NAME";
+
+    const reviewerResult =
+      resolveBrowserRegressionApiResult<DocumentGovernanceManifestEntriesResponse>({
+        authToken: reviewerToken,
+        method: "GET",
+        path
+      });
+    expect(reviewerResult).not.toBeNull();
+    expect(reviewerResult?.ok).toBe(true);
+    expect(reviewerResult?.data?.items.length).toBeGreaterThan(0);
+    expect(reviewerResult?.data?.items[0]?.category).toBe("PERSON_NAME");
+
+    const researcherResult =
+      resolveBrowserRegressionApiResult<DocumentGovernanceManifestEntriesResponse>({
+        authToken: researcherToken,
+        method: "GET",
+        path
+      });
+    expect(researcherResult).not.toBeNull();
+    expect(researcherResult?.ok).toBe(false);
+    expect(researcherResult?.status).toBe(403);
+  });
+
+  it("restricts governance ledger reads to admin/auditor and verify mutations to admin", () => {
+    process.env[MODE_FLAG] = "1";
+    const adminToken = getBrowserFixtureSessionToken("admin");
+    const auditorToken = getBrowserFixtureSessionToken("auditor");
+    const reviewerToken = getBrowserFixtureSessionToken("reviewer");
+
+    const ledgerStatusPath =
+      "/projects/project-fixture-alpha/documents/doc-fixture-002/governance/runs/redaction-run-fixture-001/ledger/status";
+    const verifyPath =
+      "/projects/project-fixture-alpha/documents/doc-fixture-002/governance/runs/redaction-run-fixture-001/ledger/verify";
+    const cancelPath =
+      "/projects/project-fixture-alpha/documents/doc-fixture-002/governance/runs/redaction-run-fixture-001/ledger/verify/gov-ledger-verify-003/cancel";
+
+    const auditorLedgerResult =
+      resolveBrowserRegressionApiResult<DocumentGovernanceLedgerStatusResponse>({
+        authToken: auditorToken,
+        method: "GET",
+        path: ledgerStatusPath
+      });
+    expect(auditorLedgerResult).not.toBeNull();
+    expect(auditorLedgerResult?.ok).toBe(true);
+    expect(auditorLedgerResult?.data?.ledgerVerificationStatus).toBe("VALID");
+
+    const reviewerLedgerResult =
+      resolveBrowserRegressionApiResult<DocumentGovernanceLedgerStatusResponse>({
+        authToken: reviewerToken,
+        method: "GET",
+        path: ledgerStatusPath
+      });
+    expect(reviewerLedgerResult).not.toBeNull();
+    expect(reviewerLedgerResult?.ok).toBe(false);
+    expect(reviewerLedgerResult?.status).toBe(403);
+
+    const auditorVerifyResult =
+      resolveBrowserRegressionApiResult<DocumentGovernanceLedgerVerifyDetailResponse>({
+        authToken: auditorToken,
+        method: "POST",
+        path: verifyPath
+      });
+    expect(auditorVerifyResult).not.toBeNull();
+    expect(auditorVerifyResult?.ok).toBe(false);
+    expect(auditorVerifyResult?.status).toBe(403);
+
+    const adminVerifyResult =
+      resolveBrowserRegressionApiResult<DocumentGovernanceLedgerVerifyDetailResponse>({
+        authToken: adminToken,
+        method: "POST",
+        path: verifyPath
+      });
+    expect(adminVerifyResult).not.toBeNull();
+    expect(adminVerifyResult?.ok).toBe(true);
+    expect(adminVerifyResult?.data?.attempt.status).toBe("RUNNING");
+
+    const adminCancelResult =
+      resolveBrowserRegressionApiResult<DocumentGovernanceLedgerVerifyDetailResponse>({
+        authToken: adminToken,
+        method: "POST",
+        path: cancelPath
+      });
+    expect(adminCancelResult).not.toBeNull();
+    expect(adminCancelResult?.ok).toBe(true);
+    expect(adminCancelResult?.data?.attempt.status).toBe("CANCELED");
+  });
+
+  it("serves project search hits from active index and blocks auditor profile", () => {
+    process.env[MODE_FLAG] = "1";
+    const researcherToken = getBrowserFixtureSessionToken("researcher");
+    const auditorToken = getBrowserFixtureSessionToken("auditor");
+
+    const researcherResult =
+      resolveBrowserRegressionApiResult<ProjectSearchResponse>({
+        authToken: researcherToken,
+        method: "GET",
+        path: "/projects/project-fixture-alpha/search?q=adams&limit=1"
+      });
+    expect(researcherResult).not.toBeNull();
+    expect(researcherResult?.ok).toBe(true);
+    expect(researcherResult?.data?.searchIndexId).toBe("search-index-fixture-002");
+    expect(researcherResult?.data?.items[0]?.searchDocumentId).toBe(
+      "search-hit-token-001"
+    );
+    expect(researcherResult?.data?.nextCursor).toBeNull();
+
+    const auditorResult =
+      resolveBrowserRegressionApiResult<ProjectSearchResponse>({
+        authToken: auditorToken,
+        method: "GET",
+        path: "/projects/project-fixture-alpha/search?q=adams"
+      });
+    expect(auditorResult).not.toBeNull();
+    expect(auditorResult?.ok).toBe(false);
+    expect(auditorResult?.status).toBe(403);
+  });
+
+  it("serves project entities from active index and blocks auditor profile", () => {
+    process.env[MODE_FLAG] = "1";
+    const researcherToken = getBrowserFixtureSessionToken("researcher");
+    const auditorToken = getBrowserFixtureSessionToken("auditor");
+
+    const researcherResult =
+      resolveBrowserRegressionApiResult<ProjectEntityListResponse>({
+        authToken: researcherToken,
+        method: "GET",
+        path: "/projects/project-fixture-alpha/entities?q=adams&entityType=PERSON"
+      });
+    expect(researcherResult).not.toBeNull();
+    expect(researcherResult?.ok).toBe(true);
+    expect(researcherResult?.data?.entityIndexId).toBe("entity-index-fixture-002");
+    expect(researcherResult?.data?.items[0]?.id).toBe("entity-person-john-adams");
+
+    const auditorResult =
+      resolveBrowserRegressionApiResult<ProjectEntityListResponse>({
+        authToken: auditorToken,
+        method: "GET",
+        path: "/projects/project-fixture-alpha/entities?q=adams"
+      });
+    expect(auditorResult).not.toBeNull();
+    expect(auditorResult?.ok).toBe(false);
+    expect(auditorResult?.status).toBe(403);
+  });
+
+  it("serves entity detail and provenance-rich occurrence links from one active generation", () => {
+    process.env[MODE_FLAG] = "1";
+    const reviewerToken = getBrowserFixtureSessionToken("reviewer");
+    const entityId = "entity-person-john-adams";
+
+    const detailResult =
+      resolveBrowserRegressionApiResult<ProjectEntityDetailResponse>({
+        authToken: reviewerToken,
+        method: "GET",
+        path: `/projects/project-fixture-alpha/entities/${entityId}`
+      });
+    expect(detailResult).not.toBeNull();
+    expect(detailResult?.ok).toBe(true);
+    expect(detailResult?.data?.entityIndexId).toBe("entity-index-fixture-002");
+    expect(detailResult?.data?.entity.id).toBe(entityId);
+
+    const occurrencesResult =
+      resolveBrowserRegressionApiResult<ProjectEntityOccurrencesResponse>({
+        authToken: reviewerToken,
+        method: "GET",
+        path: `/projects/project-fixture-alpha/entities/${entityId}/occurrences`
+      });
+    expect(occurrencesResult).not.toBeNull();
+    expect(occurrencesResult?.ok).toBe(true);
+    expect(occurrencesResult?.data?.entityIndexId).toBe("entity-index-fixture-002");
+    expect(occurrencesResult?.data?.entity.id).toBe(entityId);
+    expect(occurrencesResult?.data?.items.length).toBeGreaterThan(0);
+    expect(occurrencesResult?.data?.items[0]?.workspacePath).toContain(
+      "/transcription/workspace?"
+    );
+  });
+
+  it("returns deterministic workspace path payload when opening a search hit", () => {
+    process.env[MODE_FLAG] = "1";
+    const reviewerToken = getBrowserFixtureSessionToken("reviewer");
+
+    const openTokenHitResult =
+      resolveBrowserRegressionApiResult<ProjectSearchResultOpenResponse>({
+        authToken: reviewerToken,
+        method: "POST",
+        path: "/projects/project-fixture-alpha/search/search-hit-token-001/open"
+      });
+    expect(openTokenHitResult).not.toBeNull();
+    expect(openTokenHitResult?.ok).toBe(true);
+    expect(openTokenHitResult?.data?.workspacePath).toBe(
+      "/projects/project-fixture-alpha/documents/doc-fixture-002/transcription/workspace?lineId=line-privacy-001&page=1&runId=transcription-run-fixture-002&sourceKind=LINE&sourceRefId=line-privacy-001&tokenId=token-privacy-001"
+    );
+
+    const openRescueHitResult =
+      resolveBrowserRegressionApiResult<ProjectSearchResultOpenResponse>({
+        authToken: reviewerToken,
+        method: "POST",
+        path: "/projects/project-fixture-alpha/search/search-hit-rescue-001/open"
+      });
+    expect(openRescueHitResult).not.toBeNull();
+    expect(openRescueHitResult?.ok).toBe(true);
+    expect(openRescueHitResult?.data?.workspacePath).toBe(
+      "/projects/project-fixture-alpha/documents/doc-fixture-002/transcription/workspace?page=2&runId=transcription-run-fixture-002&sourceKind=RESCUE_CANDIDATE&sourceRefId=resc-2-1"
+    );
   });
 });

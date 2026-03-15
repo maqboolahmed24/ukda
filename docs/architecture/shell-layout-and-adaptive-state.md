@@ -110,6 +110,25 @@ Fallback behavior:
 
 - narrow-width and low-height conditions relax layout while preserving keyboard reachability and visible focus.
 
+## Layout Stability Baseline (90% Type Scale)
+
+The UI uses a reduced base type scale (`90%`) while keeping shell geometry stable.
+
+Stability contract:
+
+- keep shell header actions on a single row in desktop states to avoid route-to-route vertical jump
+- truncate long shell titles/subtitles with ellipsis instead of allowing header-height expansion
+- keep page-header actions in one row on desktop; allow wrap only at narrow mobile breakpoints
+- reserve stable width for shell status chips and top-bar controls so changing labels do not shift neighboring controls
+- switch to stacked header layout earlier on medium widths to avoid overflow-driven reflow
+- keep shell/workspace max widths in font-independent units so reducing base typography scale does not introduce side gutters
+
+Verification baseline:
+
+- browser reflow tests in `web/tests/browser/shell-regression.spec.ts`
+- test case: `header chrome remains stable across authenticated route transitions @reflow`
+- existing single-fold checks remain required for viewport-bounded shell behavior
+
 ## Accessibility And Keyboard Behavior
 
 - skip link: `Skip to work region`

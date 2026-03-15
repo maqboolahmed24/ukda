@@ -3,6 +3,21 @@ import type {
   AuditIntegrityResponse,
   AuthProviderResponse,
   CreateDocumentUploadSessionRequest,
+  DocumentGovernanceLedgerEntriesResponse,
+  DocumentGovernanceLedgerResponse,
+  DocumentGovernanceLedgerStatusResponse,
+  DocumentGovernanceLedgerSummaryResponse,
+  DocumentGovernanceLedgerVerifyDetailResponse,
+  DocumentGovernanceLedgerVerifyRunsResponse,
+  DocumentGovernanceLedgerVerifyStatusResponse,
+  DocumentGovernanceManifestEntriesResponse,
+  DocumentGovernanceManifestHashResponse,
+  DocumentGovernanceManifestResponse,
+  DocumentGovernanceManifestStatusResponse,
+  DocumentGovernanceOverviewResponse,
+  DocumentGovernanceRunEventsResponse,
+  DocumentGovernanceRunOverviewResponse,
+  DocumentGovernanceRunsResponse,
   DocumentLayoutActiveRunResponse,
   DocumentLayoutOverviewResponse,
   DocumentLayoutPageOverlay,
@@ -11,6 +26,23 @@ import type {
   DocumentLayoutRun,
   DocumentLayoutRunListResponse,
   DocumentLayoutRunStatusResponse,
+  DocumentRedactionFinding,
+  DocumentRedactionCompareResponse,
+  DocumentRedactionActiveRunResponse,
+  DocumentRedactionFindingListResponse,
+  DocumentRedactionOverviewResponse,
+  DocumentRedactionPageReview,
+  DocumentRedactionPreviewStatusResponse,
+  DocumentRedactionProjection,
+  DocumentRedactionRun,
+  DocumentRedactionRunOutput,
+  DocumentRedactionRunEventsResponse,
+  DocumentRedactionRunListResponse,
+  DocumentRedactionRunPage,
+  DocumentRedactionRunPageListResponse,
+  DocumentRedactionRunReview,
+  DocumentRedactionRunStatusResponse,
+  DocumentRedactionTimelineEvent,
   DocumentPageVariantsResponse,
   DocumentImportStatus,
   DocumentPreprocessActiveRunResponse,
@@ -24,8 +56,13 @@ import type {
   DocumentPreprocessRunPageListResponse,
   DocumentPreprocessRunStatusResponse,
   DocumentProcessingRunStatusResponse,
+  DocumentTranscriptionLineResult,
+  DocumentTranscriptionLineResultListResponse,
   DocumentTimelineResponse,
   DocumentUploadSessionStatus,
+  ControlledEntity,
+  EntityOccurrence,
+  OperationsExportStatusResponse,
   OperationsOverviewResponse,
   ProjectDocument,
   ProjectDocumentUploadSessionStatus,
@@ -35,7 +72,21 @@ import type {
   ProjectJobListResponse,
   ProjectJobSummaryResponse,
   ProjectListResponse,
+  ProjectRole,
+  ProjectSearchHit,
+  ProjectSearchResponse,
+  ProjectSearchResultOpenResponse,
+  ProjectEntityDetailResponse,
+  ProjectEntityListResponse,
+  ProjectEntityOccurrencesResponse,
   ProjectSummary,
+  GovernanceLedgerEntry,
+  GovernanceArtifactStatus,
+  GovernanceLedgerVerificationRun,
+  GovernanceManifestEntry,
+  GovernanceReadinessProjection,
+  GovernanceRunEvent,
+  GovernanceRunSummary,
   SecurityStatusResponse,
   ServiceHealthPayload,
   ServiceReadinessPayload,
@@ -45,7 +96,20 @@ import type {
 import type { ApiResult } from "./api-types";
 
 const BROWSER_TEST_MODE_FLAG = "UKDE_BROWSER_TEST_MODE";
-const FIXTURE_SESSION_TOKEN = "fixture-session-token";
+export type BrowserFixtureSessionProfile =
+  | "admin"
+  | "auditor"
+  | "project-lead"
+  | "reviewer"
+  | "researcher";
+
+const FIXTURE_SESSION_TOKENS: Record<BrowserFixtureSessionProfile, string> = {
+  admin: "fixture-session-token",
+  auditor: "fixture-session-token-auditor",
+  "project-lead": "fixture-session-token-project-lead",
+  reviewer: "fixture-session-token-reviewer",
+  researcher: "fixture-session-token-researcher"
+};
 const FIXTURE_NOW = "2026-03-13T10:00:00.000Z";
 
 const FIXTURE_SESSION: SessionResponse = {
@@ -60,6 +124,70 @@ const FIXTURE_SESSION: SessionResponse = {
     id: "session-fixture-001",
     expiresAt: "2026-03-14T10:00:00.000Z"
   }
+};
+
+const FIXTURE_AUDITOR_SESSION: SessionResponse = {
+  user: {
+    id: "user-fixture-auditor",
+    sub: "fixture-auditor-sub",
+    email: "fixture.auditor@ukde.test",
+    displayName: "Fixture Auditor",
+    platformRoles: ["AUDITOR"]
+  },
+  session: {
+    id: "session-fixture-002",
+    expiresAt: "2026-03-14T10:00:00.000Z"
+  }
+};
+
+const FIXTURE_PROJECT_LEAD_SESSION: SessionResponse = {
+  user: {
+    id: "user-fixture-project-lead",
+    sub: "fixture-project-lead-sub",
+    email: "fixture.projectlead@ukde.test",
+    displayName: "Fixture Project Lead",
+    platformRoles: []
+  },
+  session: {
+    id: "session-fixture-003",
+    expiresAt: "2026-03-14T10:00:00.000Z"
+  }
+};
+
+const FIXTURE_REVIEWER_SESSION: SessionResponse = {
+  user: {
+    id: "user-fixture-reviewer",
+    sub: "fixture-reviewer-sub",
+    email: "fixture.reviewer@ukde.test",
+    displayName: "Fixture Reviewer",
+    platformRoles: []
+  },
+  session: {
+    id: "session-fixture-004",
+    expiresAt: "2026-03-14T10:00:00.000Z"
+  }
+};
+
+const FIXTURE_RESEARCHER_SESSION: SessionResponse = {
+  user: {
+    id: "user-fixture-researcher",
+    sub: "fixture-researcher-sub",
+    email: "fixture.researcher@ukde.test",
+    displayName: "Fixture Researcher",
+    platformRoles: []
+  },
+  session: {
+    id: "session-fixture-005",
+    expiresAt: "2026-03-14T10:00:00.000Z"
+  }
+};
+
+const FIXTURE_SESSION_BY_PROFILE: Record<BrowserFixtureSessionProfile, SessionResponse> = {
+  admin: FIXTURE_SESSION,
+  auditor: FIXTURE_AUDITOR_SESSION,
+  "project-lead": FIXTURE_PROJECT_LEAD_SESSION,
+  reviewer: FIXTURE_REVIEWER_SESSION,
+  researcher: FIXTURE_RESEARCHER_SESSION
 };
 
 const FIXTURE_PROJECTS: ProjectSummary[] = [
@@ -155,7 +283,7 @@ const FIXTURE_SECURITY_STATUS: SecurityStatusResponse = {
   lastBackupAt: "2026-03-12T01:00:00.000Z",
   reducedMotionPreferenceState: "supported",
   reducedTransparencyPreferenceState: "supported",
-  exportGatewayState: "DISABLED_PHASE0"
+  exportGatewayState: "ENFORCED_GATEWAY_ONLY"
 };
 
 const FIXTURE_OPERATIONS_OVERVIEW: OperationsOverviewResponse = {
@@ -201,6 +329,50 @@ const FIXTURE_OPERATIONS_OVERVIEW: OperationsOverviewResponse = {
       p95LatencyMs: 120.76
     }
   ]
+};
+
+const FIXTURE_OPERATIONS_EXPORT_STATUS: OperationsExportStatusResponse = {
+  generatedAt: FIXTURE_NOW,
+  openRequestCount: 7,
+  aging: {
+    unstarted: 2,
+    noSla: 0,
+    onTrack: 3,
+    dueSoon: 1,
+    overdue: 1,
+    staleOpen: 1
+  },
+  reminders: {
+    due: 2,
+    sentLast24h: 4,
+    total: 18
+  },
+  escalations: {
+    due: 1,
+    openEscalated: 2,
+    total: 9
+  },
+  retention: {
+    pendingCount: 5,
+    pendingWindowDays: 14
+  },
+  terminal: {
+    approved: 11,
+    exported: 26,
+    rejected: 4,
+    returned: 6
+  },
+  policy: {
+    slaHours: 72,
+    reminderAfterHours: 24,
+    reminderCooldownHours: 12,
+    escalationAfterSlaHours: 24,
+    escalationCooldownHours: 24,
+    staleOpenAfterDays: 30,
+    retentionStaleOpenDays: 60,
+    retentionTerminalApprovedDays: 180,
+    retentionTerminalOtherDays: 90
+  }
 };
 
 const FIXTURE_ACTIVITY: AuditEventListResponse = {
@@ -1382,6 +1554,1391 @@ const FIXTURE_LAYOUT_PROJECTION_BY_DOCUMENT: Record<string, DocumentLayoutProjec
   }
 };
 
+const FIXTURE_REDACTION_RUNS_BY_DOCUMENT: Record<string, DocumentRedactionRun[]> = {
+  "doc-fixture-002": [
+    {
+      id: "redaction-run-fixture-002",
+      projectId: "project-fixture-alpha",
+      documentId: "doc-fixture-002",
+      inputTranscriptionRunId: "transcription-run-fixture-002",
+      inputLayoutRunId: "layout-run-fixture-002",
+      runKind: "BASELINE",
+      supersedesRedactionRunId: "redaction-run-fixture-001",
+      supersededByRedactionRunId: null,
+      policySnapshotId: "policy-baseline-v1",
+      policySnapshotJson: {
+        directIdentifiers: {
+          dualReviewRequiredCategories: ["EMAIL", "NI_NUMBER"]
+        }
+      },
+      policySnapshotHash: "policy-fixture-hash-002",
+      policyId: null,
+      policyFamilyId: null,
+      policyVersion: null,
+      detectorsVersion: "redaction-detectors-v1",
+      status: "SUCCEEDED",
+      createdBy: "user-fixture-admin",
+      createdAt: "2026-03-12T09:14:00.000Z",
+      startedAt: "2026-03-12T09:14:10.000Z",
+      finishedAt: "2026-03-12T09:15:05.000Z",
+      failureReason: null,
+      isActiveProjection: true,
+      isSuperseded: false,
+      isCurrentAttempt: true,
+      isHistoricalAttempt: false
+    },
+    {
+      id: "redaction-run-fixture-001",
+      projectId: "project-fixture-alpha",
+      documentId: "doc-fixture-002",
+      inputTranscriptionRunId: "transcription-run-fixture-002",
+      inputLayoutRunId: "layout-run-fixture-002",
+      runKind: "BASELINE",
+      supersedesRedactionRunId: null,
+      supersededByRedactionRunId: "redaction-run-fixture-002",
+      policySnapshotId: "policy-baseline-v1",
+      policySnapshotJson: {
+        directIdentifiers: {
+          dualReviewRequiredCategories: ["EMAIL", "NI_NUMBER"]
+        }
+      },
+      policySnapshotHash: "policy-fixture-hash-002",
+      policyId: null,
+      policyFamilyId: null,
+      policyVersion: null,
+      detectorsVersion: "redaction-detectors-v1",
+      status: "SUCCEEDED",
+      createdBy: "user-fixture-admin",
+      createdAt: "2026-03-11T16:04:00.000Z",
+      startedAt: "2026-03-11T16:04:12.000Z",
+      finishedAt: "2026-03-11T16:05:09.000Z",
+      failureReason: null,
+      isActiveProjection: false,
+      isSuperseded: true,
+      isCurrentAttempt: false,
+      isHistoricalAttempt: true
+    }
+  ]
+};
+
+const FIXTURE_REDACTION_PROJECTION_BY_DOCUMENT: Record<
+  string,
+  DocumentRedactionProjection
+> = {
+  "doc-fixture-002": {
+    documentId: "doc-fixture-002",
+    projectId: "project-fixture-alpha",
+    activeRedactionRunId: "redaction-run-fixture-002",
+    activeTranscriptionRunId: "transcription-run-fixture-002",
+    activeLayoutRunId: "layout-run-fixture-002",
+    activePolicySnapshotId: "policy-baseline-v1",
+    updatedAt: "2026-03-12T09:15:10.000Z"
+  }
+};
+
+const FIXTURE_REDACTION_FINDINGS_BY_RUN_PAGE: Record<string, DocumentRedactionFinding[]> = {
+  "redaction-run-fixture-001:page-fixture-001": [
+    {
+      id: "red-find-base-1",
+      runId: "redaction-run-fixture-001",
+      pageId: "page-fixture-001",
+      lineId: "line-privacy-001",
+      category: "PERSON_NAME",
+      spanStart: 0,
+      spanEnd: 11,
+      spanBasisKind: "LINE_TEXT",
+      spanBasisRef: "line-privacy-001",
+      confidence: 0.97,
+      basisPrimary: "RULE",
+      basisSecondaryJson: null,
+      assistExplanationKey: null,
+      assistExplanationSha256: null,
+      bboxRefs: {
+        boxes: [{ x: 188, y: 224, width: 286, height: 54 }]
+      },
+      tokenRefsJson: [{ tokenId: "token-privacy-001" }],
+      areaMaskId: null,
+      decisionStatus: "APPROVED",
+      actionType: "MASK",
+      overrideRiskClassification: null,
+      overrideRiskReasonCodesJson: null,
+      decisionBy: "user-fixture-admin",
+      decisionAt: "2026-03-11T16:15:22.000Z",
+      decisionReason: null,
+      decisionEtag: "red-find-base-1-etag-v3",
+      updatedAt: "2026-03-11T16:15:22.000Z",
+      createdAt: "2026-03-11T16:15:18.000Z",
+      geometry: {
+        anchorKind: "TOKEN_LINKED",
+        lineId: "line-privacy-001",
+        tokenIds: ["token-privacy-001"],
+        boxes: [
+          {
+            x: 188,
+            y: 224,
+            width: 286,
+            height: 54,
+            source: "TOKEN_REF"
+          }
+        ],
+        polygons: []
+      },
+      activeAreaMask: null
+    }
+  ],
+  "redaction-run-fixture-001:page-fixture-002": [
+    {
+      id: "red-find-base-2",
+      runId: "redaction-run-fixture-001",
+      pageId: "page-fixture-002",
+      lineId: "line-privacy-010",
+      category: "EMAIL",
+      spanStart: null,
+      spanEnd: null,
+      spanBasisKind: "NONE",
+      spanBasisRef: null,
+      confidence: 0.82,
+      basisPrimary: "NER",
+      basisSecondaryJson: {
+        detectorDisagreement: true
+      },
+      assistExplanationKey: null,
+      assistExplanationSha256: null,
+      bboxRefs: {
+        boxes: [{ x: 366, y: 516, width: 332, height: 68 }]
+      },
+      tokenRefsJson: null,
+      areaMaskId: "mask-fixture-001",
+      decisionStatus: "OVERRIDDEN",
+      actionType: "MASK",
+      overrideRiskClassification: "HIGH",
+      overrideRiskReasonCodesJson: ["AREA_MASK_BACKED"],
+      decisionBy: "user-fixture-admin",
+      decisionAt: "2026-03-11T16:15:38.000Z",
+      decisionReason: "Unreadable fold region masked conservatively.",
+      decisionEtag: "red-find-base-2-etag-v2",
+      updatedAt: "2026-03-11T16:15:38.000Z",
+      createdAt: "2026-03-11T16:15:31.000Z",
+      geometry: {
+        anchorKind: "AREA_MASK_BACKED",
+        lineId: "line-privacy-010",
+        tokenIds: [],
+        boxes: [
+          {
+            x: 366,
+            y: 516,
+            width: 332,
+            height: 68,
+            source: "AREA_MASK"
+          }
+        ],
+        polygons: []
+      },
+      activeAreaMask: {
+        id: "mask-fixture-001",
+        runId: "redaction-run-fixture-001",
+        pageId: "page-fixture-002",
+        geometryJson: {
+          boxes: [{ x: 366, y: 516, width: 332, height: 68 }]
+        },
+        maskReason: "Unreadable direct identifier segment near fold",
+        versionEtag: "mask-fixture-001-v1",
+        supersedesAreaMaskId: null,
+        supersededByAreaMaskId: null,
+        createdBy: "user-fixture-admin",
+        createdAt: "2026-03-11T16:15:31.000Z",
+        updatedAt: "2026-03-11T16:15:31.000Z"
+      }
+    }
+  ],
+  "redaction-run-fixture-002:page-fixture-001": [
+    {
+      id: "red-find-1",
+      runId: "redaction-run-fixture-002",
+      pageId: "page-fixture-001",
+      lineId: "line-privacy-001",
+      category: "PERSON_NAME",
+      spanStart: 0,
+      spanEnd: 11,
+      spanBasisKind: "LINE_TEXT",
+      spanBasisRef: "line-privacy-001",
+      confidence: 0.97,
+      basisPrimary: "RULE",
+      basisSecondaryJson: {
+        fusion: {
+          detectorAgreement: "HIGH"
+        }
+      },
+      assistExplanationKey: null,
+      assistExplanationSha256: null,
+      bboxRefs: {
+        boxes: [{ x: 188, y: 224, width: 286, height: 54 }]
+      },
+      tokenRefsJson: [{ tokenId: "token-privacy-001" }],
+      areaMaskId: null,
+      decisionStatus: "NEEDS_REVIEW",
+      actionType: "PSEUDONYMIZE",
+      overrideRiskClassification: null,
+      overrideRiskReasonCodesJson: null,
+      decisionBy: null,
+      decisionAt: null,
+      decisionReason: null,
+      decisionEtag: "red-find-1-etag-v1",
+      updatedAt: "2026-03-12T09:15:20.000Z",
+      createdAt: "2026-03-12T09:15:18.000Z",
+      geometry: {
+        anchorKind: "TOKEN_LINKED",
+        lineId: "line-privacy-001",
+        tokenIds: ["token-privacy-001"],
+        boxes: [
+          {
+            x: 188,
+            y: 224,
+            width: 286,
+            height: 54,
+            source: "TOKEN_REF"
+          }
+        ],
+        polygons: []
+      },
+      activeAreaMask: null
+    }
+  ],
+  "redaction-run-fixture-002:page-fixture-002": [
+    {
+      id: "red-find-2",
+      runId: "redaction-run-fixture-002",
+      pageId: "page-fixture-002",
+      lineId: "line-privacy-010",
+      category: "EMAIL",
+      spanStart: null,
+      spanEnd: null,
+      spanBasisKind: "NONE",
+      spanBasisRef: null,
+      confidence: 0.82,
+      basisPrimary: "NER",
+      basisSecondaryJson: {
+        detectorDisagreement: true,
+        ambiguousOverlap: true,
+        assistSummary: {
+          explanation: "Possible contact detail appears in a damaged margin segment."
+        }
+      },
+      assistExplanationKey: null,
+      assistExplanationSha256: null,
+      bboxRefs: {
+        boxes: [{ x: 366, y: 516, width: 332, height: 68 }]
+      },
+      tokenRefsJson: null,
+      areaMaskId: "mask-fixture-002",
+      decisionStatus: "NEEDS_REVIEW",
+      actionType: "GENERALIZE",
+      overrideRiskClassification: "HIGH",
+      overrideRiskReasonCodesJson: [
+        "AREA_MASK_BACKED",
+        "DETECTOR_DISAGREEMENT",
+        "AMBIGUOUS_OVERLAP"
+      ],
+      decisionBy: null,
+      decisionAt: null,
+      decisionReason: null,
+      decisionEtag: "red-find-2-etag-v1",
+      updatedAt: "2026-03-12T09:15:32.000Z",
+      createdAt: "2026-03-12T09:15:31.000Z",
+      geometry: {
+        anchorKind: "AREA_MASK_BACKED",
+        lineId: "line-privacy-010",
+        tokenIds: [],
+        boxes: [
+          {
+            x: 366,
+            y: 516,
+            width: 332,
+            height: 68,
+            source: "AREA_MASK"
+          }
+        ],
+        polygons: []
+      },
+      activeAreaMask: {
+        id: "mask-fixture-002",
+        runId: "redaction-run-fixture-002",
+        pageId: "page-fixture-002",
+        geometryJson: {
+          boxes: [{ x: 366, y: 516, width: 332, height: 68 }]
+        },
+        maskReason: "Unreadable direct identifier segment near fold",
+        versionEtag: "mask-fixture-002-v1",
+        supersedesAreaMaskId: null,
+        supersededByAreaMaskId: null,
+        createdBy: "user-fixture-admin",
+        createdAt: "2026-03-12T09:15:31.000Z",
+        updatedAt: "2026-03-12T09:15:31.000Z"
+      }
+    }
+  ]
+};
+
+const FIXTURE_REDACTION_PAGE_REVIEWS_BY_RUN_PAGE: Record<
+  string,
+  DocumentRedactionPageReview
+> = {
+  "redaction-run-fixture-001:page-fixture-001": {
+    runId: "redaction-run-fixture-001",
+    pageId: "page-fixture-001",
+    reviewStatus: "APPROVED",
+    reviewEtag: "red-review-base-page-001-v3",
+    firstReviewedBy: "user-fixture-admin",
+    firstReviewedAt: "2026-03-11T16:18:45.000Z",
+    requiresSecondReview: false,
+    secondReviewStatus: "NOT_REQUIRED",
+    secondReviewedBy: null,
+    secondReviewedAt: null,
+    updatedAt: "2026-03-11T16:18:45.000Z"
+  },
+  "redaction-run-fixture-001:page-fixture-002": {
+    runId: "redaction-run-fixture-001",
+    pageId: "page-fixture-002",
+    reviewStatus: "APPROVED",
+    reviewEtag: "red-review-base-page-002-v4",
+    firstReviewedBy: "user-fixture-admin",
+    firstReviewedAt: "2026-03-11T16:20:06.000Z",
+    requiresSecondReview: true,
+    secondReviewStatus: "APPROVED",
+    secondReviewedBy: "user-fixture-reviewer-2",
+    secondReviewedAt: "2026-03-11T16:22:06.000Z",
+    updatedAt: "2026-03-11T16:22:06.000Z"
+  },
+  "redaction-run-fixture-002:page-fixture-001": {
+    runId: "redaction-run-fixture-002",
+    pageId: "page-fixture-001",
+    reviewStatus: "IN_REVIEW",
+    reviewEtag: "red-review-page-001-v1",
+    firstReviewedBy: "user-fixture-admin",
+    firstReviewedAt: "2026-03-12T09:15:45.000Z",
+    requiresSecondReview: false,
+    secondReviewStatus: "NOT_REQUIRED",
+    secondReviewedBy: null,
+    secondReviewedAt: null,
+    updatedAt: "2026-03-12T09:15:45.000Z"
+  },
+  "redaction-run-fixture-002:page-fixture-002": {
+    runId: "redaction-run-fixture-002",
+    pageId: "page-fixture-002",
+    reviewStatus: "NOT_STARTED",
+    reviewEtag: "red-review-page-002-v1",
+    firstReviewedBy: null,
+    firstReviewedAt: null,
+    requiresSecondReview: false,
+    secondReviewStatus: "NOT_REQUIRED",
+    secondReviewedBy: null,
+    secondReviewedAt: null,
+    updatedAt: "2026-03-12T09:15:46.000Z"
+  }
+};
+
+const FIXTURE_REDACTION_PREVIEW_STATUS_BY_RUN_PAGE: Record<
+  string,
+  DocumentRedactionPreviewStatusResponse
+> = {
+  "redaction-run-fixture-001:page-fixture-001": {
+    runId: "redaction-run-fixture-001",
+    pageId: "page-fixture-001",
+    status: "READY",
+    previewSha256: "fixture-redaction-preview-sha-base-001",
+    generatedAt: "2026-03-11T16:23:02.000Z",
+    failureReason: null,
+    runOutputStatus: "READY",
+    runOutputManifestSha256: "fixture-redaction-manifest-sha-base-001",
+    runOutputReadinessState: "OUTPUT_READY",
+    downstreamReady: true
+  },
+  "redaction-run-fixture-001:page-fixture-002": {
+    runId: "redaction-run-fixture-001",
+    pageId: "page-fixture-002",
+    status: "READY",
+    previewSha256: "fixture-redaction-preview-sha-base-002",
+    generatedAt: "2026-03-11T16:23:04.000Z",
+    failureReason: null,
+    runOutputStatus: "READY",
+    runOutputManifestSha256: "fixture-redaction-manifest-sha-base-001",
+    runOutputReadinessState: "OUTPUT_READY",
+    downstreamReady: true
+  },
+  "redaction-run-fixture-002:page-fixture-001": {
+    runId: "redaction-run-fixture-002",
+    pageId: "page-fixture-001",
+    status: "READY",
+    previewSha256: "fixture-redaction-preview-sha-001",
+    generatedAt: "2026-03-12T09:16:02.000Z",
+    failureReason: null,
+    runOutputStatus: "PENDING",
+    runOutputManifestSha256: null,
+    runOutputReadinessState: "OUTPUT_GENERATING",
+    downstreamReady: false
+  },
+  "redaction-run-fixture-002:page-fixture-002": {
+    runId: "redaction-run-fixture-002",
+    pageId: "page-fixture-002",
+    status: "PENDING",
+    previewSha256: null,
+    generatedAt: null,
+    failureReason: null,
+    runOutputStatus: "PENDING",
+    runOutputManifestSha256: null,
+    runOutputReadinessState: "OUTPUT_GENERATING",
+    downstreamReady: false
+  }
+};
+
+const FIXTURE_REDACTION_EVENTS_BY_RUN_PAGE: Record<
+  string,
+  DocumentRedactionTimelineEvent[]
+> = {
+  "redaction-run-fixture-001:page-fixture-001": [
+    {
+      sourceTable: "redaction_page_review_events",
+      sourceTablePrecedence: 1,
+      eventId: "red-event-base-page-001-approved",
+      runId: "redaction-run-fixture-001",
+      pageId: "page-fixture-001",
+      findingId: null,
+      eventType: "PAGE_APPROVED",
+      actorUserId: "user-fixture-admin",
+      reason: "Baseline review complete.",
+      createdAt: "2026-03-11T16:18:45.000Z",
+      detailsJson: {}
+    }
+  ],
+  "redaction-run-fixture-001:page-fixture-002": [
+    {
+      sourceTable: "redaction_page_review_events",
+      sourceTablePrecedence: 1,
+      eventId: "red-event-base-page-002-second-review",
+      runId: "redaction-run-fixture-001",
+      pageId: "page-fixture-002",
+      findingId: null,
+      eventType: "SECOND_REVIEW_APPROVED",
+      actorUserId: "user-fixture-reviewer-2",
+      reason: "Distinct reviewer approved high-risk override.",
+      createdAt: "2026-03-11T16:22:06.000Z",
+      detailsJson: {}
+    }
+  ],
+  "redaction-run-fixture-002:page-fixture-001": [
+    {
+      sourceTable: "redaction_page_review_events",
+      sourceTablePrecedence: 1,
+      eventId: "red-event-page-001-started",
+      runId: "redaction-run-fixture-002",
+      pageId: "page-fixture-001",
+      findingId: null,
+      eventType: "PAGE_REVIEW_STARTED",
+      actorUserId: "user-fixture-admin",
+      reason: "Workspace opened from triage queue.",
+      createdAt: "2026-03-12T09:15:45.000Z",
+      detailsJson: {}
+    }
+  ],
+  "redaction-run-fixture-002:page-fixture-002": []
+};
+
+const FIXTURE_REDACTION_RUN_REVIEWS_BY_RUN: Record<string, DocumentRedactionRunReview> = {
+  "redaction-run-fixture-001": {
+    runId: "redaction-run-fixture-001",
+    reviewStatus: "APPROVED",
+    reviewStartedBy: "user-fixture-admin",
+    reviewStartedAt: "2026-03-11T16:17:10.000Z",
+    approvedBy: "user-fixture-reviewer-2",
+    approvedAt: "2026-03-11T16:24:12.000Z",
+    approvedSnapshotKey:
+      "controlled/derived/project-fixture-alpha/doc-fixture-002/redaction-run-fixture-001/approved-review.json",
+    approvedSnapshotSha256: "approved-fixture-sha-base-001",
+    lockedAt: "2026-03-11T16:24:12.000Z",
+    updatedAt: "2026-03-11T16:24:12.000Z"
+  },
+  "redaction-run-fixture-002": {
+    runId: "redaction-run-fixture-002",
+    reviewStatus: "IN_REVIEW",
+    reviewStartedBy: "user-fixture-admin",
+    reviewStartedAt: "2026-03-12T09:18:10.000Z",
+    approvedBy: null,
+    approvedAt: null,
+    approvedSnapshotKey: null,
+    approvedSnapshotSha256: null,
+    lockedAt: null,
+    updatedAt: "2026-03-12T09:18:10.000Z"
+  }
+};
+
+const FIXTURE_REDACTION_RUN_OUTPUTS_BY_RUN: Record<string, DocumentRedactionRunOutput> = {
+  "redaction-run-fixture-001": {
+    runId: "redaction-run-fixture-001",
+    status: "READY",
+    reviewStatus: "APPROVED",
+    readinessState: "OUTPUT_READY",
+    downstreamReady: true,
+    outputManifestSha256: "fixture-redaction-manifest-sha-base-001",
+    pageCount: 2,
+    startedAt: "2026-03-11T16:23:00.000Z",
+    generatedAt: "2026-03-11T16:23:08.000Z",
+    canceledBy: null,
+    canceledAt: null,
+    failureReason: null,
+    createdAt: "2026-03-11T16:16:00.000Z",
+    updatedAt: "2026-03-11T16:23:08.000Z"
+  },
+  "redaction-run-fixture-002": {
+    runId: "redaction-run-fixture-002",
+    status: "PENDING",
+    reviewStatus: "IN_REVIEW",
+    readinessState: "OUTPUT_GENERATING",
+    downstreamReady: false,
+    outputManifestSha256: null,
+    pageCount: 2,
+    startedAt: "2026-03-12T09:20:00.000Z",
+    generatedAt: null,
+    canceledBy: null,
+    canceledAt: null,
+    failureReason: null,
+    createdAt: "2026-03-12T09:14:00.000Z",
+    updatedAt: "2026-03-12T09:20:00.000Z"
+  }
+};
+
+const FIXTURE_REDACTION_RUN_EVENTS_BY_RUN: Record<string, DocumentRedactionTimelineEvent[]> = {
+  "redaction-run-fixture-001": [
+    {
+      sourceTable: "redaction_run_review_events",
+      sourceTablePrecedence: 2,
+      eventId: "red-event-base-run-approved",
+      runId: "redaction-run-fixture-001",
+      pageId: null,
+      findingId: null,
+      eventType: "RUN_APPROVED",
+      actorUserId: "user-fixture-reviewer-2",
+      reason: "Baseline run approved and locked.",
+      createdAt: "2026-03-11T16:24:12.000Z",
+      detailsJson: {}
+    },
+    {
+      sourceTable: "redaction_run_output_events",
+      sourceTablePrecedence: 3,
+      eventId: "red-event-base-run-output-ready",
+      runId: "redaction-run-fixture-001",
+      pageId: null,
+      findingId: null,
+      eventType: "RUN_OUTPUT_GENERATION_SUCCEEDED",
+      actorUserId: "system-fixture",
+      reason: "Reviewed output manifest generated.",
+      createdAt: "2026-03-11T16:23:08.000Z",
+      detailsJson: {
+        fromStatus: "PENDING",
+        toStatus: "READY"
+      }
+    }
+  ],
+  "redaction-run-fixture-002": [
+    {
+      sourceTable: "redaction_run_review_events",
+      sourceTablePrecedence: 2,
+      eventId: "red-event-candidate-run-review-opened",
+      runId: "redaction-run-fixture-002",
+      pageId: null,
+      findingId: null,
+      eventType: "RUN_REVIEW_OPENED",
+      actorUserId: "user-fixture-admin",
+      reason: "Candidate run review started.",
+      createdAt: "2026-03-12T09:18:10.000Z",
+      detailsJson: {}
+    }
+  ]
+};
+
+const FIXTURE_GOVERNANCE_RUN_SUMMARY: GovernanceRunSummary = {
+  runId: "redaction-run-fixture-001",
+  projectId: "project-fixture-alpha",
+  documentId: "doc-fixture-002",
+  runStatus: "SUCCEEDED",
+  reviewStatus: "APPROVED",
+  approvedSnapshotKey:
+    "controlled/derived/project-fixture-alpha/doc-fixture-002/redaction-run-fixture-001/approved-review.json",
+  approvedSnapshotSha256: "approved-fixture-sha-base-001",
+  runOutputStatus: "READY",
+  runOutputManifestSha256: "fixture-redaction-manifest-sha-base-001",
+  runCreatedAt: "2026-03-11T16:16:00.000Z",
+  runFinishedAt: "2026-03-11T16:24:12.000Z",
+  readinessStatus: "READY",
+  generationStatus: "IDLE",
+  readyManifestId: "gov-manifest-attempt-001",
+  readyLedgerId: "gov-ledger-attempt-001",
+  latestManifestSha256: "fixture-governance-manifest-sha-001",
+  latestLedgerSha256: "fixture-governance-ledger-sha-001",
+  ledgerVerificationStatus: "VALID",
+  readyAt: "2026-03-11T16:25:15.000Z",
+  lastErrorCode: null,
+  updatedAt: "2026-03-13T10:02:00.000Z"
+};
+
+const FIXTURE_GOVERNANCE_READINESS: GovernanceReadinessProjection = {
+  runId: "redaction-run-fixture-001",
+  projectId: "project-fixture-alpha",
+  documentId: "doc-fixture-002",
+  status: "READY",
+  generationStatus: "IDLE",
+  manifestId: "gov-manifest-attempt-001",
+  ledgerId: "gov-ledger-attempt-001",
+  lastLedgerVerificationRunId: "gov-ledger-verify-003",
+  lastManifestSha256: "fixture-governance-manifest-sha-001",
+  lastLedgerSha256: "fixture-governance-ledger-sha-001",
+  ledgerVerificationStatus: "VALID",
+  ledgerVerifiedAt: "2026-03-13T09:59:30.000Z",
+  readyAt: "2026-03-11T16:25:15.000Z",
+  lastErrorCode: null,
+  updatedAt: "2026-03-13T10:02:00.000Z"
+};
+
+const FIXTURE_GOVERNANCE_MANIFEST_ENTRY_SET: GovernanceManifestEntry[] = [
+  {
+    entryId: "manifest-entry-001",
+    appliedAction: "MASK",
+    category: "PERSON_NAME",
+    pageId: "page-fixture-001",
+    pageIndex: 0,
+    lineId: "line-privacy-001",
+    locationRef: {
+      bboxToken: "bbox-fixture-001",
+      spanRef: "line-privacy-001:token-1-token-2"
+    },
+    basisPrimary: "DIRECT_IDENTIFIER_RULE",
+    confidence: 0.98,
+    secondaryBasisSummary: {
+      detectorCount: 2,
+      categories: ["PERSON_NAME", "DIRECT_IDENTIFIER"],
+      hasPolicyHints: true
+    },
+    finalDecisionState: "APPLIED",
+    reviewState: "APPROVED",
+    policySnapshotHash: "policy-snapshot-fixture-v1",
+    policyId: "policy-fixture-v1",
+    policyFamilyId: "policy-family-fixture",
+    policyVersion: "1.0.0",
+    decisionTimestamp: "2026-03-11T16:18:45.000Z",
+    decisionBy: "user-fixture-admin",
+    decisionEtag: "red-find-1-etag-v2"
+  },
+  {
+    entryId: "manifest-entry-002",
+    appliedAction: "MASK",
+    category: "POSTCODE",
+    pageId: "page-fixture-001",
+    pageIndex: 0,
+    lineId: "line-privacy-002",
+    locationRef: {
+      bboxToken: "bbox-fixture-002",
+      spanRef: "line-privacy-002:token-3-token-5"
+    },
+    basisPrimary: "RULE_AND_NER",
+    confidence: 0.93,
+    secondaryBasisSummary: {
+      detectorCount: 1,
+      categories: ["POSTCODE"],
+      hasPolicyHints: true
+    },
+    finalDecisionState: "APPLIED",
+    reviewState: "APPROVED",
+    policySnapshotHash: "policy-snapshot-fixture-v1",
+    policyId: "policy-fixture-v1",
+    policyFamilyId: "policy-family-fixture",
+    policyVersion: "1.0.0",
+    decisionTimestamp: "2026-03-11T16:20:06.000Z",
+    decisionBy: "user-fixture-reviewer-2",
+    decisionEtag: "red-find-2-etag-v1"
+  },
+  {
+    entryId: "manifest-entry-003",
+    appliedAction: "MASK",
+    category: "PHONE",
+    pageId: "page-fixture-002",
+    pageIndex: 1,
+    lineId: "line-privacy-010",
+    locationRef: {
+      bboxToken: "bbox-fixture-003",
+      spanRef: "line-privacy-010:token-2-token-4"
+    },
+    basisPrimary: "AREA_MASK_BACKED",
+    confidence: 0.84,
+    secondaryBasisSummary: {
+      detectorCount: 3,
+      categories: ["PHONE", "DIRECT_IDENTIFIER"],
+      hasPolicyHints: true
+    },
+    finalDecisionState: "APPLIED",
+    reviewState: "APPROVED",
+    policySnapshotHash: "policy-snapshot-fixture-v1",
+    policyId: "policy-fixture-v1",
+    policyFamilyId: "policy-family-fixture",
+    policyVersion: "1.0.0",
+    decisionTimestamp: "2026-03-11T16:22:06.000Z",
+    decisionBy: "user-fixture-reviewer-2",
+    decisionEtag: "red-find-3-etag-v1"
+  }
+];
+
+const FIXTURE_GOVERNANCE_LEDGER_ENTRY_SET: GovernanceLedgerEntry[] = [
+  {
+    rowId: "ledger-row-001",
+    rowIndex: 0,
+    findingId: "red-find-base-1",
+    pageId: "page-fixture-001",
+    pageIndex: 0,
+    lineId: "line-privacy-001",
+    category: "PERSON_NAME",
+    actionType: "MASK",
+    beforeTextRef: { key: "before-ref-001", span: "token-1:token-2" },
+    afterTextRef: { key: "after-ref-001", span: "token-1:token-2" },
+    detectorEvidence: {
+      basisPrimary: "DIRECT_IDENTIFIER_RULE",
+      basisSecondaryJson: { detectorIds: ["rules", "ner"] }
+    },
+    assistExplanationKey: "assist-exp-fixture-001",
+    assistExplanationSha256: "assist-exp-sha-fixture-001",
+    actorUserId: "user-fixture-admin",
+    decisionTimestamp: "2026-03-11T16:18:45.000Z",
+    overrideReason: null,
+    finalDecisionState: "APPLIED",
+    policySnapshotHash: "policy-snapshot-fixture-v1",
+    policyId: "policy-fixture-v1",
+    policyFamilyId: "policy-family-fixture",
+    policyVersion: "1.0.0",
+    prevHash: "0",
+    rowHash: "ledger-row-hash-001"
+  },
+  {
+    rowId: "ledger-row-002",
+    rowIndex: 1,
+    findingId: "red-find-base-2",
+    pageId: "page-fixture-001",
+    pageIndex: 0,
+    lineId: "line-privacy-002",
+    category: "POSTCODE",
+    actionType: "MASK",
+    beforeTextRef: { key: "before-ref-002", span: "token-3:token-5" },
+    afterTextRef: { key: "after-ref-002", span: "token-3:token-5" },
+    detectorEvidence: {
+      basisPrimary: "RULE_AND_NER",
+      basisSecondaryJson: { detectorIds: ["ner"] }
+    },
+    assistExplanationKey: null,
+    assistExplanationSha256: null,
+    actorUserId: "user-fixture-reviewer-2",
+    decisionTimestamp: "2026-03-11T16:20:06.000Z",
+    overrideReason: null,
+    finalDecisionState: "APPLIED",
+    policySnapshotHash: "policy-snapshot-fixture-v1",
+    policyId: "policy-fixture-v1",
+    policyFamilyId: "policy-family-fixture",
+    policyVersion: "1.0.0",
+    prevHash: "ledger-row-hash-001",
+    rowHash: "ledger-row-hash-002"
+  },
+  {
+    rowId: "ledger-row-003",
+    rowIndex: 2,
+    findingId: "red-find-base-3",
+    pageId: "page-fixture-002",
+    pageIndex: 1,
+    lineId: "line-privacy-010",
+    category: "PHONE",
+    actionType: "MASK",
+    beforeTextRef: { key: "before-ref-003", span: "token-2:token-4" },
+    afterTextRef: { key: "after-ref-003", span: "token-2:token-4" },
+    detectorEvidence: {
+      basisPrimary: "AREA_MASK_BACKED",
+      basisSecondaryJson: { detectorIds: ["area-mask", "rules"] }
+    },
+    assistExplanationKey: "assist-exp-fixture-003",
+    assistExplanationSha256: "assist-exp-sha-fixture-003",
+    actorUserId: "user-fixture-reviewer-2",
+    decisionTimestamp: "2026-03-11T16:22:06.000Z",
+    overrideReason: "Unreadable area required area-mask fallback.",
+    finalDecisionState: "APPLIED",
+    policySnapshotHash: "policy-snapshot-fixture-v1",
+    policyId: "policy-fixture-v1",
+    policyFamilyId: "policy-family-fixture",
+    policyVersion: "1.0.0",
+    prevHash: "ledger-row-hash-002",
+    rowHash: "ledger-row-hash-003"
+  }
+];
+
+const FIXTURE_GOVERNANCE_MANIFEST_ATTEMPTS: DocumentGovernanceRunOverviewResponse["manifestAttempts"] =
+  [
+    {
+      id: "gov-manifest-attempt-001",
+      runId: "redaction-run-fixture-001",
+      projectId: "project-fixture-alpha",
+      documentId: "doc-fixture-002",
+      sourceReviewSnapshotKey:
+        "controlled/derived/project-fixture-alpha/doc-fixture-002/redaction-run-fixture-001/approved-review.json",
+      sourceReviewSnapshotSha256: "approved-fixture-sha-base-001",
+      attemptNumber: 1,
+      supersedesManifestId: null,
+      supersededByManifestId: null,
+      status: "SUCCEEDED",
+      manifestKey:
+        "controlled/derived/project-fixture-alpha/doc-fixture-002/redaction-run-fixture-001/governance/manifest/1/fixture-governance-manifest-sha-001.json",
+      manifestSha256: "fixture-governance-manifest-sha-001",
+      formatVersion: 1,
+      startedAt: "2026-03-11T16:24:20.000Z",
+      finishedAt: "2026-03-11T16:24:34.000Z",
+      canceledBy: null,
+      canceledAt: null,
+      failureReason: null,
+      createdBy: "system-fixture",
+      createdAt: "2026-03-11T16:24:20.000Z"
+    }
+  ];
+
+const FIXTURE_GOVERNANCE_LEDGER_ATTEMPTS: DocumentGovernanceRunOverviewResponse["ledgerAttempts"] =
+  [
+    {
+      id: "gov-ledger-attempt-001",
+      runId: "redaction-run-fixture-001",
+      projectId: "project-fixture-alpha",
+      documentId: "doc-fixture-002",
+      sourceReviewSnapshotKey:
+        "controlled/derived/project-fixture-alpha/doc-fixture-002/redaction-run-fixture-001/approved-review.json",
+      sourceReviewSnapshotSha256: "approved-fixture-sha-base-001",
+      attemptNumber: 1,
+      supersedesLedgerId: null,
+      supersededByLedgerId: null,
+      status: "SUCCEEDED",
+      ledgerKey:
+        "controlled/derived/project-fixture-alpha/doc-fixture-002/redaction-run-fixture-001/governance/ledger/1/fixture-governance-ledger-sha-001.json",
+      ledgerSha256: "fixture-governance-ledger-sha-001",
+      hashChainVersion: "v1",
+      startedAt: "2026-03-11T16:24:35.000Z",
+      finishedAt: "2026-03-11T16:24:50.000Z",
+      canceledBy: null,
+      canceledAt: null,
+      failureReason: null,
+      createdBy: "system-fixture",
+      createdAt: "2026-03-11T16:24:35.000Z"
+    }
+  ];
+
+const FIXTURE_GOVERNANCE_RUN_OVERVIEW: DocumentGovernanceRunOverviewResponse = {
+  documentId: "doc-fixture-002",
+  projectId: "project-fixture-alpha",
+  activeRunId: "redaction-run-fixture-001",
+  run: FIXTURE_GOVERNANCE_RUN_SUMMARY,
+  readiness: FIXTURE_GOVERNANCE_READINESS,
+  manifestAttempts: FIXTURE_GOVERNANCE_MANIFEST_ATTEMPTS,
+  ledgerAttempts: FIXTURE_GOVERNANCE_LEDGER_ATTEMPTS
+};
+
+const FIXTURE_GOVERNANCE_OVERVIEW: DocumentGovernanceOverviewResponse = {
+  documentId: "doc-fixture-002",
+  projectId: "project-fixture-alpha",
+  activeRunId: "redaction-run-fixture-001",
+  totalRuns: 1,
+  approvedRuns: 1,
+  readyRuns: 1,
+  pendingRuns: 0,
+  failedRuns: 0,
+  latestRunId: "redaction-run-fixture-001",
+  latestReadyRunId: "redaction-run-fixture-001",
+  latestRun: FIXTURE_GOVERNANCE_RUN_SUMMARY,
+  latestReadyRun: FIXTURE_GOVERNANCE_RUN_SUMMARY
+};
+
+const FIXTURE_GOVERNANCE_RUNS: DocumentGovernanceRunsResponse = {
+  documentId: "doc-fixture-002",
+  projectId: "project-fixture-alpha",
+  activeRunId: "redaction-run-fixture-001",
+  items: [FIXTURE_GOVERNANCE_RUN_SUMMARY]
+};
+
+const FIXTURE_GOVERNANCE_EVENTS: GovernanceRunEvent[] = [
+  {
+    id: "gov-event-001",
+    runId: "redaction-run-fixture-001",
+    eventType: "RUN_CREATED",
+    actorUserId: "system-fixture",
+    fromStatus: null,
+    toStatus: "PENDING",
+    reason: "Governance run created from approved privacy review.",
+    createdAt: "2026-03-11T16:24:15.000Z",
+    screeningSafe: true
+  },
+  {
+    id: "gov-event-002",
+    runId: "redaction-run-fixture-001",
+    eventType: "MANIFEST_SUCCEEDED",
+    actorUserId: "system-fixture",
+    fromStatus: "RUNNING",
+    toStatus: "SUCCEEDED",
+    reason: "Screening-safe manifest finalized.",
+    createdAt: "2026-03-11T16:24:34.000Z",
+    screeningSafe: true
+  },
+  {
+    id: "gov-event-003",
+    runId: "redaction-run-fixture-001",
+    eventType: "LEDGER_SUCCEEDED",
+    actorUserId: "system-fixture",
+    fromStatus: "RUNNING",
+    toStatus: "SUCCEEDED",
+    reason: "Controlled evidence ledger finalized.",
+    createdAt: "2026-03-11T16:24:50.000Z",
+    screeningSafe: false
+  },
+  {
+    id: "gov-event-004",
+    runId: "redaction-run-fixture-001",
+    eventType: "LEDGER_VERIFIED_VALID",
+    actorUserId: "system-fixture",
+    fromStatus: "RUNNING",
+    toStatus: "SUCCEEDED",
+    reason: "Hash-chain verification completed as VALID.",
+    createdAt: "2026-03-11T16:25:00.000Z",
+    screeningSafe: false
+  }
+];
+
+const FIXTURE_GOVERNANCE_MANIFEST_PAYLOAD = {
+  manifestSchemaVersion: 1,
+  manifestKind: "SCREENING_SAFE_REDACTION_MANIFEST",
+  runId: "redaction-run-fixture-001",
+  approvedSnapshotSha256: "approved-fixture-sha-base-001",
+  internalOnly: true,
+  exportApproved: false,
+  notExportApproved: true,
+  entryCount: FIXTURE_GOVERNANCE_MANIFEST_ENTRY_SET.length,
+  entries: FIXTURE_GOVERNANCE_MANIFEST_ENTRY_SET
+};
+
+const FIXTURE_GOVERNANCE_LEDGER_PAYLOAD = {
+  schemaVersion: 1,
+  ledgerKind: "CONTROLLED_EVIDENCE_LEDGER",
+  runId: "redaction-run-fixture-001",
+  sourceSnapshotSha256: "approved-fixture-sha-base-001",
+  hashChainVersion: "v1",
+  rowCount: FIXTURE_GOVERNANCE_LEDGER_ENTRY_SET.length,
+  headHash: "ledger-row-hash-003",
+  rows: FIXTURE_GOVERNANCE_LEDGER_ENTRY_SET
+};
+
+const FIXTURE_GOVERNANCE_MANIFEST_RESPONSE: DocumentGovernanceManifestResponse = {
+  overview: FIXTURE_GOVERNANCE_RUN_OVERVIEW,
+  latestAttempt: FIXTURE_GOVERNANCE_MANIFEST_ATTEMPTS[0],
+  manifestJson: FIXTURE_GOVERNANCE_MANIFEST_PAYLOAD,
+  streamSha256: "fixture-governance-manifest-sha-001",
+  hashMatches: true,
+  internalOnly: true,
+  exportApproved: false,
+  notExportApproved: true
+};
+
+const FIXTURE_GOVERNANCE_MANIFEST_STATUS_RESPONSE: DocumentGovernanceManifestStatusResponse = {
+  runId: "redaction-run-fixture-001",
+  status: "SUCCEEDED",
+  latestAttempt: FIXTURE_GOVERNANCE_MANIFEST_ATTEMPTS[0],
+  attemptCount: FIXTURE_GOVERNANCE_MANIFEST_ATTEMPTS.length,
+  readyManifestId: "gov-manifest-attempt-001",
+  latestManifestSha256: "fixture-governance-manifest-sha-001",
+  generationStatus: "IDLE",
+  readinessStatus: "READY",
+  updatedAt: "2026-03-13T10:02:00.000Z"
+};
+
+const FIXTURE_GOVERNANCE_MANIFEST_HASH_RESPONSE: DocumentGovernanceManifestHashResponse = {
+  runId: "redaction-run-fixture-001",
+  status: "SUCCEEDED",
+  manifestId: "gov-manifest-attempt-001",
+  manifestSha256: "fixture-governance-manifest-sha-001",
+  streamSha256: "fixture-governance-manifest-sha-001",
+  hashMatches: true,
+  internalOnly: true,
+  exportApproved: false,
+  notExportApproved: true
+};
+
+const FIXTURE_GOVERNANCE_LEDGER_RESPONSE: DocumentGovernanceLedgerResponse = {
+  overview: FIXTURE_GOVERNANCE_RUN_OVERVIEW,
+  latestAttempt: FIXTURE_GOVERNANCE_LEDGER_ATTEMPTS[0],
+  ledgerJson: FIXTURE_GOVERNANCE_LEDGER_PAYLOAD,
+  streamSha256: "fixture-governance-ledger-sha-001",
+  hashMatches: true,
+  internalOnly: true
+};
+
+const FIXTURE_GOVERNANCE_LEDGER_STATUS_RESPONSE: DocumentGovernanceLedgerStatusResponse = {
+  runId: "redaction-run-fixture-001",
+  status: "SUCCEEDED",
+  latestAttempt: FIXTURE_GOVERNANCE_LEDGER_ATTEMPTS[0],
+  attemptCount: FIXTURE_GOVERNANCE_LEDGER_ATTEMPTS.length,
+  readyLedgerId: "gov-ledger-attempt-001",
+  latestLedgerSha256: "fixture-governance-ledger-sha-001",
+  generationStatus: "IDLE",
+  readinessStatus: "READY",
+  ledgerVerificationStatus: "VALID",
+  updatedAt: "2026-03-13T10:02:00.000Z"
+};
+
+const FIXTURE_GOVERNANCE_VERIFY_RUNS: GovernanceLedgerVerificationRun[] = [
+  {
+    id: "gov-ledger-verify-003",
+    runId: "redaction-run-fixture-001",
+    attemptNumber: 3,
+    supersedesVerificationRunId: "gov-ledger-verify-002",
+    supersededByVerificationRunId: null,
+    status: "RUNNING",
+    verificationResult: null,
+    resultJson: null,
+    startedAt: "2026-03-13T10:01:45.000Z",
+    finishedAt: null,
+    canceledBy: null,
+    canceledAt: null,
+    failureReason: null,
+    createdBy: "user-fixture-admin",
+    createdAt: "2026-03-13T10:01:45.000Z"
+  },
+  {
+    id: "gov-ledger-verify-002",
+    runId: "redaction-run-fixture-001",
+    attemptNumber: 2,
+    supersedesVerificationRunId: "gov-ledger-verify-001",
+    supersededByVerificationRunId: "gov-ledger-verify-003",
+    status: "SUCCEEDED",
+    verificationResult: "VALID",
+    resultJson: {
+      valid: true,
+      headHash: "ledger-row-hash-003",
+      rowCount: 3
+    },
+    startedAt: "2026-03-13T09:59:15.000Z",
+    finishedAt: "2026-03-13T09:59:30.000Z",
+    canceledBy: null,
+    canceledAt: null,
+    failureReason: null,
+    createdBy: "user-fixture-admin",
+    createdAt: "2026-03-13T09:59:15.000Z"
+  },
+  {
+    id: "gov-ledger-verify-001",
+    runId: "redaction-run-fixture-001",
+    attemptNumber: 1,
+    supersedesVerificationRunId: null,
+    supersededByVerificationRunId: "gov-ledger-verify-002",
+    status: "SUCCEEDED",
+    verificationResult: "INVALID",
+    resultJson: {
+      valid: false,
+      firstInvalidRowId: "ledger-row-002"
+    },
+    startedAt: "2026-03-13T09:57:12.000Z",
+    finishedAt: "2026-03-13T09:57:22.000Z",
+    canceledBy: null,
+    canceledAt: null,
+    failureReason: null,
+    createdBy: "user-fixture-admin",
+    createdAt: "2026-03-13T09:57:12.000Z"
+  }
+];
+
+const FIXTURE_GOVERNANCE_LEDGER_SUMMARY_RESPONSE: DocumentGovernanceLedgerSummaryResponse = {
+  runId: "redaction-run-fixture-001",
+  status: "SUCCEEDED",
+  ledgerId: "gov-ledger-attempt-001",
+  ledgerSha256: "fixture-governance-ledger-sha-001",
+  hashChainVersion: "v1",
+  rowCount: FIXTURE_GOVERNANCE_LEDGER_ENTRY_SET.length,
+  hashChainHead: "ledger-row-hash-003",
+  hashChainValid: true,
+  verificationStatus: "VALID",
+  categoryCounts: {
+    PERSON_NAME: 1,
+    POSTCODE: 1,
+    PHONE: 1
+  },
+  actionCounts: {
+    MASK: 3
+  },
+  overrideCount: 1,
+  assistReferenceCount: 2,
+  internalOnly: true
+};
+
+let fixtureRedactionEventSequence = 4;
+
+const FIXTURE_TRANSCRIPTION_LINES_BY_RUN_PAGE: Record<
+  string,
+  DocumentTranscriptionLineResult[]
+> = {
+  "transcription-run-fixture-002:page-fixture-001": [
+    {
+      runId: "transcription-run-fixture-002",
+      pageId: "page-fixture-001",
+      lineId: "line-privacy-001",
+      textDiplomatic: "John Adams presented testimony in York.",
+      confLine: 0.97,
+      confidenceBand: "HIGH",
+      confidenceBasis: "MODEL_NATIVE",
+      confidenceCalibrationVersion: "v1",
+      alignmentJsonKey: null,
+      charBoxesKey: null,
+      schemaValidationStatus: "VALID",
+      flagsJson: {},
+      machineOutputSha256: "fixture-line-privacy-001",
+      activeTranscriptVersionId: "line-privacy-001-v1",
+      versionEtag: "line-privacy-001-v1",
+      tokenAnchorStatus: "CURRENT",
+      createdAt: "2026-03-12T09:10:00.000Z",
+      updatedAt: "2026-03-12T09:10:00.000Z"
+    },
+    {
+      runId: "transcription-run-fixture-002",
+      pageId: "page-fixture-001",
+      lineId: "line-privacy-002",
+      textDiplomatic: "No sensitive fields were identified in this line.",
+      confLine: 0.94,
+      confidenceBand: "HIGH",
+      confidenceBasis: "MODEL_NATIVE",
+      confidenceCalibrationVersion: "v1",
+      alignmentJsonKey: null,
+      charBoxesKey: null,
+      schemaValidationStatus: "VALID",
+      flagsJson: {},
+      machineOutputSha256: "fixture-line-privacy-002",
+      activeTranscriptVersionId: "line-privacy-002-v1",
+      versionEtag: "line-privacy-002-v1",
+      tokenAnchorStatus: "CURRENT",
+      createdAt: "2026-03-12T09:10:03.000Z",
+      updatedAt: "2026-03-12T09:10:03.000Z"
+    }
+  ],
+  "transcription-run-fixture-002:page-fixture-002": [
+    {
+      runId: "transcription-run-fixture-002",
+      pageId: "page-fixture-002",
+      lineId: "line-privacy-010",
+      textDiplomatic: "Contact reaches remain partially legible near the crease.",
+      confLine: 0.79,
+      confidenceBand: "MEDIUM",
+      confidenceBasis: "MODEL_NATIVE",
+      confidenceCalibrationVersion: "v1",
+      alignmentJsonKey: null,
+      charBoxesKey: null,
+      schemaValidationStatus: "VALID",
+      flagsJson: {},
+      machineOutputSha256: "fixture-line-privacy-010",
+      activeTranscriptVersionId: "line-privacy-010-v1",
+      versionEtag: "line-privacy-010-v1",
+      tokenAnchorStatus: "CURRENT",
+      createdAt: "2026-03-12T09:10:10.000Z",
+      updatedAt: "2026-03-12T09:10:10.000Z"
+    }
+  ]
+};
+
+const FIXTURE_PROJECT_SEARCH_INDEX_ID: Record<string, string | null> = {
+  "project-fixture-alpha": "search-index-fixture-002",
+  "project-fixture-beta": "search-index-fixture-001"
+};
+
+const FIXTURE_PROJECT_SEARCH_HITS: Record<string, ProjectSearchHit[]> = {
+  "project-fixture-alpha": [
+    {
+      searchDocumentId: "search-hit-token-001",
+      searchIndexId: "search-index-fixture-002",
+      documentId: "doc-fixture-002",
+      runId: "transcription-run-fixture-002",
+      pageId: "page-fixture-001",
+      pageNumber: 1,
+      lineId: "line-privacy-001",
+      tokenId: "token-privacy-001",
+      sourceKind: "LINE",
+      sourceRefId: "line-privacy-001",
+      matchSpanJson: null,
+      tokenGeometryJson: {
+        x: 112,
+        y: 208,
+        w: 64,
+        h: 16
+      },
+      searchText: "John Adams presented testimony in York.",
+      searchMetadataJson: {
+        confidence: 0.97
+      }
+    },
+    {
+      searchDocumentId: "search-hit-rescue-001",
+      searchIndexId: "search-index-fixture-002",
+      documentId: "doc-fixture-002",
+      runId: "transcription-run-fixture-002",
+      pageId: "page-fixture-002",
+      pageNumber: 2,
+      lineId: null,
+      tokenId: null,
+      sourceKind: "RESCUE_CANDIDATE",
+      sourceRefId: "resc-2-1",
+      matchSpanJson: {
+        start: 8,
+        end: 24
+      },
+      tokenGeometryJson: null,
+      searchText: "Rescue candidate confirms partial name near crease.",
+      searchMetadataJson: {
+        confidence: 0.74
+      }
+    },
+    {
+      searchDocumentId: "search-hit-window-001",
+      searchIndexId: "search-index-fixture-002",
+      documentId: "doc-fixture-002",
+      runId: "transcription-run-fixture-002",
+      pageId: "page-fixture-002",
+      pageNumber: 2,
+      lineId: null,
+      tokenId: null,
+      sourceKind: "PAGE_WINDOW",
+      sourceRefId: "window-2-3",
+      matchSpanJson: {
+        start: 0,
+        end: 14
+      },
+      tokenGeometryJson: null,
+      searchText: "Contact reaches remain partially legible near the crease.",
+      searchMetadataJson: {}
+    }
+  ]
+};
+
+const FIXTURE_PROJECT_ENTITY_INDEX_ID: Record<string, string | null> = {
+  "project-fixture-alpha": "entity-index-fixture-002",
+  "project-fixture-beta": null
+};
+
+const FIXTURE_PROJECT_ENTITIES: Record<string, ControlledEntity[]> = {
+  "project-fixture-alpha": [
+    {
+      id: "entity-person-john-adams",
+      projectId: "project-fixture-alpha",
+      entityIndexId: "entity-index-fixture-002",
+      entityType: "PERSON",
+      displayValue: "John Adams",
+      canonicalValue: "john adams",
+      confidenceSummaryJson: {
+        band: "HIGH",
+        average: 0.962,
+        min: 0.931,
+        max: 0.989,
+        occurrenceCount: 2
+      },
+      occurrenceCount: 2,
+      createdAt: "2026-03-12T09:12:00.000Z"
+    },
+    {
+      id: "entity-place-york",
+      projectId: "project-fixture-alpha",
+      entityIndexId: "entity-index-fixture-002",
+      entityType: "PLACE",
+      displayValue: "York",
+      canonicalValue: "york",
+      confidenceSummaryJson: {
+        band: "MEDIUM",
+        average: 0.742,
+        min: 0.742,
+        max: 0.742,
+        occurrenceCount: 1
+      },
+      occurrenceCount: 1,
+      createdAt: "2026-03-12T09:12:05.000Z"
+    }
+  ]
+};
+
+const FIXTURE_PROJECT_ENTITY_OCCURRENCES: Record<string, EntityOccurrence[]> = {
+  "project-fixture-alpha": [
+    {
+      id: "entocc-john-adams-line",
+      entityIndexId: "entity-index-fixture-002",
+      entityId: "entity-person-john-adams",
+      documentId: "doc-fixture-002",
+      runId: "transcription-run-fixture-002",
+      pageId: "page-fixture-001",
+      pageNumber: 1,
+      lineId: "line-privacy-001",
+      tokenId: "token-privacy-001",
+      sourceKind: "LINE",
+      sourceRefId: "line-privacy-001",
+      confidence: 0.989,
+      occurrenceSpanJson: {
+        start: 0,
+        end: 10
+      },
+      occurrenceSpanBasisKind: "LINE_TEXT",
+      occurrenceSpanBasisRef: "line-privacy-001",
+      tokenGeometryJson: {
+        x: 112,
+        y: 208,
+        w: 64,
+        h: 16
+      },
+      workspacePath:
+        "/projects/project-fixture-alpha/documents/doc-fixture-002/transcription/workspace?lineId=line-privacy-001&page=1&runId=transcription-run-fixture-002&sourceKind=LINE&sourceRefId=line-privacy-001&tokenId=token-privacy-001"
+    },
+    {
+      id: "entocc-john-adams-window",
+      entityIndexId: "entity-index-fixture-002",
+      entityId: "entity-person-john-adams",
+      documentId: "doc-fixture-002",
+      runId: "transcription-run-fixture-002",
+      pageId: "page-fixture-002",
+      pageNumber: 2,
+      lineId: null,
+      tokenId: null,
+      sourceKind: "PAGE_WINDOW",
+      sourceRefId: "window-2-3",
+      confidence: 0.931,
+      occurrenceSpanJson: {
+        start: 8,
+        end: 19
+      },
+      occurrenceSpanBasisKind: "PAGE_WINDOW_TEXT",
+      occurrenceSpanBasisRef: "window-2-3",
+      tokenGeometryJson: null,
+      workspacePath:
+        "/projects/project-fixture-alpha/documents/doc-fixture-002/transcription/workspace?page=2&runId=transcription-run-fixture-002&sourceKind=PAGE_WINDOW&sourceRefId=window-2-3"
+    },
+    {
+      id: "entocc-york-line",
+      entityIndexId: "entity-index-fixture-002",
+      entityId: "entity-place-york",
+      documentId: "doc-fixture-002",
+      runId: "transcription-run-fixture-002",
+      pageId: "page-fixture-001",
+      pageNumber: 1,
+      lineId: "line-privacy-001",
+      tokenId: null,
+      sourceKind: "LINE",
+      sourceRefId: "line-privacy-001",
+      confidence: 0.742,
+      occurrenceSpanJson: {
+        start: 31,
+        end: 35
+      },
+      occurrenceSpanBasisKind: "LINE_TEXT",
+      occurrenceSpanBasisRef: "line-privacy-001",
+      tokenGeometryJson: null,
+      workspacePath:
+        "/projects/project-fixture-alpha/documents/doc-fixture-002/transcription/workspace?lineId=line-privacy-001&page=1&runId=transcription-run-fixture-002&sourceKind=LINE&sourceRefId=line-privacy-001"
+    }
+  ]
+};
+
 function normalizeFixturePath(path: string): URL {
   try {
     if (path.startsWith("http://") || path.startsWith("https://")) {
@@ -1408,6 +2965,79 @@ function cloneProject(project: ProjectSummary): ProjectSummary {
   return {
     ...project
   };
+}
+
+function cloneSearchHit(hit: ProjectSearchHit): ProjectSearchHit {
+  return {
+    ...hit,
+    matchSpanJson: hit.matchSpanJson ? { ...hit.matchSpanJson } : null,
+    tokenGeometryJson: hit.tokenGeometryJson ? { ...hit.tokenGeometryJson } : null,
+    searchMetadataJson: { ...hit.searchMetadataJson }
+  };
+}
+
+function cloneControlledEntity(entity: ControlledEntity): ControlledEntity {
+  return {
+    ...entity,
+    confidenceSummaryJson: { ...entity.confidenceSummaryJson }
+  };
+}
+
+function cloneEntityOccurrence(occurrence: EntityOccurrence): EntityOccurrence {
+  return {
+    ...occurrence,
+    occurrenceSpanJson: occurrence.occurrenceSpanJson
+      ? { ...occurrence.occurrenceSpanJson }
+      : null,
+    tokenGeometryJson: occurrence.tokenGeometryJson
+      ? { ...occurrence.tokenGeometryJson }
+      : null
+  };
+}
+
+function parsePositiveIntParam(raw: string | null, fallback: number): number {
+  const parsed = Number.parseInt(raw ?? "", 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return parsed;
+}
+
+function parseNonNegativeIntParam(raw: string | null, fallback: number): number {
+  const parsed = Number.parseInt(raw ?? "", 10);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return fallback;
+  }
+  return parsed;
+}
+
+function encodeFixturePathSegment(value: string): string {
+  return encodeURIComponent(value);
+}
+
+function buildFixtureSearchWorkspacePath(
+  projectId: string,
+  hit: ProjectSearchHit
+): string {
+  const params: Array<[string, string]> = [
+    ["page", String(hit.pageNumber)],
+    ["runId", hit.runId]
+  ];
+  if (hit.lineId) {
+    params.push(["lineId", hit.lineId]);
+  }
+  if (hit.tokenId) {
+    params.push(["tokenId", hit.tokenId]);
+  }
+  if (hit.sourceKind) {
+    params.push(["sourceKind", hit.sourceKind]);
+  }
+  if (hit.sourceRefId) {
+    params.push(["sourceRefId", hit.sourceRefId]);
+  }
+  params.sort(([left], [right]) => left.localeCompare(right));
+  const search = new URLSearchParams(params);
+  return `/projects/${encodeFixturePathSegment(projectId)}/documents/${encodeFixturePathSegment(hit.documentId)}/transcription/workspace?${search.toString()}`;
 }
 
 function cloneDocument(document: ProjectDocument): ProjectDocument {
@@ -1568,6 +3198,347 @@ function resolveLayoutOverlayFixture(
   return overlay ? cloneLayoutOverlay(overlay) : null;
 }
 
+function cloneRedactionRun(run: DocumentRedactionRun): DocumentRedactionRun {
+  return {
+    ...run,
+    policySnapshotJson: { ...run.policySnapshotJson }
+  };
+}
+
+function cloneRedactionProjection(
+  projection: DocumentRedactionProjection
+): DocumentRedactionProjection {
+  return {
+    ...projection
+  };
+}
+
+function cloneRedactionRunReview(
+  review: DocumentRedactionRunReview
+): DocumentRedactionRunReview {
+  return {
+    ...review
+  };
+}
+
+function cloneRedactionRunOutput(
+  output: DocumentRedactionRunOutput
+): DocumentRedactionRunOutput {
+  return {
+    ...output
+  };
+}
+
+function cloneRedactionFinding(
+  finding: DocumentRedactionFinding
+): DocumentRedactionFinding {
+  return {
+    ...finding,
+    basisSecondaryJson: finding.basisSecondaryJson
+      ? { ...finding.basisSecondaryJson }
+      : null,
+    bboxRefs: { ...finding.bboxRefs },
+    tokenRefsJson: finding.tokenRefsJson
+      ? finding.tokenRefsJson.map((item) => ({ ...item }))
+      : null,
+    overrideRiskReasonCodesJson: finding.overrideRiskReasonCodesJson
+      ? [...finding.overrideRiskReasonCodesJson]
+      : null,
+    geometry: {
+      ...finding.geometry,
+      tokenIds: [...finding.geometry.tokenIds],
+      boxes: finding.geometry.boxes.map((box) => ({ ...box })),
+      polygons: finding.geometry.polygons.map((polygon) => ({
+        ...polygon,
+        points: polygon.points.map((point) => ({ ...point }))
+      }))
+    },
+    activeAreaMask: finding.activeAreaMask
+      ? {
+          ...finding.activeAreaMask,
+          geometryJson: { ...finding.activeAreaMask.geometryJson }
+        }
+      : null
+  };
+}
+
+function cloneRedactionPageReview(
+  review: DocumentRedactionPageReview
+): DocumentRedactionPageReview {
+  return {
+    ...review
+  };
+}
+
+function cloneRedactionPreviewStatus(
+  previewStatus: DocumentRedactionPreviewStatusResponse
+): DocumentRedactionPreviewStatusResponse {
+  return {
+    ...previewStatus
+  };
+}
+
+function cloneRedactionTimelineEvent(
+  event: DocumentRedactionTimelineEvent
+): DocumentRedactionTimelineEvent {
+  return {
+    ...event,
+    detailsJson: { ...event.detailsJson }
+  };
+}
+
+function cloneTranscriptionLine(
+  line: DocumentTranscriptionLineResult
+): DocumentTranscriptionLineResult {
+  return {
+    ...line,
+    flagsJson: { ...line.flagsJson }
+  };
+}
+
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function resolveRedactionRunsFixture(documentId: string): DocumentRedactionRun[] {
+  const runs = FIXTURE_REDACTION_RUNS_BY_DOCUMENT[documentId] ?? [];
+  return runs.map((run) => cloneRedactionRun(run));
+}
+
+function resolveRedactionProjectionFixture(
+  documentId: string
+): DocumentRedactionProjection | null {
+  const projection = FIXTURE_REDACTION_PROJECTION_BY_DOCUMENT[documentId];
+  return projection ? cloneRedactionProjection(projection) : null;
+}
+
+function resolveRedactionFindingsFixture(
+  runId: string,
+  pageId: string
+): DocumentRedactionFinding[] {
+  const key = `${runId}:${pageId}`;
+  const findings = FIXTURE_REDACTION_FINDINGS_BY_RUN_PAGE[key] ?? [];
+  return findings.map((finding) => cloneRedactionFinding(finding));
+}
+
+function resolveRedactionPageReviewFixture(
+  runId: string,
+  pageId: string
+): DocumentRedactionPageReview | null {
+  const key = `${runId}:${pageId}`;
+  const review = FIXTURE_REDACTION_PAGE_REVIEWS_BY_RUN_PAGE[key];
+  return review ? cloneRedactionPageReview(review) : null;
+}
+
+function resolveRedactionPreviewStatusFixture(
+  runId: string,
+  pageId: string
+): DocumentRedactionPreviewStatusResponse | null {
+  const key = `${runId}:${pageId}`;
+  const previewStatus = FIXTURE_REDACTION_PREVIEW_STATUS_BY_RUN_PAGE[key];
+  return previewStatus ? cloneRedactionPreviewStatus(previewStatus) : null;
+}
+
+function resolveRedactionRunReviewFixture(
+  runId: string
+): DocumentRedactionRunReview | null {
+  const review = FIXTURE_REDACTION_RUN_REVIEWS_BY_RUN[runId];
+  return review ? cloneRedactionRunReview(review) : null;
+}
+
+function resolveRedactionRunOutputFixture(
+  runId: string
+): DocumentRedactionRunOutput | null {
+  const output = FIXTURE_REDACTION_RUN_OUTPUTS_BY_RUN[runId];
+  return output ? cloneRedactionRunOutput(output) : null;
+}
+
+function resolveRedactionEventsFixture(
+  runId: string,
+  pageId: string
+): DocumentRedactionTimelineEvent[] {
+  const key = `${runId}:${pageId}`;
+  const events = FIXTURE_REDACTION_EVENTS_BY_RUN_PAGE[key] ?? [];
+  return events.map((event) => cloneRedactionTimelineEvent(event));
+}
+
+function resolveRedactionRunEventsFixture(
+  runId: string
+): DocumentRedactionTimelineEvent[] {
+  const runLevel = FIXTURE_REDACTION_RUN_EVENTS_BY_RUN[runId] ?? [];
+  const pageLevel = Object.entries(FIXTURE_REDACTION_EVENTS_BY_RUN_PAGE)
+    .filter(([key]) => key.startsWith(`${runId}:`))
+    .flatMap(([, events]) => events);
+  return [...runLevel, ...pageLevel].map((event) => cloneRedactionTimelineEvent(event));
+}
+
+function resolveTranscriptionLinesFixture(
+  runId: string,
+  pageId: string
+): DocumentTranscriptionLineResult[] {
+  const key = `${runId}:${pageId}`;
+  const lines = FIXTURE_TRANSCRIPTION_LINES_BY_RUN_PAGE[key] ?? [];
+  return lines.map((line) => cloneTranscriptionLine(line));
+}
+
+function isUnresolvedStatus(status: string): boolean {
+  return status === "NEEDS_REVIEW" || status === "OVERRIDDEN" || status === "FALSE_POSITIVE";
+}
+
+function isDirectIdentifierCategory(category: string): boolean {
+  const normalized = category.trim().toUpperCase();
+  if (!normalized) {
+    return false;
+  }
+  if (normalized.startsWith("DIRECT_")) {
+    return true;
+  }
+  return [
+    "DIRECT_IDENTIFIER",
+    "PERSON_NAME",
+    "ORGANIZATION",
+    "LOCATION",
+    "EMAIL",
+    "PHONE",
+    "URL",
+    "POSTCODE",
+    "ID_NUMBER",
+    "NATIONAL_ID",
+    "NI_NUMBER",
+    "NHS_NUMBER"
+  ].includes(normalized);
+}
+
+function filterRedactionFindings(options: {
+  findings: DocumentRedactionFinding[];
+  path: URL;
+}): DocumentRedactionFinding[] {
+  const { findings, path } = options;
+  const category = path.searchParams.get("category")?.trim() ?? "";
+  const unresolvedOnly =
+    path.searchParams.get("unresolvedOnly")?.trim().toLowerCase() === "true";
+  const directIdentifiersOnly =
+    path.searchParams.get("directIdentifiersOnly")?.trim().toLowerCase() === "true";
+  const findingId = path.searchParams.get("findingId")?.trim() ?? "";
+  const lineId = path.searchParams.get("lineId")?.trim() ?? "";
+  const tokenId = path.searchParams.get("tokenId")?.trim() ?? "";
+  return findings.filter((finding) => {
+    if (category && finding.category !== category) {
+      return false;
+    }
+    if (unresolvedOnly && !isUnresolvedStatus(finding.decisionStatus)) {
+      return false;
+    }
+    if (directIdentifiersOnly && !isDirectIdentifierCategory(finding.category)) {
+      return false;
+    }
+    if (findingId && finding.id !== findingId) {
+      return false;
+    }
+    if (lineId) {
+      const findingLineId = finding.geometry.lineId ?? finding.lineId ?? "";
+      if (findingLineId !== lineId) {
+        return false;
+      }
+    }
+    if (tokenId && !finding.geometry.tokenIds.includes(tokenId)) {
+      return false;
+    }
+    return true;
+  });
+}
+
+function buildRedactionRunPagesFixture(
+  runId: string,
+  documentId: string
+): DocumentRedactionRunPage[] {
+  const pages = resolveDocumentPagesFixture(documentId);
+  const items: DocumentRedactionRunPage[] = [];
+  for (const page of pages) {
+    const findings = resolveRedactionFindingsFixture(runId, page.id);
+    const review = resolveRedactionPageReviewFixture(runId, page.id);
+    const previewStatus = resolveRedactionPreviewStatusFixture(runId, page.id);
+    items.push({
+      runId,
+      pageId: page.id,
+      pageIndex: page.pageIndex,
+      findingCount: findings.length,
+      unresolvedCount: findings.filter((finding) =>
+        isUnresolvedStatus(finding.decisionStatus)
+      ).length,
+      reviewStatus: review?.reviewStatus ?? "NOT_STARTED",
+      reviewEtag: review?.reviewEtag ?? "",
+      requiresSecondReview: review?.requiresSecondReview ?? false,
+      secondReviewStatus: review?.secondReviewStatus ?? "NOT_REQUIRED",
+      secondReviewedBy: review?.secondReviewedBy ?? null,
+      secondReviewedAt: review?.secondReviewedAt ?? null,
+      lastReviewedBy: review?.firstReviewedBy ?? null,
+      lastReviewedAt: review?.firstReviewedAt ?? null,
+      previewStatus: previewStatus?.status ?? null,
+      topFindings: findings.slice(0, 5)
+    });
+  }
+  return items.sort((left, right) => left.pageIndex - right.pageIndex);
+}
+
+function resolveRedactionOverviewFixture(
+  projectId: string,
+  documentId: string
+): DocumentRedactionOverviewResponse {
+  const projection = resolveRedactionProjectionFixture(documentId);
+  const runs = resolveRedactionRunsFixture(documentId);
+  const activeRun = projection?.activeRedactionRunId
+    ? runs.find((run) => run.id === projection.activeRedactionRunId) ?? null
+    : null;
+  const latestRun = runs.length > 0 ? runs[0] : null;
+  const pages = activeRun ? buildRedactionRunPagesFixture(activeRun.id, documentId) : [];
+  const findings = activeRun
+    ? pages.flatMap((page) => resolveRedactionFindingsFixture(activeRun.id, page.pageId))
+    : [];
+  const findingsByCategory: Record<string, number> = {};
+  let unresolvedFindings = 0;
+  let autoAppliedFindings = 0;
+  let needsReviewFindings = 0;
+  let overriddenFindings = 0;
+  for (const finding of findings) {
+    findingsByCategory[finding.category] = (findingsByCategory[finding.category] ?? 0) + 1;
+    if (finding.decisionStatus === "AUTO_APPLIED") {
+      autoAppliedFindings += 1;
+    } else if (finding.decisionStatus === "NEEDS_REVIEW") {
+      needsReviewFindings += 1;
+    } else if (finding.decisionStatus === "OVERRIDDEN") {
+      overriddenFindings += 1;
+    }
+    if (isUnresolvedStatus(finding.decisionStatus)) {
+      unresolvedFindings += 1;
+    }
+  }
+  const previewStatuses = activeRun
+    ? pages.map((page) => resolveRedactionPreviewStatusFixture(activeRun.id, page.pageId))
+    : [];
+  const previewReadyPages = previewStatuses.filter((status) => status?.status === "READY").length;
+  const previewFailedPages = previewStatuses.filter((status) => status?.status === "FAILED").length;
+  const pagesBlockedForReview = pages.filter((page) => page.reviewStatus !== "APPROVED").length;
+  return {
+    documentId,
+    projectId,
+    projection,
+    activeRun,
+    latestRun,
+    totalRuns: runs.length,
+    pageCount: resolveDocumentPagesFixture(documentId).length,
+    findingsByCategory,
+    unresolvedFindings,
+    autoAppliedFindings,
+    needsReviewFindings,
+    overriddenFindings,
+    pagesBlockedForReview,
+    previewReadyPages,
+    previewTotalPages: previewStatuses.length,
+    previewFailedPages
+  };
+}
+
 function resolveListSlice(path: URL): { cursor: number; pageSize: number } {
   const cursorRaw = Number(path.searchParams.get("cursor") ?? "0");
   const pageSizeRaw = Number(path.searchParams.get("pageSize") ?? "50");
@@ -1588,6 +3559,81 @@ function sliceFixtureItems<T>(
   return {
     items: items.slice(cursor, end),
     nextCursor: end < items.length ? end : null
+  };
+}
+
+function resolveGovernanceCursorLimit(path: URL): { cursor: number; limit: number } {
+  const cursorRaw = Number(path.searchParams.get("cursor") ?? "0");
+  const limitRaw = Number(path.searchParams.get("limit") ?? "100");
+  const cursor = Number.isFinite(cursorRaw) && cursorRaw >= 0 ? Math.floor(cursorRaw) : 0;
+  const limit =
+    Number.isFinite(limitRaw) && limitRaw > 0
+      ? Math.min(200, Math.floor(limitRaw))
+      : 100;
+  return { cursor, limit };
+}
+
+function resolveGovernanceManifestEntriesFixture(
+  path: URL
+): { items: GovernanceManifestEntry[]; totalCount: number; nextCursor: number | null } {
+  const categoryFilter = path.searchParams.get("category")?.trim() ?? "";
+  const reviewStateFilter = path.searchParams.get("reviewState")?.trim() ?? "";
+  const pageFilter = Number.parseInt(path.searchParams.get("page") ?? "", 10);
+  const fromFilter = path.searchParams.get("from")?.trim() ?? "";
+  const toFilter = path.searchParams.get("to")?.trim() ?? "";
+  const fromTime = fromFilter ? Date.parse(`${fromFilter}T00:00:00.000Z`) : Number.NaN;
+  const toTime = toFilter ? Date.parse(`${toFilter}T23:59:59.999Z`) : Number.NaN;
+
+  const filtered = FIXTURE_GOVERNANCE_MANIFEST_ENTRY_SET.filter((entry) => {
+    if (categoryFilter && entry.category !== categoryFilter) {
+      return false;
+    }
+    if (reviewStateFilter && entry.reviewState !== reviewStateFilter) {
+      return false;
+    }
+    if (Number.isFinite(pageFilter) && entry.pageIndex !== pageFilter - 1) {
+      return false;
+    }
+    if (Number.isFinite(fromTime) || Number.isFinite(toTime)) {
+      const decisionTime = Date.parse(entry.decisionTimestamp ?? "");
+      if (!Number.isFinite(decisionTime)) {
+        return false;
+      }
+      if (Number.isFinite(fromTime) && decisionTime < fromTime) {
+        return false;
+      }
+      if (Number.isFinite(toTime) && decisionTime > toTime) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  const { cursor, limit } = resolveGovernanceCursorLimit(path);
+  const end = cursor + limit;
+  return {
+    items: filtered.slice(cursor, end).map((entry) => cloneJson(entry)),
+    totalCount: filtered.length,
+    nextCursor: end < filtered.length ? end : null
+  };
+}
+
+function resolveGovernanceLedgerEntriesFixture(path: URL): {
+  items: GovernanceLedgerEntry[];
+  totalCount: number;
+  nextCursor: number | null;
+  view: "list" | "timeline";
+} {
+  const view = path.searchParams.get("view")?.trim() === "timeline" ? "timeline" : "list";
+  const { cursor, limit } = resolveGovernanceCursorLimit(path);
+  const end = cursor + limit;
+  return {
+    items: FIXTURE_GOVERNANCE_LEDGER_ENTRY_SET.slice(cursor, end).map((entry) =>
+      cloneJson(entry)
+    ),
+    totalCount: FIXTURE_GOVERNANCE_LEDGER_ENTRY_SET.length,
+    nextCursor: end < FIXTURE_GOVERNANCE_LEDGER_ENTRY_SET.length ? end : null,
+    view
   };
 }
 
@@ -1719,8 +3765,104 @@ function conflict<T>(detail: string): ApiResult<T> {
   };
 }
 
+function forbidden<T>(detail: string): ApiResult<T> {
+  return {
+    ok: false,
+    status: 403,
+    detail,
+    error: {
+      code: "FORBIDDEN",
+      detail,
+      retryable: false
+    }
+  };
+}
+
 function hasFixtureAuthToken(token: string | null | undefined): boolean {
   return Boolean(token && token.trim().length > 0);
+}
+
+function resolveFixtureSessionProfile(
+  token: string | null | undefined
+): BrowserFixtureSessionProfile | null {
+  if (!token || token.trim().length === 0) {
+    return null;
+  }
+  const normalized = token.trim();
+  const directMatch = (Object.entries(FIXTURE_SESSION_TOKENS) as Array<
+    [BrowserFixtureSessionProfile, string]
+  >).find(([, value]) => value === normalized);
+  if (directMatch) {
+    return directMatch[0];
+  }
+  if (normalized === "fixture-session-token-admin") {
+    return "admin";
+  }
+  return null;
+}
+
+function resolveFixtureSessionByToken(
+  token: string | null | undefined
+): SessionResponse | null {
+  const profile = resolveFixtureSessionProfile(token);
+  if (!profile) {
+    return null;
+  }
+  const session = FIXTURE_SESSION_BY_PROFILE[profile];
+  return {
+    user: { ...session.user },
+    session: { ...session.session }
+  };
+}
+
+function resolveFixtureProjectRole(
+  profile: BrowserFixtureSessionProfile | null
+): ProjectRole | null {
+  if (profile === "researcher") {
+    return "RESEARCHER";
+  }
+  if (profile === "reviewer") {
+    return "REVIEWER";
+  }
+  if (profile === "project-lead") {
+    return "PROJECT_LEAD";
+  }
+  if (profile === "admin" || profile === "auditor") {
+    return "PROJECT_LEAD";
+  }
+  return null;
+}
+
+function canViewGovernanceManifest(profile: BrowserFixtureSessionProfile | null): boolean {
+  return (
+    profile === "admin" ||
+    profile === "auditor" ||
+    profile === "project-lead" ||
+    profile === "reviewer"
+  );
+}
+
+function canViewGovernanceLedger(profile: BrowserFixtureSessionProfile | null): boolean {
+  return profile === "admin" || profile === "auditor";
+}
+
+function canMutateGovernanceLedgerVerification(
+  profile: BrowserFixtureSessionProfile | null
+): boolean {
+  return profile === "admin";
+}
+
+function canUseProjectSearch(profile: BrowserFixtureSessionProfile | null): boolean {
+  return (
+    profile === "admin" ||
+    profile === "project-lead" ||
+    profile === "researcher" ||
+    profile === "reviewer"
+  );
+}
+
+function canCancelVerificationRun(status: GovernanceArtifactStatus): boolean {
+  return status === "QUEUED" || status === "RUNNING";
 }
 
 function resolveProjectFixture(projectId: string): ProjectSummary | null {
@@ -1786,8 +3928,10 @@ export function isBrowserRegressionFixtureMode(): boolean {
   return process.env[BROWSER_TEST_MODE_FLAG] === "1";
 }
 
-export function getBrowserFixtureSessionToken(): string {
-  return FIXTURE_SESSION_TOKEN;
+export function getBrowserFixtureSessionToken(
+  profile: BrowserFixtureSessionProfile = "admin"
+): string {
+  return FIXTURE_SESSION_TOKENS[profile];
 }
 
 export function resolveBrowserRegressionFixtureSession(
@@ -1796,10 +3940,7 @@ export function resolveBrowserRegressionFixtureSession(
   if (!isBrowserRegressionFixtureMode() || !hasFixtureAuthToken(token)) {
     return null;
   }
-  return {
-    user: { ...FIXTURE_SESSION.user },
-    session: { ...FIXTURE_SESSION.session }
-  };
+  return resolveFixtureSessionByToken(token);
 }
 
 export function resolveBrowserRegressionApiResult<T>(options: {
@@ -1824,9 +3965,13 @@ export function resolveBrowserRegressionApiResult<T>(options: {
     if (!hasFixtureAuthToken(options.authToken)) {
       return unauthorized<T>();
     }
+    const fixtureSession = resolveFixtureSessionByToken(options.authToken);
+    if (!fixtureSession) {
+      return unauthorized<T>();
+    }
     return ok<T>({
-      user: { ...FIXTURE_SESSION.user },
-      session: { ...FIXTURE_SESSION.session }
+      user: { ...fixtureSession.user },
+      session: { ...fixtureSession.session }
     } as T);
   }
 
@@ -1842,6 +3987,10 @@ export function resolveBrowserRegressionApiResult<T>(options: {
   }
 
   if (!hasFixtureAuthToken(options.authToken)) {
+    return unauthorized<T>();
+  }
+  const fixtureProfile = resolveFixtureSessionProfile(options.authToken);
+  if (!fixtureProfile) {
     return unauthorized<T>();
   }
 
@@ -1864,6 +4013,284 @@ export function resolveBrowserRegressionApiResult<T>(options: {
   if (method === "GET" && projectSummaryMatch) {
     const project = resolveProjectFixture(projectSummaryMatch[1]);
     return project ? ok<T>(project as T) : notFound<T>("Project not found.");
+  }
+
+  const projectSearchMatch = pathname.match(/^\/projects\/([^/]+)\/search$/);
+  if (method === "GET" && projectSearchMatch) {
+    const project = resolveProjectFixture(projectSearchMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    if (!canUseProjectSearch(fixtureProfile)) {
+      return forbidden<T>("Interactive project search is not available for this role.");
+    }
+
+    const activeSearchIndexId = FIXTURE_PROJECT_SEARCH_INDEX_ID[project.id] ?? null;
+    if (!activeSearchIndexId) {
+      return conflict<T>("No active search index is available for this project.");
+    }
+
+    const queryText = parsedPath.searchParams.get("q")?.trim() ?? "";
+    if (!queryText) {
+      return validationError<T>("q is required.");
+    }
+    const loweredQuery = queryText.toLocaleLowerCase();
+    const documentIdFilter = parsedPath.searchParams.get("documentId")?.trim() ?? "";
+    const runIdFilter = parsedPath.searchParams.get("runId")?.trim() ?? "";
+    const pageNumberRaw = parsedPath.searchParams.get("pageNumber");
+    const pageNumberFilter =
+      pageNumberRaw && pageNumberRaw.trim().length > 0
+        ? Number.parseInt(pageNumberRaw.trim(), 10)
+        : null;
+    if (pageNumberRaw && pageNumberRaw.trim().length > 0) {
+      if (!Number.isFinite(pageNumberFilter) || (pageNumberFilter ?? 0) < 1) {
+        return validationError<T>("pageNumber must be greater than or equal to 1.");
+      }
+    }
+    const cursor = parseNonNegativeIntParam(parsedPath.searchParams.get("cursor"), 0);
+    const limit = Math.max(
+      1,
+      Math.min(100, parsePositiveIntParam(parsedPath.searchParams.get("limit"), 25))
+    );
+
+    const baseHits = (FIXTURE_PROJECT_SEARCH_HITS[project.id] ?? []).filter(
+      (hit) => hit.searchIndexId === activeSearchIndexId
+    );
+    const filtered = baseHits
+      .filter((hit) => hit.searchText.toLocaleLowerCase().includes(loweredQuery))
+      .filter((hit) => (documentIdFilter ? hit.documentId === documentIdFilter : true))
+      .filter((hit) => (runIdFilter ? hit.runId === runIdFilter : true))
+      .filter((hit) =>
+        pageNumberFilter !== null && Number.isFinite(pageNumberFilter)
+          ? hit.pageNumber === pageNumberFilter
+          : true
+      )
+      .sort((left, right) => {
+        if (left.pageNumber !== right.pageNumber) {
+          return left.pageNumber - right.pageNumber;
+        }
+        if (left.documentId !== right.documentId) {
+          return left.documentId.localeCompare(right.documentId);
+        }
+        if (left.runId !== right.runId) {
+          return left.runId.localeCompare(right.runId);
+        }
+        return left.searchDocumentId.localeCompare(right.searchDocumentId);
+      });
+
+    const window = filtered.slice(cursor, cursor + limit + 1);
+    const items = window.slice(0, limit).map((hit) => cloneSearchHit(hit));
+    const nextCursor = window.length > limit ? cursor + limit : null;
+    const payload: ProjectSearchResponse = {
+      searchIndexId: activeSearchIndexId,
+      items,
+      nextCursor
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectEntitiesMatch = pathname.match(/^\/projects\/([^/]+)\/entities$/);
+  if (method === "GET" && projectEntitiesMatch) {
+    const project = resolveProjectFixture(projectEntitiesMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    if (!canUseProjectSearch(fixtureProfile)) {
+      return forbidden<T>("Interactive entity workspace is not available for this role.");
+    }
+
+    const activeEntityIndexId = FIXTURE_PROJECT_ENTITY_INDEX_ID[project.id] ?? null;
+    if (!activeEntityIndexId) {
+      return conflict<T>("No active entity index is available for this project.");
+    }
+
+    const queryText = parsedPath.searchParams.get("q")?.trim().toLocaleLowerCase() ?? "";
+    const entityTypeFilter = parsedPath.searchParams.get("entityType")?.trim().toUpperCase() ?? "";
+    if (
+      entityTypeFilter &&
+      !["PERSON", "PLACE", "ORGANISATION", "DATE"].includes(entityTypeFilter)
+    ) {
+      return validationError<T>(
+        "entityType must be one of PERSON, PLACE, ORGANISATION, DATE."
+      );
+    }
+
+    const cursor = parseNonNegativeIntParam(parsedPath.searchParams.get("cursor"), 0);
+    const limit = Math.max(
+      1,
+      Math.min(100, parsePositiveIntParam(parsedPath.searchParams.get("limit"), 25))
+    );
+
+    const base = (FIXTURE_PROJECT_ENTITIES[project.id] ?? []).filter(
+      (entity) => entity.entityIndexId === activeEntityIndexId
+    );
+    const filtered = base
+      .filter((entity) =>
+        queryText
+          ? entity.displayValue.toLocaleLowerCase().includes(queryText) ||
+            entity.canonicalValue.toLocaleLowerCase().includes(queryText)
+          : true
+      )
+      .filter((entity) =>
+        entityTypeFilter ? entity.entityType === entityTypeFilter : true
+      )
+      .sort((left, right) => {
+        if (left.entityType !== right.entityType) {
+          return left.entityType.localeCompare(right.entityType);
+        }
+        if (left.canonicalValue !== right.canonicalValue) {
+          return left.canonicalValue.localeCompare(right.canonicalValue);
+        }
+        return left.id.localeCompare(right.id);
+      });
+
+    const window = filtered.slice(cursor, cursor + limit + 1);
+    const items = window.slice(0, limit).map((entity) => cloneControlledEntity(entity));
+    const nextCursor = window.length > limit ? cursor + limit : null;
+    const payload: ProjectEntityListResponse = {
+      entityIndexId: activeEntityIndexId,
+      items,
+      nextCursor
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectEntityDetailMatch = pathname.match(/^\/projects\/([^/]+)\/entities\/([^/]+)$/);
+  if (method === "GET" && projectEntityDetailMatch) {
+    const project = resolveProjectFixture(projectEntityDetailMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    if (!canUseProjectSearch(fixtureProfile)) {
+      return forbidden<T>("Interactive entity workspace is not available for this role.");
+    }
+
+    const activeEntityIndexId = FIXTURE_PROJECT_ENTITY_INDEX_ID[project.id] ?? null;
+    if (!activeEntityIndexId) {
+      return conflict<T>("No active entity index is available for this project.");
+    }
+
+    const entityId = projectEntityDetailMatch[2];
+    const entity =
+      (FIXTURE_PROJECT_ENTITIES[project.id] ?? []).find(
+        (candidate) =>
+          candidate.entityIndexId === activeEntityIndexId && candidate.id === entityId
+      ) ?? null;
+    if (!entity) {
+      return notFound<T>("Entity was not found in the active entity index.");
+    }
+
+    const payload: ProjectEntityDetailResponse = {
+      entityIndexId: activeEntityIndexId,
+      entity: cloneControlledEntity(entity)
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectEntityOccurrencesMatch = pathname.match(
+    /^\/projects\/([^/]+)\/entities\/([^/]+)\/occurrences$/
+  );
+  if (method === "GET" && projectEntityOccurrencesMatch) {
+    const project = resolveProjectFixture(projectEntityOccurrencesMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    if (!canUseProjectSearch(fixtureProfile)) {
+      return forbidden<T>("Interactive entity workspace is not available for this role.");
+    }
+
+    const activeEntityIndexId = FIXTURE_PROJECT_ENTITY_INDEX_ID[project.id] ?? null;
+    if (!activeEntityIndexId) {
+      return conflict<T>("No active entity index is available for this project.");
+    }
+
+    const entityId = projectEntityOccurrencesMatch[2];
+    const entity =
+      (FIXTURE_PROJECT_ENTITIES[project.id] ?? []).find(
+        (candidate) =>
+          candidate.entityIndexId === activeEntityIndexId && candidate.id === entityId
+      ) ?? null;
+    if (!entity) {
+      return notFound<T>("Entity was not found in the active entity index.");
+    }
+
+    const cursor = parseNonNegativeIntParam(parsedPath.searchParams.get("cursor"), 0);
+    const limit = Math.max(
+      1,
+      Math.min(100, parsePositiveIntParam(parsedPath.searchParams.get("limit"), 25))
+    );
+    const filtered = (FIXTURE_PROJECT_ENTITY_OCCURRENCES[project.id] ?? [])
+      .filter(
+        (occurrence) =>
+          occurrence.entityIndexId === activeEntityIndexId &&
+          occurrence.entityId === entityId
+      )
+      .sort((left, right) => {
+        if (left.pageNumber !== right.pageNumber) {
+          return left.pageNumber - right.pageNumber;
+        }
+        if (left.documentId !== right.documentId) {
+          return left.documentId.localeCompare(right.documentId);
+        }
+        if (left.runId !== right.runId) {
+          return left.runId.localeCompare(right.runId);
+        }
+        return left.id.localeCompare(right.id);
+      });
+    const window = filtered.slice(cursor, cursor + limit + 1);
+    const items = window.slice(0, limit).map((occurrence) => cloneEntityOccurrence(occurrence));
+    const nextCursor = window.length > limit ? cursor + limit : null;
+
+    const payload: ProjectEntityOccurrencesResponse = {
+      entityIndexId: activeEntityIndexId,
+      entity: cloneControlledEntity(entity),
+      items,
+      nextCursor
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectSearchOpenMatch = pathname.match(
+    /^\/projects\/([^/]+)\/search\/([^/]+)\/open$/
+  );
+  if (method === "POST" && projectSearchOpenMatch) {
+    const project = resolveProjectFixture(projectSearchOpenMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    if (!canUseProjectSearch(fixtureProfile)) {
+      return forbidden<T>("Interactive project search is not available for this role.");
+    }
+
+    const activeSearchIndexId = FIXTURE_PROJECT_SEARCH_INDEX_ID[project.id] ?? null;
+    if (!activeSearchIndexId) {
+      return conflict<T>("No active search index is available for this project.");
+    }
+
+    const searchDocumentId = projectSearchOpenMatch[2];
+    const hit =
+      (FIXTURE_PROJECT_SEARCH_HITS[project.id] ?? []).find(
+        (candidate) =>
+          candidate.searchIndexId === activeSearchIndexId &&
+          candidate.searchDocumentId === searchDocumentId
+      ) ?? null;
+    if (!hit) {
+      return notFound<T>("Search result was not found in the active search index.");
+    }
+
+    const payload: ProjectSearchResultOpenResponse = {
+      searchIndexId: hit.searchIndexId,
+      searchDocumentId: hit.searchDocumentId,
+      documentId: hit.documentId,
+      runId: hit.runId,
+      pageNumber: hit.pageNumber,
+      lineId: hit.lineId,
+      tokenId: hit.tokenId,
+      sourceKind: hit.sourceKind,
+      sourceRefId: hit.sourceRefId,
+      workspacePath: buildFixtureSearchWorkspacePath(project.id, hit)
+    };
+    return ok<T>(payload as T);
   }
 
   const projectJobsSummaryMatch = pathname.match(
@@ -2263,6 +4690,557 @@ export function resolveBrowserRegressionApiResult<T>(options: {
       active: run.status === "QUEUED" || run.status === "RUNNING"
     };
     return ok<T>(payload as T);
+  }
+
+  const projectDocumentGovernanceOverviewMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/overview$/
+  );
+  if (method === "GET" && projectDocumentGovernanceOverviewMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceOverviewMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentGovernanceOverviewMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    if (!canViewGovernanceManifest(fixtureProfile)) {
+      return forbidden<T>("Governance manifest access requires project lead, reviewer, admin, or auditor roles.");
+    }
+    return ok<T>(cloneJson(FIXTURE_GOVERNANCE_OVERVIEW) as T);
+  }
+
+  const projectDocumentGovernanceRunsMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/runs$/
+  );
+  if (method === "GET" && projectDocumentGovernanceRunsMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceRunsMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(project.id, projectDocumentGovernanceRunsMatch[2]);
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    if (!canViewGovernanceManifest(fixtureProfile)) {
+      return forbidden<T>("Governance manifest access requires project lead, reviewer, admin, or auditor roles.");
+    }
+    return ok<T>(cloneJson(FIXTURE_GOVERNANCE_RUNS) as T);
+  }
+
+  const projectDocumentGovernanceRunOverviewMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/runs\/([^/]+)\/overview$/
+  );
+  if (method === "GET" && projectDocumentGovernanceRunOverviewMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceRunOverviewMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentGovernanceRunOverviewMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentGovernanceRunOverviewMatch[3];
+    if (runId !== FIXTURE_GOVERNANCE_RUN_SUMMARY.runId) {
+      return notFound<T>("Governance run not found.");
+    }
+    if (!canViewGovernanceManifest(fixtureProfile)) {
+      return forbidden<T>("Governance manifest access requires project lead, reviewer, admin, or auditor roles.");
+    }
+    return ok<T>(cloneJson(FIXTURE_GOVERNANCE_RUN_OVERVIEW) as T);
+  }
+
+  const projectDocumentGovernanceRunEventsMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/runs\/([^/]+)\/events$/
+  );
+  if (method === "GET" && projectDocumentGovernanceRunEventsMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceRunEventsMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentGovernanceRunEventsMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentGovernanceRunEventsMatch[3];
+    if (runId !== FIXTURE_GOVERNANCE_RUN_SUMMARY.runId) {
+      return notFound<T>("Governance run not found.");
+    }
+    if (!canViewGovernanceManifest(fixtureProfile)) {
+      return forbidden<T>("Governance manifest access requires project lead, reviewer, admin, or auditor roles.");
+    }
+    const payload: DocumentGovernanceRunEventsResponse = {
+      runId,
+      items: FIXTURE_GOVERNANCE_EVENTS.map((event) => cloneJson(event))
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentGovernanceRunManifestStatusMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/runs\/([^/]+)\/manifest\/status$/
+  );
+  if (method === "GET" && projectDocumentGovernanceRunManifestStatusMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceRunManifestStatusMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentGovernanceRunManifestStatusMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentGovernanceRunManifestStatusMatch[3];
+    if (runId !== FIXTURE_GOVERNANCE_RUN_SUMMARY.runId) {
+      return notFound<T>("Governance run not found.");
+    }
+    if (!canViewGovernanceManifest(fixtureProfile)) {
+      return forbidden<T>("Governance manifest access requires project lead, reviewer, admin, or auditor roles.");
+    }
+    return ok<T>(cloneJson(FIXTURE_GOVERNANCE_MANIFEST_STATUS_RESPONSE) as T);
+  }
+
+  const projectDocumentGovernanceRunManifestEntriesMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/runs\/([^/]+)\/manifest\/entries$/
+  );
+  if (method === "GET" && projectDocumentGovernanceRunManifestEntriesMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceRunManifestEntriesMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentGovernanceRunManifestEntriesMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentGovernanceRunManifestEntriesMatch[3];
+    if (runId !== FIXTURE_GOVERNANCE_RUN_SUMMARY.runId) {
+      return notFound<T>("Governance run not found.");
+    }
+    if (!canViewGovernanceManifest(fixtureProfile)) {
+      return forbidden<T>("Governance manifest access requires project lead, reviewer, admin, or auditor roles.");
+    }
+    const sliced = resolveGovernanceManifestEntriesFixture(parsedPath);
+    const payload: DocumentGovernanceManifestEntriesResponse = {
+      runId,
+      status: "SUCCEEDED",
+      manifestId: "gov-manifest-attempt-001",
+      manifestSha256: "fixture-governance-manifest-sha-001",
+      sourceReviewSnapshotSha256: "approved-fixture-sha-base-001",
+      totalCount: sliced.totalCount,
+      nextCursor: sliced.nextCursor,
+      internalOnly: true,
+      exportApproved: false,
+      notExportApproved: true,
+      items: sliced.items
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentGovernanceRunManifestHashMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/runs\/([^/]+)\/manifest\/hash$/
+  );
+  if (method === "GET" && projectDocumentGovernanceRunManifestHashMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceRunManifestHashMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentGovernanceRunManifestHashMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentGovernanceRunManifestHashMatch[3];
+    if (runId !== FIXTURE_GOVERNANCE_RUN_SUMMARY.runId) {
+      return notFound<T>("Governance run not found.");
+    }
+    if (!canViewGovernanceManifest(fixtureProfile)) {
+      return forbidden<T>("Governance manifest access requires project lead, reviewer, admin, or auditor roles.");
+    }
+    return ok<T>(cloneJson(FIXTURE_GOVERNANCE_MANIFEST_HASH_RESPONSE) as T);
+  }
+
+  const projectDocumentGovernanceRunManifestMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/runs\/([^/]+)\/manifest$/
+  );
+  if (method === "GET" && projectDocumentGovernanceRunManifestMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceRunManifestMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentGovernanceRunManifestMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentGovernanceRunManifestMatch[3];
+    if (runId !== FIXTURE_GOVERNANCE_RUN_SUMMARY.runId) {
+      return notFound<T>("Governance run not found.");
+    }
+    if (!canViewGovernanceManifest(fixtureProfile)) {
+      return forbidden<T>("Governance manifest access requires project lead, reviewer, admin, or auditor roles.");
+    }
+    return ok<T>(cloneJson(FIXTURE_GOVERNANCE_MANIFEST_RESPONSE) as T);
+  }
+
+  const projectDocumentGovernanceRunLedgerVerifyStatusMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/runs\/([^/]+)\/ledger\/verify\/status$/
+  );
+  if (method === "GET" && projectDocumentGovernanceRunLedgerVerifyStatusMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceRunLedgerVerifyStatusMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentGovernanceRunLedgerVerifyStatusMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentGovernanceRunLedgerVerifyStatusMatch[3];
+    if (runId !== FIXTURE_GOVERNANCE_RUN_SUMMARY.runId) {
+      return notFound<T>("Governance run not found.");
+    }
+    if (!canViewGovernanceLedger(fixtureProfile)) {
+      return forbidden<T>("Evidence-ledger routes are restricted to administrator or auditor roles.");
+    }
+    const latestAttempt = FIXTURE_GOVERNANCE_VERIFY_RUNS[0];
+    const latestCompletedAttempt =
+      FIXTURE_GOVERNANCE_VERIFY_RUNS.find((item) => item.status === "SUCCEEDED") ?? null;
+    const payload: DocumentGovernanceLedgerVerifyStatusResponse = {
+      runId,
+      verificationStatus: "VALID",
+      attemptCount: FIXTURE_GOVERNANCE_VERIFY_RUNS.length,
+      latestAttempt: latestAttempt ? cloneJson(latestAttempt) : null,
+      latestCompletedAttempt: latestCompletedAttempt ? cloneJson(latestCompletedAttempt) : null,
+      readyLedgerId: "gov-ledger-attempt-001",
+      latestLedgerSha256: "fixture-governance-ledger-sha-001",
+      lastVerifiedAt: "2026-03-13T09:59:30.000Z"
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentGovernanceRunLedgerVerifyRunsMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/runs\/([^/]+)\/ledger\/verify\/runs$/
+  );
+  if (method === "GET" && projectDocumentGovernanceRunLedgerVerifyRunsMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceRunLedgerVerifyRunsMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentGovernanceRunLedgerVerifyRunsMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentGovernanceRunLedgerVerifyRunsMatch[3];
+    if (runId !== FIXTURE_GOVERNANCE_RUN_SUMMARY.runId) {
+      return notFound<T>("Governance run not found.");
+    }
+    if (!canViewGovernanceLedger(fixtureProfile)) {
+      return forbidden<T>("Evidence-ledger routes are restricted to administrator or auditor roles.");
+    }
+    const payload: DocumentGovernanceLedgerVerifyRunsResponse = {
+      runId,
+      verificationStatus: "VALID",
+      items: FIXTURE_GOVERNANCE_VERIFY_RUNS.map((item) => cloneJson(item))
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentGovernanceRunLedgerVerifyRunStatusMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/runs\/([^/]+)\/ledger\/verify\/([^/]+)\/status$/
+  );
+  if (method === "GET" && projectDocumentGovernanceRunLedgerVerifyRunStatusMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceRunLedgerVerifyRunStatusMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentGovernanceRunLedgerVerifyRunStatusMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentGovernanceRunLedgerVerifyRunStatusMatch[3];
+    const verificationRunId = projectDocumentGovernanceRunLedgerVerifyRunStatusMatch[4];
+    if (runId !== FIXTURE_GOVERNANCE_RUN_SUMMARY.runId) {
+      return notFound<T>("Governance run not found.");
+    }
+    if (!canViewGovernanceLedger(fixtureProfile)) {
+      return forbidden<T>("Evidence-ledger routes are restricted to administrator or auditor roles.");
+    }
+    const attempt =
+      FIXTURE_GOVERNANCE_VERIFY_RUNS.find((item) => item.id === verificationRunId) ?? null;
+    if (!attempt) {
+      return notFound<T>("Verification attempt not found.");
+    }
+    const payload: DocumentGovernanceLedgerVerifyDetailResponse = {
+      runId,
+      verificationStatus: "VALID",
+      attempt: cloneJson(attempt)
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentGovernanceRunLedgerVerifyRunMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/runs\/([^/]+)\/ledger\/verify\/([^/]+)$/
+  );
+  if (method === "GET" && projectDocumentGovernanceRunLedgerVerifyRunMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceRunLedgerVerifyRunMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentGovernanceRunLedgerVerifyRunMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentGovernanceRunLedgerVerifyRunMatch[3];
+    const verificationRunId = projectDocumentGovernanceRunLedgerVerifyRunMatch[4];
+    if (runId !== FIXTURE_GOVERNANCE_RUN_SUMMARY.runId) {
+      return notFound<T>("Governance run not found.");
+    }
+    if (!canViewGovernanceLedger(fixtureProfile)) {
+      return forbidden<T>("Evidence-ledger routes are restricted to administrator or auditor roles.");
+    }
+    const attempt =
+      FIXTURE_GOVERNANCE_VERIFY_RUNS.find((item) => item.id === verificationRunId) ?? null;
+    if (!attempt) {
+      return notFound<T>("Verification attempt not found.");
+    }
+    const payload: DocumentGovernanceLedgerVerifyDetailResponse = {
+      runId,
+      verificationStatus: "VALID",
+      attempt: cloneJson(attempt)
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentGovernanceRunLedgerVerifyCancelMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/runs\/([^/]+)\/ledger\/verify\/([^/]+)\/cancel$/
+  );
+  if (method === "POST" && projectDocumentGovernanceRunLedgerVerifyCancelMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceRunLedgerVerifyCancelMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentGovernanceRunLedgerVerifyCancelMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentGovernanceRunLedgerVerifyCancelMatch[3];
+    const verificationRunId = projectDocumentGovernanceRunLedgerVerifyCancelMatch[4];
+    if (runId !== FIXTURE_GOVERNANCE_RUN_SUMMARY.runId) {
+      return notFound<T>("Governance run not found.");
+    }
+    if (!canMutateGovernanceLedgerVerification(fixtureProfile)) {
+      return forbidden<T>("Only administrators may mutate ledger verification attempts.");
+    }
+    const attempt =
+      FIXTURE_GOVERNANCE_VERIFY_RUNS.find((item) => item.id === verificationRunId) ?? null;
+    if (!attempt) {
+      return notFound<T>("Verification attempt not found.");
+    }
+    if (!canCancelVerificationRun(attempt.status)) {
+      return conflict<T>("Verification attempt is not cancelable.");
+    }
+    const payload: DocumentGovernanceLedgerVerifyDetailResponse = {
+      runId,
+      verificationStatus: "VALID",
+      attempt: {
+        ...cloneJson(attempt),
+        status: "CANCELED",
+        canceledBy: FIXTURE_SESSION.user.id,
+        canceledAt: "2026-03-13T10:02:25.000Z",
+        finishedAt: "2026-03-13T10:02:25.000Z"
+      }
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentGovernanceRunLedgerVerifyMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/runs\/([^/]+)\/ledger\/verify$/
+  );
+  if (method === "POST" && projectDocumentGovernanceRunLedgerVerifyMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceRunLedgerVerifyMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentGovernanceRunLedgerVerifyMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentGovernanceRunLedgerVerifyMatch[3];
+    if (runId !== FIXTURE_GOVERNANCE_RUN_SUMMARY.runId) {
+      return notFound<T>("Governance run not found.");
+    }
+    if (!canMutateGovernanceLedgerVerification(fixtureProfile)) {
+      return forbidden<T>("Only administrators may mutate ledger verification attempts.");
+    }
+    const payload: DocumentGovernanceLedgerVerifyDetailResponse = {
+      runId,
+      verificationStatus: "VALID",
+      attempt: {
+        id: "gov-ledger-verify-004",
+        runId,
+        attemptNumber: 4,
+        supersedesVerificationRunId: "gov-ledger-verify-003",
+        supersededByVerificationRunId: null,
+        status: "RUNNING",
+        verificationResult: null,
+        resultJson: null,
+        startedAt: "2026-03-13T10:02:05.000Z",
+        finishedAt: null,
+        canceledBy: null,
+        canceledAt: null,
+        failureReason: null,
+        createdBy: FIXTURE_SESSION.user.id,
+        createdAt: "2026-03-13T10:02:05.000Z"
+      }
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentGovernanceRunLedgerEntriesMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/runs\/([^/]+)\/ledger\/entries$/
+  );
+  if (method === "GET" && projectDocumentGovernanceRunLedgerEntriesMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceRunLedgerEntriesMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentGovernanceRunLedgerEntriesMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentGovernanceRunLedgerEntriesMatch[3];
+    if (runId !== FIXTURE_GOVERNANCE_RUN_SUMMARY.runId) {
+      return notFound<T>("Governance run not found.");
+    }
+    if (!canViewGovernanceLedger(fixtureProfile)) {
+      return forbidden<T>("Evidence-ledger routes are restricted to administrator or auditor roles.");
+    }
+    const sliced = resolveGovernanceLedgerEntriesFixture(parsedPath);
+    const payload: DocumentGovernanceLedgerEntriesResponse = {
+      runId,
+      status: "SUCCEEDED",
+      view: sliced.view,
+      ledgerId: "gov-ledger-attempt-001",
+      ledgerSha256: "fixture-governance-ledger-sha-001",
+      hashChainVersion: "v1",
+      totalCount: sliced.totalCount,
+      nextCursor: sliced.nextCursor,
+      verificationStatus: "VALID",
+      items: sliced.items
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentGovernanceRunLedgerSummaryMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/runs\/([^/]+)\/ledger\/summary$/
+  );
+  if (method === "GET" && projectDocumentGovernanceRunLedgerSummaryMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceRunLedgerSummaryMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentGovernanceRunLedgerSummaryMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentGovernanceRunLedgerSummaryMatch[3];
+    if (runId !== FIXTURE_GOVERNANCE_RUN_SUMMARY.runId) {
+      return notFound<T>("Governance run not found.");
+    }
+    if (!canViewGovernanceLedger(fixtureProfile)) {
+      return forbidden<T>("Evidence-ledger routes are restricted to administrator or auditor roles.");
+    }
+    return ok<T>(cloneJson(FIXTURE_GOVERNANCE_LEDGER_SUMMARY_RESPONSE) as T);
+  }
+
+  const projectDocumentGovernanceRunLedgerStatusMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/runs\/([^/]+)\/ledger\/status$/
+  );
+  if (method === "GET" && projectDocumentGovernanceRunLedgerStatusMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceRunLedgerStatusMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentGovernanceRunLedgerStatusMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentGovernanceRunLedgerStatusMatch[3];
+    if (runId !== FIXTURE_GOVERNANCE_RUN_SUMMARY.runId) {
+      return notFound<T>("Governance run not found.");
+    }
+    if (!canViewGovernanceLedger(fixtureProfile)) {
+      return forbidden<T>("Evidence-ledger routes are restricted to administrator or auditor roles.");
+    }
+    return ok<T>(cloneJson(FIXTURE_GOVERNANCE_LEDGER_STATUS_RESPONSE) as T);
+  }
+
+  const projectDocumentGovernanceRunLedgerMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/runs\/([^/]+)\/ledger$/
+  );
+  if (method === "GET" && projectDocumentGovernanceRunLedgerMatch) {
+    const project = resolveProjectFixture(projectDocumentGovernanceRunLedgerMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentGovernanceRunLedgerMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentGovernanceRunLedgerMatch[3];
+    if (runId !== FIXTURE_GOVERNANCE_RUN_SUMMARY.runId) {
+      return notFound<T>("Governance run not found.");
+    }
+    if (!canViewGovernanceLedger(fixtureProfile)) {
+      return forbidden<T>("Evidence-ledger routes are restricted to administrator or auditor roles.");
+    }
+    return ok<T>(cloneJson(FIXTURE_GOVERNANCE_LEDGER_RESPONSE) as T);
   }
 
   const projectDocumentLayoutOverviewMatch = pathname.match(
@@ -2926,6 +5904,850 @@ export function resolveBrowserRegressionApiResult<T>(options: {
     return ok<T>(payload as T);
   }
 
+  const projectDocumentRedactionOverviewMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/redaction\/overview$/
+  );
+  if (method === "GET" && projectDocumentRedactionOverviewMatch) {
+    const project = resolveProjectFixture(projectDocumentRedactionOverviewMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentRedactionOverviewMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const payload = resolveRedactionOverviewFixture(project.id, document.id);
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentRedactionRunsMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/redaction-runs$/
+  );
+  if (method === "GET" && projectDocumentRedactionRunsMatch) {
+    const project = resolveProjectFixture(projectDocumentRedactionRunsMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentRedactionRunsMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runs = resolveRedactionRunsFixture(document.id);
+    const sliced = sliceFixtureItems(runs, parsedPath);
+    const payload: DocumentRedactionRunListResponse = {
+      items: sliced.items,
+      nextCursor: sliced.nextCursor
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentRedactionRunsActiveMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/redaction-runs\/active$/
+  );
+  if (method === "GET" && projectDocumentRedactionRunsActiveMatch) {
+    const project = resolveProjectFixture(projectDocumentRedactionRunsActiveMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentRedactionRunsActiveMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const projection = resolveRedactionProjectionFixture(document.id);
+    const activeRun = projection?.activeRedactionRunId
+      ? resolveRedactionRunsFixture(document.id).find(
+          (candidate) => candidate.id === projection.activeRedactionRunId
+        ) ?? null
+      : null;
+    const payload: DocumentRedactionActiveRunResponse = {
+      projection,
+      run: activeRun
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentRedactionRunsCompareMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/redaction-runs\/compare$/
+  );
+  if (method === "GET" && projectDocumentRedactionRunsCompareMatch) {
+    const project = resolveProjectFixture(projectDocumentRedactionRunsCompareMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentRedactionRunsCompareMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const baseRunId = parsedPath.searchParams.get("baseRunId")?.trim() || "";
+    const candidateRunId = parsedPath.searchParams.get("candidateRunId")?.trim() || "";
+    if (!baseRunId || !candidateRunId) {
+      return validationError<T>("baseRunId and candidateRunId are required for compare.");
+    }
+    const runs = resolveRedactionRunsFixture(document.id);
+    const baseRun = runs.find((run) => run.id === baseRunId);
+    const candidateRun = runs.find((run) => run.id === candidateRunId);
+    if (!baseRun || !candidateRun) {
+      return notFound<T>("Redaction run not found.");
+    }
+    const statuses = [
+      "AUTO_APPLIED",
+      "NEEDS_REVIEW",
+      "APPROVED",
+      "OVERRIDDEN",
+      "FALSE_POSITIVE"
+    ] as const;
+    const actionTypes = ["MASK", "PSEUDONYMIZE", "GENERALIZE"] as const;
+    const pages = resolveDocumentPagesFixture(document.id);
+    const pageParam = Number.parseInt(parsedPath.searchParams.get("page") ?? "", 10);
+    const requestedPage = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : null;
+    const findingFilter = parsedPath.searchParams.get("findingId")?.trim() || null;
+    const lineFilter = parsedPath.searchParams.get("lineId")?.trim() || null;
+    const tokenFilter = parsedPath.searchParams.get("tokenId")?.trim() || null;
+    const items = pages
+      .filter((page) => requestedPage === null || page.pageIndex + 1 === requestedPage)
+      .map((page) => {
+        const baseFindings = resolveRedactionFindingsFixture(baseRun.id, page.id);
+        const candidateFindings = resolveRedactionFindingsFixture(candidateRun.id, page.id);
+        if (findingFilter) {
+          const hasFinding =
+            baseFindings.some((item) => item.id === findingFilter) ||
+            candidateFindings.some((item) => item.id === findingFilter);
+          if (!hasFinding) {
+            return null;
+          }
+        }
+        if (lineFilter) {
+          const hasLine =
+            baseFindings.some((item) => item.lineId === lineFilter || item.geometry.lineId === lineFilter) ||
+            candidateFindings.some(
+              (item) => item.lineId === lineFilter || item.geometry.lineId === lineFilter
+            );
+          if (!hasLine) {
+            return null;
+          }
+        }
+        if (tokenFilter) {
+          const hasToken =
+            baseFindings.some((item) => item.geometry.tokenIds.includes(tokenFilter)) ||
+            candidateFindings.some((item) => item.geometry.tokenIds.includes(tokenFilter));
+          if (!hasToken) {
+            return null;
+          }
+        }
+        const baseDecisionCounts = Object.fromEntries(
+          statuses.map((status) => [status, baseFindings.filter((item) => item.decisionStatus === status).length])
+        ) as Record<(typeof statuses)[number], number>;
+        const candidateDecisionCounts = Object.fromEntries(
+          statuses.map((status) => [status, candidateFindings.filter((item) => item.decisionStatus === status).length])
+        ) as Record<(typeof statuses)[number], number>;
+        const decisionStatusDeltas = Object.fromEntries(
+          statuses.map((status) => [status, candidateDecisionCounts[status] - baseDecisionCounts[status]])
+        ) as Record<(typeof statuses)[number], number>;
+        const baseActionCounts = Object.fromEntries(
+          actionTypes.map((actionType) => [
+            actionType,
+            baseFindings.filter((item) => item.actionType === actionType).length
+          ])
+        ) as Record<(typeof actionTypes)[number], number>;
+        const candidateActionCounts = Object.fromEntries(
+          actionTypes.map((actionType) => [
+            actionType,
+            candidateFindings.filter((item) => item.actionType === actionType).length
+          ])
+        ) as Record<(typeof actionTypes)[number], number>;
+        const actionTypeDeltas = Object.fromEntries(
+          actionTypes.map((actionType) => [
+            actionType,
+            candidateActionCounts[actionType] - baseActionCounts[actionType]
+          ])
+        ) as Record<(typeof actionTypes)[number], number>;
+        const changedDecisionCount = statuses.reduce(
+          (count, status) => count + Math.abs(decisionStatusDeltas[status]),
+          0
+        );
+        const changedActionCount = actionTypes.reduce(
+          (count, actionType) => count + Math.abs(actionTypeDeltas[actionType]),
+          0
+        );
+        const baseReview = resolveRedactionPageReviewFixture(baseRun.id, page.id);
+        const candidateReview = resolveRedactionPageReviewFixture(candidateRun.id, page.id);
+        const basePreview = resolveRedactionPreviewStatusFixture(baseRun.id, page.id);
+        const candidatePreview = resolveRedactionPreviewStatusFixture(candidateRun.id, page.id);
+        const actionCompareState =
+          basePreview?.status === "READY" && candidatePreview?.status === "READY"
+            ? ("AVAILABLE" as const)
+            : ("NOT_YET_AVAILABLE" as const);
+        return {
+          pageId: page.id,
+          pageIndex: page.pageIndex,
+          baseFindingCount: baseFindings.length,
+          candidateFindingCount: candidateFindings.length,
+          changedDecisionCount,
+          changedActionCount,
+          baseDecisionCounts,
+          candidateDecisionCounts,
+          decisionStatusDeltas,
+          baseActionCounts,
+          candidateActionCounts,
+          actionTypeDeltas,
+          actionCompareState,
+          changedReviewStatus: (baseReview?.reviewStatus ?? null) !== (candidateReview?.reviewStatus ?? null),
+          changedSecondReviewStatus:
+            (baseReview?.secondReviewStatus ?? null) !== (candidateReview?.secondReviewStatus ?? null),
+          baseReview,
+          candidateReview,
+          basePreviewStatus: basePreview?.status ?? null,
+          candidatePreviewStatus: candidatePreview?.status ?? null,
+          previewReadyDelta:
+            Number(candidatePreview?.status === "READY") - Number(basePreview?.status === "READY")
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
+    const payload: DocumentRedactionCompareResponse = {
+      documentId: document.id,
+      projectId: project.id,
+      baseRun,
+      candidateRun,
+      compareActionState:
+        candidateRun.runKind === "POLICY_RERUN" ||
+        baseRun.runKind === "POLICY_RERUN" ||
+        candidateRun.supersedesRedactionRunId === baseRun.id ||
+        baseRun.supersedesRedactionRunId === candidateRun.id
+          ? items.every((item) => item.actionCompareState === "AVAILABLE")
+            ? "AVAILABLE"
+            : "NOT_YET_AVAILABLE"
+          : "NOT_YET_RERUN",
+      changedPageCount: items.filter(
+        (item) =>
+          item.changedDecisionCount > 0 ||
+          item.changedActionCount > 0 ||
+          item.changedReviewStatus ||
+          item.changedSecondReviewStatus ||
+          item.basePreviewStatus !== item.candidatePreviewStatus
+      ).length,
+      changedDecisionCount: items.reduce((count, item) => count + item.changedDecisionCount, 0),
+      changedActionCount: items.reduce((count, item) => count + item.changedActionCount, 0),
+      candidatePolicyStatus: null,
+      comparisonOnlyCandidate: false,
+      preActivationWarnings: [],
+      items
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentRedactionRunDetailMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/redaction-runs\/([^/]+)$/
+  );
+  if (method === "GET" && projectDocumentRedactionRunDetailMatch) {
+    const project = resolveProjectFixture(projectDocumentRedactionRunDetailMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentRedactionRunDetailMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentRedactionRunDetailMatch[3];
+    const run = resolveRedactionRunsFixture(document.id).find(
+      (candidate) => candidate.id === runId
+    );
+    if (!run) {
+      return notFound<T>("Redaction run not found.");
+    }
+    return ok<T>(run as T);
+  }
+
+  const projectDocumentRedactionRunStatusMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/redaction-runs\/([^/]+)\/status$/
+  );
+  if (method === "GET" && projectDocumentRedactionRunStatusMatch) {
+    const project = resolveProjectFixture(projectDocumentRedactionRunStatusMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentRedactionRunStatusMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentRedactionRunStatusMatch[3];
+    const run = resolveRedactionRunsFixture(document.id).find(
+      (candidate) => candidate.id === runId
+    );
+    if (!run) {
+      return notFound<T>("Redaction run not found.");
+    }
+    const projection = resolveRedactionProjectionFixture(document.id);
+    const payload: DocumentRedactionRunStatusResponse = {
+      runId: run.id,
+      documentId: document.id,
+      status: run.status,
+      failureReason: run.failureReason,
+      startedAt: run.startedAt,
+      finishedAt: run.finishedAt,
+      createdAt: run.createdAt,
+      active: projection?.activeRedactionRunId === run.id
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentRedactionRunReviewMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/redaction-runs\/([^/]+)\/review$/
+  );
+  if (method === "GET" && projectDocumentRedactionRunReviewMatch) {
+    const project = resolveProjectFixture(projectDocumentRedactionRunReviewMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentRedactionRunReviewMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentRedactionRunReviewMatch[3];
+    const run = resolveRedactionRunsFixture(document.id).find(
+      (candidate) => candidate.id === runId
+    );
+    if (!run) {
+      return notFound<T>("Redaction run not found.");
+    }
+    const review = resolveRedactionRunReviewFixture(run.id);
+    if (!review) {
+      return notFound<T>("Redaction run review not found.");
+    }
+    return ok<T>(review as T);
+  }
+
+  const projectDocumentRedactionRunEventsMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/redaction-runs\/([^/]+)\/events$/
+  );
+  if (method === "GET" && projectDocumentRedactionRunEventsMatch) {
+    const project = resolveProjectFixture(projectDocumentRedactionRunEventsMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentRedactionRunEventsMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentRedactionRunEventsMatch[3];
+    const run = resolveRedactionRunsFixture(document.id).find(
+      (candidate) => candidate.id === runId
+    );
+    if (!run) {
+      return notFound<T>("Redaction run not found.");
+    }
+    const events = resolveRedactionRunEventsFixture(run.id).sort((left, right) => {
+      if (left.createdAt !== right.createdAt) {
+        return left.createdAt.localeCompare(right.createdAt);
+      }
+      if (left.sourceTablePrecedence !== right.sourceTablePrecedence) {
+        return left.sourceTablePrecedence - right.sourceTablePrecedence;
+      }
+      return left.eventId.localeCompare(right.eventId);
+    });
+    const payload: DocumentRedactionRunEventsResponse = {
+      runId: run.id,
+      items: events
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentRedactionRunOutputMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/redaction-runs\/([^/]+)\/output(?:\/status)?$/
+  );
+  if (method === "GET" && projectDocumentRedactionRunOutputMatch) {
+    const project = resolveProjectFixture(projectDocumentRedactionRunOutputMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentRedactionRunOutputMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentRedactionRunOutputMatch[3];
+    const run = resolveRedactionRunsFixture(document.id).find(
+      (candidate) => candidate.id === runId
+    );
+    if (!run) {
+      return notFound<T>("Redaction run not found.");
+    }
+    const output = resolveRedactionRunOutputFixture(run.id);
+    if (!output) {
+      return notFound<T>("Redaction run output not found.");
+    }
+    return ok<T>(output as T);
+  }
+
+  const projectDocumentRedactionRunPagesMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/redaction-runs\/([^/]+)\/pages$/
+  );
+  if (method === "GET" && projectDocumentRedactionRunPagesMatch) {
+    const project = resolveProjectFixture(projectDocumentRedactionRunPagesMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentRedactionRunPagesMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentRedactionRunPagesMatch[3];
+    const run = resolveRedactionRunsFixture(document.id).find(
+      (candidate) => candidate.id === runId
+    );
+    if (!run) {
+      return notFound<T>("Redaction run not found.");
+    }
+    const category = parsedPath.searchParams.get("category")?.trim() ?? "";
+    const unresolvedOnly =
+      parsedPath.searchParams.get("unresolvedOnly")?.trim().toLowerCase() === "true";
+    const directIdentifiersOnly =
+      parsedPath.searchParams.get("directIdentifiersOnly")?.trim().toLowerCase() === "true";
+    const pages = resolveDocumentPagesFixture(document.id);
+    const rows: DocumentRedactionRunPage[] = [];
+    for (const page of pages) {
+      let findings = resolveRedactionFindingsFixture(run.id, page.id);
+      if (category) {
+        findings = findings.filter((finding) => finding.category === category);
+      }
+      if (directIdentifiersOnly) {
+        findings = findings.filter((finding) =>
+          isDirectIdentifierCategory(finding.category)
+        );
+      }
+      const unresolvedCount = findings.filter((finding) =>
+        isUnresolvedStatus(finding.decisionStatus)
+      ).length;
+      if (unresolvedOnly && unresolvedCount <= 0) {
+        continue;
+      }
+      const review = resolveRedactionPageReviewFixture(run.id, page.id);
+      const previewStatus = resolveRedactionPreviewStatusFixture(run.id, page.id);
+      rows.push({
+        runId: run.id,
+        pageId: page.id,
+        pageIndex: page.pageIndex,
+        findingCount: findings.length,
+        unresolvedCount,
+        reviewStatus: review?.reviewStatus ?? "NOT_STARTED",
+        reviewEtag: review?.reviewEtag ?? "",
+        requiresSecondReview: review?.requiresSecondReview ?? false,
+        secondReviewStatus: review?.secondReviewStatus ?? "NOT_REQUIRED",
+        secondReviewedBy: review?.secondReviewedBy ?? null,
+        secondReviewedAt: review?.secondReviewedAt ?? null,
+        lastReviewedBy: review?.firstReviewedBy ?? null,
+        lastReviewedAt: review?.firstReviewedAt ?? null,
+        previewStatus: previewStatus?.status ?? null,
+        topFindings: findings.slice(0, 5)
+      });
+    }
+    const sorted = rows.sort((left, right) => left.pageIndex - right.pageIndex);
+    const sliced = sliceFixtureItems(sorted, parsedPath);
+    const payload: DocumentRedactionRunPageListResponse = {
+      runId: run.id,
+      items: sliced.items,
+      nextCursor: sliced.nextCursor
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentRedactionRunPageFindingsMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/redaction-runs\/([^/]+)\/pages\/([^/]+)\/findings$/
+  );
+  if (method === "GET" && projectDocumentRedactionRunPageFindingsMatch) {
+    const project = resolveProjectFixture(projectDocumentRedactionRunPageFindingsMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentRedactionRunPageFindingsMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentRedactionRunPageFindingsMatch[3];
+    const pageId = projectDocumentRedactionRunPageFindingsMatch[4];
+    const run = resolveRedactionRunsFixture(document.id).find(
+      (candidate) => candidate.id === runId
+    );
+    if (!run) {
+      return notFound<T>("Redaction run not found.");
+    }
+    const page = resolveDocumentPagesFixture(document.id).find(
+      (candidate) => candidate.id === pageId
+    );
+    if (!page) {
+      return notFound<T>("Page not found.");
+    }
+    const findings = filterRedactionFindings({
+      findings: resolveRedactionFindingsFixture(run.id, page.id),
+      path: parsedPath
+    });
+    const payload: DocumentRedactionFindingListResponse = {
+      runId: run.id,
+      pageId: page.id,
+      items: findings
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentRedactionRunFindingPatchMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/redaction-runs\/([^/]+)\/findings\/([^/]+)$/
+  );
+  if (method === "PATCH" && projectDocumentRedactionRunFindingPatchMatch) {
+    const project = resolveProjectFixture(projectDocumentRedactionRunFindingPatchMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentRedactionRunFindingPatchMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentRedactionRunFindingPatchMatch[3];
+    const findingId = projectDocumentRedactionRunFindingPatchMatch[4];
+    const run = resolveRedactionRunsFixture(document.id).find(
+      (candidate) => candidate.id === runId
+    );
+    if (!run) {
+      return notFound<T>("Redaction run not found.");
+    }
+    const runReview = resolveRedactionRunReviewFixture(run.id);
+    if (runReview?.reviewStatus === "APPROVED") {
+      return conflict<T>("Approved runs are locked and cannot be mutated.");
+    }
+    const payload = parseFixtureJsonBody(options.body) as {
+      actionType?: unknown;
+      decisionEtag?: unknown;
+      decisionStatus?: unknown;
+      reason?: unknown;
+    } | null;
+    if (!payload || typeof payload.decisionStatus !== "string") {
+      return validationError<T>("decisionStatus is required.");
+    }
+    if (!payload || typeof payload.decisionEtag !== "string" || !payload.decisionEtag.trim()) {
+      return validationError<T>("decisionEtag is required.");
+    }
+    if (
+      payload.decisionStatus !== "APPROVED" &&
+      payload.decisionStatus !== "OVERRIDDEN" &&
+      payload.decisionStatus !== "FALSE_POSITIVE" &&
+      payload.decisionStatus !== "AUTO_APPLIED" &&
+      payload.decisionStatus !== "NEEDS_REVIEW"
+    ) {
+      return validationError<T>("decisionStatus is invalid.");
+    }
+    const reason =
+      typeof payload.reason === "string" && payload.reason.trim().length > 0
+        ? payload.reason.trim()
+        : null;
+    if (
+      (payload.decisionStatus === "OVERRIDDEN" ||
+        payload.decisionStatus === "FALSE_POSITIVE") &&
+      !reason
+    ) {
+      return validationError<T>(
+        "reason is required when decisionStatus is OVERRIDDEN or FALSE_POSITIVE."
+      );
+    }
+
+    const runPageKeys = Object.keys(FIXTURE_REDACTION_FINDINGS_BY_RUN_PAGE).filter((key) =>
+      key.startsWith(`${run.id}:`)
+    );
+    let updatedFinding: DocumentRedactionFinding | null = null;
+    let updatedPageId: string | null = null;
+    for (const runPageKey of runPageKeys) {
+      const findings = FIXTURE_REDACTION_FINDINGS_BY_RUN_PAGE[runPageKey] ?? [];
+      const findingIndex = findings.findIndex((item) => item.id === findingId);
+      if (findingIndex < 0) {
+        continue;
+      }
+      const currentFinding = findings[findingIndex];
+      if (currentFinding.decisionEtag !== payload.decisionEtag.trim()) {
+        return conflict<T>("Redaction finding update conflicts with a newer change.");
+      }
+      const nextEtag = `${currentFinding.id}-etag-v${Date.now()}`;
+      const now = new Date().toISOString();
+      const nextDecisionStatus = payload.decisionStatus as DocumentRedactionFinding["decisionStatus"];
+      const nextFinding = {
+        ...currentFinding,
+        decisionStatus: nextDecisionStatus,
+        decisionBy: FIXTURE_SESSION.user.id,
+        decisionAt: now,
+        decisionReason: reason,
+        decisionEtag: nextEtag,
+        updatedAt: now
+      };
+      findings[findingIndex] = nextFinding;
+      updatedFinding = cloneRedactionFinding(nextFinding);
+      updatedPageId = nextFinding.pageId;
+      const previewKey = `${run.id}:${nextFinding.pageId}`;
+      const currentPreview = FIXTURE_REDACTION_PREVIEW_STATUS_BY_RUN_PAGE[previewKey];
+      if (currentPreview) {
+        FIXTURE_REDACTION_PREVIEW_STATUS_BY_RUN_PAGE[previewKey] = {
+          ...currentPreview,
+          status: "PENDING",
+          previewSha256: null,
+          generatedAt: null
+        };
+      }
+      fixtureRedactionEventSequence += 1;
+      const eventsKey = `${run.id}:${nextFinding.pageId}`;
+      const eventList = FIXTURE_REDACTION_EVENTS_BY_RUN_PAGE[eventsKey] ?? [];
+      eventList.push({
+        sourceTable: "redaction_decision_events",
+        sourceTablePrecedence: 0,
+        eventId: `red-event-decision-${fixtureRedactionEventSequence}`,
+        runId: run.id,
+        pageId: nextFinding.pageId,
+        findingId: nextFinding.id,
+        eventType: String(payload.actionType ?? "MASK"),
+        actorUserId: FIXTURE_SESSION.user.id,
+        reason,
+        createdAt: now,
+        detailsJson: {
+          fromDecisionStatus: currentFinding.decisionStatus,
+          toDecisionStatus: nextFinding.decisionStatus,
+          actionType: String(payload.actionType ?? "MASK"),
+          areaMaskId: nextFinding.areaMaskId
+        }
+      });
+      FIXTURE_REDACTION_EVENTS_BY_RUN_PAGE[eventsKey] = eventList;
+      break;
+    }
+    if (!updatedFinding || !updatedPageId) {
+      return notFound<T>("Redaction finding not found.");
+    }
+    return ok<T>(updatedFinding as T);
+  }
+
+  const projectDocumentRedactionRunPageReviewMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/redaction-runs\/([^/]+)\/pages\/([^/]+)\/review$/
+  );
+  if (projectDocumentRedactionRunPageReviewMatch) {
+    const project = resolveProjectFixture(projectDocumentRedactionRunPageReviewMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentRedactionRunPageReviewMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentRedactionRunPageReviewMatch[3];
+    const pageId = projectDocumentRedactionRunPageReviewMatch[4];
+    const run = resolveRedactionRunsFixture(document.id).find(
+      (candidate) => candidate.id === runId
+    );
+    if (!run) {
+      return notFound<T>("Redaction run not found.");
+    }
+    const key = `${run.id}:${pageId}`;
+    const currentReview = FIXTURE_REDACTION_PAGE_REVIEWS_BY_RUN_PAGE[key];
+    if (!currentReview) {
+      return notFound<T>("Redaction page review not found.");
+    }
+    if (method === "GET") {
+      return ok<T>(cloneRedactionPageReview(currentReview) as T);
+    }
+    if (method === "PATCH") {
+      const runReview = resolveRedactionRunReviewFixture(run.id);
+      if (runReview?.reviewStatus === "APPROVED") {
+        return conflict<T>("Approved runs are locked and cannot be mutated.");
+      }
+      const payload = parseFixtureJsonBody(options.body) as {
+        reviewEtag?: unknown;
+        reviewStatus?: unknown;
+        reason?: unknown;
+      } | null;
+      if (!payload || typeof payload.reviewStatus !== "string") {
+        return validationError<T>("reviewStatus is required.");
+      }
+      if (!payload || typeof payload.reviewEtag !== "string" || !payload.reviewEtag.trim()) {
+        return validationError<T>("reviewEtag is required.");
+      }
+      if (
+        payload.reviewStatus !== "NOT_STARTED" &&
+        payload.reviewStatus !== "IN_REVIEW" &&
+        payload.reviewStatus !== "APPROVED" &&
+        payload.reviewStatus !== "CHANGES_REQUESTED"
+      ) {
+        return validationError<T>("reviewStatus is invalid.");
+      }
+      if (currentReview.reviewEtag !== payload.reviewEtag.trim()) {
+        return conflict<T>("Redaction page review update conflicts with a newer change.");
+      }
+      const now = new Date().toISOString();
+      const nextReview: DocumentRedactionPageReview = {
+        ...currentReview,
+        reviewStatus: payload.reviewStatus,
+        reviewEtag: `${currentReview.pageId}-review-v${Date.now()}`,
+        firstReviewedBy: currentReview.firstReviewedBy ?? FIXTURE_SESSION.user.id,
+        firstReviewedAt: currentReview.firstReviewedAt ?? now,
+        updatedAt: now
+      };
+      FIXTURE_REDACTION_PAGE_REVIEWS_BY_RUN_PAGE[key] = nextReview;
+      fixtureRedactionEventSequence += 1;
+      const eventType =
+        payload.reviewStatus === "APPROVED"
+          ? "PAGE_APPROVED"
+          : payload.reviewStatus === "CHANGES_REQUESTED"
+            ? "CHANGES_REQUESTED"
+            : "PAGE_REVIEW_STARTED";
+      const eventList = FIXTURE_REDACTION_EVENTS_BY_RUN_PAGE[key] ?? [];
+      eventList.push({
+        sourceTable: "redaction_page_review_events",
+        sourceTablePrecedence: 1,
+        eventId: `red-event-review-${fixtureRedactionEventSequence}`,
+        runId: run.id,
+        pageId,
+        findingId: null,
+        eventType,
+        actorUserId: FIXTURE_SESSION.user.id,
+        reason:
+          typeof payload.reason === "string" && payload.reason.trim()
+            ? payload.reason.trim()
+            : null,
+        createdAt: now,
+        detailsJson: {}
+      });
+      FIXTURE_REDACTION_EVENTS_BY_RUN_PAGE[key] = eventList;
+      return ok<T>(cloneRedactionPageReview(nextReview) as T);
+    }
+  }
+
+  const projectDocumentRedactionRunPagePreviewStatusMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/redaction-runs\/([^/]+)\/pages\/([^/]+)\/preview-status$/
+  );
+  if (method === "GET" && projectDocumentRedactionRunPagePreviewStatusMatch) {
+    const project = resolveProjectFixture(projectDocumentRedactionRunPagePreviewStatusMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentRedactionRunPagePreviewStatusMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentRedactionRunPagePreviewStatusMatch[3];
+    const pageId = projectDocumentRedactionRunPagePreviewStatusMatch[4];
+    const run = resolveRedactionRunsFixture(document.id).find(
+      (candidate) => candidate.id === runId
+    );
+    if (!run) {
+      return notFound<T>("Redaction run not found.");
+    }
+    const previewStatus = resolveRedactionPreviewStatusFixture(run.id, pageId);
+    if (!previewStatus) {
+      return notFound<T>("Safeguarded preview status was not found.");
+    }
+    return ok<T>(previewStatus as T);
+  }
+
+  const projectDocumentRedactionRunPageEventsMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/redaction-runs\/([^/]+)\/pages\/([^/]+)\/events$/
+  );
+  if (method === "GET" && projectDocumentRedactionRunPageEventsMatch) {
+    const project = resolveProjectFixture(projectDocumentRedactionRunPageEventsMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentRedactionRunPageEventsMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentRedactionRunPageEventsMatch[3];
+    const pageId = projectDocumentRedactionRunPageEventsMatch[4];
+    const run = resolveRedactionRunsFixture(document.id).find(
+      (candidate) => candidate.id === runId
+    );
+    if (!run) {
+      return notFound<T>("Redaction run not found.");
+    }
+    const events = resolveRedactionEventsFixture(run.id, pageId).sort((left, right) => {
+      if (left.createdAt !== right.createdAt) {
+        return left.createdAt.localeCompare(right.createdAt);
+      }
+      if (left.sourceTablePrecedence !== right.sourceTablePrecedence) {
+        return left.sourceTablePrecedence - right.sourceTablePrecedence;
+      }
+      return left.eventId.localeCompare(right.eventId);
+    });
+    const payload: DocumentRedactionRunEventsResponse = {
+      runId: run.id,
+      items: events
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDocumentTranscriptionRunPageLinesMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/transcription-runs\/([^/]+)\/pages\/([^/]+)\/lines$/
+  );
+  if (method === "GET" && projectDocumentTranscriptionRunPageLinesMatch) {
+    const project = resolveProjectFixture(projectDocumentTranscriptionRunPageLinesMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentTranscriptionRunPageLinesMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const runId = projectDocumentTranscriptionRunPageLinesMatch[3];
+    const pageId = projectDocumentTranscriptionRunPageLinesMatch[4];
+    const requestedLineId = parsedPath.searchParams.get("lineId")?.trim() ?? "";
+    let lines = resolveTranscriptionLinesFixture(runId, pageId);
+    if (requestedLineId) {
+      lines = lines.filter((line) => line.lineId === requestedLineId);
+    }
+    const payload: DocumentTranscriptionLineResultListResponse = {
+      runId,
+      pageId,
+      items: lines
+    };
+    return ok<T>(payload as T);
+  }
+
   const projectDocumentRetryExtractionMatch = pathname.match(
     /^\/projects\/([^/]+)\/documents\/([^/]+)\/retry-extraction$/
   );
@@ -3206,6 +7028,18 @@ export function resolveBrowserRegressionApiResult<T>(options: {
         ...route
       })),
       exporter: { ...FIXTURE_OPERATIONS_OVERVIEW.exporter }
+    } as T);
+  }
+
+  if (method === "GET" && pathname === "/admin/operations/export-status") {
+    return ok<T>({
+      ...FIXTURE_OPERATIONS_EXPORT_STATUS,
+      aging: { ...FIXTURE_OPERATIONS_EXPORT_STATUS.aging },
+      reminders: { ...FIXTURE_OPERATIONS_EXPORT_STATUS.reminders },
+      escalations: { ...FIXTURE_OPERATIONS_EXPORT_STATUS.escalations },
+      retention: { ...FIXTURE_OPERATIONS_EXPORT_STATUS.retention },
+      terminal: { ...FIXTURE_OPERATIONS_EXPORT_STATUS.terminal },
+      policy: { ...FIXTURE_OPERATIONS_EXPORT_STATUS.policy }
     } as T);
   }
 

@@ -75,6 +75,72 @@ TranscriptionRunStatus = Literal[
     "FAILED",
     "CANCELED",
 ]
+RedactionRunKind = Literal["BASELINE", "POLICY_RERUN"]
+RedactionRunStatus = Literal[
+    "QUEUED",
+    "RUNNING",
+    "SUCCEEDED",
+    "FAILED",
+    "CANCELED",
+]
+RedactionFindingSpanBasisKind = Literal["LINE_TEXT", "PAGE_WINDOW_TEXT", "NONE"]
+RedactionFindingBasisPrimary = Literal["RULE", "NER", "HEURISTIC"]
+RedactionDecisionStatus = Literal[
+    "AUTO_APPLIED",
+    "NEEDS_REVIEW",
+    "APPROVED",
+    "OVERRIDDEN",
+    "FALSE_POSITIVE",
+]
+RedactionOverrideRiskClassification = Literal["STANDARD", "HIGH"]
+RedactionDecisionActionType = Literal["MASK", "PSEUDONYMIZE", "GENERALIZE"]
+RedactionPageReviewStatus = Literal[
+    "NOT_STARTED",
+    "IN_REVIEW",
+    "APPROVED",
+    "CHANGES_REQUESTED",
+]
+RedactionSecondReviewStatus = Literal[
+    "NOT_REQUIRED",
+    "PENDING",
+    "APPROVED",
+    "CHANGES_REQUESTED",
+]
+RedactionPageReviewEventType = Literal[
+    "PAGE_OPENED",
+    "PAGE_REVIEW_STARTED",
+    "PAGE_APPROVED",
+    "CHANGES_REQUESTED",
+    "SECOND_REVIEW_REQUIRED",
+    "SECOND_REVIEW_APPROVED",
+    "SECOND_REVIEW_CHANGES_REQUESTED",
+]
+RedactionRunReviewStatus = Literal[
+    "NOT_READY",
+    "IN_REVIEW",
+    "APPROVED",
+    "CHANGES_REQUESTED",
+]
+RedactionRunReviewEventType = Literal[
+    "RUN_REVIEW_OPENED",
+    "RUN_APPROVED",
+    "RUN_CHANGES_REQUESTED",
+]
+RedactionOutputStatus = Literal["PENDING", "READY", "FAILED", "CANCELED"]
+RedactionRunOutputEventType = Literal[
+    "RUN_OUTPUT_GENERATION_STARTED",
+    "RUN_OUTPUT_GENERATION_SUCCEEDED",
+    "RUN_OUTPUT_GENERATION_FAILED",
+    "RUN_OUTPUT_GENERATION_CANCELED",
+]
+RedactionRunOutputReadinessState = Literal[
+    "APPROVAL_REQUIRED",
+    "APPROVED_OUTPUT_PENDING",
+    "OUTPUT_GENERATING",
+    "OUTPUT_FAILED",
+    "OUTPUT_CANCELED",
+    "OUTPUT_READY",
+]
 TranscriptionConfidenceBasis = Literal[
     "MODEL_NATIVE",
     "READ_AGREEMENT",
@@ -89,6 +155,10 @@ TranscriptionLineSchemaValidationStatus = Literal[
 TokenAnchorStatus = Literal["CURRENT", "STALE", "REFRESH_REQUIRED"]
 TranscriptionTokenSourceKind = Literal["LINE", "RESCUE_CANDIDATE", "PAGE_WINDOW"]
 TranscriptionProjectionBasis = Literal["ENGINE_OUTPUT", "REVIEW_CORRECTED"]
+TranscriptionRescueResolutionStatus = Literal[
+    "RESCUE_VERIFIED",
+    "MANUAL_REVIEW_RESOLVED",
+]
 TranscriptionCompareDecision = Literal["KEEP_BASE", "PROMOTE_CANDIDATE"]
 TranscriptVariantKind = Literal["NORMALISED"]
 TranscriptVariantSuggestionStatus = Literal["PENDING", "ACCEPTED", "REJECTED"]
@@ -503,6 +573,197 @@ class TranscriptionRunRecord:
 
 
 @dataclass(frozen=True)
+class RedactionRunRecord:
+    id: str
+    project_id: str
+    document_id: str
+    input_transcription_run_id: str
+    input_layout_run_id: str | None
+    run_kind: RedactionRunKind
+    supersedes_redaction_run_id: str | None
+    superseded_by_redaction_run_id: str | None
+    policy_snapshot_id: str
+    policy_snapshot_json: dict[str, object]
+    policy_snapshot_hash: str
+    policy_id: str | None
+    policy_family_id: str | None
+    policy_version: str | None
+    detectors_version: str
+    status: RedactionRunStatus
+    created_by: str
+    created_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+    failure_reason: str | None
+
+
+@dataclass(frozen=True)
+class RedactionFindingRecord:
+    id: str
+    run_id: str
+    page_id: str
+    line_id: str | None
+    category: str
+    span_start: int | None
+    span_end: int | None
+    span_basis_kind: RedactionFindingSpanBasisKind
+    span_basis_ref: str | None
+    confidence: float | None
+    basis_primary: RedactionFindingBasisPrimary
+    basis_secondary_json: dict[str, object] | None
+    assist_explanation_key: str | None
+    assist_explanation_sha256: str | None
+    bbox_refs: dict[str, object]
+    token_refs_json: list[dict[str, object]] | None
+    area_mask_id: str | None
+    decision_status: RedactionDecisionStatus
+    override_risk_classification: RedactionOverrideRiskClassification | None
+    override_risk_reason_codes_json: list[str] | None
+    decision_by: str | None
+    decision_at: datetime | None
+    decision_reason: str | None
+    decision_etag: str
+    updated_at: datetime
+    created_at: datetime
+    action_type: RedactionDecisionActionType = "MASK"
+
+
+@dataclass(frozen=True)
+class RedactionAreaMaskRecord:
+    id: str
+    run_id: str
+    page_id: str
+    geometry_json: dict[str, object]
+    mask_reason: str
+    version_etag: str
+    supersedes_area_mask_id: str | None
+    superseded_by_area_mask_id: str | None
+    created_by: str
+    created_at: datetime
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
+class RedactionDecisionEventRecord:
+    id: str
+    run_id: str
+    page_id: str
+    finding_id: str
+    from_decision_status: RedactionDecisionStatus | None
+    to_decision_status: RedactionDecisionStatus
+    action_type: RedactionDecisionActionType
+    area_mask_id: str | None
+    actor_user_id: str
+    reason: str | None
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class RedactionPageReviewRecord:
+    run_id: str
+    page_id: str
+    review_status: RedactionPageReviewStatus
+    review_etag: str
+    first_reviewed_by: str | None
+    first_reviewed_at: datetime | None
+    requires_second_review: bool
+    second_review_status: RedactionSecondReviewStatus
+    second_reviewed_by: str | None
+    second_reviewed_at: datetime | None
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
+class RedactionPageReviewEventRecord:
+    id: str
+    run_id: str
+    page_id: str
+    event_type: RedactionPageReviewEventType
+    actor_user_id: str
+    reason: str | None
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class RedactionRunReviewRecord:
+    run_id: str
+    review_status: RedactionRunReviewStatus
+    review_started_by: str | None
+    review_started_at: datetime | None
+    approved_by: str | None
+    approved_at: datetime | None
+    approved_snapshot_key: str | None
+    approved_snapshot_sha256: str | None
+    locked_at: datetime | None
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
+class RedactionRunReviewEventRecord:
+    id: str
+    run_id: str
+    event_type: RedactionRunReviewEventType
+    actor_user_id: str
+    reason: str | None
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class DocumentRedactionProjectionRecord:
+    document_id: str
+    project_id: str
+    active_redaction_run_id: str | None
+    active_transcription_run_id: str | None
+    active_layout_run_id: str | None
+    active_policy_snapshot_id: str | None
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
+class RedactionOutputRecord:
+    run_id: str
+    page_id: str
+    status: RedactionOutputStatus
+    safeguarded_preview_key: str | None
+    preview_sha256: str | None
+    started_at: datetime | None
+    generated_at: datetime | None
+    canceled_by: str | None
+    canceled_at: datetime | None
+    failure_reason: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
+class RedactionRunOutputRecord:
+    run_id: str
+    status: RedactionOutputStatus
+    output_manifest_key: str | None
+    output_manifest_sha256: str | None
+    page_count: int
+    started_at: datetime | None
+    generated_at: datetime | None
+    canceled_by: str | None
+    canceled_at: datetime | None
+    failure_reason: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
+class RedactionRunOutputEventRecord:
+    id: str
+    run_id: str
+    event_type: RedactionRunOutputEventType
+    from_status: RedactionOutputStatus | None
+    to_status: RedactionOutputStatus
+    reason: str | None
+    actor_user_id: str | None
+    created_at: datetime
+
+
+@dataclass(frozen=True)
 class PageTranscriptionResultRecord:
     run_id: str
     page_id: str
@@ -561,6 +822,16 @@ class TokenTranscriptionResultRecord:
     source_ref_id: str
     projection_basis: TranscriptionProjectionBasis
     created_at: datetime
+    updated_at: datetime
+
+
+@dataclass(frozen=True)
+class TranscriptionRescueResolutionRecord:
+    run_id: str
+    page_id: str
+    resolution_status: TranscriptionRescueResolutionStatus
+    resolution_reason: str | None
+    updated_by: str
     updated_at: datetime
 
 

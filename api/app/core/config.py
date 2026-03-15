@@ -41,6 +41,9 @@ DEFAULT_SECURITY_CSP = (
 )
 DEFAULT_SECURITY_PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=()"
 DEFAULT_AUTH_SESSION_SECRET = "ukde-dev-session-secret-change-me"
+DEFAULT_PSEUDONYM_REGISTRY_MASTER_SECRET = "ukde-dev-pseudonym-master-secret-change-me"
+DEFAULT_INTERNAL_EXPORT_GATEWAY_TOKEN = "ukde-dev-export-gateway-token-change-me"
+DEFAULT_PROVENANCE_SIGNING_SECRET = "ukde-dev-provenance-signing-secret-change-me"
 DEFAULT_AUTH_DEV_SEED_USERS = [
     {
         "key": "project-lead",
@@ -156,6 +159,26 @@ class Settings(BaseSettings):
         default=4 * 1024 * 1024,
         alias="DOCUMENTS_RESUMABLE_CHUNK_BYTES",
     )
+    redaction_direct_identifier_recall_floor: float = Field(
+        default=0.99,
+        alias="REDACTION_DIRECT_IDENTIFIER_RECALL_FLOOR",
+    )
+    redaction_default_auto_apply_threshold: float = Field(
+        default=0.92,
+        alias="REDACTION_DEFAULT_AUTO_APPLY_THRESHOLD",
+    )
+    redaction_ner_timeout_seconds: float = Field(
+        default=0.35,
+        alias="REDACTION_NER_TIMEOUT_SECONDS",
+    )
+    redaction_assist_timeout_seconds: float = Field(
+        default=0.2,
+        alias="REDACTION_ASSIST_TIMEOUT_SECONDS",
+    )
+    redaction_assist_enabled: bool = Field(
+        default=True,
+        alias="REDACTION_ASSIST_ENABLED",
+    )
     document_scanner_backend: Literal["auto", "stub", "none"] = Field(
         default="auto",
         alias="DOCUMENT_SCANNER_BACKEND",
@@ -233,6 +256,78 @@ class Settings(BaseSettings):
     auth_session_secret: str = Field(
         default=DEFAULT_AUTH_SESSION_SECRET,
         alias="AUTH_SESSION_SECRET",
+    )
+    pseudonym_registry_master_secret: str = Field(
+        default=DEFAULT_PSEUDONYM_REGISTRY_MASTER_SECRET,
+        alias="PSEUDONYM_REGISTRY_MASTER_SECRET",
+    )
+    internal_export_gateway_token: str = Field(
+        default=DEFAULT_INTERNAL_EXPORT_GATEWAY_TOKEN,
+        alias="INTERNAL_EXPORT_GATEWAY_TOKEN",
+    )
+    internal_export_gateway_actor_user_id: str = Field(
+        default="service-export-gateway",
+        alias="INTERNAL_EXPORT_GATEWAY_ACTOR_USER_ID",
+    )
+    internal_export_gateway_oidc_sub: str = Field(
+        default="service-export-gateway",
+        alias="INTERNAL_EXPORT_GATEWAY_OIDC_SUB",
+    )
+    internal_export_gateway_email: str = Field(
+        default="service-export-gateway@local.ukde",
+        alias="INTERNAL_EXPORT_GATEWAY_EMAIL",
+    )
+    internal_export_gateway_display_name: str = Field(
+        default="UKDE Export Gateway Service",
+        alias="INTERNAL_EXPORT_GATEWAY_DISPLAY_NAME",
+    )
+    provenance_signing_key_ref: str = Field(
+        default="ukde-provenance-lamport-v1",
+        alias="PROVENANCE_SIGNING_KEY_REF",
+    )
+    provenance_signing_secret: str = Field(
+        default=DEFAULT_PROVENANCE_SIGNING_SECRET,
+        alias="PROVENANCE_SIGNING_SECRET",
+    )
+    export_request_sla_hours: int = Field(
+        default=72,
+        alias="EXPORT_REQUEST_SLA_HOURS",
+    )
+    export_request_reminder_after_hours: int = Field(
+        default=24,
+        alias="EXPORT_REQUEST_REMINDER_AFTER_HOURS",
+    )
+    export_request_reminder_cooldown_hours: int = Field(
+        default=12,
+        alias="EXPORT_REQUEST_REMINDER_COOLDOWN_HOURS",
+    )
+    export_request_escalation_after_sla_hours: int = Field(
+        default=24,
+        alias="EXPORT_REQUEST_ESCALATION_AFTER_SLA_HOURS",
+    )
+    export_request_escalation_cooldown_hours: int = Field(
+        default=24,
+        alias="EXPORT_REQUEST_ESCALATION_COOLDOWN_HOURS",
+    )
+    export_request_stale_open_after_days: int = Field(
+        default=30,
+        alias="EXPORT_REQUEST_STALE_OPEN_AFTER_DAYS",
+    )
+    export_request_retention_stale_open_days: int = Field(
+        default=60,
+        alias="EXPORT_REQUEST_RETENTION_STALE_OPEN_DAYS",
+    )
+    export_request_retention_terminal_approved_days: int = Field(
+        default=180,
+        alias="EXPORT_REQUEST_RETENTION_TERMINAL_APPROVED_DAYS",
+    )
+    export_request_retention_terminal_other_days: int = Field(
+        default=90,
+        alias="EXPORT_REQUEST_RETENTION_TERMINAL_OTHER_DAYS",
+    )
+    export_request_retention_pending_window_days: int = Field(
+        default=14,
+        alias="EXPORT_REQUEST_RETENTION_PENDING_WINDOW_DAYS",
     )
     auth_session_ttl_seconds: int = Field(
         default=3600,
@@ -386,12 +481,19 @@ class Settings(BaseSettings):
         "security_csp_value",
         "security_referrer_policy",
         "security_permissions_policy",
+        "internal_export_gateway_token",
+        "internal_export_gateway_actor_user_id",
+        "internal_export_gateway_oidc_sub",
+        "internal_export_gateway_email",
+        "internal_export_gateway_display_name",
+        "provenance_signing_key_ref",
+        "provenance_signing_secret",
     )
     @classmethod
-    def _validate_security_header_values(cls, value: str) -> str:
+    def _validate_non_empty_text_fields(cls, value: str) -> str:
         normalized = value.strip()
         if not normalized:
-            raise ValueError("Security header values cannot be empty.")
+            raise ValueError("Configured text values cannot be empty.")
         return normalized
 
     @model_validator(mode="after")
@@ -404,6 +506,26 @@ class Settings(BaseSettings):
             and self.auth_session_secret == DEFAULT_AUTH_SESSION_SECRET
         ):
             raise ValueError("AUTH_SESSION_SECRET must be replaced outside dev/test.")
+        if (
+            self.app_env in {"staging", "prod"}
+            and self.pseudonym_registry_master_secret
+            == DEFAULT_PSEUDONYM_REGISTRY_MASTER_SECRET
+        ):
+            raise ValueError(
+                "PSEUDONYM_REGISTRY_MASTER_SECRET must be replaced outside dev/test."
+            )
+        if (
+            self.app_env in {"staging", "prod"}
+            and self.internal_export_gateway_token == DEFAULT_INTERNAL_EXPORT_GATEWAY_TOKEN
+        ):
+            raise ValueError(
+                "INTERNAL_EXPORT_GATEWAY_TOKEN must be replaced outside dev/test."
+            )
+        if (
+            self.app_env in {"staging", "prod"}
+            and self.provenance_signing_secret == DEFAULT_PROVENANCE_SIGNING_SECRET
+        ):
+            raise ValueError("PROVENANCE_SIGNING_SECRET must be replaced outside dev/test.")
 
         has_any_oidc = any(
             [

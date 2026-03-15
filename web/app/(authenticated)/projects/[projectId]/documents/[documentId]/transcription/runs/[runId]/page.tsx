@@ -8,6 +8,7 @@ import {
   getProjectDocument,
   getProjectDocumentActiveTranscriptionRun,
   getProjectDocumentTranscriptionRun,
+  getProjectDocumentTranscriptionRunRescueStatus,
   listProjectDocumentTranscriptionRunPageLines,
   listProjectDocumentTranscriptionRunPageTokens,
   listProjectDocumentTranscriptionRunPages,
@@ -36,7 +37,8 @@ export default async function ProjectDocumentTranscriptionRunDetailPage({
     pagesResult,
     activeRunResult,
     runsResult,
-    workspaceResult
+    workspaceResult,
+    rescueStatusResult
   ] = await Promise.all([
     getProjectDocument(projectId, documentId),
     getProjectDocumentTranscriptionRun(projectId, documentId, runId),
@@ -45,7 +47,8 @@ export default async function ProjectDocumentTranscriptionRunDetailPage({
     }),
     getProjectDocumentActiveTranscriptionRun(projectId, documentId),
     listProjectDocumentTranscriptionRuns(projectId, documentId, { pageSize: 50 }),
-    getProjectWorkspace(projectId)
+    getProjectWorkspace(projectId),
+    getProjectDocumentTranscriptionRunRescueStatus(projectId, documentId, runId)
   ]);
 
   if (!documentResult.ok) {
@@ -154,6 +157,13 @@ export default async function ProjectDocumentTranscriptionRunDetailPage({
     runsResult.ok && runsResult.data
       ? runsResult.data.items.find((candidate) => candidate.id !== run.id) ?? null
       : null;
+  const rescueStatus =
+    rescueStatusResult.ok && rescueStatusResult.data
+      ? rescueStatusResult.data
+      : null;
+  const rescueBlockedPages = rescueStatus
+    ? rescueStatus.pages.filter((page) => page.blockerReasonCodes.length > 0)
+    : [];
 
   return (
     <main className="homeLayout">
@@ -304,6 +314,120 @@ export default async function ProjectDocumentTranscriptionRunDetailPage({
           <li>
             <span>Redaction invalidated reason</span>
             <strong>{projection?.downstreamRedactionInvalidatedReason ?? "None"}</strong>
+          </li>
+          <li>
+            <span>Rescue readiness</span>
+            <strong>
+              {rescueStatus
+                ? rescueStatus.readyForActivation
+                  ? "READY"
+                  : `BLOCKED (${rescueStatus.blockerCount})`
+                : "Unavailable"}
+            </strong>
+          </li>
+        </ul>
+        {rescueStatus ? (
+          <div className="panelCard panelSubtle">
+            <h4>Rescue and manual-review activation gates</h4>
+            <p className="ukde-muted">
+              {rescueStatus.readyForActivation
+                ? "All rescue-required and manual-review pages are resolved for activation."
+                : "Activation is blocked until unresolved rescue/manual-review blockers are resolved."}
+            </p>
+            {!rescueStatus.readyForActivation ? (
+              <ul className="projectMetaList">
+                <li>
+                  <span>Run blocker codes</span>
+                  <strong>
+                    {rescueStatus.runBlockerReasonCodes.length > 0
+                      ? rescueStatus.runBlockerReasonCodes.join(", ")
+                      : "None"}
+                  </strong>
+                </li>
+                <li>
+                  <span>Blocked pages</span>
+                  <strong>{rescueBlockedPages.length}</strong>
+                </li>
+                <li>
+                  <span>First blocked page</span>
+                  <strong>
+                    {rescueBlockedPages[0]
+                      ? `Page ${rescueBlockedPages[0].pageIndex + 1}: ${rescueBlockedPages[0].blockerReasonCodes.join(", ")}`
+                      : "None"}
+                  </strong>
+                </li>
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
+      </section>
+
+      <section className="sectionCard ukde-panel">
+        <h3>Generation lineage</h3>
+        <ul className="projectMetaList">
+          <li>
+            <span>Source type</span>
+            <strong>
+              {run.engine === "REVIEW_COMPOSED"
+                ? "Compare decision composed run"
+                : "Engine output / reviewer-corrected projection"}
+            </strong>
+          </li>
+          <li>
+            <span>Created by</span>
+            <strong>{run.createdBy}</strong>
+          </li>
+          <li>
+            <span>Created at</span>
+            <strong>{new Date(run.createdAt).toISOString()}</strong>
+          </li>
+          <li>
+            <span>Supersedes run</span>
+            <strong>{run.supersedesTranscriptionRunId ?? "None"}</strong>
+          </li>
+          <li>
+            <span>Superseded by run</span>
+            <strong>{run.supersededByTranscriptionRunId ?? "None"}</strong>
+          </li>
+          <li>
+            <span>Compare base run</span>
+            <strong>
+              {typeof run.paramsJson["baseRunId"] === "string"
+                ? run.paramsJson["baseRunId"]
+                : "N/A"}
+            </strong>
+          </li>
+          <li>
+            <span>Compare candidate run</span>
+            <strong>
+              {typeof run.paramsJson["candidateRunId"] === "string"
+                ? run.paramsJson["candidateRunId"]
+                : "N/A"}
+            </strong>
+          </li>
+          <li>
+            <span>Compare decision hash</span>
+            <strong>
+              {typeof run.paramsJson["compareDecisionSnapshotHash"] === "string"
+                ? run.paramsJson["compareDecisionSnapshotHash"]
+                : "N/A"}
+            </strong>
+          </li>
+          <li>
+            <span>Finalized by</span>
+            <strong>
+              {typeof run.paramsJson["finalizedBy"] === "string"
+                ? run.paramsJson["finalizedBy"]
+                : "N/A"}
+            </strong>
+          </li>
+          <li>
+            <span>Finalized at</span>
+            <strong>
+              {typeof run.paramsJson["finalizedAt"] === "string"
+                ? new Date(run.paramsJson["finalizedAt"]).toISOString()
+                : "N/A"}
+            </strong>
           </li>
         </ul>
       </section>

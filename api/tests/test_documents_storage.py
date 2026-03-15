@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from app.core.config import Settings
+from app.core.storage_boundaries import resolve_storage_boundary
 from app.documents.storage import DocumentStorage, DocumentStorageError
 
 
@@ -530,3 +531,14 @@ def test_transcription_corrected_pagexml_write_is_idempotent_per_version(
             transcript_version_id="transcript-version-1",
             payload=b"<PcGts><Page><TextRegion /></Page></PcGts>\n",
         )
+
+
+def test_storage_boundary_blocks_app_writer_from_safeguarded_exports_prefix(
+    tmp_path: Path,
+) -> None:
+    settings = _settings(tmp_path)
+    boundary = resolve_storage_boundary(settings)
+    export_key = "safeguarded/exports/project-1/request-1/receipt.json"
+
+    assert boundary.can_write(writer="app", object_key=export_key) is False
+    assert boundary.can_write(writer="export_gateway", object_key=export_key) is True

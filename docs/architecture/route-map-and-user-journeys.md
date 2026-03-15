@@ -60,8 +60,16 @@ Current implemented baseline route ownership is defined in:
 | `/projects/:projectId/model-assignments`                                               | Project role-map assignment list and lifecycle actions | Preserve selected role filters or status context when added                            |
 | `/projects/:projectId/model-assignments/:assignmentId`                                 | Assignment detail, lifecycle metadata, and role compatibility | Stable assignment anchor                                                                |
 | `/projects/:projectId/model-assignments/:assignmentId/datasets`                        | Training dataset lineage for one assignment          | Stable dataset lineage view anchored by assignment                                      |
-| `/projects/:projectId/privacy`                                                       | Privacy-review queue and unresolved findings list | Preserve queue filter, severity, and selected document/page                            |
-| `/projects/:projectId/privacy/runs/:runId/documents/:documentId/pages/:pageId`       | Privacy review workspace                          | Preserve findings filter, selected token or area mask, compare mode, and inspector tab |
+| `/projects/:projectId/documents/:documentId/privacy`                                  | Privacy overview, triage queue, and run list      | Preserve selected tab plus optional `runId` context                                    |
+| `/projects/:projectId/documents/:documentId/privacy/runs/:runId`                      | Privacy run detail and review actions             | Preserve run context and linked workspace handoff                                      |
+| `/projects/:projectId/documents/:documentId/privacy/runs/:runId/events`               | Append-only run timeline                           | Preserve run context for deterministic review chronology                               |
+| `/projects/:projectId/documents/:documentId/privacy/workspace?page={page}&runId={runId}&findingId={findingId}&lineId={lineId}&tokenId={tokenId}` | Privacy workspace shell                            | Preserve page/run focus and optional finding/line/token anchors                        |
+| `/projects/:projectId/documents/:documentId/privacy/compare?baseRunId={baseRunId}&candidateRunId={candidateRunId}&page={page}&findingId={findingId}&lineId={lineId}&tokenId={tokenId}` | Privacy run compare                                | Preserve base/candidate context and optional page/finding/line/token filters           |
+| `/projects/:projectId/documents/:documentId/governance`                               | Governance overview and run list tabs              | Preserve selected `tab` and optional `runId`                                           |
+| `/projects/:projectId/documents/:documentId/governance/runs/:runId/overview`          | Governance run readiness and attempt summary       | Stable run anchor for manifest, ledger, and events                                     |
+| `/projects/:projectId/documents/:documentId/governance/runs/:runId/manifest`          | Screening-safe manifest state and lineage          | Preserve immutable attempt lineage for approved runs                                   |
+| `/projects/:projectId/documents/:documentId/governance/runs/:runId/ledger`            | Controlled-only ledger state and verification      | Access-gated to `ADMIN` and read-only `AUDITOR`                                        |
+| `/projects/:projectId/documents/:documentId/governance/runs/:runId/events`            | Append-only governance event history               | Deterministic chronological source for readiness and artefact transitions               |
 
 ## Governance, Release, And Discovery Routes
 
@@ -71,13 +79,23 @@ Current implemented baseline route ownership is defined in:
 | `/projects/:projectId/manifests/:manifestId`        | Manifest detail and reconciliation view            | Stable manifest anchor                                   |
 | `/projects/:projectId/evidence`                     | Controlled evidence and lineage drill-down         | Preserve evidence type, actor filter, and selected event |
 | `/projects/:projectId/policies`                     | Policy assignment, simulation, and version history | Preserve active version and diff target                  |
-| `/projects/:projectId/export-candidates`            | Export candidate listing surface (Phase 0 stub)    | Preserve future candidate filters when enabled           |
-| `/projects/:projectId/export-requests`              | Export request listing surface (Phase 0 stub)      | Preserve `status`, `requesterId`, `candidateKind`        |
-| `/projects/:projectId/export-review`                | Export review queue surface (Phase 0 stub)         | Preserve `status`, `agingBucket`, `reviewerUserId`       |
-| `/projects/:projectId/provenance`                   | Provenance overview and bundle inventory           | Preserve bundle filter and selected proof node           |
-| `/projects/:projectId/provenance/bundles/:bundleId` | Proof bundle detail and verification view          | Stable bundle anchor                                     |
-| `/projects/:projectId/discovery/search`             | Controlled search and jump-to-context results      | Preserve query, filters, sort, and selected hit          |
-| `/projects/:projectId/discovery/entities`           | Governed entity index and review surfaces          | Preserve entity type, filters, and selected entity       |
+| `/projects/:projectId/policies/active`              | Active policy projection                           | Always reflect `project_policy_projections.active_policy_id` |
+| `/projects/:projectId/policies/:policyId`           | Policy revision detail and lifecycle timeline      | Stable policy revision anchor                            |
+| `/projects/:projectId/policies/:policyId/compare`   | Revision compare vs revision or baseline snapshot  | Require exactly one target query parameter               |
+| `/projects/:projectId/pseudonym-registry`           | Controlled-only alias registry list                | Read-only surface for lead/admin/auditor                 |
+| `/projects/:projectId/pseudonym-registry/:entryId`  | Registry entry detail and lineage links            | Stable entry anchor with no raw identity                 |
+| `/projects/:projectId/pseudonym-registry/:entryId/events` | Append-only registry entry event timeline      | Canonical source for create/reuse/retire chronology      |
+| `/projects/:projectId/export-candidates`            | Export candidate listing surface                   | Preserve candidate filters and immutable lineage context  |
+| `/projects/:projectId/export-requests`              | Export request listing/detail with receipt states  | Preserve `status`, `requesterId`, `candidateKind`        |
+| `/projects/:projectId/export-requests/:exportRequestId/provenance` | Export-request provenance summary and lineage nodes | Preserve selected proof attempt via `proofId` query |
+| `/projects/:projectId/export-requests/:exportRequestId/bundles` | Deposit bundle lineage list for one approved request | Preserve selected kind and attempt focus when linked |
+| `/projects/:projectId/export-requests/:exportRequestId/bundles/:bundleId` | Deposit bundle detail preview and pinned proof references | Preserve `bundleId` identity and attempt lineage context |
+| `/projects/:projectId/export-requests/:exportRequestId/bundles/:bundleId/events` | Append-only bundle timeline for build/verify/validate activity | Preserve deterministic event chronology by bundle identity |
+| `/projects/:projectId/export-requests/:exportRequestId/bundles/:bundleId/verification` | Bundle proof verification summary, run history, and pass/fail detail | Preserve selected verification attempt via `runId` query |
+| `/projects/:projectId/export-requests/:exportRequestId/bundles/:bundleId/validation?profile={profileId}` | Bundle profile-validation status, run history, and readiness evidence | Preserve selected `profile` and optional `runId` focus |
+| `/projects/:projectId/export-review`                | Export review queue surface                        | Preserve `status`, `agingBucket`, `reviewerUserId`       |
+| `/projects/:projectId/search`                       | Controlled search and jump-to-context results      | Preserve query, filters, sort, and selected hit          |
+| `/projects/:projectId/entities`                     | Governed entity index and review surfaces          | Preserve entity type, filters, and selected entity       |
 
 ## Platform-Level Admin And Audit Routes
 

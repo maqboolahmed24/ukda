@@ -1,7 +1,7 @@
 # Transcription Route Family And Workspace Contract
 
-Status: Implemented baseline + primary + fallback/compare + editable workspace surfaces (Prompts 49, 51, 52, and 56)
-Scope: Canonical document-scoped transcription IA, queue views, run detail, deep-link workspace, fallback lifecycle APIs, compare shell, and worker-backed status progression
+Status: Updated in Prompt 57
+Scope: Canonical document-scoped transcription IA, deep-link workspace, compare/history route refinements, and immutable composed-run finalization
 
 ## Route ownership
 
@@ -11,6 +11,8 @@ Transcription is owned under a single document-scoped family:
 - `/projects/:projectId/documents/:documentId/transcription/runs/:runId`
 - `/projects/:projectId/documents/:documentId/transcription/workspace?page={page}&runId={runId}&mode={mode}&lineId={lineId}&tokenId={tokenId}&sourceKind={sourceKind}&sourceRefId={sourceRefId}`
 - `/projects/:projectId/documents/:documentId/transcription/compare?baseRunId={baseRunId}&candidateRunId={candidateRunId}&page={page}&lineId={lineId}&tokenId={tokenId}`
+- `/projects/:projectId/documents/:documentId/transcription-runs/:runId/pages/:pageId/lines/:lineId/versions`
+- `/projects/:projectId/documents/:documentId/transcription-runs/:runId/pages/:pageId/lines/:lineId/versions/:versionId`
 
 No parallel transcription route family is allowed.
 
@@ -62,7 +64,7 @@ Run mutations (`create`, `cancel`, `activate`, `fallback`) are limited to:
 - `REVIEWER`
 - `ADMIN`
 
-Compare decision writes are limited to:
+Compare decision writes and compare finalize are limited to:
 
 - `PROJECT_LEAD`
 - `REVIEWER`
@@ -80,28 +82,48 @@ Route surfaces consume typed APIs:
 - `GET /transcription-runs/active`
 - `GET /transcription-runs/{runId}`
 - `GET /transcription-runs/{runId}/status`
+- `GET /transcription-runs/{runId}/rescue-status`
 - `GET /transcription-runs/{runId}/pages`
+- `GET /transcription-runs/{runId}/pages/{pageId}/rescue-sources`
 - `POST /transcription-runs/{runId}/activate`
+- `PATCH /transcription-runs/{runId}/pages/{pageId}/rescue-resolution`
 - `POST /transcription-runs/{runId}/cancel`
 - `GET /transcription-runs/{runId}/pages/{pageId}/lines`
+- `GET /transcription-runs/{runId}/pages/{pageId}/lines/{lineId}/versions`
+- `GET /transcription-runs/{runId}/pages/{pageId}/lines/{lineId}/versions/{versionId}`
 - `PATCH /transcription-runs/{runId}/pages/{pageId}/lines/{lineId}`
 - `GET /transcription-runs/{runId}/pages/{pageId}/tokens`
 - `GET /transcription-runs/{runId}/pages/{pageId}/variant-layers?variantKind=NORMALISED`
 - `POST /transcription-runs/{runId}/pages/{pageId}/variant-layers/NORMALISED/suggestions/{suggestionId}/decision`
-- `GET /transcription-runs/compare?baseRunId={baseRunId}&candidateRunId={candidateRunId}`
+- `GET /transcription-runs/compare?baseRunId={baseRunId}&candidateRunId={candidateRunId}&page={page}&lineId={lineId}&tokenId={tokenId}`
 - `POST /transcription-runs/compare/decisions`
+- `POST /transcription-runs/compare/finalize`
 
 Run status polling uses the dedicated status endpoint, not full run-detail refresh.
 
+Rescue readiness and manual-resolution state are exposed via dedicated typed endpoints; activation must not infer recall safety from raw rows alone.
+
 ## Compare shell behavior
 
-The compare route is intentionally minimal but explicit:
+The compare route is explicit, review-safe, and lineage-aware:
 
 - base/candidate context is URL-addressable and deep-link-safe
 - page/line/token diff shells are shown without hidden merge behavior
+- response includes `compareDecisionSnapshotHash`, decision counts, and decision-event counts
 - decision controls are only shown for `PROJECT_LEAD`, `REVIEWER`, and `ADMIN`
+- finalize is guarded by explicit decisions and optional expected snapshot hash
+- finalize creates a new immutable `REVIEW_COMPOSED` run and never mutates source runs
 - empty/not-ready/error states remain explicit and non-destructive
 - no automatic merge or silent promotion path exists in the route shell
+
+## Lineage and workspace integration
+
+Workspace and run-detail surfaces preserve provenance context:
+
+- compare can deep-link into workspace via `page`, `runId`, `lineId`, and `tokenId`
+- workspace can open immutable line-version history drawer per selected line
+- run detail shows composed lineage fields (`baseRunId`, `candidateRunId`, `compareDecisionSnapshotHash`, `finalizedBy`, `finalizedAt`)
+- diplomatic and normalised layers remain separate; normalised suggestions are auditable through variant-layer events
 
 ## Artefact exposure policy
 

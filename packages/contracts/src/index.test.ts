@@ -88,6 +88,84 @@ describe("@ukde/contracts", () => {
     ).toBe(true);
     expect(
       bootstrapSurfaces.some(
+        (surface) => surface.route === "/projects/:projectId/policies"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/projects/:projectId/policies/active"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route === "/projects/:projectId/policies/:policyId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route === "/projects/:projectId/policies/:policyId/compare"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/projects/:projectId/indexes"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/projects/:projectId/search"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/projects/:projectId/entities"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/projects/:projectId/entities/:entityId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route === "/projects/:projectId/indexes/search/:indexId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route === "/projects/:projectId/indexes/entity/:indexId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route === "/projects/:projectId/indexes/derivative/:indexId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/projects/:projectId/pseudonym-registry"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route === "/projects/:projectId/pseudonym-registry/:entryId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/pseudonym-registry/:entryId/events"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
         (surface) => surface.route === "/projects/:projectId/jobs/:jobId"
       )
     ).toBe(true);
@@ -194,6 +272,41 @@ describe("@ukde/contracts", () => {
     ).toBe(true);
     expect(
       bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/export-requests/:exportRequestId/bundles"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/export-requests/:exportRequestId/bundles/:bundleId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/export-requests/:exportRequestId/bundles/:bundleId/events"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/export-requests/:exportRequestId/bundles/:bundleId/verification"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/export-requests/:exportRequestId/bundles/:bundleId/validation"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
         (surface) => surface.route === "/projects/:projectId/export-review"
       )
     ).toBe(true);
@@ -253,8 +366,16 @@ describe("@ukde/contracts", () => {
       "APPROVED_MODEL_CREATED",
       "PROJECT_MODEL_ASSIGNMENT_CREATED",
       "PROJECT_MODEL_ACTIVATED",
-      "PROJECT_MODEL_RETIRED"
+      "PROJECT_MODEL_RETIRED",
+      "POLICY_CREATED",
+      "POLICY_ACTIVATED",
+      "PSEUDONYM_REGISTRY_VIEWED",
+      "PSEUDONYM_REGISTRY_ENTRY_VIEWED",
+      "PSEUDONYM_REGISTRY_EVENTS_VIEWED",
+      "ENTITY_LIST_VIEWED",
+      "ENTITY_DETAIL_VIEWED",
+      "ENTITY_OCCURRENCES_VIEWED"
     ];
-    expect(required.length).toBe(18);
+    expect(required.length).toBe(26);
   });
 });

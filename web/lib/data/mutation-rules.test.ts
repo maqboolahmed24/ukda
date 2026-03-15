@@ -32,6 +32,18 @@ describe("mutation rule policy", () => {
     ]);
   });
 
+  it("returns index overview and detail paths for index lifecycle mutations", () => {
+    const paths = resolveMutationRevalidationPaths("indexes.activate", {
+      projectId: "project-1",
+      indexKind: "SEARCH",
+      indexId: "search-4"
+    });
+    expect(paths).toEqual([
+      "/projects/project-1/indexes",
+      "/projects/project-1/indexes/search/search-4"
+    ]);
+  });
+
   it("revalidates protected shell surfaces when auth boundaries change", () => {
     const paths = resolveMutationRevalidationPaths("auth.logout", {});
     expect(paths).toContain("/projects");

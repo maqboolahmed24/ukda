@@ -94,12 +94,6 @@ export function ThemePreferenceControl({
             <path d="M10.5 21h3" />
           </svg>
         </span>
-        <span className="ukde-theme-state">
-          {modeLabel}
-        </span>
-        <span aria-hidden className="ukde-theme-source">
-          System
-        </span>
       </button>
     </div>
   );

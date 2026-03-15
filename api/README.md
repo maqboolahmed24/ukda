@@ -10,6 +10,7 @@ This package is the FastAPI bootstrap for UKDE. It owns:
 - privacy-safe telemetry baseline for request metrics, trace propagation, and operations diagnostics
 - operations read APIs under `/admin/operations/*` with role-scoped access
 - baseline settings and internal-only model wiring contract validation
+- provenance bundle verification and replay tooling (`ukde-bundle-verify`, `ukde-provenance-replay`)
 
 Implemented project jobs APIs:
 

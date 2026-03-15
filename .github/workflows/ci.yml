@@ -69,10 +69,14 @@ jobs:
       - name: Run Python quality gates
         run: make ci-python
 
-      - name: Upload preprocessing regression artifacts
+      - name: Upload preprocessing, privacy, governance, and export-hardening regression artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: preprocess-gold-set-artifacts
-          path: api/tests/.artifacts/preprocessing-gold-set
+          name: python-regression-artifacts
+          path: |
+            api/tests/.artifacts/preprocessing-gold-set
+            api/tests/.artifacts/privacy-regression
+            api/tests/.artifacts/governance-integrity
+            api/tests/.artifacts/export-hardening
           if-no-files-found: ignore

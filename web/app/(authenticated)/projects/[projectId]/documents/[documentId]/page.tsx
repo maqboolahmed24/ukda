@@ -10,8 +10,10 @@ import {
   listProjectDocumentProcessingRuns
 } from "../../../../../../lib/documents";
 import {
+  projectDocumentGovernancePath,
   projectDocumentIngestStatusPath,
   projectDocumentLayoutPath,
+  projectDocumentPrivacyPath,
   projectDocumentPreprocessingPath,
   projectDocumentTranscriptionPath,
   projectDocumentViewerPath,
@@ -266,6 +268,18 @@ export default async function ProjectDocumentDetailPage({
             href={projectDocumentTranscriptionPath(projectId, document.id)}
           >
             Open transcription
+          </Link>
+          <Link
+            className="secondaryButton"
+            href={projectDocumentPrivacyPath(projectId, document.id)}
+          >
+            Open privacy
+          </Link>
+          <Link
+            className="secondaryButton"
+            href={projectDocumentGovernancePath(projectId, document.id)}
+          >
+            Open governance
           </Link>
           <Link className="secondaryButton" href={projectDocumentsPath(projectId)}>
             Back to documents

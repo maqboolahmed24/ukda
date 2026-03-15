@@ -264,3 +264,78 @@ test("single-fold and controlled reflow checks for shell routes @reflow", async 
   expect(compactMetrics?.shellState).toBe("Focus");
   expect(compactMetrics?.workRegionOverflow ?? 0).toBeGreaterThanOrEqual(0);
 });
+
+test("header chrome remains stable across authenticated route transitions @reflow", async ({
+  baseURL,
+  context,
+  page
+}) => {
+  if (!baseURL) {
+    throw new Error("Missing Playwright baseURL.");
+  }
+  await seedAuthenticatedSession(context, baseURL);
+  await page.setViewportSize({ width: 1366, height: 900 });
+
+  const routes = [
+    "/projects",
+    `/projects/${PROJECT_ID}/overview`,
+    `/projects/${PROJECT_ID}/documents`,
+    `/projects/${PROJECT_ID}/jobs`,
+    `/projects/${PROJECT_ID}/settings`
+  ];
+
+  const samples: Array<{
+    actionsMultiRow: boolean;
+    actionsOverflowX: number;
+    actionsTopOffset: number;
+    headerHeight: number;
+    route: string;
+  }> = [];
+
+  for (const route of routes) {
+    await page.goto(route);
+    await expect(page.locator(".authenticatedShellHeader")).toBeVisible();
+    const sample = await page.evaluate(() => {
+      const header = document.querySelector<HTMLElement>(".authenticatedShellHeader");
+      const actions = header?.querySelector<HTMLElement>(".authenticatedShellActions");
+      if (!header || !actions) {
+        return null;
+      }
+
+      const headerRect = header.getBoundingClientRect();
+      const actionsRect = actions.getBoundingClientRect();
+      const childTopValues = Array.from(actions.children).map((child) =>
+        (child as HTMLElement).getBoundingClientRect().top
+      );
+      const firstTop = childTopValues[0] ?? actionsRect.top;
+      const actionsMultiRow = childTopValues.some(
+        (top) => Math.abs(top - firstTop) > 2
+      );
+
+      return {
+        headerHeight: headerRect.height,
+        actionsTopOffset: actionsRect.top - headerRect.top,
+        actionsOverflowX: Math.max(0, actionsRect.right - headerRect.right),
+        actionsMultiRow
+      };
+    });
+
+    expect(sample).not.toBeNull();
+    if (!sample) {
+      continue;
+    }
+    expect(sample.actionsMultiRow).toBe(false);
+    expect(sample.actionsOverflowX).toBeLessThanOrEqual(1);
+    samples.push({ ...sample, route });
+  }
+
+  expect(samples).toHaveLength(routes.length);
+  const projectScopedSamples = samples.filter((sample) => sample.route !== "/projects");
+  expect(projectScopedSamples).toHaveLength(routes.length - 1);
+
+  const baseline = projectScopedSamples[0]!;
+  for (const sample of projectScopedSamples.slice(1)) {
+    expect(Math.abs(sample.headerHeight - baseline.headerHeight)).toBeLessThanOrEqual(2);
+    expect(Math.abs(sample.actionsTopOffset - baseline.actionsTopOffset)).toBeLessThanOrEqual(2);
+  }
+});

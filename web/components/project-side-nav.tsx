@@ -19,7 +19,10 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "overview", label: "Overview", requiresMembership: true },
   { href: "documents", label: "Documents", requiresMembership: true },
+  { href: "search", label: "Search", requiresMembership: true },
+  { href: "entities", label: "Entities", requiresMembership: true },
   { href: "jobs", label: "Jobs", requiresMembership: true },
+  { href: "indexes", label: "Indexes", requiresMembership: true },
   {
     href: "export-candidates",
     label: "Export candidates",
@@ -31,6 +34,12 @@ const NAV_ITEMS: NavItem[] = [
     requiresMembership: true
   },
   { href: "export-review", label: "Export review", requiresMembership: true },
+  { href: "policies", label: "Policies", requiresMembership: true },
+  {
+    href: "pseudonym-registry",
+    label: "Pseudonym registry",
+    requiresMembership: true
+  },
   { href: "activity", label: "Activity", requiresMembership: true },
   { href: "settings", label: "Settings", requiresSettings: true }
 ];

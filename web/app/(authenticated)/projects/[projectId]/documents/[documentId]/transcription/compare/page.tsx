@@ -4,6 +4,7 @@ import { SectionState, StatusChip } from "@ukde/ui/primitives";
 
 import {
   compareProjectDocumentTranscriptionRuns,
+  finalizeProjectDocumentTranscriptionCompare,
   getProjectDocument,
   listProjectDocumentTranscriptionRuns,
   recordProjectDocumentTranscriptionCompareDecisions
@@ -13,6 +14,7 @@ import {
   projectDocumentTranscriptionComparePath,
   projectDocumentTranscriptionPath,
   projectDocumentTranscriptionRunPath,
+  projectDocumentTranscriptionWorkspacePath,
   projectsPath
 } from "../../../../../../../../lib/routes";
 
@@ -47,7 +49,9 @@ export default async function ProjectDocumentTranscriptionComparePage({
   searchParams: Promise<{
     baseRunId?: string;
     candidateRunId?: string;
+    error?: string;
     lineId?: string;
+    notice?: string;
     page?: string;
     tokenId?: string;
   }>;
@@ -57,6 +61,8 @@ export default async function ProjectDocumentTranscriptionComparePage({
   const selectedPage = resolvePage(query.page);
   const selectedLineId = query.lineId?.trim() || undefined;
   const selectedTokenId = query.tokenId?.trim() || undefined;
+  const notice = query.notice?.trim() || undefined;
+  const error = query.error?.trim() || undefined;
 
   const [documentResult, runsResult, workspaceResult] = await Promise.all([
     getProjectDocument(projectId, documentId),
@@ -106,9 +112,16 @@ export default async function ProjectDocumentTranscriptionComparePage({
           projectId,
           document.id,
           resolvedBaseRunId,
-          resolvedCandidateRunId
+          resolvedCandidateRunId,
+          {
+            lineId: selectedLineId,
+            page: selectedPage,
+            tokenId: selectedTokenId
+          }
         )
       : null;
+  const compareData =
+    compareResult && compareResult.ok && compareResult.data ? compareResult.data : null;
 
   const canDecide =
     workspaceResult.ok &&
@@ -116,6 +129,27 @@ export default async function ProjectDocumentTranscriptionComparePage({
     (workspaceResult.data.currentUserRole === "PROJECT_LEAD" ||
       workspaceResult.data.currentUserRole === "REVIEWER" ||
       (!workspaceResult.data.isMember && workspaceResult.data.canAccessSettings));
+
+  function comparePathWithContext(extra?: { error?: string; notice?: string }) {
+    return projectDocumentTranscriptionComparePath(
+      projectId,
+      documentId,
+      resolvedBaseRunId,
+      resolvedCandidateRunId,
+      {
+        page: selectedPage,
+        lineId: selectedLineId,
+        tokenId: selectedTokenId
+      }
+    ).concat(
+      extra && (extra.error || extra.notice)
+        ? `&${new URLSearchParams({
+            ...(extra.error ? { error: extra.error } : {}),
+            ...(extra.notice ? { notice: extra.notice } : {})
+          }).toString()}`
+        : ""
+    );
+  }
 
   async function recordDecision(formData: FormData) {
     "use server";
@@ -130,30 +164,57 @@ export default async function ProjectDocumentTranscriptionComparePage({
     if (!pageId || !decision) {
       return;
     }
-    await recordProjectDocumentTranscriptionCompareDecisions(projectId, documentId, {
-      baseRunId: resolvedBaseRunId,
-      candidateRunId: resolvedCandidateRunId,
-      items: [
-        {
-          pageId,
-          lineId: lineId || undefined,
-          tokenId: tokenId || undefined,
-          decision: decision === "PROMOTE_CANDIDATE" ? "PROMOTE_CANDIDATE" : "KEEP_BASE",
-          decisionEtag: decisionEtag || undefined
-        }
-      ]
-    });
+    const result = await recordProjectDocumentTranscriptionCompareDecisions(
+      projectId,
+      documentId,
+      {
+        baseRunId: resolvedBaseRunId,
+        candidateRunId: resolvedCandidateRunId,
+        items: [
+          {
+            pageId,
+            lineId: lineId || undefined,
+            tokenId: tokenId || undefined,
+            decision:
+              decision === "PROMOTE_CANDIDATE" ? "PROMOTE_CANDIDATE" : "KEEP_BASE",
+            decisionEtag: decisionEtag || undefined
+          }
+        ]
+      }
+    );
+    if (!result.ok) {
+      redirect(comparePathWithContext({ error: result.detail ?? "decision_failed" }));
+    }
+    redirect(comparePathWithContext({ notice: "decision_saved" }));
+  }
+
+  async function finalizeCompare() {
+    "use server";
+    if (!resolvedBaseRunId || !resolvedCandidateRunId || !compareData) {
+      return;
+    }
+    const pageScope =
+      compareData.items.length === 1
+        ? [compareData.items[0].pageId]
+        : undefined;
+    const result = await finalizeProjectDocumentTranscriptionCompare(
+      projectId,
+      documentId,
+      {
+        baseRunId: resolvedBaseRunId,
+        candidateRunId: resolvedCandidateRunId,
+        expectedCompareDecisionSnapshotHash: compareData.compareDecisionSnapshotHash,
+        pageIds: pageScope
+      }
+    );
+    if (!result.ok || !result.data) {
+      redirect(comparePathWithContext({ error: result.detail ?? "finalize_failed" }));
+    }
     redirect(
-      projectDocumentTranscriptionComparePath(
+      projectDocumentTranscriptionRunPath(
         projectId,
         documentId,
-        resolvedBaseRunId,
-        resolvedCandidateRunId,
-        {
-          page: selectedPage,
-          lineId: selectedLineId,
-          tokenId: selectedTokenId
-        }
+        result.data.composedRun.id
       )
     );
   }
@@ -190,6 +251,30 @@ export default async function ProjectDocumentTranscriptionComparePage({
         </div>
       </section>
 
+      {notice ? (
+        <section className="sectionCard ukde-panel">
+          <SectionState
+            kind="success"
+            title="Compare update"
+            description={
+              notice === "decision_saved"
+                ? "Compare decision saved."
+                : "Compare operation completed."
+            }
+          />
+        </section>
+      ) : null}
+
+      {error ? (
+        <section className="sectionCard ukde-panel">
+          <SectionState
+            kind="degraded"
+            title="Compare action failed"
+            description={error}
+          />
+        </section>
+      ) : null}
+
       {!resolvedBaseRunId || !resolvedCandidateRunId ? (
         <section className="sectionCard ukde-panel">
           <SectionState
@@ -213,7 +298,7 @@ export default async function ProjectDocumentTranscriptionComparePage({
         </section>
       ) : null}
 
-      {compareResult && compareResult.ok && compareResult.data ? (
+      {compareData ? (
         <>
           <section className="sectionCard ukde-panel">
             <h3>Compare summary</h3>
@@ -225,10 +310,10 @@ export default async function ProjectDocumentTranscriptionComparePage({
                     href={projectDocumentTranscriptionRunPath(
                       projectId,
                       document.id,
-                      compareResult.data.baseRun.id
+                      compareData.baseRun.id
                     )}
                   >
-                    {compareResult.data.baseRun.id}
+                    {compareData.baseRun.id}
                   </Link>
                 </strong>
               </li>
@@ -239,39 +324,62 @@ export default async function ProjectDocumentTranscriptionComparePage({
                     href={projectDocumentTranscriptionRunPath(
                       projectId,
                       document.id,
-                      compareResult.data.candidateRun.id
+                      compareData.candidateRun.id
                     )}
                   >
-                    {compareResult.data.candidateRun.id}
+                    {compareData.candidateRun.id}
                   </Link>
                 </strong>
               </li>
               <li>
                 <span>Changed lines</span>
-                <strong>{compareResult.data.changedLineCount}</strong>
+                <strong>{compareData.changedLineCount}</strong>
               </li>
               <li>
                 <span>Changed tokens</span>
-                <strong>{compareResult.data.changedTokenCount}</strong>
+                <strong>{compareData.changedTokenCount}</strong>
               </li>
               <li>
                 <span>Changed confidence entries</span>
-                <strong>{compareResult.data.changedConfidenceCount}</strong>
+                <strong>{compareData.changedConfidenceCount}</strong>
               </li>
               <li>
                 <span>Base engine</span>
-                <strong>{String(compareResult.data.baseEngineMetadata.engine ?? "unknown")}</strong>
+                <strong>{String(compareData.baseEngineMetadata.engine ?? "unknown")}</strong>
               </li>
               <li>
                 <span>Candidate engine</span>
-                <strong>{String(compareResult.data.candidateEngineMetadata.engine ?? "unknown")}</strong>
+                <strong>{String(compareData.candidateEngineMetadata.engine ?? "unknown")}</strong>
+              </li>
+              <li>
+                <span>Decision snapshot hash</span>
+                <strong>{compareData.compareDecisionSnapshotHash}</strong>
+              </li>
+              <li>
+                <span>Current decisions</span>
+                <strong>{compareData.compareDecisionCount}</strong>
+              </li>
+              <li>
+                <span>Decision events</span>
+                <strong>{compareData.compareDecisionEventCount}</strong>
               </li>
             </ul>
+            {canDecide ? (
+              <form action={finalizeCompare} className="buttonRow">
+                <button
+                  className="secondaryButton"
+                  type="submit"
+                  disabled={compareData.compareDecisionCount < 1}
+                >
+                  Finalize into REVIEW_COMPOSED run
+                </button>
+              </form>
+            ) : null}
           </section>
 
           <section className="sectionCard ukde-panel">
             <h3>Page-level diff shell</h3>
-            {compareResult.data.items.length === 0 ? (
+            {compareData.items.length === 0 ? (
               <SectionState
                 kind="empty"
                 title="No diff rows available"
@@ -279,7 +387,7 @@ export default async function ProjectDocumentTranscriptionComparePage({
               />
             ) : (
               <ul className="timelineList">
-                {compareResult.data.items.map((page) => (
+                {compareData.items.map((page) => (
                   <li key={page.pageId}>
                     <div className="auditIntegrityRow">
                       <span>Page {page.pageIndex + 1}</span>
@@ -314,6 +422,44 @@ export default async function ProjectDocumentTranscriptionComparePage({
                           Base: {line.base?.textDiplomatic || "<empty>"} · Candidate:{" "}
                           {line.candidate?.textDiplomatic || "<empty>"}
                         </p>
+                        <p className="ukde-muted">
+                          Base source:{" "}
+                          {String(
+                            (line.base?.flagsJson?.lineage as { sourceType?: string } | undefined)
+                              ?.sourceType ?? "ENGINE_OUTPUT"
+                          )}{" "}
+                          · Candidate source:{" "}
+                          {String(
+                            (line.candidate?.flagsJson?.lineage as { sourceType?: string } | undefined)
+                              ?.sourceType ?? "ENGINE_OUTPUT"
+                          )}
+                        </p>
+                        {line.decision ? (
+                          <p className="ukde-muted">
+                            Decision {line.decision.decision} by {line.decision.decidedBy} at{" "}
+                            {new Date(line.decision.decidedAt).toISOString()}
+                            {line.decision.decisionReason
+                              ? ` · ${line.decision.decisionReason}`
+                              : ""}
+                          </p>
+                        ) : null}
+                        <div className="buttonRow">
+                          <Link
+                            className="secondaryButton"
+                            href={projectDocumentTranscriptionWorkspacePath(
+                              projectId,
+                              document.id,
+                              {
+                                lineId: line.lineId,
+                                page: page.pageIndex + 1,
+                                runId: compareData.candidateRun.id,
+                                tokenId: null
+                              }
+                            )}
+                          >
+                            Open in workspace
+                          </Link>
+                        </div>
                         {canDecide ? (
                           <form action={recordDecision} className="buttonRow">
                             <input type="hidden" name="pageId" value={page.pageId} />
@@ -349,6 +495,32 @@ export default async function ProjectDocumentTranscriptionComparePage({
                           {token.base?.tokenText || "<empty>"} · candidate{" "}
                           {token.candidate?.tokenText || "<empty>"}
                         </p>
+                        {token.decision ? (
+                          <p className="ukde-muted">
+                            Decision {token.decision.decision} by {token.decision.decidedBy} at{" "}
+                            {new Date(token.decision.decidedAt).toISOString()}
+                            {token.decision.decisionReason
+                              ? ` · ${token.decision.decisionReason}`
+                              : ""}
+                          </p>
+                        ) : null}
+                        <div className="buttonRow">
+                          <Link
+                            className="secondaryButton"
+                            href={projectDocumentTranscriptionWorkspacePath(
+                              projectId,
+                              document.id,
+                              {
+                                lineId: token.lineId ?? undefined,
+                                page: page.pageIndex + 1,
+                                runId: compareData.candidateRun.id,
+                                tokenId: token.tokenId
+                              }
+                            )}
+                          >
+                            Open token in workspace
+                          </Link>
+                        </div>
                         {canDecide ? (
                           <form action={recordDecision} className="buttonRow">
                             <input type="hidden" name="pageId" value={page.pageId} />

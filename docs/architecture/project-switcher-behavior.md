@@ -30,6 +30,8 @@ When switching projects from an existing project route:
   - `overview`
   - `documents`
   - `documents/import`
+  - `policies`
+  - `pseudonym-registry`
   - `jobs`
   - `activity`
   - `settings` (only when target allows settings)

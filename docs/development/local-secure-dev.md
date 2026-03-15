@@ -100,9 +100,9 @@ pnpm dev:web
 - `http://127.0.0.1:3000/admin/operations/slos` (`ADMIN` SLO surface)
 - `http://127.0.0.1:3000/admin/operations/alerts` (`ADMIN` alert surface)
 - `http://127.0.0.1:3000/admin/operations/timelines` (`ADMIN` and read-only `AUDITOR`)
-- `http://127.0.0.1:3000/projects/:projectId/export-candidates` (disabled export stub surface)
-- `http://127.0.0.1:3000/projects/:projectId/export-requests` (disabled export stub surface)
-- `http://127.0.0.1:3000/projects/:projectId/export-review` (disabled export stub surface)
+- `http://127.0.0.1:3000/projects/:projectId/export-candidates` (export candidate snapshots)
+- `http://127.0.0.1:3000/projects/:projectId/export-requests` (request history and receipt read state)
+- `http://127.0.0.1:3000/projects/:projectId/export-review` (review queue and decisions)
 - `http://127.0.0.1:3000/admin/security` (`ADMIN` and read-only `AUDITOR`)
 
 ## Containerized Smoke Path
@@ -205,10 +205,11 @@ curl -i http://127.0.0.1:8000/healthz
 # admin or auditor security status
 curl -sS -H "Authorization: Bearer <session_token>" http://127.0.0.1:8000/admin/security/status
 
-# export gateway stubs stay disabled
+# export routes are active but egress remains gateway-only
 curl -i -H "Authorization: Bearer <session_token>" http://127.0.0.1:8000/projects/<project_id>/export-candidates
 curl -i -H "Authorization: Bearer <session_token>" http://127.0.0.1:8000/projects/<project_id>/export-requests
 curl -i -H "Authorization: Bearer <session_token>" http://127.0.0.1:8000/projects/<project_id>/export-review
+curl -i -H "Authorization: Bearer <session_token>" http://127.0.0.1:8000/projects/<project_id>/export-requests/<request_id>/receipt
 
 # quick auth rate-limit smoke (expect one 429 with low limits in dedicated test env)
 for i in 1 2 3; do curl -s -o /tmp/auth-rate-$i.json -w "%{http_code}\n" http://127.0.0.1:8000/auth/providers; done

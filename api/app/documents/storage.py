@@ -393,6 +393,75 @@ class DocumentStorage:
             raise DocumentStorageError("Controlled derived object key violates storage boundaries.")
         return object_key
 
+    def _build_redaction_approved_snapshot_key(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        approved_snapshot_sha256: str,
+    ) -> str:
+        prefix = self._normalize_prefix(self._settings.storage_controlled_derived_prefix)
+        object_key = (
+            f"{prefix}/{project_id}/{document_id}/redaction/{run_id}/approved-snapshots/"
+            f"{approved_snapshot_sha256}.json"
+        )
+        if not self._boundary.can_write(writer="app", object_key=object_key):
+            raise DocumentStorageError("Controlled derived object key violates storage boundaries.")
+        return object_key
+
+    def _build_redaction_preview_key(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        preview_sha256: str,
+    ) -> str:
+        prefix = self._normalize_prefix(self._settings.storage_controlled_derived_prefix)
+        object_key = (
+            f"{prefix}/{project_id}/{document_id}/redaction/{run_id}/page/{page_id}/preview/"
+            f"{preview_sha256}.png"
+        )
+        if not self._boundary.can_write(writer="app", object_key=object_key):
+            raise DocumentStorageError("Controlled derived object key violates storage boundaries.")
+        return object_key
+
+    def _build_redaction_run_manifest_key(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        output_manifest_sha256: str,
+    ) -> str:
+        prefix = self._normalize_prefix(self._settings.storage_controlled_derived_prefix)
+        object_key = (
+            f"{prefix}/{project_id}/{document_id}/redaction/{run_id}/output-manifest/"
+            f"{output_manifest_sha256}.json"
+        )
+        if not self._boundary.can_write(writer="app", object_key=object_key):
+            raise DocumentStorageError("Controlled derived object key violates storage boundaries.")
+        return object_key
+
+    def _build_governance_evidence_ledger_key(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        ledger_sha256: str,
+    ) -> str:
+        prefix = self._normalize_prefix(self._settings.storage_controlled_derived_prefix)
+        object_key = (
+            f"{prefix}/{project_id}/{document_id}/governance/{run_id}/ledger/"
+            f"{ledger_sha256}.json"
+        )
+        if not self._boundary.can_write(writer="app", object_key=object_key):
+            raise DocumentStorageError("Controlled derived object key violates storage boundaries.")
+        return object_key
+
     @staticmethod
     def _write_idempotent(destination: Path, payload: bytes) -> None:
         if destination.exists():
@@ -1048,6 +1117,68 @@ class DocumentStorage:
             page_index=page_index,
         )
 
+    def build_redaction_approved_snapshot_key(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        approved_snapshot_sha256: str,
+    ) -> str:
+        return self._build_redaction_approved_snapshot_key(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            approved_snapshot_sha256=approved_snapshot_sha256,
+        )
+
+    def build_redaction_preview_key(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        preview_sha256: str,
+    ) -> str:
+        return self._build_redaction_preview_key(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+            preview_sha256=preview_sha256,
+        )
+
+    def build_redaction_run_manifest_key(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        output_manifest_sha256: str,
+    ) -> str:
+        return self._build_redaction_run_manifest_key(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            output_manifest_sha256=output_manifest_sha256,
+        )
+
+    def build_governance_evidence_ledger_key(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        ledger_sha256: str,
+    ) -> str:
+        return self._build_governance_evidence_ledger_key(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            ledger_sha256=ledger_sha256,
+        )
+
     def build_transcription_line_alignment_key(
         self,
         *,
@@ -1202,6 +1333,88 @@ class DocumentStorage:
             run_id=run_id,
             page_index=page_index,
             line_id=line_id,
+        )
+        destination = self._resolve_file_path(object_key)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        self._write_idempotent(destination, payload)
+        return StoredDocumentObject(object_key=object_key, absolute_path=destination)
+
+    def write_redaction_approved_snapshot(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        approved_snapshot_sha256: str,
+        payload: bytes,
+    ) -> StoredDocumentObject:
+        object_key = self._build_redaction_approved_snapshot_key(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            approved_snapshot_sha256=approved_snapshot_sha256,
+        )
+        destination = self._resolve_file_path(object_key)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        self._write_idempotent(destination, payload)
+        return StoredDocumentObject(object_key=object_key, absolute_path=destination)
+
+    def write_redaction_preview(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        page_id: str,
+        preview_sha256: str,
+        payload: bytes,
+    ) -> StoredDocumentObject:
+        object_key = self._build_redaction_preview_key(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+            preview_sha256=preview_sha256,
+        )
+        destination = self._resolve_file_path(object_key)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        self._write_idempotent(destination, payload)
+        return StoredDocumentObject(object_key=object_key, absolute_path=destination)
+
+    def write_redaction_run_manifest(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        output_manifest_sha256: str,
+        payload: bytes,
+    ) -> StoredDocumentObject:
+        object_key = self._build_redaction_run_manifest_key(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            output_manifest_sha256=output_manifest_sha256,
+        )
+        destination = self._resolve_file_path(object_key)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        self._write_idempotent(destination, payload)
+        return StoredDocumentObject(object_key=object_key, absolute_path=destination)
+
+    def write_governance_evidence_ledger(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        run_id: str,
+        ledger_sha256: str,
+        payload: bytes,
+    ) -> StoredDocumentObject:
+        object_key = self._build_governance_evidence_ledger_key(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            ledger_sha256=ledger_sha256,
         )
         destination = self._resolve_file_path(object_key)
         destination.parent.mkdir(parents=True, exist_ok=True)

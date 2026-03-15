@@ -47,6 +47,6 @@ SELECT COUNT(*) FROM export_stub_events;
 ## Recovery Validation
 
 - create and read one test project
-- call one export stub route and confirm `501`
+- call one export candidate/request route and confirm authenticated read works
 - confirm audit list is readable by admin/auditor
 - confirm `/admin/security/status` returns valid payload
