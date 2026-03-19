@@ -1,0 +1,170 @@
+[
+  {
+    "viewport": "1366x900",
+    "navFound": true,
+    "navWidth": 853,
+    "navHeight": 43,
+    "navScrollWidth": 1519,
+    "navScrollHeight": 43,
+    "hiddenOrClippedCount": 7,
+    "hiddenOrClipped": [
+      {
+        "text": "Pseudonym registry",
+        "hidden": false,
+        "clipped": true,
+        "left": 983.375,
+        "right": 1136.53125,
+        "top": 134.40625,
+        "bottom": 163.203125
+      },
+      {
+        "text": "Jobs",
+        "hidden": false,
+        "clipped": true,
+        "left": 1141.5625,
+        "right": 1195.046875,
+        "top": 134.40625,
+        "bottom": 163.203125
+      },
+      {
+        "text": "Export candidates",
+        "hidden": false,
+        "clipped": true,
+        "left": 1200.078125,
+        "right": 1341.359375,
+        "top": 134.40625,
+        "bottom": 163.203125
+      },
+      {
+        "text": "Export requests",
+        "hidden": false,
+        "clipped": true,
+        "left": 1346.390625,
+        "right": 1472.546875,
+        "top": 134.40625,
+        "bottom": 163.203125
+      },
+      {
+        "text": "Export review",
+        "hidden": false,
+        "clipped": true,
+        "left": 1477.578125,
+        "right": 1589.203125,
+        "top": 134.40625,
+        "bottom": 163.203125
+      },
+      {
+        "text": "Activity",
+        "hidden": false,
+        "clipped": true,
+        "left": 1594.234375,
+        "right": 1665.015625,
+        "top": 134.40625,
+        "bottom": 163.203125
+      },
+      {
+        "text": "Settings",
+        "hidden": false,
+        "clipped": true,
+        "left": 1670.046875,
+        "right": 1746.296875,
+        "top": 134.40625,
+        "bottom": 163.203125
+      }
+    ]
+  },
+  {
+    "viewport": "1440x900",
+    "navFound": true,
+    "navWidth": 927,
+    "navHeight": 43,
+    "navScrollWidth": 1519,
+    "navScrollHeight": 43,
+    "hiddenOrClippedCount": 6,
+    "hiddenOrClipped": [
+      {
+        "text": "Jobs",
+        "hidden": false,
+        "clipped": true,
+        "left": 1141.5625,
+        "right": 1195.046875,
+        "top": 93.375,
+        "bottom": 122.171875
+      },
+      {
+        "text": "Export candidates",
+        "hidden": false,
+        "clipped": true,
+        "left": 1200.078125,
+        "right": 1341.359375,
+        "top": 93.375,
+        "bottom": 122.171875
+      },
+      {
+        "text": "Export requests",
+        "hidden": false,
+        "clipped": true,
+        "left": 1346.390625,
+        "right": 1472.546875,
+        "top": 93.375,
+        "bottom": 122.171875
+      },
+      {
+        "text": "Export review",
+        "hidden": false,
+        "clipped": true,
+        "left": 1477.578125,
+        "right": 1589.203125,
+        "top": 93.375,
+        "bottom": 122.171875
+      },
+      {
+        "text": "Activity",
+        "hidden": false,
+        "clipped": true,
+        "left": 1594.234375,
+        "right": 1665.015625,
+        "top": 93.375,
+        "bottom": 122.171875
+      },
+      {
+        "text": "Settings",
+        "hidden": false,
+        "clipped": true,
+        "left": 1670.046875,
+        "right": 1746.296875,
+        "top": 93.375,
+        "bottom": 122.171875
+      }
+    ]
+  },
+  {
+    "viewport": "1920x1080",
+    "navFound": true,
+    "navWidth": 1407,
+    "navHeight": 43,
+    "navScrollWidth": 1519,
+    "navScrollHeight": 43,
+    "hiddenOrClippedCount": 2,
+    "hiddenOrClipped": [
+      {
+        "text": "Activity",
+        "hidden": false,
+        "clipped": true,
+        "left": 1594.234375,
+        "right": 1665.015625,
+        "top": 93.375,
+        "bottom": 122.171875
+      },
+      {
+        "text": "Settings",
+        "hidden": false,
+        "clipped": true,
+        "left": 1670.046875,
+        "right": 1746.296875,
+        "top": 93.375,
+        "bottom": 122.171875
+      }
+    ]
+  }
+]

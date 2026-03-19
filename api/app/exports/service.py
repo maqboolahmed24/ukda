@@ -13,9 +13,7 @@ from app.core.storage_boundaries import resolve_storage_boundary
 from app.exports.models import (
     BundleEventRecord,
     BundleProfileRecord,
-    BundleValidationProjectionRecord,
     BundleValidationRunRecord,
-    BundleVerificationProjectionRecord,
     BundleVerificationRunRecord,
     DepositBundleKind,
     DepositBundleRecord,
@@ -46,6 +44,8 @@ from app.projects.service import (
     ProjectService,
     get_project_service,
 )
+from app.telemetry.context import current_trace_id
+from app.telemetry.service import TelemetryService, get_telemetry_service
 
 _ALLOWED_CANDIDATE_VIEW_ROLES = {"RESEARCHER", "PROJECT_LEAD", "REVIEWER", "ADMIN", "AUDITOR"}
 _ALLOWED_REQUEST_CREATE_ROLES = {"RESEARCHER", "PROJECT_LEAD", "ADMIN"}
@@ -85,10 +85,12 @@ class ExportService:
         settings: Settings,
         store: ExportStore | None = None,
         project_service: ProjectService | None = None,
+        telemetry_service: TelemetryService | None = None,
     ) -> None:
         self._settings = settings
         self._store = store or ExportStore(settings)
         self._project_service = project_service or get_project_service()
+        self._telemetry_service = telemetry_service or get_telemetry_service()
 
     @staticmethod
     def _is_admin(current_user: SessionPrincipal) -> bool:
@@ -1566,7 +1568,7 @@ class ExportService:
                 project_id=project_id,
                 export_request_id=export_request_id,
             )
-        except ExportStoreNotFoundError as error:
+        except ExportStoreNotFoundError:
             self._ensure_initial_proof_exists(
                 project_id=project_id,
                 export_request_id=export_request_id,
@@ -2735,7 +2737,7 @@ class ExportService:
     ) -> tuple[ExportRequestRecord, ExportRequestReviewRecord]:
         role = self._resolve_role(current_user=current_user, project_id=project_id)
         self._ensure_review_mutation_allowed(role=role)
-        request = self.get_export_request(
+        request_before_decision = self.get_export_request(
             current_user=current_user,
             project_id=project_id,
             export_request_id=export_request_id,
@@ -2747,7 +2749,10 @@ class ExportService:
             raise ExportValidationError("decisionReason is required for REJECT.")
         if normalized_decision == "RETURN" and normalized_return_comment is None:
             raise ExportValidationError("returnComment is required for RETURN.")
-        if normalized_decision == "APPROVE" and request.submitted_by == current_user.user_id:
+        if (
+            normalized_decision == "APPROVE"
+            and request_before_decision.submitted_by == current_user.user_id
+        ):
             raise ExportAccessDeniedError("Requester cannot approve their own export request.")
         try:
             request_record, review_record = self._store.decide_request_review(
@@ -2764,6 +2769,17 @@ class ExportService:
             raise ExportNotFoundError(str(error)) from error
         except ExportStoreConflictError as error:
             raise ExportConflictError(str(error)) from error
+        if request_record.final_decision_at is not None:
+            latency_ms = max(
+                0.0,
+                (request_record.final_decision_at - request_record.submitted_at).total_seconds()
+                * 1000.0,
+            )
+            self._telemetry_service.record_export_review_latency(
+                latency_ms=latency_ms,
+                request_id=f"export:{project_id}:{request_record.id}",
+                trace_id=current_trace_id(),
+            )
         if request_record.status == "APPROVED":
             try:
                 self._store.generate_provenance_proof(

@@ -8,6 +8,7 @@ import type {
 import { InlineAlert, StatusChip } from "@ukde/ui/primitives";
 
 import { requestBrowserApi } from "../lib/data/browser-api-client";
+import { RecoveryModeBanner } from "./recovery-mode-banner";
 
 const POLL_INTERVAL_MS = 5_000;
 
@@ -39,13 +40,14 @@ export function DocumentTranscriptionRunStatus({
 }) {
   const [status, setStatus] = useState<TranscriptionRunStatus>(initialStatus);
   const [pollError, setPollError] = useState<string | null>(null);
+  const isPollingActive = status === "QUEUED" || status === "RUNNING";
 
   useEffect(() => {
     setStatus(initialStatus);
   }, [initialStatus]);
 
   useEffect(() => {
-    if (!(status === "QUEUED" || status === "RUNNING")) {
+    if (!isPollingActive) {
       return;
     }
     let canceled = false;
@@ -75,14 +77,15 @@ export function DocumentTranscriptionRunStatus({
       canceled = true;
       window.clearInterval(timer);
     };
-  }, [documentId, projectId, runId, status]);
+  }, [documentId, isPollingActive, projectId, runId, status]);
 
   return (
     <div>
       <StatusChip tone={resolveTone(status)}>{status}</StatusChip>
+      <RecoveryModeBanner pollingActive={isPollingActive} />
       {pollError ? (
         <InlineAlert title="Polling degraded" tone="warning">
-          {pollError}
+          {pollError}. The run may still be processing server-side; this degraded state is distinct from run failure.
         </InlineAlert>
       ) : null}
     </div>

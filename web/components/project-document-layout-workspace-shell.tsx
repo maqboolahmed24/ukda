@@ -99,6 +99,7 @@ interface LayoutVertexDragState {
 }
 
 type WorkspaceMode = "INSPECT" | "READING_ORDER" | "EDIT";
+type PageImageLoadState = "idle" | "loading" | "loaded" | "error";
 
 type WorkspaceTransitionAction =
   | {
@@ -133,6 +134,7 @@ const INSPECTOR_WIDTH_PRESETS: Record<"default" | "narrow" | "wide", number> = {
   default: 16.75,
   wide: 19.5
 };
+const PAGE_IMAGE_MAX_RETRY_ATTEMPTS = 1;
 
 function isShellState(value: string | null): value is ShellState {
   return WORKSPACE_STATES.includes(value as ShellState);
@@ -493,6 +495,8 @@ export function ProjectDocumentLayoutWorkspaceShell({
 }: ProjectDocumentLayoutWorkspaceShellProps) {
   const router = useRouter();
   const overlaySvgRef = useRef<SVGSVGElement | null>(null);
+  const pageImageRef = useRef<HTMLImageElement | null>(null);
+  const latestResolvedImagePathRef = useRef<string | null>(null);
   const [shellState, setShellState] = useState<ShellState>("Expanded");
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("geometry");
   const [showRegions, setShowRegions] = useState(true);
@@ -506,7 +510,13 @@ export function ProjectDocumentLayoutWorkspaceShell({
   const [filmstripDrawerOpen, setFilmstripDrawerOpen] = useState(false);
   const [inspectorDrawerOpen, setInspectorDrawerOpen] = useState(false);
   const [zoomPercent, setZoomPercent] = useState(100);
-  const [pageImageFailed, setPageImageFailed] = useState(false);
+  const [pageImageState, setPageImageState] = useState<{
+    retryAttempt: number;
+    status: PageImageLoadState;
+  }>({
+    retryAttempt: 0,
+    status: "idle"
+  });
   const [readingOrderBaseGroups, setReadingOrderBaseGroups] = useState<
     DocumentLayoutReadingOrderGroup[]
   >([]);
@@ -630,6 +640,15 @@ export function ProjectDocumentLayoutWorkspaceShell({
           { runId: selectedRunId }
         )
       : null;
+  const resolvedImagePath =
+    imagePath && pageImageState.retryAttempt > 0
+      ? `${imagePath}${imagePath.includes("?") ? "&" : "?"}retry=${pageImageState.retryAttempt}`
+      : imagePath;
+  const pageImageFailed = pageImageState.status === "error";
+
+  useEffect(() => {
+    latestResolvedImagePathRef.current = resolvedImagePath;
+  }, [resolvedImagePath]);
 
   useEffect(() => {
     const shellElement = document.querySelector<HTMLElement>(".authenticatedShell");
@@ -663,7 +682,6 @@ export function ProjectDocumentLayoutWorkspaceShell({
   useEffect(() => {
     setHoveredElementId(null);
     setSelectedElementId(null);
-    setPageImageFailed(false);
     setInspectorTab("geometry");
     setLayoutEditMode(false);
     setLayoutEditTool("SELECT_PAN");
@@ -682,6 +700,73 @@ export function ProjectDocumentLayoutWorkspaceShell({
     setLayoutEditConflict(false);
     setPendingTransitionAction(null);
   }, [selectedRunId, selectedPage?.pageId]);
+
+  useEffect(() => {
+    if (!imagePath) {
+      setPageImageState({
+        retryAttempt: 0,
+        status: "idle"
+      });
+      return;
+    }
+    const imageElement = pageImageRef.current;
+    const imageAlreadyLoaded = Boolean(
+      imageElement &&
+        imageElement.complete &&
+        imageElement.naturalWidth > 0 &&
+        imageElement.naturalHeight > 0
+    );
+    if (imageAlreadyLoaded) {
+      setPageImageState({
+        retryAttempt: 0,
+        status: "loaded"
+      });
+      return;
+    }
+    setPageImageState({
+      retryAttempt: 0,
+      status: "loading"
+    });
+  }, [imagePath]);
+
+  useEffect(() => {
+    const requestPath = resolvedImagePath;
+    if (pageImageState.status !== "loading") {
+      return;
+    }
+    if (!requestPath || latestResolvedImagePathRef.current !== requestPath) {
+      return;
+    }
+    const imageElement = pageImageRef.current;
+    if (!imageElement || !imageElement.complete) {
+      return;
+    }
+    setPageImageState((current) => {
+      if (
+        current.status !== "loading" ||
+        !requestPath ||
+        latestResolvedImagePathRef.current !== requestPath
+      ) {
+        return current;
+      }
+      if (imageElement.naturalWidth > 0 && imageElement.naturalHeight > 0) {
+        return {
+          retryAttempt: current.retryAttempt,
+          status: "loaded"
+        };
+      }
+      if (current.retryAttempt < PAGE_IMAGE_MAX_RETRY_ATTEMPTS) {
+        return {
+          retryAttempt: current.retryAttempt + 1,
+          status: "loading"
+        };
+      }
+      return {
+        retryAttempt: current.retryAttempt,
+        status: "error"
+      };
+    });
+  }, [pageImageState.status, resolvedImagePath]);
 
   useEffect(() => {
     const overlayRegions = overlayPayload
@@ -1864,6 +1949,41 @@ export function ProjectDocumentLayoutWorkspaceShell({
     });
   };
 
+  const handlePageImageError = (): void => {
+    const requestPath = resolvedImagePath;
+    setPageImageState((current) => {
+      if (!requestPath || latestResolvedImagePathRef.current !== requestPath) {
+        return current;
+      }
+      if (current.retryAttempt < PAGE_IMAGE_MAX_RETRY_ATTEMPTS) {
+        return {
+          retryAttempt: current.retryAttempt + 1,
+          status: "loading"
+        };
+      }
+      return {
+        retryAttempt: current.retryAttempt,
+        status: "error"
+      };
+    });
+  };
+
+  const handlePageImageLoad = (): void => {
+    const requestPath = resolvedImagePath;
+    setPageImageState((current) => {
+      if (!requestPath || latestResolvedImagePathRef.current !== requestPath) {
+        return current;
+      }
+      if (current.status === "loaded") {
+        return current;
+      }
+      return {
+        retryAttempt: current.retryAttempt,
+        status: "loaded"
+      };
+    });
+  };
+
   const updateVertexDrag = (event: PointerEvent<SVGCircleElement>): void => {
     setVertexDragState((current) => {
       if (!current || current.pointerId !== event.pointerId) {
@@ -2349,11 +2469,7 @@ export function ProjectDocumentLayoutWorkspaceShell({
 
           <h3>Rescue candidates</h3>
           {rescueCandidatesError ? (
-            <SectionState
-              kind="degraded"
-              title="Rescue candidates unavailable"
-              description={rescueCandidatesError}
-            />
+            null
           ) : rescueCandidates.length === 0 ? (
             <p className="ukde-muted">No rescue candidates for this page.</p>
           ) : (
@@ -2646,282 +2762,294 @@ export function ProjectDocumentLayoutWorkspaceShell({
         <p className="ukde-eyebrow">Layout workspace</p>
         <h2>{documentName}</h2>
         <div className="documentViewerToolbarRow layoutWorkspaceToolbarRow">
-          <label className="documentViewerRunSelector" htmlFor="layout-run-selector">
-            <span>Run selector</span>
-            <select
-              id="layout-run-selector"
-              onChange={(event) =>
-                requestTransitionAction({
-                  kind: "NAVIGATE",
-                  page: selectedPageNumber,
-                  runId: event.target.value
-                })
-              }
-              value={selectedRunId}
+            <label
+              className="documentViewerRunSelector layoutWorkspaceToolbarCluster layoutWorkspaceToolbarCluster--run"
+              htmlFor="layout-run-selector"
             >
-              {runs.map((run) => (
-                <option key={run.id} value={run.id}>
-                  {run.id} · {run.status}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="documentViewerModeSelector" role="group" aria-label="Workspace mode">
-            <button
-              aria-pressed={workspaceMode === "INSPECT"}
-              className="secondaryButton"
-              onClick={() =>
-                requestTransitionAction({
-                  kind: "SET_MODE",
-                  mode: "INSPECT"
-                })
-              }
-              type="button"
-            >
-              Inspect
-            </button>
-            <button
-              aria-pressed={workspaceMode === "READING_ORDER"}
-              className="secondaryButton"
-              onClick={() =>
-                requestTransitionAction({
-                  kind: "SET_MODE",
-                  mode: "READING_ORDER"
-                })
-              }
-              type="button"
-            >
-              Reading order
-            </button>
-            <button
-              aria-pressed={workspaceMode === "EDIT"}
-              className="secondaryButton"
-              disabled={!canEditLayout || !workspaceOverlay}
-              onClick={() =>
-                requestTransitionAction({
-                  kind: "SET_MODE",
-                  mode: "EDIT"
-                })
-              }
-              type="button"
-            >
-              Edit
-            </button>
-          </div>
-
-          <Toolbar actions={toggleActions} label="Layout overlay controls" />
-
-          <label className="layoutWorkspaceOpacity" htmlFor="layout-overlay-opacity">
-            <span>Overlay opacity</span>
-            <input
-              id="layout-overlay-opacity"
-              max={100}
-              min={15}
-              onChange={(event) => {
-                const next = Number.parseInt(event.target.value, 10);
-                if (!Number.isFinite(next)) {
-                  return;
+              <span>Run selector</span>
+              <select
+                id="layout-run-selector"
+                onChange={(event) =>
+                  requestTransitionAction({
+                    kind: "NAVIGATE",
+                    page: selectedPageNumber,
+                    runId: event.target.value
+                  })
                 }
-                setOverlayOpacityPercent(Math.max(15, Math.min(100, next)));
-              }}
-              step={1}
-              type="range"
-              value={overlayOpacityPercent}
-            />
-            <strong>{overlayOpacityPercent}%</strong>
-          </label>
+                value={selectedRunId}
+              >
+                {runs.map((run) => (
+                  <option key={run.id} value={run.id}>
+                    {run.id} · {run.status}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <div className="buttonRow layoutWorkspacePrimaryActions">
-            {workspaceMode === "EDIT" ? (
-              <>
-                <button
-                  className="secondaryButton"
-                  disabled={!layoutEditCanUndo || layoutEditSaving}
-                  onClick={undoLayoutEdit}
-                  type="button"
-                >
-                  Undo
-                </button>
-                <button
-                  className="secondaryButton"
-                  disabled={!layoutEditCanRedo || layoutEditSaving}
-                  onClick={redoLayoutEdit}
-                  type="button"
-                >
-                  Redo
-                </button>
-                <button
-                  className="secondaryButton"
-                  disabled={!layoutEditHasChanges || layoutEditSaving}
-                  onClick={discardLayoutEdits}
-                  type="button"
-                >
-                  Discard
-                </button>
-                <button
-                  className="secondaryButton"
-                  disabled={!layoutEditHasChanges || layoutEditSaving}
-                  onClick={() => {
-                    void saveLayoutEdits();
-                  }}
-                  type="button"
-                >
-                  {layoutEditSaving ? "Saving..." : "Save edits"}
-                </button>
-              </>
-            ) : workspaceMode === "READING_ORDER" ? (
-              <>
-                <button
-                  className="secondaryButton"
-                  disabled={!readingOrderHasChanges || readingOrderSaving}
-                  onClick={() =>
-                    revertReadingOrderDraft("Unsaved reading-order changes discarded.")
-                  }
-                  type="button"
-                >
-                  Discard
-                </button>
-                <button
-                  className="secondaryButton"
-                  disabled={
-                    !canEditReadingOrder ||
-                    !readingOrderHasChanges ||
-                    readingOrderSaving ||
-                    layoutEditMode
-                  }
-                  onClick={() => {
-                    void saveReadingOrder();
-                  }}
-                  type="button"
-                >
-                  {readingOrderSaving ? "Saving..." : "Save order"}
-                </button>
-              </>
-            ) : null}
-            <button
-              className="secondaryButton"
-              onClick={() =>
-                requestTransitionAction({
-                  kind: "OPEN_TRIAGE"
-                })
-              }
-              type="button"
+            <div
+              className="documentViewerModeSelector layoutWorkspaceToolbarCluster layoutWorkspaceToolbarCluster--mode"
+              role="group"
+              aria-label="Workspace mode"
             >
-              Open triage
-            </button>
-          </div>
-
-          <details className="layoutWorkspaceOverflowPanel">
-            <summary>Workspace tools</summary>
-            <div className="layoutWorkspaceOverflowBody">
-              <div className="buttonRow">
-                <button
-                  className="secondaryButton"
-                  onClick={() => setZoomPercent((value) => Math.max(50, value - 10))}
-                  type="button"
-                >
-                  Zoom out
-                </button>
-                <button
-                  className="secondaryButton"
-                  onClick={() => setZoomPercent(100)}
-                  type="button"
-                >
-                  Fit
-                </button>
-                <button
-                  className="secondaryButton"
-                  onClick={() => setZoomPercent((value) => Math.min(400, value + 10))}
-                  type="button"
-                >
-                  Zoom in
-                </button>
-              </div>
-              <div className="buttonRow">
-                <button
-                  className="secondaryButton"
-                  onClick={() => {
-                    if (shellState === "Focus") {
-                      setFilmstripDrawerOpen((open) => !open);
-                      return;
-                    }
-                    setFilmstripCollapsed((collapsed) => !collapsed);
-                  }}
-                  type="button"
-                >
-                  {shellState === "Focus"
-                    ? filmstripDrawerOpen
-                      ? "Close filmstrip"
-                      : "Open filmstrip"
-                    : filmstripCollapsed
-                      ? "Show filmstrip"
-                      : "Hide filmstrip"}
-                </button>
-                {!showInspectorAside ? (
-                  <button
-                    className="secondaryButton"
-                    onClick={() => setInspectorDrawerOpen((open) => !open)}
-                    type="button"
-                  >
-                    {inspectorDrawerOpen ? "Close inspector" : "Inspector drawer"}
-                  </button>
-                ) : null}
-              </div>
-              <div className="layoutWorkspacePaneControls">
-                <span>Filmstrip width</span>
-                <div className="buttonRow">
-                  <button
-                    className="secondaryButton"
-                    onClick={() => setFilmstripWidthPreset("narrow")}
-                    type="button"
-                  >
-                    Narrow
-                  </button>
-                  <button
-                    className="secondaryButton"
-                    onClick={() => setFilmstripWidthPreset("default")}
-                    type="button"
-                  >
-                    Default
-                  </button>
-                  <button
-                    className="secondaryButton"
-                    onClick={() => setFilmstripWidthPreset("wide")}
-                    type="button"
-                  >
-                    Wide
-                  </button>
-                </div>
-              </div>
-              <div className="layoutWorkspacePaneControls">
-                <span>Inspector width</span>
-                <div className="buttonRow">
-                  <button
-                    className="secondaryButton"
-                    onClick={() => setInspectorWidthPreset("narrow")}
-                    type="button"
-                  >
-                    Narrow
-                  </button>
-                  <button
-                    className="secondaryButton"
-                    onClick={() => setInspectorWidthPreset("default")}
-                    type="button"
-                  >
-                    Default
-                  </button>
-                  <button
-                    className="secondaryButton"
-                    onClick={() => setInspectorWidthPreset("wide")}
-                    type="button"
-                  >
-                    Wide
-                  </button>
-                </div>
-              </div>
+              <button
+                aria-pressed={workspaceMode === "INSPECT"}
+                className="secondaryButton"
+                onClick={() =>
+                  requestTransitionAction({
+                    kind: "SET_MODE",
+                    mode: "INSPECT"
+                  })
+                }
+                type="button"
+              >
+                Inspect
+              </button>
+              <button
+                aria-pressed={workspaceMode === "READING_ORDER"}
+                className="secondaryButton"
+                onClick={() =>
+                  requestTransitionAction({
+                    kind: "SET_MODE",
+                    mode: "READING_ORDER"
+                  })
+                }
+                type="button"
+              >
+                Reading order
+              </button>
+              <button
+                aria-pressed={workspaceMode === "EDIT"}
+                className="secondaryButton"
+                disabled={!canEditLayout || !workspaceOverlay}
+                onClick={() =>
+                  requestTransitionAction({
+                    kind: "SET_MODE",
+                    mode: "EDIT"
+                  })
+                }
+                type="button"
+              >
+                Edit
+              </button>
             </div>
-          </details>
+
+            <div className="layoutWorkspaceToolbarCluster layoutWorkspaceToolbarCluster--overlays">
+              <Toolbar actions={toggleActions} label="Layout overlay controls" />
+            </div>
+
+            <label
+              className="layoutWorkspaceOpacity layoutWorkspaceToolbarCluster layoutWorkspaceToolbarCluster--opacity"
+              htmlFor="layout-overlay-opacity"
+            >
+              <span>Overlay opacity</span>
+              <input
+                id="layout-overlay-opacity"
+                max={100}
+                min={15}
+                onChange={(event) => {
+                  const next = Number.parseInt(event.target.value, 10);
+                  if (!Number.isFinite(next)) {
+                    return;
+                  }
+                  setOverlayOpacityPercent(Math.max(15, Math.min(100, next)));
+                }}
+                step={1}
+                type="range"
+                value={overlayOpacityPercent}
+              />
+              <strong>{overlayOpacityPercent}%</strong>
+            </label>
+
+            <div className="buttonRow layoutWorkspacePrimaryActions layoutWorkspaceToolbarCluster layoutWorkspaceToolbarCluster--actions">
+              {workspaceMode === "EDIT" ? (
+                <>
+                  <button
+                    className="secondaryButton"
+                    disabled={!layoutEditCanUndo || layoutEditSaving}
+                    onClick={undoLayoutEdit}
+                    type="button"
+                  >
+                    Undo
+                  </button>
+                  <button
+                    className="secondaryButton"
+                    disabled={!layoutEditCanRedo || layoutEditSaving}
+                    onClick={redoLayoutEdit}
+                    type="button"
+                  >
+                    Redo
+                  </button>
+                  <button
+                    className="secondaryButton"
+                    disabled={!layoutEditHasChanges || layoutEditSaving}
+                    onClick={discardLayoutEdits}
+                    type="button"
+                  >
+                    Discard
+                  </button>
+                  <button
+                    className="secondaryButton"
+                    disabled={!layoutEditHasChanges || layoutEditSaving}
+                    onClick={() => {
+                      void saveLayoutEdits();
+                    }}
+                    type="button"
+                  >
+                    {layoutEditSaving ? "Saving..." : "Save edits"}
+                  </button>
+                </>
+              ) : workspaceMode === "READING_ORDER" ? (
+                <>
+                  <button
+                    className="secondaryButton"
+                    disabled={!readingOrderHasChanges || readingOrderSaving}
+                    onClick={() =>
+                      revertReadingOrderDraft("Unsaved reading-order changes discarded.")
+                    }
+                    type="button"
+                  >
+                    Discard
+                  </button>
+                  <button
+                    className="secondaryButton"
+                    disabled={
+                      !canEditReadingOrder ||
+                      !readingOrderHasChanges ||
+                      readingOrderSaving ||
+                      layoutEditMode
+                    }
+                    onClick={() => {
+                      void saveReadingOrder();
+                    }}
+                    type="button"
+                  >
+                    {readingOrderSaving ? "Saving..." : "Save order"}
+                  </button>
+                </>
+              ) : null}
+              <button
+                className="secondaryButton"
+                onClick={() =>
+                  requestTransitionAction({
+                    kind: "OPEN_TRIAGE"
+                  })
+                }
+                type="button"
+              >
+                Open triage
+              </button>
+            </div>
+
+            <details className="layoutWorkspaceOverflowPanel layoutWorkspaceToolbarCluster layoutWorkspaceToolbarCluster--overflow">
+              <summary>Workspace tools</summary>
+              <div className="layoutWorkspaceOverflowBody">
+                <div className="buttonRow">
+                  <button
+                    className="secondaryButton"
+                    onClick={() => setZoomPercent((value) => Math.max(50, value - 10))}
+                    type="button"
+                  >
+                    Zoom out
+                  </button>
+                  <button
+                    className="secondaryButton"
+                    onClick={() => setZoomPercent(100)}
+                    type="button"
+                  >
+                    Fit
+                  </button>
+                  <button
+                    className="secondaryButton"
+                    onClick={() => setZoomPercent((value) => Math.min(400, value + 10))}
+                    type="button"
+                  >
+                    Zoom in
+                  </button>
+                </div>
+                <div className="buttonRow">
+                  <button
+                    className="secondaryButton"
+                    onClick={() => {
+                      if (shellState === "Focus") {
+                        setFilmstripDrawerOpen((open) => !open);
+                        return;
+                      }
+                      setFilmstripCollapsed((collapsed) => !collapsed);
+                    }}
+                    type="button"
+                  >
+                    {shellState === "Focus"
+                      ? filmstripDrawerOpen
+                        ? "Close filmstrip"
+                        : "Open filmstrip"
+                      : filmstripCollapsed
+                        ? "Show filmstrip"
+                        : "Hide filmstrip"}
+                  </button>
+                  {!showInspectorAside ? (
+                    <button
+                      className="secondaryButton"
+                      onClick={() => setInspectorDrawerOpen((open) => !open)}
+                      type="button"
+                    >
+                      {inspectorDrawerOpen ? "Close inspector" : "Inspector drawer"}
+                    </button>
+                  ) : null}
+                </div>
+                <div className="layoutWorkspacePaneControls">
+                  <span>Filmstrip width</span>
+                  <div className="buttonRow">
+                    <button
+                      className="secondaryButton"
+                      onClick={() => setFilmstripWidthPreset("narrow")}
+                      type="button"
+                    >
+                      Narrow
+                    </button>
+                    <button
+                      className="secondaryButton"
+                      onClick={() => setFilmstripWidthPreset("default")}
+                      type="button"
+                    >
+                      Default
+                    </button>
+                    <button
+                      className="secondaryButton"
+                      onClick={() => setFilmstripWidthPreset("wide")}
+                      type="button"
+                    >
+                      Wide
+                    </button>
+                  </div>
+                </div>
+                <div className="layoutWorkspacePaneControls">
+                  <span>Inspector width</span>
+                  <div className="buttonRow">
+                    <button
+                      className="secondaryButton"
+                      onClick={() => setInspectorWidthPreset("narrow")}
+                      type="button"
+                    >
+                      Narrow
+                    </button>
+                    <button
+                      className="secondaryButton"
+                      onClick={() => setInspectorWidthPreset("default")}
+                      type="button"
+                    >
+                      Default
+                    </button>
+                    <button
+                      className="secondaryButton"
+                      onClick={() => setInspectorWidthPreset("wide")}
+                      type="button"
+                    >
+                      Wide
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </details>
         </div>
         {pendingTransitionAction ? (
           <section className="layoutWorkspacePendingTransition" role="status" aria-live="polite">
@@ -3074,6 +3202,7 @@ export function ProjectDocumentLayoutWorkspaceShell({
       <section
         className="sectionCard ukde-panel documentViewerWorkspace layoutWorkspace"
         data-filmstrip-collapsed={filmstripCollapsed ? "true" : undefined}
+        data-image-state={pageImageState.status}
         data-workspace-mode={workspaceMode.toLowerCase()}
         data-workspace-state={shellState}
         style={workspaceStyle}
@@ -3113,12 +3242,15 @@ export function ProjectDocumentLayoutWorkspaceShell({
             ) : (
               <div className="layoutWorkspaceCanvasScroller" tabIndex={0}>
                 <div className="layoutWorkspaceCanvasStage" style={stageStyle}>
-                  {imagePath ? (
+                  {resolvedImagePath ? (
                     <img
                       alt={`Preprocessed page ${selectedPage.pageIndex + 1}`}
                       className="layoutWorkspacePageImage"
-                      onError={() => setPageImageFailed(true)}
-                      src={imagePath}
+                      key={resolvedImagePath}
+                      ref={pageImageRef}
+                      onError={handlePageImageError}
+                      onLoad={handlePageImageLoad}
+                      src={resolvedImagePath}
                     />
                   ) : null}
                   {pageImageFailed ? (

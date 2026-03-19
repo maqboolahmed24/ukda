@@ -30,6 +30,10 @@ services:
       pullPolicy: IfNotPresent
     containerPort: 8000
     servicePort: 8000
+    serviceAccount:
+      create: true
+      name: ""
+      automountServiceAccountToken: false
     env:
       UKDE_API_ENVIRONMENT: dev
   workers:
@@ -38,8 +42,28 @@ services:
       repository: ukde/workers
       tag: ""
       pullPolicy: IfNotPresent
+    serviceAccount:
+      create: true
+      name: ""
+      automountServiceAccountToken: false
     env:
       UKDE_WORKER_ENVIRONMENT: dev
+      WORKER_QUEUE_NAME: ukde-jobs
+      WORKER_HEARTBEAT_SECONDS: "30"
+      WORKER_POLL_SECONDS: "2"
+      WORKER_MAX_ITERATIONS: "0"
+
+storage:
+  controlled:
+    enabled: true
+    mountPath: /var/ukde-storage
+    persistentVolumeClaim:
+      create: true
+      name: ""
+      accessModes:
+        - ReadWriteMany
+      size: 20Gi
+      storageClassName: ""
 
 imagePullSecrets: []
 

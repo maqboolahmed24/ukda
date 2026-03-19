@@ -47,7 +47,9 @@ function toPage(value: string | undefined): number | undefined {
   return Math.max(1, parsed);
 }
 
-function resolveDeltaTone(delta: number): "danger" | "neutral" | "success" | "warning" {
+function resolveDeltaTone(
+  delta: number
+): "danger" | "neutral" | "success" | "warning" {
   if (delta > 0) {
     return "success";
   }
@@ -71,6 +73,7 @@ export default async function ProjectDocumentPrivacyComparePage({
     tokenId?: string;
   }>;
 }>) {
+  const pageLayoutClassName = "homeLayout homeLayout--privacy-compare";
   const { projectId, documentId } = await params;
   const query = await searchParams;
   const selectedPage = toPage(query.page);
@@ -91,7 +94,7 @@ export default async function ProjectDocumentPrivacyComparePage({
       redirect(projectsPath);
     }
     return (
-      <main className="homeLayout">
+      <main className={pageLayoutClassName}>
         <SectionState
           className="sectionCard ukde-panel"
           kind="error"
@@ -110,7 +113,8 @@ export default async function ProjectDocumentPrivacyComparePage({
     notFound();
   }
 
-  const availableRuns = runsResult.ok && runsResult.data ? runsResult.data.items : [];
+  const availableRuns =
+    runsResult.ok && runsResult.data ? runsResult.data.items : [];
   let baseRunId = toOptionalToken(query.baseRunId);
   let candidateRunId = toOptionalToken(query.candidateRunId);
 
@@ -136,35 +140,46 @@ export default async function ProjectDocumentPrivacyComparePage({
       : null;
 
   const compareData =
-    compareResult && compareResult.ok && compareResult.data ? compareResult.data : null;
+    compareResult && compareResult.ok && compareResult.data
+      ? compareResult.data
+      : null;
   const candidateSupersedesBase = Boolean(
-    compareData && compareData.candidateRun.supersedesRedactionRunId === compareData.baseRun.id
+    compareData &&
+    compareData.candidateRun.supersedesRedactionRunId === compareData.baseRun.id
   );
   const baseSupersedesCandidate = Boolean(
-    compareData && compareData.baseRun.supersedesRedactionRunId === compareData.candidateRun.id
+    compareData &&
+    compareData.baseRun.supersedesRedactionRunId === compareData.candidateRun.id
   );
-  const compareActionState = compareData?.compareActionState ?? "NOT_YET_AVAILABLE";
+  const compareActionState =
+    compareData?.compareActionState ?? "NOT_YET_AVAILABLE";
 
   return (
-    <main className="homeLayout">
+    <main className={pageLayoutClassName}>
       <section className="sectionCard ukde-panel">
         <p className="ukde-eyebrow">Privacy compare</p>
         <h2>{document.originalFilename}</h2>
         <p className="ukde-muted">
-          Compare run projections by page review state, decision count changes, and safeguarded
-          preview status deltas.
+          Compare run projections by page review state, decision count changes,
+          and safeguarded preview status deltas.
         </p>
         <div className="buttonRow">
           <Link
             className="secondaryButton"
-            href={projectDocumentPrivacyPath(projectId, document.id, { tab: "runs" })}
+            href={projectDocumentPrivacyPath(projectId, document.id, {
+              tab: "runs"
+            })}
           >
             Back to runs
           </Link>
           {baseRunId ? (
             <Link
               className="secondaryButton"
-              href={projectDocumentPrivacyRunPath(projectId, document.id, baseRunId)}
+              href={projectDocumentPrivacyRunPath(
+                projectId,
+                document.id,
+                baseRunId
+              )}
             >
               Base run detail
             </Link>
@@ -172,7 +187,11 @@ export default async function ProjectDocumentPrivacyComparePage({
           {candidateRunId ? (
             <Link
               className="secondaryButton"
-              href={projectDocumentPrivacyRunPath(projectId, document.id, candidateRunId)}
+              href={projectDocumentPrivacyRunPath(
+                projectId,
+                document.id,
+                candidateRunId
+              )}
             >
               Candidate run detail
             </Link>
@@ -195,7 +214,9 @@ export default async function ProjectDocumentPrivacyComparePage({
           <SectionState
             kind="degraded"
             title="Compare unavailable"
-            description={compareResult.detail ?? "Could not load privacy run comparison."}
+            description={
+              compareResult.detail ?? "Could not load privacy run comparison."
+            }
           />
         </section>
       ) : null}
@@ -215,19 +236,28 @@ export default async function ProjectDocumentPrivacyComparePage({
               </li>
               <li>
                 <span>Base supersedes run</span>
-                <strong>{compareData.baseRun.supersedesRedactionRunId ?? "None"}</strong>
+                <strong>
+                  {compareData.baseRun.supersedesRedactionRunId ?? "None"}
+                </strong>
               </li>
               <li>
                 <span>Base superseded by run</span>
-                <strong>{compareData.baseRun.supersededByRedactionRunId ?? "None"}</strong>
+                <strong>
+                  {compareData.baseRun.supersededByRedactionRunId ?? "None"}
+                </strong>
               </li>
               <li>
                 <span>Candidate supersedes run</span>
-                <strong>{compareData.candidateRun.supersedesRedactionRunId ?? "None"}</strong>
+                <strong>
+                  {compareData.candidateRun.supersedesRedactionRunId ?? "None"}
+                </strong>
               </li>
               <li>
                 <span>Candidate superseded by run</span>
-                <strong>{compareData.candidateRun.supersededByRedactionRunId ?? "None"}</strong>
+                <strong>
+                  {compareData.candidateRun.supersededByRedactionRunId ??
+                    "None"}
+                </strong>
               </li>
             </ul>
           </section>
@@ -277,11 +307,15 @@ export default async function ProjectDocumentPrivacyComparePage({
               </li>
               <li>
                 <span>Candidate policy status</span>
-                <strong>{compareData.candidatePolicyStatus ?? "Unknown"}</strong>
+                <strong>
+                  {compareData.candidatePolicyStatus ?? "Unknown"}
+                </strong>
               </li>
               <li>
                 <span>Comparison-only candidate</span>
-                <strong>{compareData.comparisonOnlyCandidate ? "Yes" : "No"}</strong>
+                <strong>
+                  {compareData.comparisonOnlyCandidate ? "Yes" : "No"}
+                </strong>
               </li>
               <li>
                 <span>Page filter</span>
@@ -325,7 +359,8 @@ export default async function ProjectDocumentPrivacyComparePage({
                     <p className="ukde-muted">{warning.message}</p>
                     {warning.affectedCategories.length > 0 ? (
                       <p className="ukde-muted">
-                        Affected categories: {warning.affectedCategories.join(", ")}
+                        Affected categories:{" "}
+                        {warning.affectedCategories.join(", ")}
                       </p>
                     ) : null}
                   </li>
@@ -359,137 +394,171 @@ export default async function ProjectDocumentPrivacyComparePage({
               />
             ) : (
               <table>
-                <thead>
-                  <tr>
-                    <th>Page</th>
-                    <th>Base findings</th>
-                    <th>Candidate findings</th>
-                    <th>Changed decisions</th>
-                    <th>Changed actions</th>
-                    <th>Decision deltas</th>
-                    <th>Action deltas</th>
-                    <th>Action compare</th>
-                    <th>Review changed</th>
-                    <th>Second review changed</th>
-                    <th>Preview ready delta</th>
-                    <th>Base preview</th>
-                    <th>Candidate preview</th>
-                    <th>Workspace links</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {compareData.items.map((item) => (
-                    <tr key={item.pageId}>
-                      <td>{item.pageIndex + 1}</td>
-                      <td>{item.baseFindingCount}</td>
-                      <td>{item.candidateFindingCount}</td>
-                      <td>{item.changedDecisionCount}</td>
-                      <td>{item.changedActionCount}</td>
-                      <td>
-                        <ul className="projectMetaList">
-                          {DECISION_STATUS_ORDER.filter(
-                            (status) => item.decisionStatusDeltas[status] !== 0
-                          ).map((status) => (
-                            <li key={`${item.pageId}:${status}`}>
-                              <span>{status}</span>
-                              <StatusChip tone={resolveDeltaTone(item.decisionStatusDeltas[status])}>
-                                {item.decisionStatusDeltas[status] > 0 ? "+" : ""}
-                                {item.decisionStatusDeltas[status]}
-                              </StatusChip>
-                            </li>
-                          ))}
-                          {DECISION_STATUS_ORDER.every(
-                            (status) => item.decisionStatusDeltas[status] === 0
-                          ) ? (
-                            <li>
-                              <span>None</span>
-                              <StatusChip tone="neutral">0</StatusChip>
-                            </li>
-                          ) : null}
-                        </ul>
-                      </td>
-                      <td>
-                        <ul className="projectMetaList">
-                          {ACTION_TYPE_ORDER.filter((action) => item.actionTypeDeltas[action] !== 0).map(
-                            (action) => (
+                  <thead>
+                    <tr>
+                      <th>Page</th>
+                      <th>Base findings</th>
+                      <th>Candidate findings</th>
+                      <th>Changed decisions</th>
+                      <th>Changed actions</th>
+                      <th>Decision deltas</th>
+                      <th>Action deltas</th>
+                      <th>Action compare</th>
+                      <th>Review changed</th>
+                      <th>Second review changed</th>
+                      <th>Preview ready delta</th>
+                      <th>Base preview</th>
+                      <th>Candidate preview</th>
+                      <th>Workspace links</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {compareData.items.map((item) => (
+                      <tr key={item.pageId}>
+                        <td>{item.pageIndex + 1}</td>
+                        <td>{item.baseFindingCount}</td>
+                        <td>{item.candidateFindingCount}</td>
+                        <td>{item.changedDecisionCount}</td>
+                        <td>{item.changedActionCount}</td>
+                        <td>
+                          <ul className="projectMetaList">
+                            {DECISION_STATUS_ORDER.filter(
+                              (status) =>
+                                item.decisionStatusDeltas[status] !== 0
+                            ).map((status) => (
+                              <li key={`${item.pageId}:${status}`}>
+                                <span>{status}</span>
+                                <StatusChip
+                                  tone={resolveDeltaTone(
+                                    item.decisionStatusDeltas[status]
+                                  )}
+                                >
+                                  {item.decisionStatusDeltas[status] > 0
+                                    ? "+"
+                                    : ""}
+                                  {item.decisionStatusDeltas[status]}
+                                </StatusChip>
+                              </li>
+                            ))}
+                            {DECISION_STATUS_ORDER.every(
+                              (status) =>
+                                item.decisionStatusDeltas[status] === 0
+                            ) ? (
+                              <li>
+                                <span>None</span>
+                                <StatusChip tone="neutral">0</StatusChip>
+                              </li>
+                            ) : null}
+                          </ul>
+                        </td>
+                        <td>
+                          <ul className="projectMetaList">
+                            {ACTION_TYPE_ORDER.filter(
+                              (action) => item.actionTypeDeltas[action] !== 0
+                            ).map((action) => (
                               <li key={`${item.pageId}:${action}`}>
                                 <span>{action}</span>
-                                <StatusChip tone={resolveDeltaTone(item.actionTypeDeltas[action])}>
+                                <StatusChip
+                                  tone={resolveDeltaTone(
+                                    item.actionTypeDeltas[action]
+                                  )}
+                                >
                                   {item.actionTypeDeltas[action] > 0 ? "+" : ""}
                                   {item.actionTypeDeltas[action]}
                                 </StatusChip>
                               </li>
-                            )
-                          )}
-                          {ACTION_TYPE_ORDER.every((action) => item.actionTypeDeltas[action] === 0) ? (
-                            <li>
-                              <span>None</span>
-                              <StatusChip tone="neutral">0</StatusChip>
-                            </li>
-                          ) : null}
-                        </ul>
-                      </td>
-                      <td>
-                        <StatusChip
-                          tone={item.actionCompareState === "AVAILABLE" ? "success" : "warning"}
-                        >
-                          {item.actionCompareState}
-                        </StatusChip>
-                      </td>
-                      <td>
-                        <StatusChip tone={item.changedReviewStatus ? "warning" : "neutral"}>
-                          {item.changedReviewStatus ? "YES" : "NO"}
-                        </StatusChip>
-                      </td>
-                      <td>
-                        <StatusChip tone={item.changedSecondReviewStatus ? "warning" : "neutral"}>
-                          {item.changedSecondReviewStatus ? "YES" : "NO"}
-                        </StatusChip>
-                      </td>
-                      <td>
-                        <StatusChip tone={resolveDeltaTone(item.previewReadyDelta)}>
-                          {item.previewReadyDelta > 0 ? "+" : ""}
-                          {item.previewReadyDelta}
-                        </StatusChip>
-                      </td>
-                      <td>{item.basePreviewStatus ?? "PENDING"}</td>
-                      <td>{item.candidatePreviewStatus ?? "PENDING"}</td>
-                      <td>
-                        <div className="buttonRow">
-                          <Link
-                            className="secondaryButton"
-                            href={projectDocumentPrivacyWorkspacePath(
-                              projectId,
-                              document.id,
-                              {
-                                page: item.pageIndex + 1,
-                                runId: compareData.candidateRun.id,
-                                findingId: selectedFindingId,
-                                lineId: selectedLineId,
-                                tokenId: selectedTokenId
-                              }
-                            )}
+                            ))}
+                            {ACTION_TYPE_ORDER.every(
+                              (action) => item.actionTypeDeltas[action] === 0
+                            ) ? (
+                              <li>
+                                <span>None</span>
+                                <StatusChip tone="neutral">0</StatusChip>
+                              </li>
+                            ) : null}
+                          </ul>
+                        </td>
+                        <td>
+                          <StatusChip
+                            tone={
+                              item.actionCompareState === "AVAILABLE"
+                                ? "success"
+                                : "warning"
+                            }
                           >
-                            Open candidate
-                          </Link>
-                          <Link
-                            className="secondaryButton"
-                            href={projectDocumentPrivacyWorkspacePath(projectId, document.id, {
-                              page: item.pageIndex + 1,
-                              runId: compareData.baseRun.id,
-                              findingId: selectedFindingId,
-                              lineId: selectedLineId,
-                              tokenId: selectedTokenId
-                            })}
+                            {item.actionCompareState}
+                          </StatusChip>
+                        </td>
+                        <td>
+                          <StatusChip
+                            tone={
+                              item.changedReviewStatus ? "warning" : "neutral"
+                            }
                           >
-                            Open base
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                            {item.changedReviewStatus ? "YES" : "NO"}
+                          </StatusChip>
+                        </td>
+                        <td>
+                          <StatusChip
+                            tone={
+                              item.changedSecondReviewStatus
+                                ? "warning"
+                                : "neutral"
+                            }
+                          >
+                            {item.changedSecondReviewStatus ? "YES" : "NO"}
+                          </StatusChip>
+                        </td>
+                        <td>
+                          <StatusChip
+                            tone={resolveDeltaTone(item.previewReadyDelta)}
+                          >
+                            {item.previewReadyDelta > 0 ? "+" : ""}
+                            {item.previewReadyDelta}
+                          </StatusChip>
+                        </td>
+                        <td>{item.basePreviewStatus ?? "PENDING"}</td>
+                        <td>{item.candidatePreviewStatus ?? "PENDING"}</td>
+                        <td>
+                          <div className="buttonRow">
+                            <Link
+                              className="secondaryButton"
+                              href={projectDocumentPrivacyWorkspacePath(
+                                projectId,
+                                document.id,
+                                {
+                                  page: item.pageIndex + 1,
+                                  runId: compareData.candidateRun.id,
+                                  findingId: selectedFindingId,
+                                  lineId: selectedLineId,
+                                  tokenId: selectedTokenId
+                                }
+                              )}
+                            >
+                              Open candidate
+                            </Link>
+                            <Link
+                              className="secondaryButton"
+                              href={projectDocumentPrivacyWorkspacePath(
+                                projectId,
+                                document.id,
+                                {
+                                  page: item.pageIndex + 1,
+                                  runId: compareData.baseRun.id,
+                                  findingId: selectedFindingId,
+                                  lineId: selectedLineId,
+                                  tokenId: selectedTokenId
+                                }
+                              )}
+                            >
+                              Open base
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
             )}
           </section>
         </>

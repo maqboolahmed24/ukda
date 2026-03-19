@@ -9,6 +9,7 @@ from app.auth.models import SessionPrincipal
 from app.exports.models import ExportOperationsStatusRecord
 from app.exports.service import get_export_service
 from app.main import app
+from app.operations.readiness import get_readiness_audit_service
 from app.telemetry.service import get_telemetry_service
 from fastapi.testclient import TestClient
 
@@ -61,6 +62,104 @@ class FakeExportService:
             policy_retention_terminal_approved_days=180,
             policy_retention_terminal_other_days=90,
         )
+
+
+class FakeReadinessAuditService:
+    def get_readiness_snapshot(  # type: ignore[no-untyped-def]
+        self, *, include_admin_details: bool
+    ):
+        class _Snapshot:
+            def __init__(self, include_admin_details: bool) -> None:
+                self._include_admin_details = include_admin_details
+
+            def to_dict(self) -> dict[str, object]:
+                checks: list[dict[str, object]] = [
+                    {
+                        "id": "accessibility-critical-routes",
+                        "title": "Accessibility and keyboard regression checks",
+                        "status": "PASS",
+                        "blockingPolicy": "BLOCKING",
+                        "detail": "Accessibility checks passed.",
+                        "durationSeconds": 4.2,
+                        "evidence": [
+                            {
+                                "label": "Execution log",
+                                "path": "output/readiness/latest/logs/accessibility.log",
+                                "sha256": "abc123",
+                            }
+                        ],
+                        "command": "pnpm -s vitest run ...",
+                        "exitCode": 0,
+                    }
+                ]
+                if not self._include_admin_details:
+                    checks = [
+                        {
+                            "id": str(item["id"]),
+                            "title": str(item["title"]),
+                            "status": str(item["status"]),
+                            "blockingPolicy": str(item["blockingPolicy"]),
+                            "detail": str(item["detail"]),
+                            "durationSeconds": float(item["durationSeconds"]),
+                            "evidence": item["evidence"],
+                        }
+                        for item in checks
+                    ]
+                admin_only_checks = [
+                    {
+                        "id": "security-remediation-suite",
+                        "title": "Security findings and boundary hardening regression",
+                        "status": "PASS",
+                        "blockingPolicy": "BLOCKING",
+                        "detail": "Security checks passed.",
+                        "durationSeconds": 2.0,
+                        "evidence": [
+                            {
+                                "label": "Execution log",
+                                "path": "output/readiness/latest/logs/security.log",
+                                "sha256": "def456",
+                            }
+                        ],
+                        "command": ".venv/bin/python -m pytest ...",
+                        "exitCode": 0,
+                    }
+                ]
+                categories = [
+                    {
+                        "id": "accessibility",
+                        "title": "Accessibility",
+                        "status": "PASS",
+                        "blockingPolicy": "BLOCKING",
+                        "summary": "Accessibility readiness passed.",
+                        "auditorVisible": True,
+                        "checks": checks,
+                    },
+                ]
+                blockers: list[dict[str, str | None]] = []
+                if self._include_admin_details:
+                    categories.append(
+                        {
+                            "id": "security_hardening",
+                            "title": "Security hardening",
+                            "status": "PASS",
+                            "blockingPolicy": "BLOCKING",
+                            "summary": "Security hardening checks passed.",
+                            "auditorVisible": False,
+                            "checks": admin_only_checks,
+                        }
+                    )
+                return {
+                    "matrixVersion": "phase-11-cross-phase-readiness-v1",
+                    "generatedAt": datetime.now(UTC).isoformat(),
+                    "overallStatus": "PASS",
+                    "detail": "Cross-phase readiness evidence is available.",
+                    "blockingFailureCount": 0,
+                    "categoryCount": len(categories),
+                    "categories": categories,
+                    "blockers": blockers,
+                }
+
+        return _Snapshot(include_admin_details)
 
 
 @pytest.fixture(autouse=True)
@@ -120,6 +219,99 @@ def test_operations_timeline_allows_auditor_role() -> None:
     assert any(entry.get("event_type") == "OPERATIONS_TIMELINE_VIEWED" for entry in spy.recorded)
 
 
+def test_operations_timeline_redacts_recovery_evidence_for_auditor() -> None:
+    telemetry_service = get_telemetry_service()
+    telemetry_service.record_timeline(
+        scope="operations",
+        severity="WARNING",
+        message="Recovery drill completed with bounded degradation.",
+        request_id="req-recovery",
+        trace_id="trace-recovery",
+        details={
+            "drill_id": "drill-2026-03-18",
+            "status": "FAILED",
+            "started_at": "2026-03-18T10:00:00Z",
+            "startedAt": "2026-03-18T10:00:00Z",
+            "finished_at": "2026-03-18T10:05:00Z",
+            "finishedAt": "2026-03-18T10:05:00Z",
+            "summary": "Replay failed over degraded queue path and required manual rollback.",
+            "evidence_summary_json": {"bucket": "s3://forbidden"},
+            "evidence_storage_key": "controlled/evidence/drill-2026-03-18.json",
+            "evidenceStorageSha256": "abc123",
+            "evidenceSha256": "def456",
+            "raw_failure_detail": "stack trace payload",
+            "rawFailureDetail": "stack trace payload camelCase",
+            "failureReason": "manual rollback required",
+        },
+    )
+
+    app.dependency_overrides[require_authenticated_user] = lambda: _principal(roles=("AUDITOR",))
+    app.dependency_overrides[get_audit_service] = lambda: SpyAuditService()
+
+    response = client.get("/admin/operations/timelines")
+
+    assert response.status_code == 200
+    payload = response.json()
+    recovery_item = next(item for item in payload["items"] if item["requestId"] == "req-recovery")
+    assert set(recovery_item["detailsJson"].keys()) == {
+        "drill_id",
+        "status",
+        "started_at",
+        "finished_at",
+        "summary",
+    }
+    assert "evidence_summary_json" not in recovery_item["detailsJson"]
+    assert "evidence_storage_key" not in recovery_item["detailsJson"]
+    assert "evidenceStorageSha256" not in recovery_item["detailsJson"]
+    assert "evidenceSha256" not in recovery_item["detailsJson"]
+    assert "raw_failure_detail" not in recovery_item["detailsJson"]
+    assert "rawFailureDetail" not in recovery_item["detailsJson"]
+    assert "failureReason" not in recovery_item["detailsJson"]
+
+
+def test_operations_timeline_preserves_recovery_details_for_admin() -> None:
+    telemetry_service = get_telemetry_service()
+    telemetry_service.record_timeline(
+        scope="operations",
+        severity="WARNING",
+        message="Recovery drill completed with bounded degradation.",
+        request_id="req-recovery-admin",
+        trace_id="trace-recovery-admin",
+        details={
+            "drill_id": "drill-2026-03-18-admin",
+            "status": "FAILED",
+            "started_at": "2026-03-18T10:00:00Z",
+            "finished_at": "2026-03-18T10:05:00Z",
+            "summary": "Replay failed over degraded queue path and required manual rollback.",
+            "evidence_summary_json": {"bucket": "s3://allowed-for-admin"},
+            "evidence_storage_key": "controlled/evidence/drill-2026-03-18-admin.json",
+            "evidenceStorageSha256": "abc123-admin",
+            "raw_failure_detail": "stack trace payload",
+        },
+    )
+
+    app.dependency_overrides[require_authenticated_user] = lambda: _principal(roles=("ADMIN",))
+    app.dependency_overrides[get_audit_service] = lambda: SpyAuditService()
+
+    response = client.get("/admin/operations/timelines")
+
+    assert response.status_code == 200
+    payload = response.json()
+    recovery_item = next(
+        item for item in payload["items"] if item["requestId"] == "req-recovery-admin"
+    )
+    assert "evidence_summary_json" in recovery_item["detailsJson"]
+    assert "evidence_storage_key" in recovery_item["detailsJson"]
+    assert "evidenceStorageSha256" in recovery_item["detailsJson"]
+    assert set(recovery_item["detailsJson"].keys()) != {
+        "drill_id",
+        "status",
+        "started_at",
+        "finished_at",
+        "summary",
+    }
+
+
 def test_operations_export_status_allows_auditor_role() -> None:
     spy = SpyAuditService()
     app.dependency_overrides[require_authenticated_user] = lambda: _principal(roles=("AUDITOR",))
@@ -135,6 +327,50 @@ def test_operations_export_status_allows_auditor_role() -> None:
     assert payload["retention"]["pendingCount"] == 6
     assert any(
         entry.get("event_type") == "OPERATIONS_EXPORT_STATUS_VIEWED"
+        for entry in spy.recorded
+    )
+
+
+def test_operations_readiness_allows_admin_and_auditor_with_safe_slice() -> None:
+    spy = SpyAuditService()
+    app.dependency_overrides[get_audit_service] = lambda: spy
+    app.dependency_overrides[get_readiness_audit_service] = (
+        lambda: FakeReadinessAuditService()
+    )
+
+    app.dependency_overrides[require_authenticated_user] = lambda: _principal(
+        roles=("ADMIN",)
+    )
+    admin_response = client.get("/admin/operations/readiness")
+    assert admin_response.status_code == 200
+    admin_payload = admin_response.json()
+    assert any(
+        category["id"] == "security_hardening"
+        for category in admin_payload["categories"]
+    )
+    assert any(
+        "command" in check and check["command"]
+        for category in admin_payload["categories"]
+        for check in category["checks"]
+    )
+
+    app.dependency_overrides[require_authenticated_user] = lambda: _principal(
+        roles=("AUDITOR",)
+    )
+    auditor_response = client.get("/admin/operations/readiness")
+    assert auditor_response.status_code == 200
+    auditor_payload = auditor_response.json()
+    assert all(
+        category["id"] != "security_hardening"
+        for category in auditor_payload["categories"]
+    )
+    assert all(
+        check.get("command") in {None, ""}
+        for category in auditor_payload["categories"]
+        for check in category["checks"]
+    )
+    assert any(
+        entry.get("event_type") == "OPERATIONS_READINESS_VIEWED"
         for entry in spy.recorded
     )
 
@@ -166,16 +402,19 @@ def test_operations_routes_emit_audit_events() -> None:
     app.dependency_overrides[get_export_service] = lambda: FakeExportService()
 
     overview_response = client.get("/admin/operations/overview")
+    readiness_response = client.get("/admin/operations/readiness")
     export_status_response = client.get("/admin/operations/export-status")
     slos_response = client.get("/admin/operations/slos")
     alerts_response = client.get("/admin/operations/alerts")
 
     assert overview_response.status_code == 200
+    assert readiness_response.status_code == 200
     assert export_status_response.status_code == 200
     assert slos_response.status_code == 200
     assert alerts_response.status_code == 200
     event_types = {entry.get("event_type") for entry in spy.recorded}
     assert "OPERATIONS_OVERVIEW_VIEWED" in event_types
+    assert "OPERATIONS_READINESS_VIEWED" in event_types
     assert "OPERATIONS_EXPORT_STATUS_VIEWED" in event_types
     assert "OPERATIONS_SLOS_VIEWED" in event_types
     assert "OPERATIONS_ALERTS_VIEWED" in event_types
@@ -183,6 +422,31 @@ def test_operations_routes_emit_audit_events() -> None:
 
 def test_operations_overview_exposes_request_metrics() -> None:
     spy = SpyAuditService()
+    telemetry_service = get_telemetry_service()
+    telemetry_service.record_storage_operation(
+        operation="READ",
+        duration_ms=12.5,
+        success=True,
+        request_id="req-storage",
+        trace_id="trace-storage",
+        object_key="controlled/object.bin",
+        detail="test-read",
+    )
+    telemetry_service.record_model_request(
+        deployment_unit="vlm-primary",
+        model_key="model-a",
+        duration_ms=240,
+        success=True,
+        fallback_invoked=False,
+        request_id="req-model",
+        trace_id="trace-model",
+    )
+    telemetry_service.record_export_review_latency(
+        latency_ms=1800,
+        request_id="req-export",
+        trace_id="trace-export",
+    )
+
     app.dependency_overrides[require_authenticated_user] = lambda: _principal(roles=("ADMIN",))
     app.dependency_overrides[get_audit_service] = lambda: spy
 
@@ -193,4 +457,10 @@ def test_operations_overview_exposes_request_metrics() -> None:
     payload = response.json()
     assert payload["requestCount"] >= 1
     assert payload["requestErrorCount"] >= 0
+    assert "modelRequestCount" in payload
+    assert "storageRequestCount" in payload
+    assert "exportReviewLatencyP95Ms" in payload
+    assert "storage" in payload
+    assert "modelDeployments" in payload
+    assert "models" in payload
     assert "topRoutes" in payload

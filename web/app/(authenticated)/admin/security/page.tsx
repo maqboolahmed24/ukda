@@ -4,12 +4,14 @@ import { resolveAdminRoleMode } from "../../../../lib/admin-console";
 import { requirePlatformRole } from "../../../../lib/auth/session";
 import {
   adminAuditPath,
+  adminSecurityFindingsPath,
+  adminSecurityRiskAcceptancesPath,
   adminOperationsExportStatusPath,
   adminOperationsPath,
   adminOperationsTimelinesPath,
   adminPath
 } from "../../../../lib/routes";
-import { getSecurityStatus } from "../../../../lib/security";
+import { getSecurityStatus, listAdminSecurityFindings } from "../../../../lib/security";
 import { SectionState, StatusChip } from "@ukde/ui/primitives";
 
 export const dynamic = "force-dynamic";
@@ -17,19 +19,27 @@ export const dynamic = "force-dynamic";
 export default async function AdminSecurityPage() {
   const session = await requirePlatformRole(["ADMIN", "AUDITOR"]);
   const roleMode = resolveAdminRoleMode(session);
-  const statusResult = await getSecurityStatus();
+  const [statusResult, findingsResult] = await Promise.all([
+    getSecurityStatus(),
+    listAdminSecurityFindings()
+  ]);
   const secondaryActions = roleMode.isAdmin
     ? [
         { href: adminPath, label: "Back to admin" },
+        { href: adminSecurityFindingsPath, label: "Security findings" },
+        { href: adminSecurityRiskAcceptancesPath, label: "Risk acceptances" },
         { href: adminOperationsPath, label: "Operations overview" },
         { href: adminAuditPath, label: "Audit viewer" }
       ]
     : [
         { href: adminPath, label: "Back to admin" },
+        { href: adminSecurityFindingsPath, label: "Security findings" },
+        { href: adminSecurityRiskAcceptancesPath, label: "Risk acceptances" },
         { href: adminOperationsExportStatusPath, label: "Export status" },
         { href: adminOperationsTimelinesPath, label: "Timelines" },
         { href: adminAuditPath, label: "Audit viewer" }
       ];
+  const findings = findingsResult.ok && findingsResult.data ? findingsResult.data : null;
 
   return (
     <main className="homeLayout">
@@ -95,6 +105,44 @@ export default async function AdminSecurityPage() {
           <p className="ukde-muted">
             Outbound allowlist: {statusResult.data.outboundAllowlist.join(", ")}
           </p>
+        </section>
+      )}
+
+      {!findingsResult.ok || !findings ? (
+        <section className="sectionCard ukde-panel">
+          <SectionState
+            kind="degraded"
+            title="Findings posture unavailable"
+            description={findingsResult.detail ?? "Unable to load security findings posture."}
+          />
+        </section>
+      ) : (
+        <section className="sectionCard ukde-panel">
+          <h2>Findings posture</h2>
+          <ul className="projectMetaList">
+            <li>
+              <span>Critical/high gate</span>
+              <strong>
+                {findings.criticalHighGatePassed ? "passing" : "blocked"}
+              </strong>
+            </li>
+            <li>
+              <span>Pen-test checklist</span>
+              <strong>
+                {findings.penTestChecklistComplete ? "complete" : "incomplete"}
+              </strong>
+            </li>
+            <li>
+              <span>Total findings</span>
+              <strong>{findings.items.length}</strong>
+            </li>
+          </ul>
+          {findings.criticalHighUnresolvedFindingIds.length > 0 ? (
+            <p className="ukde-muted">
+              Unresolved critical/high:{" "}
+              {findings.criticalHighUnresolvedFindingIds.join(", ")}
+            </p>
+          ) : null}
         </section>
       )}
 

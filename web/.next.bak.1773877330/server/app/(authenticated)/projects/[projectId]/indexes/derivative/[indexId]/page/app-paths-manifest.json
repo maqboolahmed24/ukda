@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/projects/[projectId]/indexes/derivative/[indexId]/page": "app/(authenticated)/projects/[projectId]/indexes/derivative/[indexId]/page.js"
+}

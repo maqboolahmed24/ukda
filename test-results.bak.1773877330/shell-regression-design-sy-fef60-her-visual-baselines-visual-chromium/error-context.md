@@ -1,0 +1,611 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - link "Skip to work region" [ref=e3] [cursor=pointer]:
+      - /url: "#ukde-shell-work-region"
+    - banner [ref=e4]:
+      - paragraph [ref=e6]: Admin workspace
+      - generic [ref=e7]:
+        - group "Global command controls" [ref=e8]:
+          - button "Project switcher" [ref=e9] [cursor=pointer]
+          - button "Command bar" [ref=e10] [cursor=pointer]:
+            - generic [ref=e11]: Command bar
+            - generic [ref=e12]: ⌘/Ctrl + K
+        - 'button "Theme preference: System (Dark). Click to switch to Dark." [ref=e14] [cursor=pointer]':
+          - img [ref=e16]
+        - link "Help" [ref=e18] [cursor=pointer]:
+          - /url: /health
+        - generic [ref=e19]:
+          - generic [ref=e20]: Env Test
+          - generic [ref=e21]: Tier CONTROLLED
+          - generic [ref=e22]: Expanded
+        - group [ref=e23]:
+          - generic "User menu" [ref=e24] [cursor=pointer]: Fixture Admin
+    - generic [ref=e25]:
+      - complementary [ref=e26]:
+        - paragraph [ref=e27]: Navigation
+        - navigation "Primary navigation" [ref=e28]:
+          - list [ref=e29]:
+            - listitem [ref=e30]:
+              - link "Projects" [ref=e31] [cursor=pointer]:
+                - /url: /projects
+                - generic [ref=e32]: Projects
+            - listitem [ref=e33]:
+              - link "My activity" [ref=e34] [cursor=pointer]:
+                - /url: /activity
+                - generic [ref=e35]: My activity
+            - listitem [ref=e36]:
+              - link "Approved models" [ref=e37] [cursor=pointer]:
+                - /url: /approved-models
+                - generic [ref=e38]: Approved models
+            - listitem [ref=e39]:
+              - link "Admin" [ref=e40] [cursor=pointer]:
+                - /url: /admin
+                - generic [ref=e41]: Admin
+      - generic [ref=e44]:
+        - complementary [ref=e45]:
+          - paragraph [ref=e46]: Admin console
+          - heading "Platform governance" [level=2] [ref=e47]
+          - generic [ref=e49]: ADMIN
+          - paragraph [ref=e50]: Platform routes remain separate from project-scoped activity and governance routes.
+          - navigation "Admin console sections" [ref=e51]:
+            - generic [ref=e52]:
+              - paragraph [ref=e53]: Overview
+              - list [ref=e54]:
+                - listitem [ref=e55]:
+                  - link "Overview Role-aware platform governance overview and module entrypoint." [ref=e56] [cursor=pointer]:
+                    - /url: /admin
+                    - generic [ref=e58]: Overview
+                    - generic [ref=e59]: Role-aware platform governance overview and module entrypoint.
+            - generic [ref=e60]:
+              - paragraph [ref=e61]: Governance
+              - list [ref=e62]:
+                - listitem [ref=e63]:
+                  - link "Audit Append-only audit log exploration and event-detail drilldown." [ref=e64] [cursor=pointer]:
+                    - /url: /admin/audit
+                    - generic [ref=e66]: Audit
+                    - generic [ref=e67]: Append-only audit log exploration and event-detail drilldown.
+                - listitem [ref=e68]:
+                  - link "Index quality Recall-first search activation readiness, freshness posture, and rollback visibility." [ref=e69] [cursor=pointer]:
+                    - /url: /admin/index-quality
+                    - generic [ref=e71]: Index quality
+                    - generic [ref=e72]: Recall-first search activation readiness, freshness posture, and rollback visibility.
+                - listitem [ref=e73]:
+                  - link "Query audits Query-hash and controlled query-text-key audit stream for controlled search reads." [ref=e74] [cursor=pointer]:
+                    - /url: /admin/index-quality/query-audits
+                    - generic [ref=e76]: Query audits
+                    - generic [ref=e77]: Query-hash and controlled query-text-key audit stream for controlled search reads.
+                - listitem [ref=e78]:
+                  - link "Security Controlled-environment security posture with read-only auditor visibility." [ref=e79] [cursor=pointer]:
+                    - /url: /admin/security
+                    - generic [ref=e81]: Security
+                    - generic [ref=e82]: Controlled-environment security posture with read-only auditor visibility.
+                - listitem [ref=e83]:
+                  - link "Security findings Security findings intake/read surface with pen-test checklist and closure/acceptance posture." [ref=e84] [cursor=pointer]:
+                    - /url: /admin/security/findings
+                    - generic [ref=e86]: Security findings
+                    - generic [ref=e87]: Security findings intake/read surface with pen-test checklist and closure/acceptance posture.
+                - listitem [ref=e88]:
+                  - link "Risk acceptances Risk-acceptance projection list and lifecycle detail with append-only events." [ref=e89] [cursor=pointer]:
+                    - /url: /admin/security/risk-acceptances
+                    - generic [ref=e91]: Risk acceptances
+                    - generic [ref=e92]: Risk-acceptance projection list and lifecycle detail with append-only events.
+            - generic [ref=e93]:
+              - paragraph [ref=e94]: Operations
+              - list [ref=e95]:
+                - listitem [ref=e96]:
+                  - link "Readiness Cross-phase production-readiness matrix spanning accessibility, governance, privacy, provenance, egress, and discovery safety gates." [ref=e97] [cursor=pointer]:
+                    - /url: /admin/operations/readiness
+                    - generic [ref=e99]: Readiness
+                    - generic [ref=e100]: Cross-phase production-readiness matrix spanning accessibility, governance, privacy, provenance, egress, and discovery safety gates.
+                - listitem [ref=e101]:
+                  - link "Export status Read-only export-request throughput and release queue health summary." [ref=e102] [cursor=pointer]:
+                    - /url: /admin/operations/export-status
+                    - generic [ref=e104]: Export status
+                    - generic [ref=e105]: Read-only export-request throughput and release queue health summary.
+                - listitem [ref=e106]:
+                  - link "Operations Operator-only telemetry posture and platform throughput diagnostics." [ref=e107] [cursor=pointer]:
+                    - /url: /admin/operations
+                    - generic [ref=e109]: Operations
+                    - generic [ref=e110]: Operator-only telemetry posture and platform throughput diagnostics.
+                - listitem [ref=e111]:
+                  - link "Timelines Read-only operational timeline with request and trace-level context." [ref=e112] [cursor=pointer]:
+                    - /url: /admin/operations/timelines
+                    - generic [ref=e114]: Timelines
+                    - generic [ref=e115]: Read-only operational timeline with request and trace-level context.
+                - listitem [ref=e116]:
+                  - link "Capacity tests Persisted benchmark/load/soak runs with p95 gates, envelope evidence, and artifacts." [ref=e117] [cursor=pointer]:
+                    - /url: /admin/capacity/tests
+                    - generic [ref=e119]: Capacity tests
+                    - generic [ref=e120]: Persisted benchmark/load/soak runs with p95 gates, envelope evidence, and artifacts.
+                - listitem [ref=e121]:
+                  - link "Recovery status Live recovery posture for degraded-mode state, queue replay readiness, and restore sequencing." [ref=e122] [cursor=pointer]:
+                    - /url: /admin/recovery/status
+                    - generic [ref=e124]: Recovery status
+                    - generic [ref=e125]: Live recovery posture for degraded-mode state, queue replay readiness, and restore sequencing.
+                - listitem [ref=e126]:
+                  - link "Recovery drills Recovery drill execution records, evidence artifacts, and deterministic status transitions." [ref=e127] [cursor=pointer]:
+                    - /url: /admin/recovery/drills
+                    - generic [ref=e129]: Recovery drills
+                    - generic [ref=e130]: Recovery drill execution records, evidence artifacts, and deterministic status transitions.
+            - generic [ref=e131]:
+              - paragraph [ref=e132]: Internal
+              - list [ref=e133]:
+                - listitem [ref=e134]:
+                  - link "Design system Internal validation gallery for shell, primitives, and accessibility diagnostics." [ref=e135] [cursor=pointer]:
+                    - /url: /admin/design-system
+                    - generic [ref=e137]: Design system
+                    - generic [ref=e138]: Internal validation gallery for shell, primitives, and accessibility diagnostics.
+        - main [ref=e140]:
+          - generic [ref=e141]:
+            - generic [ref=e142]:
+              - paragraph [ref=e143]: Internal route
+              - heading "Obsidian web design-system gallery" [level=1] [ref=e144]
+              - paragraph [ref=e145]: Engineering validation surface for shared tokens, runtime theme behavior, focus language, and shell interaction posture.
+              - generic [ref=e147]: ADMIN
+            - generic [ref=e148]:
+              - link "Back to admin" [ref=e149] [cursor=pointer]:
+                - /url: /admin
+              - button "More actions" [ref=e151] [cursor=pointer]
+              - link "Open projects workspace" [ref=e152] [cursor=pointer]:
+                - /url: /projects
+          - generic [ref=e154]:
+            - 'button "Theme preference: System (Dark). Click to switch to Dark." [ref=e156] [cursor=pointer]':
+              - img [ref=e158]
+            - generic [ref=e160]: Dark default
+            - generic [ref=e161]: Forced-colors safe
+            - generic [ref=e162]: Reduced-motion aware
+          - generic [ref=e163]:
+            - article [ref=e164]:
+              - generic [ref=e165]:
+                - paragraph [ref=e166]: Runtime diagnostics
+                - heading "Browser preference and mode state" [level=2] [ref=e167]
+              - list [ref=e168]:
+                - listitem [ref=e169]:
+                  - generic [ref=e170]: Stored preference
+                  - strong [ref=e171]: system
+                - listitem [ref=e172]:
+                  - generic [ref=e173]: Resolved mode
+                  - strong [ref=e174]: dark
+                - listitem [ref=e175]:
+                  - generic [ref=e176]: Contrast posture
+                  - strong [ref=e177]: no-preference
+                - listitem [ref=e178]:
+                  - generic [ref=e179]: Forced colors
+                  - strong [ref=e180]: inactive
+                - listitem [ref=e181]:
+                  - generic [ref=e182]: Reduced motion
+                  - strong [ref=e183]: no-preference
+                - listitem [ref=e184]:
+                  - generic [ref=e185]: Reduced transparency
+                  - strong [ref=e186]: no-preference
+                - listitem [ref=e187]:
+                  - generic [ref=e188]: Viewport
+                  - strong [ref=e189]: 1366×900
+                - listitem [ref=e190]:
+                  - generic [ref=e191]: Adaptive shell state
+                  - strong [ref=e192]: Expanded
+              - paragraph [ref=e193]:
+                - text: "Preference persistence key:"
+                - code [ref=e194]: ukde.theme.preference
+            - article [ref=e195]:
+              - generic [ref=e196]:
+                - paragraph [ref=e197]: Theme contract
+                - heading "Mode and variable map" [level=2] [ref=e198]
+              - list [ref=e199]:
+                - listitem [ref=e200]:
+                  - generic [ref=e201]: Supported preferences
+                  - strong [ref=e202]: system, dark, light
+                - listitem [ref=e203]:
+                  - generic [ref=e204]: Dark variable count
+                  - strong [ref=e205]: "31"
+                - listitem [ref=e206]:
+                  - generic [ref=e207]: Light variable count
+                  - strong [ref=e208]: "31"
+                - listitem [ref=e209]:
+                  - generic [ref=e210]: Focus ring width
+                  - strong [ref=e211]: 2px
+          - generic [ref=e212]:
+            - generic [ref=e213]:
+              - paragraph [ref=e214]: Semantic color tokens
+              - heading "Dark baseline swatches" [level=2] [ref=e215]
+            - generic [ref=e216]:
+              - article [ref=e217]:
+                - strong [ref=e219]: Canvas
+                - code [ref=e220]: "#070b12"
+              - article [ref=e221]:
+                - strong [ref=e223]: Frame
+                - code [ref=e224]: "#0f1623"
+              - article [ref=e225]:
+                - strong [ref=e227]: Surface
+                - code [ref=e228]: rgba(18, 27, 41, 0.86)
+              - article [ref=e229]:
+                - strong [ref=e231]: Surface raised
+                - code [ref=e232]: "#1a2539"
+              - article [ref=e233]:
+                - strong [ref=e235]: Accent
+                - code [ref=e236]: "#8bb7ff"
+              - article [ref=e237]:
+                - strong [ref=e239]: Success
+                - code [ref=e240]: "#95d9b6"
+              - article [ref=e241]:
+                - strong [ref=e243]: Warning
+                - code [ref=e244]: "#f1c786"
+              - article [ref=e245]:
+                - strong [ref=e247]: Danger
+                - code [ref=e248]: "#f3a4a4"
+              - article [ref=e249]:
+                - strong [ref=e251]: Focus ring
+                - code [ref=e252]: "#f4df9f"
+          - generic [ref=e253]:
+            - article [ref=e254]:
+              - generic [ref=e255]:
+                - paragraph [ref=e256]: Typography scale
+                - heading "Editorial and operational rhythm" [level=2] [ref=e257]
+              - generic [ref=e258]:
+                - generic [ref=e259]:
+                  - paragraph [ref=e260]: Shell title
+                  - paragraph [ref=e261]: UKDataExtraction workspace shell
+                - generic [ref=e262]:
+                  - paragraph [ref=e263]: Page title
+                  - paragraph [ref=e264]: Project governance overview
+                - generic [ref=e265]:
+                  - paragraph [ref=e266]: Section title
+                  - paragraph [ref=e267]: Security and operations status
+                - generic [ref=e268]:
+                  - paragraph [ref=e269]: Body
+                  - paragraph [ref=e270]: Dense operational surfaces stay legible through strict spacing rhythm.
+                - generic [ref=e271]:
+                  - paragraph [ref=e272]: Metadata
+                  - paragraph [ref=e273]: REVIEW SURFACE · READ-ONLY
+                - generic [ref=e274]:
+                  - paragraph [ref=e275]: Microcopy
+                  - paragraph [ref=e276]: "contrast: more | motion: reduce"
+              - paragraph [ref=e277]: "Families: -apple-system / -apple-system / \"SF Mono\""
+            - article [ref=e278]:
+              - generic [ref=e279]:
+                - paragraph [ref=e280]: Scale tokens
+                - heading "Spacing, radius, and motion" [level=2] [ref=e281]
+              - generic [ref=e282]:
+                - generic [ref=e283]:
+                  - paragraph [ref=e284]: Spacing
+                  - list [ref=e285]:
+                    - listitem [ref=e286]:
+                      - generic [ref=e287]: "0"
+                      - code [ref=e288]: "0"
+                    - listitem [ref=e289]:
+                      - generic [ref=e290]: "1"
+                      - code [ref=e291]: 0.25rem
+                    - listitem [ref=e292]:
+                      - generic [ref=e293]: "2"
+                      - code [ref=e294]: 0.5rem
+                    - listitem [ref=e295]:
+                      - generic [ref=e296]: "3"
+                      - code [ref=e297]: 0.75rem
+                    - listitem [ref=e298]:
+                      - generic [ref=e299]: "4"
+                      - code [ref=e300]: 1rem
+                    - listitem [ref=e301]:
+                      - generic [ref=e302]: "5"
+                      - code [ref=e303]: 1.5rem
+                    - listitem [ref=e304]:
+                      - generic [ref=e305]: "6"
+                      - code [ref=e306]: 2rem
+                    - listitem [ref=e307]:
+                      - generic [ref=e308]: "7"
+                      - code [ref=e309]: 2.5rem
+                    - listitem [ref=e310]:
+                      - generic [ref=e311]: "8"
+                      - code [ref=e312]: 3rem
+                    - listitem [ref=e313]:
+                      - generic [ref=e314]: "9"
+                      - code [ref=e315]: 4rem
+                - generic [ref=e316]:
+                  - paragraph [ref=e317]: Radius
+                  - list [ref=e318]:
+                    - listitem [ref=e319]:
+                      - generic [ref=e320]: xs
+                      - code [ref=e321]: 0.16rem
+                    - listitem [ref=e322]:
+                      - generic [ref=e323]: sm
+                      - code [ref=e324]: 0.26rem
+                    - listitem [ref=e325]:
+                      - generic [ref=e326]: md
+                      - code [ref=e327]: 0.38rem
+                    - listitem [ref=e328]:
+                      - generic [ref=e329]: lg
+                      - code [ref=e330]: 0.52rem
+                    - listitem [ref=e331]:
+                      - generic [ref=e332]: xl
+                      - code [ref=e333]: 0.68rem
+                    - listitem [ref=e334]:
+                      - generic [ref=e335]: pill
+                      - code [ref=e336]: 1.02rem
+              - paragraph [ref=e337]: Motion tokens
+              - list [ref=e338]:
+                - listitem [ref=e339]:
+                  - generic [ref=e340]: duration.instant
+                  - code [ref=e341]: 0ms
+                - listitem [ref=e342]:
+                  - generic [ref=e343]: duration.quick
+                  - code [ref=e344]: 120ms
+                - listitem [ref=e345]:
+                  - generic [ref=e346]: duration.standard
+                  - code [ref=e347]: 180ms
+                - listitem [ref=e348]:
+                  - generic [ref=e349]: duration.deliberate
+                  - code [ref=e350]: 260ms
+                - listitem [ref=e351]:
+                  - generic [ref=e352]: easing.standard
+                  - code [ref=e353]: cubic-bezier(0.2, 0, 0, 1)
+                - listitem [ref=e354]:
+                  - generic [ref=e355]: easing.emphasized
+                  - code [ref=e356]: cubic-bezier(0.2, 0, 0, 1.2)
+                - listitem [ref=e357]:
+                  - generic [ref=e358]: easing.accelerate
+                  - code [ref=e359]: cubic-bezier(0.4, 0, 1, 1)
+                - listitem [ref=e360]:
+                  - generic [ref=e361]: easing.decelerate
+                  - code [ref=e362]: cubic-bezier(0, 0, 0.2, 1)
+          - generic [ref=e363]:
+            - article [ref=e364]:
+              - generic [ref=e365]:
+                - paragraph [ref=e366]: Surface language
+                - heading "Quiet through overlay surfaces" [level=2] [ref=e367]
+              - generic [ref=e368]:
+                - generic [ref=e369]: Quiet surface
+                - generic [ref=e370]: Default surface
+                - generic [ref=e371]: Raised surface
+                - generic [ref=e372]: Overlay surface
+            - article [ref=e373]:
+              - generic [ref=e374]:
+                - paragraph [ref=e375]: Interaction language
+                - heading "Focus, hover, selected, and disabled" [level=2] [ref=e376]
+              - generic [ref=e377]:
+                - button "Primary action" [ref=e378] [cursor=pointer]
+                - button "Selected state" [ref=e379] [cursor=pointer]
+                - button "Disabled danger" [disabled] [ref=e380]
+                - textbox "Focusable field sample" [ref=e381]: Focusable field
+              - paragraph [ref=e382]: Tab through controls to verify visible focus rings on dark, light, and high-contrast render modes.
+          - generic [ref=e383]:
+            - generic [ref=e384]:
+              - paragraph [ref=e385]: Adaptive-state language
+              - heading "Expanded through Focus" [level=2] [ref=e386]
+            - generic [ref=e387]:
+              - article [ref=e388]:
+                - heading "Expanded" [level=3] [ref=e389]
+                - paragraph [ref=e390]: Rail, workspace, and inspector remain visible for dense review work.
+              - article [ref=e391]:
+                - heading "Balanced" [level=3] [ref=e392]
+                - paragraph [ref=e393]: The workspace stays dominant while secondary context compresses to summaries.
+              - article [ref=e394]:
+                - heading "Compact" [level=3] [ref=e395]
+                - paragraph [ref=e396]: Navigation and inspection move to compact affordances without losing object focus.
+              - article [ref=e397]:
+                - heading "Focus" [level=3] [ref=e398]
+                - paragraph [ref=e399]: The active review surface takes priority while supporting context becomes on-demand.
+            - list [ref=e400]:
+              - listitem [ref=e401]:
+                - strong [ref=e402]: Dark-first, research-grade surfaces
+                - generic [ref=e403]: New primitives or route styles should inherit this behavior without page-local token forks.
+              - listitem [ref=e404]:
+                - strong [ref=e405]: Bounded work regions instead of page sprawl
+                - generic [ref=e406]: New primitives or route styles should inherit this behavior without page-local token forks.
+              - listitem [ref=e407]:
+                - strong [ref=e408]: Visible confidence, provenance, and governance state
+                - generic [ref=e409]: New primitives or route styles should inherit this behavior without page-local token forks.
+              - listitem [ref=e410]:
+                - strong [ref=e411]: Keyboard-first interaction with explicit focus
+                - generic [ref=e412]: New primitives or route styles should inherit this behavior without page-local token forks.
+          - generic [ref=e413]:
+            - generic [ref=e414]:
+              - paragraph [ref=e415]: Primitive showcase
+              - heading "Dialogs, drawers, menus, toasts, breadcrumbs, toolbar, and table" [level=2] [ref=e416]
+            - navigation "Breadcrumb" [ref=e417]:
+              - list [ref=e418]:
+                - listitem [ref=e419]:
+                  - link "Admin" [ref=e420] [cursor=pointer]:
+                    - /url: /admin
+                  - text: /
+                - listitem [ref=e421]:
+                  - link "Design system" [ref=e422] [cursor=pointer]:
+                    - /url: /admin/design-system
+                  - text: /
+                - listitem [ref=e423]:
+                  - generic [ref=e424]: Primitive showcase
+            - generic [ref=e425]:
+              - button "Open dialog" [ref=e426] [cursor=pointer]
+              - button "Open drawer" [ref=e427] [cursor=pointer]
+              - button "Open menu" [ref=e429] [cursor=pointer]
+              - button "More actions" [ref=e431] [cursor=pointer]
+            - generic [ref=e432]:
+              - toolbar "Primitive toolbar" [ref=e433]:
+                - button "Refresh" [ref=e434] [cursor=pointer]
+                - button "Filter open only" [ref=e435] [cursor=pointer]
+                - button "Delete" [disabled] [ref=e436]
+              - button "More actions" [ref=e438] [cursor=pointer]
+            - generic [ref=e439]:
+              - generic [ref=e440]: READY
+              - generic [ref=e441]: QUEUED
+              - generic [ref=e442]: FAILED
+              - generic [ref=e443]: CONTROLLED
+            - status [ref=e444]:
+              - strong [ref=e446]: Inline route guidance
+              - paragraph [ref=e447]: Use dialogs for blocking confirmation and drawers for contextual detail.
+            - alert [ref=e448]:
+              - strong [ref=e450]: Banner-level status
+              - paragraph [ref=e451]: Important workflow guidance should stay visible in-line, not only in toasts.
+              - button "Acknowledge" [ref=e453] [cursor=pointer]
+            - generic [ref=e454]:
+              - table "Primitive data table" [ref=e455]:
+                - caption [ref=e456]: Primitive data table
+                - rowgroup [ref=e457]:
+                  - row "Document Status Owner" [ref=e458]:
+                    - columnheader "Document" [ref=e459]:
+                      - button "Document" [ref=e460] [cursor=pointer]:
+                        - generic [ref=e461]: Document
+                        - generic [ref=e462]: ↑
+                    - columnheader "Status" [ref=e463]:
+                      - button "Status" [ref=e464] [cursor=pointer]:
+                        - generic [ref=e465]: Status
+                    - columnheader "Owner" [ref=e466]:
+                      - button "Owner" [ref=e467] [cursor=pointer]:
+                        - generic [ref=e468]: Owner
+                - rowgroup [ref=e469]:
+                  - row "Diary_1871 Ready researcher.a" [ref=e470] [cursor=pointer]:
+                    - cell "Diary_1871" [ref=e471]
+                    - cell "Ready" [ref=e472]:
+                      - generic [ref=e473]: Ready
+                    - cell "researcher.a" [ref=e474]
+                  - row "Estate_Notes Failed lead.c" [ref=e475] [cursor=pointer]:
+                    - cell "Estate_Notes" [ref=e476]
+                    - cell "Failed" [ref=e477]:
+                      - generic [ref=e478]: Failed
+                    - cell "lead.c" [ref=e479]
+                  - row "Parish_Logs Queued reviewer.b" [ref=e480] [cursor=pointer]:
+                    - cell "Parish_Logs" [ref=e481]
+                    - cell "Queued" [ref=e482]:
+                      - generic [ref=e483]: Queued
+                    - cell "reviewer.b" [ref=e484]
+              - generic [ref=e485]:
+                - generic [ref=e486]: Page 1 of 1
+                - generic [ref=e487]:
+                  - button "Previous" [disabled] [ref=e488]
+                  - button "Next" [disabled] [ref=e489]
+          - complementary
+          - generic [ref=e490]:
+            - generic [ref=e491]:
+              - paragraph [ref=e492]: State language
+              - heading "Zero, empty, loading, error, success, and disabled patterns" [level=2] [ref=e493]
+              - paragraph [ref=e494]: These are shared primitives for route, page, section, drawer, and timeline feedback surfaces.
+            - generic [ref=e495]:
+              - status [ref=e496]:
+                - 'heading "Import wizard: no file selected" [level=2] [ref=e498]'
+                - paragraph [ref=e499]: Select files, confirm metadata, then start controlled upload.
+              - status [ref=e500]:
+                - 'heading "Import wizard: uploading and scanning" [level=2] [ref=e502]'
+                - paragraph [ref=e503]: "Current status: UPLOADING -> QUEUED -> SCANNING."
+              - alert [ref=e509]:
+                - 'heading "Import wizard: validation failed" [level=2] [ref=e511]'
+                - paragraph [ref=e512]: The file did not pass upload validation. Resolve the issue and retry.
+              - status [ref=e513]:
+                - 'heading "Import wizard: accepted" [level=2] [ref=e515]'
+                - paragraph [ref=e516]: Upload is accepted. Follow-up status is available from document detail.
+            - generic [ref=e517]:
+              - status [ref=e518]:
+                - heading "Document library empty" [level=2] [ref=e520]
+                - paragraph [ref=e521]: No documents are currently available for this project.
+              - status [ref=e522]:
+                - heading "Document library no-results" [level=2] [ref=e524]
+                - paragraph [ref=e525]: No rows matched the current filters.
+              - status [ref=e526]:
+                - heading "Document library loading" [level=2] [ref=e528]
+                - paragraph [ref=e529]: Rows are loading while shell continuity is preserved.
+              - alert [ref=e534]:
+                - heading "Document library error" [level=2] [ref=e536]
+                - paragraph [ref=e537]: Rows could not be loaded. Retry once upstream services recover.
+            - generic [ref=e538]:
+              - status [ref=e539]:
+                - heading "Viewer loading" [level=2] [ref=e541]
+                - paragraph [ref=e542]: Page image and metadata are loading.
+              - alert [ref=e547]:
+                - heading "Viewer error" [level=2] [ref=e549]
+                - paragraph [ref=e550]: Page assets are unavailable for this route.
+              - status [ref=e551]:
+                - heading "Ingest timeline loading" [level=2] [ref=e553]
+                - paragraph [ref=e554]: Attempt history is loading.
+              - status [ref=e559]:
+                - heading "Ingest timeline degraded" [level=2] [ref=e561]
+                - paragraph [ref=e562]: Status endpoint is reachable but timeline payload is incomplete.
+            - generic [ref=e563]:
+              - paragraph [ref=e564]: Job progress and safe failure
+              - generic [ref=e565]:
+                - generic [ref=e566]: RUNNING
+                - generic [ref=e567]: "delivery attempts: 1/3"
+              - alert [ref=e568]:
+                - strong [ref=e570]: Safe failure summary
+                - paragraph [ref=e571]: "EXTRACTION_TIMEOUT: page extraction exceeded runtime guardrail."
+            - generic [ref=e572]:
+              - paragraph [ref=e573]: Drawer detail states
+              - paragraph [ref=e574]: Detail drawers can expose loading and empty states without breaking page context.
+              - generic [ref=e575]:
+                - button "Open loading drawer" [ref=e576] [cursor=pointer]
+                - button "Open empty drawer" [ref=e577] [cursor=pointer]
+          - generic [ref=e578]:
+            - generic [ref=e579]:
+              - paragraph [ref=e580]: Accessibility diagnostics
+              - heading "Keyboard, focus, motion, and contrast checks" [level=2] [ref=e581]
+            - list [ref=e582]:
+              - listitem [ref=e583]:
+                - generic [ref=e584]: Contrast posture
+                - strong [ref=e585]: no-preference
+              - listitem [ref=e586]:
+                - generic [ref=e587]: Forced colors
+                - strong [ref=e588]: inactive
+              - listitem [ref=e589]:
+                - generic [ref=e590]: Reduced motion
+                - strong [ref=e591]: no-preference
+              - listitem [ref=e592]:
+                - generic [ref=e593]: Reduced transparency
+                - strong [ref=e594]: no-preference
+            - status [ref=e595]:
+              - heading "Keyboard traversal checklist" [level=2] [ref=e597]
+              - paragraph [ref=e598]: Use Tab from skip link through nav rail, context bar, page header actions, and work region. Use Escape to close open flyouts, dialogs, and drawers.
+            - status [ref=e599]:
+              - heading "Overlay and toolbar checklist" [level=2] [ref=e601]
+              - paragraph [ref=e602]: Toolbar uses arrow-key roving focus. Flyout menus support ArrowUp/ArrowDown + Escape. Dialog and drawer trap Tab and restore focus on close.
+            - status [ref=e603]:
+              - heading "High-contrast and reduced-motion checklist" [level=2] [ref=e605]
+              - paragraph [ref=e606]: Focus rings, selected states, badges, and status chips must remain visible in forced-colors. Non-essential motion/transparency should be reduced when preferences request it.
+          - generic [ref=e607]:
+            - generic [ref=e608]:
+              - paragraph [ref=e609]: Command diagnostics
+              - heading "Global command bar and project switcher state" [level=2] [ref=e610]
+            - generic [ref=e611]:
+              - button "Open command bar" [ref=e612] [cursor=pointer]
+              - button "Open project switcher" [ref=e613] [cursor=pointer]
+              - button "Open no-results state" [ref=e614] [cursor=pointer]
+            - list [ref=e615]:
+              - listitem [ref=e616]:
+                - generic [ref=e617]: Open
+                - strong [ref=e618]: "no"
+              - listitem [ref=e619]:
+                - generic [ref=e620]: Mode
+                - strong [ref=e621]: command
+              - listitem [ref=e622]:
+                - generic [ref=e623]: Result count
+                - strong [ref=e624]: "0"
+              - listitem [ref=e625]:
+                - generic [ref=e626]: Loading
+                - strong [ref=e627]: "no"
+              - listitem [ref=e628]:
+                - generic [ref=e629]: Active command
+                - strong [ref=e630]: none
+            - status [ref=e631]:
+              - heading "Keyboard traversal checklist" [level=2] [ref=e633]
+              - paragraph [ref=e634]: Verify Cmd/Ctrl+K open/close behavior, input focus on open, Arrow/Home/End traversal, Enter execution, Escape close, and safe focus return.
+            - status [ref=e635]:
+              - heading "Scope and role checklist" [level=2] [ref=e637]
+              - paragraph [ref=e638]: Verify role-aware command visibility and project-switch preservation from overview/documents/jobs/activity/settings routes.
+      - complementary [ref=e639]:
+        - paragraph [ref=e640]: Adaptive state
+        - heading "Expanded" [level=2] [ref=e641]
+        - paragraph [ref=e642]: Rail, workspace, and inspector remain visible for dense review work.
+        - list [ref=e643]:
+          - listitem [ref=e644]:
+            - generic [ref=e645]: Task context
+            - strong [ref=e646]: standard
+          - listitem [ref=e647]:
+            - generic [ref=e648]: Focus override
+            - strong [ref=e649]: "off"
+          - listitem [ref=e650]:
+            - generic [ref=e651]: Role mode
+            - strong [ref=e652]: ADMIN
+        - paragraph [ref=e653]:
+          - text: "Keyboard path:"
+          - generic [ref=e654]: Tab
+          - text: through rail, context bar, then work region.
+  - alert [ref=e655]
+```

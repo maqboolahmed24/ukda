@@ -2,7 +2,7 @@
 
 ## Scope
 
-Baseline database backup/restore flow for Phase 0.5 operations readiness.
+Baseline database backup/restore flow plus Phase 11.2 recovery drill execution evidence.
 
 ## Backup Procedure (Postgres)
 
@@ -44,9 +44,45 @@ SELECT COUNT(*) FROM audit_events;
 SELECT COUNT(*) FROM export_stub_events;
 ```
 
+## Controlled Storage And Model Restore
+
+After DB restore, restore controlled object storage snapshot and model artifacts into the clean environment.
+
+Required model role restore order:
+
+1. `PRIVACY_RULES`
+2. `TRANSCRIPTION_FALLBACK`
+3. `TRANSCRIPTION_PRIMARY`
+4. `ASSIST`
+5. `PRIVACY_NER`
+6. `EMBEDDING_SEARCH`
+
+Model restore must use approved local artifacts and internal service endpoints only. Do not fetch model artifacts from public networks during recovery.
+
+## Recovery Drill Execution
+
+Use admin recovery routes to execute and verify drills:
+
+- `GET /admin/recovery/status`
+- `POST /admin/recovery/drills`
+- `GET /admin/recovery/drills/{drillId}/status`
+- `GET /admin/recovery/drills/{drillId}/evidence`
+
+Drill evidence is persisted to:
+
+- `controlled/derived/recovery/drills/{scope}/{drillId}/evidence.json`
+
+and referenced from `recovery_drills.evidence_storage_key` and `recovery_drills.evidence_storage_sha256`.
+
+If a drill must be halted while `QUEUED` or `RUNNING`, use:
+
+- `POST /admin/recovery/drills/{drillId}/cancel`
+
 ## Recovery Validation
 
 - create and read one test project
 - call one export candidate/request route and confirm authenticated read works
 - confirm audit list is readable by admin/auditor
 - confirm `/admin/security/status` returns valid payload
+- confirm `/admin/recovery/status` and `/admin/recovery/drills` are `ADMIN`-only
+- confirm operations timelines redact recovery evidence for `AUDITOR` to drill/status/timestamps/summary only

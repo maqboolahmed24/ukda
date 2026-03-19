@@ -183,7 +183,7 @@ export default async function ProjectDocumentLayoutWorkspacePage({
       (!workspaceResult.data.isMember && workspaceResult.data.canAccessSettings));
   const canEditLayout = canEditReadingOrder;
   return (
-    <main className="homeLayout">
+    <main className="homeLayout layoutWorkspacePage">
       <ProjectDocumentLayoutWorkspaceShell
         canEditLayout={Boolean(canEditLayout)}
         canEditReadingOrder={Boolean(canEditReadingOrder)}

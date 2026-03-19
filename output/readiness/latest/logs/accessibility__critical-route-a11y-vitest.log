@@ -1,0 +1,13 @@
+$ pnpm -s vitest run web/components/authenticated-shell.a11y.test.tsx web/components/route-states.a11y.test.tsx
+
+
+ RUN  v4.1.0 /Users/test/Code/UKDA
+
+
+ Test Files  2 passed (2)
+      Tests  6 passed (6)
+   Start at  23:44:37
+   Duration  1.28s (transform 190ms, setup 0ms, import 497ms, tests 577ms, environment 996ms)
+
+
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.

@@ -2,6 +2,7 @@ import type {
   OperationsAlertListResponse,
   OperationsAlertState,
   OperationsExportStatusResponse,
+  OperationsReadinessResponse,
   OperationsOverviewResponse,
   OperationsSloListResponse,
   OperationsTimelineListResponse,
@@ -77,6 +78,17 @@ export async function getOperationsExportStatus(): Promise<
     "/admin/operations/export-status",
     {
       queryKey: queryKeys.operations.exportStatus()
+    }
+  );
+}
+
+export async function getOperationsReadiness(): Promise<
+  OperationsApiResult<OperationsReadinessResponse>
+> {
+  return requestOperationsApi<OperationsReadinessResponse>(
+    "/admin/operations/readiness",
+    {
+      queryKey: queryKeys.operations.readiness()
     }
   );
 }

@@ -1,0 +1,32 @@
+{
+  "url": "http://127.0.0.1:3100/projects",
+  "title": "UKDE",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "bodyOverflowX": 0,
+  "bodyOverflowY": 0,
+  "mainClass": "homeLayout",
+  "mainOverflowX": 0,
+  "mainOverflowY": 0,
+  "topOverflowElements": [
+    {
+      "selector": "h1",
+      "overflowX": 0,
+      "overflowY": 2,
+      "width": 816,
+      "height": 30
+    },
+    {
+      "selector": "p.authenticatedShellTitle",
+      "overflowX": 0,
+      "overflowY": 1,
+      "width": 448,
+      "height": 24
+    }
+  ],
+  "clippedTextCandidates": [],
+  "totalButtons": 5,
+  "totalLinks": 9
+}

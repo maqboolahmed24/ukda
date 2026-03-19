@@ -1,0 +1,870 @@
+{
+  "generatedAt": "2026-03-19T00:30:04.436Z",
+  "baseURL": "http://localhost:3100",
+  "results": [
+    {
+      "viewport": {
+        "label": "desktop-1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": {
+        "id": "projects",
+        "path": "/projects"
+      },
+      "target": "http://localhost:3100/projects",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/projects-desktop-1920x1080.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": {
+        "id": "overview",
+        "path": "/projects/project-fixture-alpha/overview"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/overview",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/overview\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/overview\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/overview-desktop-1920x1080.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": {
+        "id": "search",
+        "path": "/projects/project-fixture-alpha/search?q=adams"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/search?q=adams",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/search?q=adams\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/search?q=adams\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/search-desktop-1920x1080.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": {
+        "id": "viewer_ready",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/viewer_ready-desktop-1920x1080.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": {
+        "id": "preprocess_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/preprocess_compare-desktop-1920x1080.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": {
+        "id": "layout_workspace",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/layout_workspace-desktop-1920x1080.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": {
+        "id": "privacy_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/privacy_compare-desktop-1920x1080.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": {
+        "id": "design_system",
+        "path": "/admin/design-system"
+      },
+      "target": "http://localhost:3100/admin/design-system",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/admin/design-system\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/admin/design-system\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/design_system-desktop-1920x1080.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1536x864",
+        "width": 1536,
+        "height": 864
+      },
+      "route": {
+        "id": "projects",
+        "path": "/projects"
+      },
+      "target": "http://localhost:3100/projects",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/projects-desktop-1536x864.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1536x864",
+        "width": 1536,
+        "height": 864
+      },
+      "route": {
+        "id": "overview",
+        "path": "/projects/project-fixture-alpha/overview"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/overview",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/overview\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/overview\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/overview-desktop-1536x864.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1536x864",
+        "width": 1536,
+        "height": 864
+      },
+      "route": {
+        "id": "search",
+        "path": "/projects/project-fixture-alpha/search?q=adams"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/search?q=adams",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/search?q=adams\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/search?q=adams\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/search-desktop-1536x864.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1536x864",
+        "width": 1536,
+        "height": 864
+      },
+      "route": {
+        "id": "viewer_ready",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/viewer_ready-desktop-1536x864.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1536x864",
+        "width": 1536,
+        "height": 864
+      },
+      "route": {
+        "id": "preprocess_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/preprocess_compare-desktop-1536x864.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1536x864",
+        "width": 1536,
+        "height": 864
+      },
+      "route": {
+        "id": "layout_workspace",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/layout_workspace-desktop-1536x864.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1536x864",
+        "width": 1536,
+        "height": 864
+      },
+      "route": {
+        "id": "privacy_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/privacy_compare-desktop-1536x864.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1536x864",
+        "width": 1536,
+        "height": 864
+      },
+      "route": {
+        "id": "design_system",
+        "path": "/admin/design-system"
+      },
+      "target": "http://localhost:3100/admin/design-system",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/admin/design-system\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/admin/design-system\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/design_system-desktop-1536x864.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": {
+        "id": "projects",
+        "path": "/projects"
+      },
+      "target": "http://localhost:3100/projects",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/projects-desktop-1440x900.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": {
+        "id": "overview",
+        "path": "/projects/project-fixture-alpha/overview"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/overview",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/overview\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/overview\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/overview-desktop-1440x900.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": {
+        "id": "search",
+        "path": "/projects/project-fixture-alpha/search?q=adams"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/search?q=adams",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/search?q=adams\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/search?q=adams\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/search-desktop-1440x900.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": {
+        "id": "viewer_ready",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/viewer_ready-desktop-1440x900.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": {
+        "id": "preprocess_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/preprocess_compare-desktop-1440x900.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": {
+        "id": "layout_workspace",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/layout_workspace-desktop-1440x900.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": {
+        "id": "privacy_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/privacy_compare-desktop-1440x900.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": {
+        "id": "design_system",
+        "path": "/admin/design-system"
+      },
+      "target": "http://localhost:3100/admin/design-system",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/admin/design-system\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/admin/design-system\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/design_system-desktop-1440x900.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": {
+        "id": "projects",
+        "path": "/projects"
+      },
+      "target": "http://localhost:3100/projects",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/projects-desktop-1366x768.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": {
+        "id": "overview",
+        "path": "/projects/project-fixture-alpha/overview"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/overview",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/overview\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/overview\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/overview-desktop-1366x768.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": {
+        "id": "search",
+        "path": "/projects/project-fixture-alpha/search?q=adams"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/search?q=adams",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/search?q=adams\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/search?q=adams\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/search-desktop-1366x768.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": {
+        "id": "viewer_ready",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/viewer_ready-desktop-1366x768.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": {
+        "id": "preprocess_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/preprocess_compare-desktop-1366x768.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": {
+        "id": "layout_workspace",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/layout_workspace-desktop-1366x768.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": {
+        "id": "privacy_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/privacy_compare-desktop-1366x768.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": {
+        "id": "design_system",
+        "path": "/admin/design-system"
+      },
+      "target": "http://localhost:3100/admin/design-system",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/admin/design-system\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/admin/design-system\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/design_system-desktop-1366x768.png"
+    },
+    {
+      "viewport": {
+        "label": "tablet-1024x1366",
+        "width": 1024,
+        "height": 1366
+      },
+      "route": {
+        "id": "projects",
+        "path": "/projects"
+      },
+      "target": "http://localhost:3100/projects",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/projects-tablet-1024x1366.png"
+    },
+    {
+      "viewport": {
+        "label": "tablet-1024x1366",
+        "width": 1024,
+        "height": 1366
+      },
+      "route": {
+        "id": "overview",
+        "path": "/projects/project-fixture-alpha/overview"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/overview",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/overview\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/overview\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/overview-tablet-1024x1366.png"
+    },
+    {
+      "viewport": {
+        "label": "tablet-1024x1366",
+        "width": 1024,
+        "height": 1366
+      },
+      "route": {
+        "id": "search",
+        "path": "/projects/project-fixture-alpha/search?q=adams"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/search?q=adams",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/search?q=adams\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/search?q=adams\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/search-tablet-1024x1366.png"
+    },
+    {
+      "viewport": {
+        "label": "tablet-1024x1366",
+        "width": 1024,
+        "height": 1366
+      },
+      "route": {
+        "id": "viewer_ready",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/viewer_ready-tablet-1024x1366.png"
+    },
+    {
+      "viewport": {
+        "label": "tablet-1024x1366",
+        "width": 1024,
+        "height": 1366
+      },
+      "route": {
+        "id": "preprocess_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/preprocess_compare-tablet-1024x1366.png"
+    },
+    {
+      "viewport": {
+        "label": "tablet-1024x1366",
+        "width": 1024,
+        "height": 1366
+      },
+      "route": {
+        "id": "layout_workspace",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/layout_workspace-tablet-1024x1366.png"
+    },
+    {
+      "viewport": {
+        "label": "tablet-1024x1366",
+        "width": 1024,
+        "height": 1366
+      },
+      "route": {
+        "id": "privacy_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/privacy_compare-tablet-1024x1366.png"
+    },
+    {
+      "viewport": {
+        "label": "tablet-1024x1366",
+        "width": 1024,
+        "height": 1366
+      },
+      "route": {
+        "id": "design_system",
+        "path": "/admin/design-system"
+      },
+      "target": "http://localhost:3100/admin/design-system",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/admin/design-system\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/admin/design-system\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/design_system-tablet-1024x1366.png"
+    },
+    {
+      "viewport": {
+        "label": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": {
+        "id": "projects",
+        "path": "/projects"
+      },
+      "target": "http://localhost:3100/projects",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/projects-mobile-390x844.png"
+    },
+    {
+      "viewport": {
+        "label": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": {
+        "id": "overview",
+        "path": "/projects/project-fixture-alpha/overview"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/overview",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/overview\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/overview\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/overview-mobile-390x844.png"
+    },
+    {
+      "viewport": {
+        "label": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": {
+        "id": "search",
+        "path": "/projects/project-fixture-alpha/search?q=adams"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/search?q=adams",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/search?q=adams\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/search?q=adams\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/search-mobile-390x844.png"
+    },
+    {
+      "viewport": {
+        "label": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": {
+        "id": "viewer_ready",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/viewer_ready-mobile-390x844.png"
+    },
+    {
+      "viewport": {
+        "label": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": {
+        "id": "preprocess_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/preprocess_compare-mobile-390x844.png"
+    },
+    {
+      "viewport": {
+        "label": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": {
+        "id": "layout_workspace",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/layout_workspace-mobile-390x844.png"
+    },
+    {
+      "viewport": {
+        "label": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": {
+        "id": "privacy_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002"
+      },
+      "target": "http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/privacy_compare-mobile-390x844.png"
+    },
+    {
+      "viewport": {
+        "label": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": {
+        "id": "design_system",
+        "path": "/admin/design-system"
+      },
+      "target": "http://localhost:3100/admin/design-system",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3100/admin/design-system\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3100/admin/design-system\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-29-59-040Z/screens/design_system-mobile-390x844.png"
+    }
+  ]
+}

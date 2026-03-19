@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/admin/security/findings/[findingId]/page": "app/(authenticated)/admin/security/findings/[findingId]/page.js"
+}

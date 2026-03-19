@@ -1,0 +1,85 @@
+{
+  "routeKey": "viewer_loading",
+  "url": "http://127.0.0.1:3100/projects/project-fixture-alpha/documents/doc-fixture-001/viewer?page=1",
+  "title": "UKDE",
+  "viewport": {
+    "width": 1366,
+    "height": 900
+  },
+  "bodyOverflowX": 0,
+  "bodyOverflowY": 0,
+  "pageOverflowX": 0,
+  "pageOverflowY": 0,
+  "mainClass": "homeLayout",
+  "mainOverflowX": 0,
+  "mainOverflowY": 361,
+  "totalButtons": 17,
+  "totalLinks": 34,
+  "topOverflowElements": [
+    {
+      "selector": "p.authenticatedShellTitle",
+      "overflowX": 0,
+      "overflowY": 1,
+      "width": 1321,
+      "height": 21
+    },
+    {
+      "selector": "nav.projectContextBar.ukde-panel",
+      "overflowX": 666,
+      "overflowY": 0,
+      "width": 853,
+      "height": 43
+    },
+    {
+      "selector": "ul.authenticatedShellContextList",
+      "overflowX": 674,
+      "overflowY": 0,
+      "width": 837,
+      "height": 29
+    },
+    {
+      "selector": "div#ukde-shell-work-region",
+      "overflowX": 0,
+      "overflowY": 362,
+      "width": 855,
+      "height": 696
+    },
+    {
+      "selector": "section.projectWorkspaceMain",
+      "overflowX": 0,
+      "overflowY": 362,
+      "width": 849,
+      "height": 696
+    },
+    {
+      "selector": "h1",
+      "overflowX": 0,
+      "overflowY": 1,
+      "width": 656,
+      "height": 27
+    },
+    {
+      "selector": "div.projectContentHost",
+      "overflowX": 0,
+      "overflowY": 361,
+      "width": 849,
+      "height": 555
+    },
+    {
+      "selector": "main.homeLayout",
+      "overflowX": 0,
+      "overflowY": 361,
+      "width": 849,
+      "height": 555
+    },
+    {
+      "selector": "aside.documentViewerInspector",
+      "overflowX": 0,
+      "overflowY": 42,
+      "width": 268,
+      "height": 581
+    }
+  ],
+  "navigationError": null,
+  "consoleErrors": []
+}

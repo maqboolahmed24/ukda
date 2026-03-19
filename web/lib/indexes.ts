@@ -5,9 +5,12 @@ import type {
   ProjectIndex,
   ProjectIndexActivateResponse,
   ProjectIndexCancelResponse,
+  ProjectIndexQualityDetailResponse,
+  ProjectIndexQualitySummaryResponse,
   ProjectIndexListResponse,
   ProjectIndexRebuildResponse,
-  ProjectIndexStatusResponse
+  ProjectIndexStatusResponse,
+  SearchQueryAuditListResponse
 } from "@ukde/contracts";
 
 import { type ApiResult, requestServerApi } from "./data/api-client";
@@ -149,6 +152,56 @@ export async function activateProjectIndex(
   return requestIndexesApi<ProjectIndexActivateResponse>(
     `/projects/${projectId}/${toCollectionPath(kind)}/${indexId}/activate`,
     { method: "POST" }
+  );
+}
+
+export async function getAdminIndexQualitySummary(
+  projectId: string
+): Promise<IndexesApiResult<ProjectIndexQualitySummaryResponse>> {
+  return requestIndexesApi<ProjectIndexQualitySummaryResponse>(
+    `/admin/index-quality?projectId=${encodeURIComponent(projectId)}`,
+    {
+      queryKey: queryKeys.admin.indexQualitySummary(projectId),
+      cacheClass: "governance-event"
+    }
+  );
+}
+
+export async function getAdminIndexQualityDetail(
+  indexKind: IndexKind,
+  indexId: string
+): Promise<IndexesApiResult<ProjectIndexQualityDetailResponse>> {
+  return requestIndexesApi<ProjectIndexQualityDetailResponse>(
+    `/admin/index-quality/${encodeURIComponent(indexKind)}/${encodeURIComponent(indexId)}`,
+    {
+      queryKey: queryKeys.admin.indexQualityDetail(indexKind, indexId),
+      cacheClass: "governance-event"
+    }
+  );
+}
+
+export async function listAdminSearchQueryAudits(
+  projectId: string,
+  options?: { cursor?: number; limit?: number }
+): Promise<IndexesApiResult<SearchQueryAuditListResponse>> {
+  const params = new URLSearchParams();
+  params.set("projectId", projectId);
+  if (typeof options?.cursor === "number") {
+    params.set("cursor", String(Math.max(0, Math.round(options.cursor))));
+  }
+  if (typeof options?.limit === "number") {
+    params.set("limit", String(Math.max(1, Math.round(options.limit))));
+  }
+  return requestIndexesApi<SearchQueryAuditListResponse>(
+    `/admin/index-quality/query-audits?${params.toString()}`,
+    {
+      queryKey: queryKeys.admin.indexQualityQueryAudits({
+        cursor: options?.cursor,
+        limit: options?.limit,
+        projectId
+      }),
+      cacheClass: "governance-event"
+    }
   );
 }
 

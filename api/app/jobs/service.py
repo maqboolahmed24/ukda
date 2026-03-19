@@ -2,12 +2,15 @@ import base64
 import hashlib
 import json
 import re
+import subprocess
 import time
 import xml.etree.ElementTree as ET
+from datetime import UTC, datetime
 from difflib import SequenceMatcher
 from functools import lru_cache
+from types import SimpleNamespace
 from urllib.parse import urlparse
-from typing import Any, Literal
+from typing import Any, Callable, Literal
 
 import httpx
 
@@ -49,6 +52,12 @@ _TRANSCRIPTION_MAX_OUTPUT_TOKENS = 512
 _TRANSCRIPTION_DEFAULT_REVIEW_CONFIDENCE_THRESHOLD = 0.85
 _TRANSCRIPTION_DEFAULT_FALLBACK_CONFIDENCE_THRESHOLD = 0.72
 _TRANSCRIPTION_FALLBACK_CONFIDENCE_SIGNAL_WEIGHT = 0.35
+_TRANSCRIPTION_DEFAULT_BATCH_SIZE = 4
+_TRANSCRIPTION_MAX_BATCH_SIZE = 16
+_ONE_PIXEL_PNG_DATA_URL = (
+    "data:image/png;base64,"
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/w8AAuMB9oN8xj0AAAAASUVORK5CYII="
+)
 
 
 class JobValidationError(RuntimeError):
@@ -94,6 +103,7 @@ class JobService:
         self._project_service = project_service or get_project_service()
         self._audit_service = audit_service or get_audit_service()
         self._telemetry_service = telemetry_service or get_telemetry_service()
+        self._model_warmup_completed_deployments: set[str] = set()
 
     @staticmethod
     def _is_admin(current_user: SessionPrincipal) -> bool:
@@ -125,6 +135,121 @@ class JobService:
             source="jobs-store",
             detail="Queue depth from unsuperseded QUEUED jobs.",
         )
+
+    @staticmethod
+    def _sample_gpu_utilization_percent() -> float | None:
+        try:
+            completed = subprocess.run(
+                [
+                    "nvidia-smi",
+                    "--query-gpu=utilization.gpu",
+                    "--format=csv,noheader,nounits",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=0.75,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+        if completed.returncode != 0:
+            return None
+        first_line = completed.stdout.splitlines()[0].strip() if completed.stdout else ""
+        if not first_line:
+            return None
+        try:
+            value = float(first_line)
+        except ValueError:
+            return None
+        return max(0.0, min(100.0, value))
+
+    def _refresh_worker_gpu_utilization(self) -> None:
+        sampled = self._sample_gpu_utilization_percent()
+        if sampled is None:
+            self._telemetry_service.record_gpu_utilization(
+                utilization_percent=None,
+                source="nvidia-smi",
+                detail=(
+                    "GPU utilization sampler is unavailable or no GPU is attached to this worker."
+                ),
+            )
+            return
+        self._telemetry_service.record_gpu_utilization(
+            utilization_percent=sampled,
+            source="nvidia-smi",
+            detail="GPU utilization sampled from worker runtime.",
+        )
+
+    def _read_storage_bytes(
+        self,
+        *,
+        document_service: Any,
+        object_key: str,
+        request_id: str | None,
+        detail: str,
+    ) -> bytes:
+        started_at = time.perf_counter()
+        try:
+            payload = document_service._storage.read_object_bytes(object_key)  # noqa: SLF001
+        except Exception as error:  # noqa: BLE001
+            self._telemetry_service.record_storage_operation(
+                operation="READ",
+                duration_ms=(time.perf_counter() - started_at) * 1000,
+                success=False,
+                request_id=request_id,
+                trace_id=current_trace_id(),
+                object_key=object_key,
+                detail=f"{detail}:{error.__class__.__name__}",
+            )
+            raise
+        self._telemetry_service.record_storage_operation(
+            operation="READ",
+            duration_ms=(time.perf_counter() - started_at) * 1000,
+            success=True,
+            request_id=request_id,
+            trace_id=current_trace_id(),
+            object_key=object_key,
+            detail=detail,
+        )
+        return payload
+
+    def _write_storage_object(
+        self,
+        *,
+        request_id: str | None,
+        detail: str,
+        operation: Callable[[], Any],
+    ) -> Any:
+        started_at = time.perf_counter()
+        try:
+            result = operation()
+        except Exception as error:  # noqa: BLE001
+            self._telemetry_service.record_storage_operation(
+                operation="WRITE",
+                duration_ms=(time.perf_counter() - started_at) * 1000,
+                success=False,
+                request_id=request_id,
+                trace_id=current_trace_id(),
+                object_key=None,
+                detail=f"{detail}:{error.__class__.__name__}",
+            )
+            raise
+        object_key_value = getattr(result, "object_key", None)
+        object_key = (
+            str(object_key_value)
+            if isinstance(object_key_value, str) and object_key_value
+            else None
+        )
+        self._telemetry_service.record_storage_operation(
+            operation="WRITE",
+            duration_ms=(time.perf_counter() - started_at) * 1000,
+            success=True,
+            request_id=request_id,
+            trace_id=current_trace_id(),
+            object_key=object_key,
+            detail=detail,
+        )
+        return result
 
     def list_jobs(
         self,
@@ -279,7 +404,7 @@ class JobService:
             dedupe_key=dedupe_key,
             payload_json=payload_json,
             created_by=created_by,
-            max_attempts=1,
+            max_attempts=3,
             event_type="JOB_CREATED",
         )
         self._refresh_queue_depth()
@@ -308,7 +433,7 @@ class JobService:
                 "run_id": run_id,
             },
             created_by=created_by,
-            max_attempts=1,
+            max_attempts=3,
             event_type="JOB_CREATED",
         )
         self._refresh_queue_depth()
@@ -370,7 +495,7 @@ class JobService:
                 "run_id": run_id,
             },
             created_by=created_by,
-            max_attempts=1,
+            max_attempts=3,
             event_type="JOB_CREATED",
         )
         self._refresh_queue_depth()
@@ -399,7 +524,7 @@ class JobService:
                 "run_id": run_id,
             },
             created_by=created_by,
-            max_attempts=1,
+            max_attempts=3,
             event_type="JOB_CREATED",
         )
         self._refresh_queue_depth()
@@ -461,7 +586,7 @@ class JobService:
                 "run_id": run_id,
             },
             created_by=created_by,
-            max_attempts=1,
+            max_attempts=3,
             event_type="JOB_CREATED",
         )
         self._refresh_queue_depth()
@@ -490,7 +615,7 @@ class JobService:
                 "run_id": run_id,
             },
             created_by=created_by,
-            max_attempts=1,
+            max_attempts=3,
             event_type="JOB_CREATED",
         )
         self._refresh_queue_depth()
@@ -552,7 +677,7 @@ class JobService:
                 "run_id": run_id,
             },
             created_by=created_by,
-            max_attempts=1,
+            max_attempts=3,
             event_type="JOB_CREATED",
         )
         self._refresh_queue_depth()
@@ -635,6 +760,8 @@ class JobService:
         self._refresh_queue_depth()
         if row is None:
             return None
+        self._telemetry_service.record_job_claimed(enqueued_at=row.created_at)
+        self._refresh_worker_gpu_utilization()
         self._audit_service.record_event_best_effort(
             event_type="JOB_RUN_STARTED",
             actor_user_id=None,
@@ -689,6 +816,10 @@ class JobService:
             error_message=error_message,
         )
         self._refresh_queue_depth()
+        if row.status in {"SUCCEEDED", "FAILED", "CANCELED"}:
+            self._telemetry_service.record_job_completed(
+                completed_at=row.finished_at or datetime.now(UTC)
+            )
 
         if row.status == "SUCCEEDED":
             self._audit_service.record_event_best_effort(
@@ -1082,7 +1213,7 @@ class JobService:
         *,
         document_service: Any,
         run: Any,
-    ) -> tuple[str, str]:
+    ) -> tuple[str, str, str]:
         model = document_service._store.get_approved_model(  # noqa: SLF001
             model_id=run.model_id
         )
@@ -1123,7 +1254,8 @@ class JobService:
             model_name = metadata_model_name.strip()
         else:
             model_name = f"{model.model_family}-{model.model_version}"
-        return endpoint, model_name
+        deployment_unit = str(model.deployment_unit).strip() or "unknown"
+        return endpoint, model_name, deployment_unit
 
     @staticmethod
     def _encode_image_as_data_url(payload: bytes) -> str:
@@ -1326,30 +1458,180 @@ class JobService:
         request_payload: dict[str, object],
         endpoint_url: str | None,
         model_name: str | None,
+        deployment_unit: str | None,
         actor_user_id: str | None,
         request_id: str,
     ) -> dict[str, object]:
         engine = str(getattr(run, "engine", "VLM_LINE_CONTEXT") or "VLM_LINE_CONTEXT")
-        if engine == "VLM_LINE_CONTEXT":
-            if not endpoint_url or not model_name:
-                raise JobValidationError(
-                    "Primary transcription engine requires resolved endpoint and model."
+        fallback_invoked = engine != "VLM_LINE_CONTEXT"
+        metric_deployment_unit = (
+            deployment_unit.strip()
+            if isinstance(deployment_unit, str) and deployment_unit.strip()
+            else "governed-fallback"
+        )
+        metric_model_key = (
+            model_name.strip()
+            if isinstance(model_name, str) and model_name.strip()
+            else engine
+        )
+        started_at = time.perf_counter()
+        try:
+            if engine == "VLM_LINE_CONTEXT":
+                if not endpoint_url or not model_name:
+                    raise JobValidationError(
+                        "Primary transcription engine requires resolved endpoint and model."
+                    )
+                response_payload = self._call_primary_transcription_service(
+                    endpoint_url=endpoint_url,
+                    model_name=model_name,
+                    request_payload=request_payload,
+                    actor_user_id=actor_user_id,
+                    request_id=request_id,
                 )
-            return self._call_primary_transcription_service(
+            elif engine in {"KRAKEN_LINE", "TROCR_LINE", "DAN_PAGE", "REVIEW_COMPOSED"}:
+                response_payload = self._call_governed_fallback_adapter(
+                    engine=engine,
+                    request_payload=request_payload,
+                )
+            else:
+                raise JobValidationError(
+                    "Transcription engine "
+                    f"'{engine}' is not supported by the worker adapter interface."
+                )
+        except Exception as error:  # noqa: BLE001
+            self._telemetry_service.record_model_request(
+                deployment_unit=metric_deployment_unit,
+                model_key=metric_model_key,
+                duration_ms=(time.perf_counter() - started_at) * 1000,
+                success=False,
+                fallback_invoked=fallback_invoked,
+                request_id=request_id,
+                trace_id=current_trace_id(),
+                detail=f"{engine}:{error.__class__.__name__}",
+            )
+            raise
+        self._telemetry_service.record_model_request(
+            deployment_unit=metric_deployment_unit,
+            model_key=metric_model_key,
+            duration_ms=(time.perf_counter() - started_at) * 1000,
+            success=True,
+            fallback_invoked=fallback_invoked,
+            request_id=request_id,
+            trace_id=current_trace_id(),
+            detail=engine,
+        )
+        return response_payload
+
+    @staticmethod
+    def _resolve_transcription_batch_size(run: Any) -> int:
+        params = getattr(run, "params_json", None)
+        if isinstance(params, dict):
+            raw_value = params.get("batchSize")
+            if isinstance(raw_value, int):
+                return max(1, min(raw_value, _TRANSCRIPTION_MAX_BATCH_SIZE))
+            if isinstance(raw_value, str) and raw_value.strip().isdigit():
+                parsed = int(raw_value.strip())
+                return max(1, min(parsed, _TRANSCRIPTION_MAX_BATCH_SIZE))
+        return _TRANSCRIPTION_DEFAULT_BATCH_SIZE
+
+    def _warmup_transcription_model_if_configured(
+        self,
+        *,
+        run: Any,
+        endpoint_url: str | None,
+        model_name: str | None,
+        deployment_unit: str | None,
+        actor_user_id: str | None,
+        request_id: str | None,
+    ) -> tuple[bool, bool, str]:
+        if not self._settings.model_warm_start:
+            return False, True, "warmup-disabled"
+        if getattr(run, "engine", None) != "VLM_LINE_CONTEXT":
+            return False, True, "warmup-not-required"
+        if not endpoint_url or not model_name or not deployment_unit:
+            return False, False, "warmup-endpoint-missing"
+
+        normalized_deployment = deployment_unit.strip().lower()
+        if not normalized_deployment:
+            return False, False, "warmup-deployment-missing"
+        if normalized_deployment in self._model_warmup_completed_deployments:
+            return False, True, "warmup-already-complete"
+
+        started_at = time.perf_counter()
+        warmup_request_payload: dict[str, object] = {
+            "schemaVersion": _TRANSCRIPTION_PROMPT_SCHEMA_VERSION,
+            "responseSchemaVersion": int(getattr(run, "response_schema_version", 1)),
+            "promptTemplateId": str(
+                getattr(run, "prompt_template_id", "ukde.transcription.v1.line-context")
+            ),
+            "target": {
+                "sourceKind": "LINE",
+                "sourceRefId": "warmup-line",
+                "lineId": "warmup-line",
+            },
+            "contextWindow": {"lineText": "warmup"},
+            "geometry": {},
+            "params": {},
+            "imageDataUrl": _ONE_PIXEL_PNG_DATA_URL,
+        }
+
+        try:
+            self._call_primary_transcription_service(
                 endpoint_url=endpoint_url,
                 model_name=model_name,
-                request_payload=request_payload,
+                request_payload=warmup_request_payload,
                 actor_user_id=actor_user_id,
+                request_id=request_id or "capacity-warmup",
+            )
+        except Exception as error:  # noqa: BLE001
+            self._telemetry_service.record_model_request(
+                deployment_unit=deployment_unit,
+                model_key=model_name,
+                duration_ms=(time.perf_counter() - started_at) * 1000,
+                success=False,
+                fallback_invoked=False,
                 request_id=request_id,
+                trace_id=current_trace_id(),
+                detail=f"warmup:{error.__class__.__name__}",
             )
-        if engine in {"KRAKEN_LINE", "TROCR_LINE", "DAN_PAGE", "REVIEW_COMPOSED"}:
-            return self._call_governed_fallback_adapter(
-                engine=engine,
-                request_payload=request_payload,
+            self._telemetry_service.record_timeline(
+                scope="model",
+                severity="WARNING",
+                message="Model warmup attempt failed; continuing with live inference requests.",
+                request_id=request_id,
+                trace_id=current_trace_id(),
+                details={
+                    "deployment_unit": deployment_unit,
+                    "model_key": model_name,
+                    "warmup": "failed",
+                },
             )
-        raise JobValidationError(
-            f"Transcription engine '{engine}' is not supported by the worker adapter interface."
+            return True, False, "warmup-failed"
+
+        self._telemetry_service.record_model_request(
+            deployment_unit=deployment_unit,
+            model_key=model_name,
+            duration_ms=(time.perf_counter() - started_at) * 1000,
+            success=True,
+            fallback_invoked=False,
+            request_id=request_id,
+            trace_id=current_trace_id(),
+            detail="warmup:success",
         )
+        self._model_warmup_completed_deployments.add(normalized_deployment)
+        self._telemetry_service.record_timeline(
+            scope="model",
+            severity="INFO",
+            message="Model warmup completed for transcription deployment.",
+            request_id=request_id,
+            trace_id=current_trace_id(),
+            details={
+                "deployment_unit": deployment_unit,
+                "model_key": model_name,
+                "warmup": "completed",
+            },
+        )
+        return True, True, "warmup-complete"
 
     @staticmethod
     def _resolve_bleed_pair_page_index(page_index: int) -> int | None:
@@ -1365,6 +1647,7 @@ class JobService:
         project_id: str,
         document_id: str,
         page_index: int,
+        request_id: str | None,
     ) -> bytes | None:
         from app.documents.service import get_document_service
 
@@ -1383,7 +1666,12 @@ class JobService:
         if pair_page is None or pair_page.status != "READY" or not pair_page.derived_image_key:
             return None
         try:
-            return document_service._storage.read_object_bytes(pair_page.derived_image_key)  # noqa: SLF001
+            return self._read_storage_bytes(
+                document_service=document_service,
+                object_key=pair_page.derived_image_key,
+                request_id=request_id,
+                detail="preprocess_bleed_pair_read",
+            )
         except Exception:  # noqa: BLE001
             return None
 
@@ -1638,8 +1926,14 @@ class JobService:
                     project_id=project_id,
                     document_id=document_id,
                     page_index=page.page_index,
+                    request_id=f"worker:{worker_id}:{row.id}",
                 )
-            source_payload = document_service._storage.read_object_bytes(input_key)  # noqa: SLF001
+            source_payload = self._read_storage_bytes(
+                document_service=document_service,
+                object_key=input_key,
+                request_id=f"worker:{worker_id}:{row.id}",
+                detail="preprocess_page_input_read",
+            )
             outcome = process_preprocess_page_bytes(
                 source_payload=source_payload,
                 source_dpi=page.source_dpi if page.source_dpi is not None else page.dpi,
@@ -1648,29 +1942,41 @@ class JobService:
                 params_json=run.params_json,
                 paired_source_payload=pair_payload,
             )
-            gray_object = document_service._storage.write_preprocess_gray_image(  # noqa: SLF001
-                project_id=project_id,
-                document_id=document_id,
-                run_id=run_id,
-                page_index=page.page_index,
-                payload=outcome.gray_png_bytes,
-            )
-            bin_object_key: str | None = None
-            if outcome.bin_png_bytes is not None:
-                bin_object = document_service._storage.write_preprocess_bin_image(  # noqa: SLF001
+            gray_object = self._write_storage_object(
+                request_id=f"worker:{worker_id}:{row.id}",
+                detail="preprocess_gray_write",
+                operation=lambda: document_service._storage.write_preprocess_gray_image(  # noqa: SLF001
                     project_id=project_id,
                     document_id=document_id,
                     run_id=run_id,
                     page_index=page.page_index,
-                    payload=outcome.bin_png_bytes,
+                    payload=outcome.gray_png_bytes,
+                ),
+            )
+            bin_object_key: str | None = None
+            if outcome.bin_png_bytes is not None:
+                bin_object = self._write_storage_object(
+                    request_id=f"worker:{worker_id}:{row.id}",
+                    detail="preprocess_bin_write",
+                    operation=lambda: document_service._storage.write_preprocess_bin_image(  # noqa: SLF001
+                        project_id=project_id,
+                        document_id=document_id,
+                        run_id=run_id,
+                        page_index=page.page_index,
+                        payload=outcome.bin_png_bytes,
+                    ),
                 )
                 bin_object_key = bin_object.object_key
-            metrics_object = document_service._storage.write_preprocess_page_metrics(  # noqa: SLF001
-                project_id=project_id,
-                document_id=document_id,
-                run_id=run_id,
-                page_index=page.page_index,
-                metrics_json=outcome.metrics_json,
+            metrics_object = self._write_storage_object(
+                request_id=f"worker:{worker_id}:{row.id}",
+                detail="preprocess_metrics_write",
+                operation=lambda: document_service._storage.write_preprocess_page_metrics(  # noqa: SLF001
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=run_id,
+                    page_index=page.page_index,
+                    metrics_json=outcome.metrics_json,
+                ),
             )
             metrics_sha256 = hashlib.sha256(metrics_object.absolute_path.read_bytes()).hexdigest()
             document_service._store.complete_preprocess_page_result(  # noqa: SLF001
@@ -1790,11 +2096,15 @@ class JobService:
                 ),
                 items=page_rows,
             )
-            manifest_object = document_service._storage.write_preprocess_manifest(  # noqa: SLF001
-                project_id=project_id,
-                document_id=document_id,
-                run_id=run_id,
-                payload=manifest_payload,
+            manifest_object = self._write_storage_object(
+                request_id=f"worker:{worker_id}:{row.id}",
+                detail="preprocess_manifest_write",
+                operation=lambda: document_service._storage.write_preprocess_manifest(  # noqa: SLF001
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=run_id,
+                    payload=manifest_payload,
+                ),
             )
             manifest_sha256 = hashlib.sha256(manifest_payload).hexdigest()
             document_service._store.record_preprocess_run_manifest(  # noqa: SLF001
@@ -2146,7 +2456,12 @@ class JobService:
             )
 
         try:
-            source_payload = document_service._storage.read_object_bytes(input_key)  # noqa: SLF001
+            source_payload = self._read_storage_bytes(
+                document_service=document_service,
+                object_key=input_key,
+                request_id=f"worker:{worker_id}:{row.id}",
+                detail="layout_preprocess_input_read",
+            )
             outcome = segment_layout_page_bytes(
                 page_image_payload=source_payload,
                 run_id=run_id,
@@ -2534,6 +2849,7 @@ class JobService:
         request_id: str,
         endpoint_url: str | None,
         model_name: str | None,
+        deployment_unit: str | None,
     ) -> tuple[float | None, str, dict[str, object]]:
         calibration_version = str(
             getattr(run, "confidence_calibration_version", "v1") or "v1"
@@ -2561,6 +2877,7 @@ class JobService:
                     request_payload=crop_only_request,
                     endpoint_url=endpoint_url,
                     model_name=model_name,
+                    deployment_unit=deployment_unit,
                     actor_user_id=actor_user_id,
                     request_id=f"{request_id}:agreement",
                 )
@@ -2597,40 +2914,49 @@ class JobService:
             if isinstance(fallback_signal_setting, bool):
                 use_fallback_signal = fallback_signal_setting
         if use_fallback_signal and text_diplomatic.strip():
-            fallback_response = self._call_governed_fallback_adapter(
-                engine="KRAKEN_LINE",
-                request_payload=request_payload,
-            )
-            fallback_text = (
-                str(fallback_response.get("textDiplomatic")).strip()
-                if isinstance(fallback_response.get("textDiplomatic"), str)
-                else ""
-            )
-            disagreement_score = 1.0 - self._compute_text_agreement_score(
-                text_diplomatic,
-                fallback_text,
-            )
-            base_confidence = confidence if isinstance(confidence, float) else 0.5
-            disagreement_adjusted = max(
-                0.0,
-                min(
-                    1.0,
-                    base_confidence
-                    - (disagreement_score * _TRANSCRIPTION_FALLBACK_CONFIDENCE_SIGNAL_WEIGHT),
-                ),
-            )
-            disagreement_calibrated = self._calibrate_confidence_value(
-                raw_score=disagreement_adjusted,
-                basis="FALLBACK_DISAGREEMENT",
-                calibration_version=calibration_version,
-            )
-            if run_basis == "FALLBACK_DISAGREEMENT":
-                confidence = disagreement_calibrated
-                basis = "FALLBACK_DISAGREEMENT"
-            else:
-                confidence = min(base_confidence, disagreement_calibrated)
-            signals["fallbackDisagreementScore"] = round(disagreement_score, 6)
-            signals["fallbackSignalApplied"] = True
+            try:
+                fallback_response = self._invoke_transcription_engine_adapter(
+                    run=SimpleNamespace(engine="KRAKEN_LINE"),
+                    request_payload=request_payload,
+                    endpoint_url=None,
+                    model_name="KRAKEN_LINE",
+                    deployment_unit="governed-fallback",
+                    actor_user_id=actor_user_id,
+                    request_id=f"{request_id}:fallback-signal",
+                )
+                fallback_text = (
+                    str(fallback_response.get("textDiplomatic")).strip()
+                    if isinstance(fallback_response.get("textDiplomatic"), str)
+                    else ""
+                )
+                disagreement_score = 1.0 - self._compute_text_agreement_score(
+                    text_diplomatic,
+                    fallback_text,
+                )
+                base_confidence = confidence if isinstance(confidence, float) else 0.5
+                disagreement_adjusted = max(
+                    0.0,
+                    min(
+                        1.0,
+                        base_confidence
+                        - (disagreement_score * _TRANSCRIPTION_FALLBACK_CONFIDENCE_SIGNAL_WEIGHT),
+                    ),
+                )
+                disagreement_calibrated = self._calibrate_confidence_value(
+                    raw_score=disagreement_adjusted,
+                    basis="FALLBACK_DISAGREEMENT",
+                    calibration_version=calibration_version,
+                )
+                if run_basis == "FALLBACK_DISAGREEMENT":
+                    confidence = disagreement_calibrated
+                    basis = "FALLBACK_DISAGREEMENT"
+                else:
+                    confidence = min(base_confidence, disagreement_calibrated)
+                signals["fallbackDisagreementScore"] = round(disagreement_score, 6)
+                signals["fallbackSignalApplied"] = True
+            except Exception as error:  # noqa: BLE001
+                signals["fallbackSignalError"] = error.__class__.__name__
+                signals["fallbackSignalApplied"] = False
         else:
             signals["fallbackSignalApplied"] = False
 
@@ -3260,11 +3586,17 @@ class JobService:
             )
 
         try:
-            preprocess_page_image = document_service._storage.read_object_bytes(  # noqa: SLF001
-                preprocess_result.output_object_key_gray
+            _ = self._read_storage_bytes(
+                document_service=document_service,
+                object_key=preprocess_result.output_object_key_gray,
+                request_id=f"worker:{worker_id}:{row.id}",
+                detail="transcription_preprocess_input_read",
             )
-            layout_pagexml_bytes = document_service._storage.read_object_bytes(  # noqa: SLF001
-                layout_page_result.page_xml_key
+            layout_pagexml_bytes = self._read_storage_bytes(
+                document_service=document_service,
+                object_key=layout_page_result.page_xml_key,
+                request_id=f"worker:{worker_id}:{row.id}",
+                detail="transcription_layout_pagexml_read",
             )
             line_geometry_by_id, page_width, page_height = (
                 self._extract_line_geometry_from_pagexml(
@@ -3285,8 +3617,13 @@ class JobService:
             )
             endpoint_url: str | None = None
             model_name: str | None = None
+            model_deployment_unit: str | None = None
             if run.engine == "VLM_LINE_CONTEXT":
-                endpoint_url, model_name = self._resolve_transcription_service_endpoint(
+                (
+                    endpoint_url,
+                    model_name,
+                    model_deployment_unit,
+                ) = self._resolve_transcription_service_endpoint(
                     document_service=document_service,
                     run=run,
                 )
@@ -3330,8 +3667,11 @@ class JobService:
         for artifact in sorted(line_artifacts, key=lambda item: item.line_id):
             context_payload: dict[str, object] = {}
             try:
-                context_bytes = document_service._storage.read_object_bytes(  # noqa: SLF001
-                    artifact.context_window_json_key
+                context_bytes = self._read_storage_bytes(
+                    document_service=document_service,
+                    object_key=artifact.context_window_json_key,
+                    request_id=f"worker:{worker_id}:{row.id}",
+                    detail="transcription_line_context_read",
                 )
                 parsed_context = json.loads(context_bytes.decode("utf-8"))
                 if isinstance(parsed_context, dict):
@@ -3376,8 +3716,11 @@ class JobService:
             )
             if artifact is not None:
                 try:
-                    context_bytes = document_service._storage.read_object_bytes(  # noqa: SLF001
-                        artifact.context_window_json_key
+                    context_bytes = self._read_storage_bytes(
+                        document_service=document_service,
+                        object_key=artifact.context_window_json_key,
+                        request_id=f"worker:{worker_id}:{row.id}",
+                        detail="transcription_rescue_context_read",
                     )
                     parsed_context = json.loads(context_bytes.decode("utf-8"))
                     if isinstance(parsed_context, dict):
@@ -3412,12 +3755,16 @@ class JobService:
                     + b"\n"
                 )
                 raw_sha = hashlib.sha256(raw_bytes).hexdigest()
-                raw_object = document_service._storage.write_transcription_raw_response(  # noqa: SLF001
-                    project_id=project_id,
-                    document_id=document_id,
-                    run_id=run_id,
-                    page_index=page.page_index,
-                    payload=raw_bytes,
+                raw_object = self._write_storage_object(
+                    request_id=f"worker:{worker_id}:{row.id}",
+                    detail="transcription_raw_response_write",
+                    operation=lambda: document_service._storage.write_transcription_raw_response(  # noqa: SLF001
+                        project_id=project_id,
+                        document_id=document_id,
+                        run_id=run_id,
+                        page_index=page.page_index,
+                        payload=raw_bytes,
+                    ),
                 )
                 document_service._store.fail_transcription_page_result(  # noqa: SLF001
                     project_id=project_id,
@@ -3457,11 +3804,40 @@ class JobService:
         fallback_invocation_count = 0
         alignment_warning_count = 0
         char_box_warning_count = 0
+        transcription_batch_size = self._resolve_transcription_batch_size(run)
+        batch_count = max(1, (len(targets) + transcription_batch_size - 1) // transcription_batch_size)
+        warmup_invoked, warmup_succeeded, warmup_detail = (
+            self._warmup_transcription_model_if_configured(
+                run=run,
+                endpoint_url=endpoint_url,
+                model_name=model_name,
+                deployment_unit=model_deployment_unit,
+                actor_user_id=row.created_by,
+                request_id=f"worker:{worker_id}:{row.id}",
+            )
+        )
         review_threshold, fallback_threshold = self._resolve_transcription_thresholds(
             run=run
         )
 
-        for target in targets:
+        for target_index, target in enumerate(targets):
+            batch_index = (target_index // transcription_batch_size) + 1
+            batch_item_index = (target_index % transcription_batch_size) + 1
+            if batch_item_index == 1 and batch_count > 1:
+                self._telemetry_service.record_timeline(
+                    scope="worker",
+                    severity="INFO",
+                    message="Processing transcription batch for page targets.",
+                    request_id=f"worker:{worker_id}:{row.id}",
+                    trace_id=current_trace_id(),
+                    details={
+                        "run_id": run_id,
+                        "page_id": page_id,
+                        "batch_index": batch_index,
+                        "batch_count": batch_count,
+                        "batch_size": transcription_batch_size,
+                    },
+                )
             source_kind = str(target["source_kind"])
             source_ref_id = str(target["source_ref_id"])
             line_result_id = str(target["line_result_id"])
@@ -3486,7 +3862,12 @@ class JobService:
             char_box_cue_preview: list[dict[str, object]] = []
             response_line_id: str | None = None
             try:
-                image_payload = document_service._storage.read_object_bytes(image_key)  # noqa: SLF001
+                image_payload = self._read_storage_bytes(
+                    document_service=document_service,
+                    object_key=image_key,
+                    request_id=f"worker:{worker_id}:{row.id}",
+                    detail="transcription_target_image_read",
+                )
                 image_data_url = self._encode_image_as_data_url(image_payload)
                 request_payload = {
                     "schemaVersion": _TRANSCRIPTION_PROMPT_SCHEMA_VERSION,
@@ -3507,6 +3888,7 @@ class JobService:
                     request_payload=request_payload,
                     endpoint_url=endpoint_url,
                     model_name=model_name,
+                    deployment_unit=model_deployment_unit,
                     actor_user_id=row.created_by,
                     request_id=f"worker:{worker_id}:{row.id}",
                 )
@@ -3537,6 +3919,7 @@ class JobService:
                             request_id=f"worker:{worker_id}:{row.id}",
                             endpoint_url=endpoint_url,
                             model_name=model_name,
+                            deployment_unit=model_deployment_unit,
                         )
                     )
                 alignment_payload, alignment_warnings = self._build_compact_alignment_payload(
@@ -3814,7 +4197,9 @@ class JobService:
                 confidence_band = "UNKNOWN"
             confidence_band_counts[confidence_band] += 1
             line_confidence = line_payload.get("conf_line")
-            if isinstance(line_confidence, (int, float)) and float(line_confidence) < review_threshold:
+            if isinstance(line_confidence, (int, float)) and (
+                float(line_confidence) < review_threshold
+            ):
                 low_confidence_line_count += 1
 
         raw_page_payload = {
@@ -3835,6 +4220,10 @@ class JobService:
                 "lowConfidenceLineCount": low_confidence_line_count,
                 "confidenceBands": confidence_band_counts,
                 "fallbackInvocationCount": fallback_invocation_count,
+                "batchSize": transcription_batch_size,
+                "batchCount": batch_count,
+                "modelWarmupInvoked": warmup_invoked,
+                "modelWarmupSucceeded": warmup_succeeded,
             },
         }
         raw_page_bytes = (
@@ -3857,6 +4246,8 @@ class JobService:
             warnings.append("ALIGNMENT_WARNINGS_PRESENT")
         if char_box_warning_count > 0:
             warnings.append("CHAR_BOX_WARNINGS_PRESENT")
+        if warmup_invoked and not warmup_succeeded:
+            warnings.append("MODEL_WARMUP_FAILED")
         metrics = {
             "schemaVersion": _TRANSCRIPTION_PROMPT_SCHEMA_VERSION,
             "targetCount": len(targets),
@@ -3876,15 +4267,25 @@ class JobService:
             "fallbackInvocationCount": fallback_invocation_count,
             "alignmentWarningCount": alignment_warning_count,
             "charBoxWarningCount": char_box_warning_count,
+            "batchSize": transcription_batch_size,
+            "batchCount": batch_count,
+            "modelWarmupInvoked": warmup_invoked,
+            "modelWarmupSucceeded": warmup_succeeded,
+            "modelWarmupDetail": warmup_detail,
         }
 
         try:
-            raw_response_object = document_service._storage.write_transcription_raw_response(  # noqa: SLF001
-                project_id=project_id,
-                document_id=document_id,
-                run_id=run_id,
-                page_index=page.page_index,
-                payload=raw_page_bytes,
+            storage = document_service._storage  # noqa: SLF001
+            raw_response_object = self._write_storage_object(
+                request_id=f"worker:{worker_id}:{row.id}",
+                detail="transcription_raw_response_write",
+                operation=lambda: storage.write_transcription_raw_response(
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=run_id,
+                    page_index=page.page_index,
+                    payload=raw_page_bytes,
+                ),
             )
             for row_payload in line_rows:
                 safe_line_id = self._safe_xml_identifier(str(row_payload["line_id"]))
@@ -3899,15 +4300,17 @@ class JobService:
                         ).encode("utf-8")
                         + b"\n"
                     )
-                    alignment_object = (
-                        document_service._storage.write_transcription_line_alignment(  # noqa: SLF001
+                    alignment_object = self._write_storage_object(
+                        request_id=f"worker:{worker_id}:{row.id}",
+                        detail="transcription_alignment_write",
+                        operation=lambda: storage.write_transcription_line_alignment(
                             project_id=project_id,
                             document_id=document_id,
                             run_id=run_id,
                             page_index=page.page_index,
                             line_id=safe_line_id,
                             payload=alignment_bytes,
-                        )
+                        ),
                     )
                     row_payload["alignment_json_key"] = alignment_object.object_key
                 else:
@@ -3924,15 +4327,17 @@ class JobService:
                         ).encode("utf-8")
                         + b"\n"
                     )
-                    char_boxes_object = (
-                        document_service._storage.write_transcription_line_char_boxes(  # noqa: SLF001
+                    char_boxes_object = self._write_storage_object(
+                        request_id=f"worker:{worker_id}:{row.id}",
+                        detail="transcription_char_boxes_write",
+                        operation=lambda: storage.write_transcription_line_char_boxes(
                             project_id=project_id,
                             document_id=document_id,
                             run_id=run_id,
                             page_index=page.page_index,
                             line_id=safe_line_id,
                             payload=char_boxes_bytes,
-                        )
+                        ),
                     )
                     row_payload["char_boxes_key"] = char_boxes_object.object_key
                 else:
@@ -3972,12 +4377,16 @@ class JobService:
                 rescue_entries=valid_rescue_entries,
             )
             pagexml_sha256 = hashlib.sha256(pagexml_payload).hexdigest()
-            pagexml_object = document_service._storage.write_transcription_page_xml(  # noqa: SLF001
-                project_id=project_id,
-                document_id=document_id,
-                run_id=run_id,
-                page_index=page.page_index,
-                payload=pagexml_payload,
+            pagexml_object = self._write_storage_object(
+                request_id=f"worker:{worker_id}:{row.id}",
+                detail="transcription_pagexml_write",
+                operation=lambda: document_service._storage.write_transcription_page_xml(  # noqa: SLF001
+                    project_id=project_id,
+                    document_id=document_id,
+                    run_id=run_id,
+                    page_index=page.page_index,
+                    payload=pagexml_payload,
+                ),
             )
             hocr_out_key: str | None = None
             hocr_out_sha256: str | None = None
@@ -3989,12 +4398,16 @@ class JobService:
                     rescue_entries=valid_rescue_entries,
                 )
                 hocr_out_sha256 = hashlib.sha256(hocr_payload).hexdigest()
-                hocr_object = document_service._storage.write_transcription_hocr(  # noqa: SLF001
-                    project_id=project_id,
-                    document_id=document_id,
-                    run_id=run_id,
-                    page_index=page.page_index,
-                    payload=hocr_payload,
+                hocr_object = self._write_storage_object(
+                    request_id=f"worker:{worker_id}:{row.id}",
+                    detail="transcription_hocr_write",
+                    operation=lambda: document_service._storage.write_transcription_hocr(  # noqa: SLF001
+                        project_id=project_id,
+                        document_id=document_id,
+                        run_id=run_id,
+                        page_index=page.page_index,
+                        payload=hocr_payload,
+                    ),
                 )
                 hocr_out_key = hocr_object.object_key
 

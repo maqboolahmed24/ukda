@@ -1,0 +1,317 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - link "Skip to work region" [ref=e3] [cursor=pointer]:
+      - /url: "#ukde-shell-work-region"
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - paragraph [ref=e6]: Victorian Parish Registers
+        - paragraph [ref=e7]: Project workspace
+      - generic [ref=e8]:
+        - group "Global command controls" [ref=e9]:
+          - button "Project switcher" [ref=e10] [cursor=pointer]
+          - button "Command bar" [ref=e11] [cursor=pointer]:
+            - generic [ref=e12]: Command bar
+            - generic [ref=e13]: ⌘/Ctrl + K
+        - 'button "Theme preference: System (Dark). Click to switch to Dark." [ref=e15] [cursor=pointer]':
+          - img [ref=e17]
+        - link "Help" [ref=e19] [cursor=pointer]:
+          - /url: /health
+        - generic [ref=e20]:
+          - generic [ref=e21]: Env Test
+          - generic [ref=e22]: Tier Controlled
+          - generic [ref=e23]: Expanded
+        - group [ref=e24]:
+          - generic "User menu" [ref=e25] [cursor=pointer]: Fixture Admin
+    - generic [ref=e26]:
+      - complementary [ref=e27]:
+        - paragraph [ref=e28]: Navigation
+        - navigation "Primary navigation" [ref=e29]:
+          - list [ref=e30]:
+            - listitem [ref=e31]:
+              - link "Projects" [ref=e32] [cursor=pointer]:
+                - /url: /projects
+                - generic [ref=e33]: Projects
+            - listitem [ref=e34]:
+              - link "My activity" [ref=e35] [cursor=pointer]:
+                - /url: /activity
+                - generic [ref=e36]: My activity
+            - listitem [ref=e37]:
+              - link "Approved models" [ref=e38] [cursor=pointer]:
+                - /url: /approved-models
+                - generic [ref=e39]: Approved models
+            - listitem [ref=e40]:
+              - link "Admin" [ref=e41] [cursor=pointer]:
+                - /url: /admin
+                - generic [ref=e42]: Admin
+      - generic [ref=e43]:
+        - navigation "Project context" [ref=e44]:
+          - list [ref=e45]:
+            - listitem [ref=e46]:
+              - link "Overview" [ref=e47] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/overview
+            - listitem [ref=e48]:
+              - link "Documents" [ref=e49] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/documents
+            - listitem [ref=e50]:
+              - link "Model assignments" [ref=e51] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/model-assignments
+            - listitem [ref=e52]:
+              - link "Search" [ref=e53] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/search
+            - listitem [ref=e54]:
+              - link "Entities" [ref=e55] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/entities
+            - listitem [ref=e56]:
+              - link "Derivatives" [ref=e57] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/derivatives
+            - listitem [ref=e58]:
+              - link "Indexes" [ref=e59] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/indexes
+            - listitem [ref=e60]:
+              - link "Policies" [ref=e61] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/policies
+            - listitem [ref=e62]:
+              - link "Pseudonym registry" [ref=e63] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/pseudonym-registry
+            - listitem [ref=e64]:
+              - link "Jobs" [ref=e65] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/jobs
+            - listitem [ref=e66]:
+              - link "Export candidates" [ref=e67] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/export-candidates
+            - listitem [ref=e68]:
+              - link "Export requests" [ref=e69] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/export-requests
+            - listitem [ref=e70]:
+              - link "Export review" [ref=e71] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/export-review
+            - listitem [ref=e72]:
+              - link "Activity" [ref=e73] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/activity
+            - listitem [ref=e74]:
+              - link "Settings" [ref=e75] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/settings
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - generic [ref=e79]:
+              - paragraph [ref=e80]: Projects / Victorian Parish Registers
+              - heading "Document doc-fixture-002" [level=1] [ref=e81]
+              - paragraph [ref=e82]: Stable document detail anchor for metadata, run history, and viewer access.
+              - navigation "Breadcrumb" [ref=e84]:
+                - list [ref=e85]:
+                  - listitem [ref=e86]:
+                    - link "Projects" [ref=e87] [cursor=pointer]:
+                      - /url: /projects
+                    - text: /
+                  - listitem [ref=e88]:
+                    - link "Victorian Parish Registers" [ref=e89] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/overview
+                    - text: /
+                  - listitem [ref=e90]:
+                    - link "Documents" [ref=e91] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents
+                    - text: /
+                  - listitem [ref=e92]:
+                    - generic [ref=e93]: Document
+            - link "Open viewer" [ref=e95] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1
+          - main [ref=e97]:
+            - generic [ref=e98]:
+              - paragraph [ref=e99]: Privacy compare
+              - heading "register-volume-04.pdf" [level=2] [ref=e100]
+              - paragraph [ref=e101]: Compare run projections by page review state, decision count changes, and safeguarded preview status deltas.
+              - generic [ref=e102]:
+                - link "Back to runs" [ref=e103] [cursor=pointer]:
+                  - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/privacy?tab=runs
+                - link "Base run detail" [ref=e104] [cursor=pointer]:
+                  - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/privacy/runs/redaction-run-fixture-001
+                - link "Candidate run detail" [ref=e105] [cursor=pointer]:
+                  - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/privacy/runs/redaction-run-fixture-002
+            - generic [ref=e106]:
+              - heading "Rerun lineage" [level=3] [ref=e107]
+              - list [ref=e108]:
+                - listitem [ref=e109]:
+                  - generic [ref=e110]: Candidate supersedes base
+                  - strong [ref=e111]: "Yes"
+                - listitem [ref=e112]:
+                  - generic [ref=e113]: Base supersedes candidate
+                  - strong [ref=e114]: "No"
+                - listitem [ref=e115]:
+                  - generic [ref=e116]: Base supersedes run
+                  - strong [ref=e117]: None
+                - listitem [ref=e118]:
+                  - generic [ref=e119]: Base superseded by run
+                  - strong [ref=e120]: redaction-run-fixture-002
+                - listitem [ref=e121]:
+                  - generic [ref=e122]: Candidate supersedes run
+                  - strong [ref=e123]: redaction-run-fixture-001
+                - listitem [ref=e124]:
+                  - generic [ref=e125]: Candidate superseded by run
+                  - strong [ref=e126]: None
+            - generic [ref=e127]:
+              - heading "Compare summary" [level=3] [ref=e128]
+              - list [ref=e129]:
+                - listitem [ref=e130]:
+                  - generic [ref=e131]: Base run
+                  - strong [ref=e132]: redaction-run-fixture-001
+                - listitem [ref=e133]:
+                  - generic [ref=e134]: Candidate run
+                  - strong [ref=e135]: redaction-run-fixture-002
+                - listitem [ref=e136]:
+                  - generic [ref=e137]: Changed pages
+                  - strong [ref=e138]: "2"
+                - listitem [ref=e139]:
+                  - generic [ref=e140]: Changed decisions
+                  - strong [ref=e141]: "4"
+                - listitem [ref=e142]:
+                  - generic [ref=e143]: Changed actions
+                  - strong [ref=e144]: "4"
+                - listitem [ref=e145]:
+                  - generic [ref=e146]: Action compare state
+                  - strong [ref=e147]: NOT_YET_AVAILABLE
+                - listitem [ref=e148]:
+                  - generic [ref=e149]: Base policy revision
+                  - strong [ref=e150]: Baseline snapshot only
+                - listitem [ref=e151]:
+                  - generic [ref=e152]: Candidate policy revision
+                  - strong [ref=e153]: Baseline snapshot only
+                - listitem [ref=e154]:
+                  - generic [ref=e155]: Candidate policy status
+                  - strong [ref=e156]: Unknown
+                - listitem [ref=e157]:
+                  - generic [ref=e158]: Comparison-only candidate
+                  - strong [ref=e159]: "No"
+                - listitem [ref=e160]:
+                  - generic [ref=e161]: Page filter
+                  - strong [ref=e162]: All
+                - listitem [ref=e163]:
+                  - generic [ref=e164]: Finding filter
+                  - strong [ref=e165]: None
+                - listitem [ref=e166]:
+                  - generic [ref=e167]: Line filter
+                  - strong [ref=e168]: None
+                - listitem [ref=e169]:
+                  - generic [ref=e170]: Token filter
+                  - strong [ref=e171]: None
+            - generic [ref=e172]:
+              - status [ref=e173]:
+                - heading "Action compare not yet available" [level=2] [ref=e175]
+                - paragraph [ref=e176]: One or more page previews are not ready yet. Re-open compare after preview rendering completes.
+              - heading "Page deltas" [level=3] [ref=e177]
+              - table [ref=e178]:
+                - rowgroup [ref=e179]:
+                  - row "Page Base findings Candidate findings Changed decisions Changed actions Decision deltas Action deltas Action compare Review changed Second review changed Preview ready delta Base preview Candidate preview Workspace links" [ref=e180]:
+                    - columnheader "Page" [ref=e181]
+                    - columnheader "Base findings" [ref=e182]
+                    - columnheader "Candidate findings" [ref=e183]
+                    - columnheader "Changed decisions" [ref=e184]
+                    - columnheader "Changed actions" [ref=e185]
+                    - columnheader "Decision deltas" [ref=e186]
+                    - columnheader "Action deltas" [ref=e187]
+                    - columnheader "Action compare" [ref=e188]
+                    - columnheader "Review changed" [ref=e189]
+                    - columnheader "Second review changed" [ref=e190]
+                    - columnheader "Preview ready delta" [ref=e191]
+                    - columnheader "Base preview" [ref=e192]
+                    - columnheader "Candidate preview" [ref=e193]
+                    - columnheader "Workspace links" [ref=e194]
+                - rowgroup [ref=e195]:
+                  - row "1 1 1 2 2 NEEDS_REVIEW +1 APPROVED -1 MASK -1 PSEUDONYMIZE +1 AVAILABLE YES NO 0 READY READY Open candidate Open base" [ref=e196]:
+                    - cell "1" [ref=e197]
+                    - cell "1" [ref=e198]
+                    - cell "1" [ref=e199]
+                    - cell "2" [ref=e200]
+                    - cell "2" [ref=e201]
+                    - cell "NEEDS_REVIEW +1 APPROVED -1" [ref=e202]:
+                      - list [ref=e203]:
+                        - listitem [ref=e204]:
+                          - generic [ref=e205]: NEEDS_REVIEW
+                          - generic [ref=e206]: "+1"
+                        - listitem [ref=e207]:
+                          - generic [ref=e208]: APPROVED
+                          - generic [ref=e209]: "-1"
+                    - cell "MASK -1 PSEUDONYMIZE +1" [ref=e210]:
+                      - list [ref=e211]:
+                        - listitem [ref=e212]:
+                          - generic [ref=e213]: MASK
+                          - generic [ref=e214]: "-1"
+                        - listitem [ref=e215]:
+                          - generic [ref=e216]: PSEUDONYMIZE
+                          - generic [ref=e217]: "+1"
+                    - cell "AVAILABLE" [ref=e218]:
+                      - generic [ref=e219]: AVAILABLE
+                    - cell "YES" [ref=e220]:
+                      - generic [ref=e221]: "YES"
+                    - cell "NO" [ref=e222]:
+                      - generic [ref=e223]: "NO"
+                    - cell "0" [ref=e224]:
+                      - generic [ref=e225]: "0"
+                    - cell "READY" [ref=e226]
+                    - cell "READY" [ref=e227]
+                    - cell "Open candidate Open base" [ref=e228]:
+                      - generic [ref=e229]:
+                        - link "Open candidate" [ref=e230] [cursor=pointer]:
+                          - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/privacy/workspace?page=1&runId=redaction-run-fixture-002
+                        - link "Open base" [ref=e231] [cursor=pointer]:
+                          - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/privacy/workspace?page=1&runId=redaction-run-fixture-001
+                  - row "2 1 1 2 2 NEEDS_REVIEW +1 OVERRIDDEN -1 MASK -1 GENERALIZE +1 NOT_YET_AVAILABLE YES YES -1 READY PENDING Open candidate Open base" [ref=e232]:
+                    - cell "2" [ref=e233]
+                    - cell "1" [ref=e234]
+                    - cell "1" [ref=e235]
+                    - cell "2" [ref=e236]
+                    - cell "2" [ref=e237]
+                    - cell "NEEDS_REVIEW +1 OVERRIDDEN -1" [ref=e238]:
+                      - list [ref=e239]:
+                        - listitem [ref=e240]:
+                          - generic [ref=e241]: NEEDS_REVIEW
+                          - generic [ref=e242]: "+1"
+                        - listitem [ref=e243]:
+                          - generic [ref=e244]: OVERRIDDEN
+                          - generic [ref=e245]: "-1"
+                    - cell "MASK -1 GENERALIZE +1" [ref=e246]:
+                      - list [ref=e247]:
+                        - listitem [ref=e248]:
+                          - generic [ref=e249]: MASK
+                          - generic [ref=e250]: "-1"
+                        - listitem [ref=e251]:
+                          - generic [ref=e252]: GENERALIZE
+                          - generic [ref=e253]: "+1"
+                    - cell "NOT_YET_AVAILABLE" [ref=e254]:
+                      - generic [ref=e255]: NOT_YET_AVAILABLE
+                    - cell "YES" [ref=e256]:
+                      - generic [ref=e257]: "YES"
+                    - cell "YES" [ref=e258]:
+                      - generic [ref=e259]: "YES"
+                    - cell "-1" [ref=e260]:
+                      - generic [ref=e261]: "-1"
+                    - cell "READY" [ref=e262]
+                    - cell "PENDING" [ref=e263]
+                    - cell "Open candidate Open base" [ref=e264]:
+                      - generic [ref=e265]:
+                        - link "Open candidate" [ref=e266] [cursor=pointer]:
+                          - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/privacy/workspace?page=2&runId=redaction-run-fixture-002
+                        - link "Open base" [ref=e267] [cursor=pointer]:
+                          - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/privacy/workspace?page=2&runId=redaction-run-fixture-001
+      - complementary [ref=e268]:
+        - paragraph [ref=e269]: Adaptive state
+        - heading "Expanded" [level=2] [ref=e270]
+        - paragraph [ref=e271]: Rail, workspace, and inspector remain visible for dense review work.
+        - list [ref=e272]:
+          - listitem [ref=e273]:
+            - generic [ref=e274]: Task context
+            - strong [ref=e275]: standard
+          - listitem [ref=e276]:
+            - generic [ref=e277]: Focus override
+            - strong [ref=e278]: "off"
+          - listitem [ref=e279]:
+            - generic [ref=e280]: Role mode
+            - strong [ref=e281]: ADMIN
+        - paragraph [ref=e282]:
+          - text: "Keyboard path:"
+          - generic [ref=e283]: Tab
+          - text: through rail, context bar, then work region.
+  - alert [ref=e284]
+```

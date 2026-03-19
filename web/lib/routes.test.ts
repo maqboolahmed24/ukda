@@ -1,8 +1,35 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  adminCapacityTestDetailPath,
+  adminCapacityTestsPath,
+  adminIncidentDetailPath,
+  adminIncidentStatusPath,
+  adminIncidentTimelinePath,
+  adminIncidentsPath,
+  adminOperationsReadinessPath,
+  adminRecoveryDrillDetailPath,
+  adminRecoveryDrillEvidencePath,
+  adminRecoveryDrillsPath,
+  adminRecoveryStatusPath,
+  adminRunbookDetailPath,
+  adminRunbooksPath,
+  adminSecurityFindingsPath,
+  adminSecurityFindingDetailPath,
+  adminSecurityRiskAcceptancesPath,
+  adminSecurityRiskAcceptanceDetailPath,
+  adminSecurityRiskAcceptanceEventsPath,
+  adminIndexQualityDetailPath,
+  adminIndexQualityPath,
+  adminIndexQualityQueryAuditsPath,
+  adminIndexQualitySummaryPath,
   approvedModelsPath,
+  projectDerivativeCandidateSnapshotsPath,
+  projectDerivativePath,
   projectDerivativeIndexPath,
+  projectDerivativePreviewPath,
+  projectDerivativesPath,
+  projectDerivativeStatusPath,
   projectEntitiesPath,
   projectEntityPath,
   projectEntityIndexPath,
@@ -33,6 +60,65 @@ import {
   projectDocumentIngestStatusPath,
   projectDocumentViewerPath
 } from "./routes";
+
+describe("admin capacity paths", () => {
+  test("builds list and detail paths for capacity runs", () => {
+    expect(adminCapacityTestsPath).toBe("/admin/capacity/tests");
+    expect(adminCapacityTestDetailPath("capacity-1")).toBe(
+      "/admin/capacity/tests/capacity-1"
+    );
+  });
+});
+
+describe("admin recovery paths", () => {
+  test("builds status/list/detail/evidence paths for recovery drills", () => {
+    expect(adminRecoveryStatusPath).toBe("/admin/recovery/status");
+    expect(adminRecoveryDrillsPath).toBe("/admin/recovery/drills");
+    expect(adminRecoveryDrillDetailPath("recovery-1")).toBe(
+      "/admin/recovery/drills/recovery-1"
+    );
+    expect(adminRecoveryDrillEvidencePath("recovery-1")).toBe(
+      "/admin/recovery/drills/recovery-1/evidence"
+    );
+  });
+});
+
+describe("admin security paths", () => {
+  test("builds findings and risk-acceptance routes", () => {
+    expect(adminSecurityFindingsPath).toBe("/admin/security/findings");
+    expect(adminSecurityFindingDetailPath("finding-1")).toBe(
+      "/admin/security/findings/finding-1"
+    );
+    expect(adminSecurityRiskAcceptancesPath).toBe(
+      "/admin/security/risk-acceptances"
+    );
+    expect(adminSecurityRiskAcceptanceDetailPath("risk-1")).toBe(
+      "/admin/security/risk-acceptances/risk-1"
+    );
+    expect(adminSecurityRiskAcceptanceEventsPath("risk-1")).toBe(
+      "/admin/security/risk-acceptances/risk-1/events"
+    );
+  });
+});
+
+describe("admin operations paths", () => {
+  test("includes readiness summary route", () => {
+    expect(adminOperationsReadinessPath).toBe("/admin/operations/readiness");
+  });
+});
+
+describe("admin runbook and incident paths", () => {
+  test("builds canonical runbook and incident detail routes", () => {
+    expect(adminRunbooksPath).toBe("/admin/runbooks");
+    expect(adminRunbookDetailPath("runbook-1")).toBe("/admin/runbooks/runbook-1");
+    expect(adminIncidentsPath).toBe("/admin/incidents");
+    expect(adminIncidentStatusPath).toBe("/admin/incidents/status");
+    expect(adminIncidentDetailPath("incident-1")).toBe("/admin/incidents/incident-1");
+    expect(adminIncidentTimelinePath("incident-1")).toBe(
+      "/admin/incidents/incident-1/timeline"
+    );
+  });
+});
 
 describe("projectDocumentViewerPath", () => {
   test("builds canonical page-only viewer paths by default", () => {
@@ -364,6 +450,21 @@ describe("index route helpers", () => {
     expect(projectEntityPath("project-1", "entity-5")).toBe(
       "/projects/project-1/entities/entity-5"
     );
+    expect(projectDerivativesPath("project-1")).toBe(
+      "/projects/project-1/derivatives"
+    );
+    expect(projectDerivativePath("project-1", "dersnap-5")).toBe(
+      "/projects/project-1/derivatives/dersnap-5"
+    );
+    expect(projectDerivativeStatusPath("project-1", "dersnap-5")).toBe(
+      "/projects/project-1/derivatives/dersnap-5/status"
+    );
+    expect(projectDerivativePreviewPath("project-1", "dersnap-5")).toBe(
+      "/projects/project-1/derivatives/dersnap-5/preview"
+    );
+    expect(
+      projectDerivativeCandidateSnapshotsPath("project-1", "dersnap-5")
+    ).toBe("/projects/project-1/derivatives/dersnap-5/candidate-snapshots");
     expect(projectSearchIndexPath("project-1", "search-5")).toBe(
       "/projects/project-1/indexes/search/search-5"
     );
@@ -372,6 +473,29 @@ describe("index route helpers", () => {
     );
     expect(projectDerivativeIndexPath("project-1", "derivative-5")).toBe(
       "/projects/project-1/indexes/derivative/derivative-5"
+    );
+  });
+});
+
+describe("admin index-quality route helpers", () => {
+  test("builds admin index-quality route family", () => {
+    expect(adminIndexQualityPath).toBe("/admin/index-quality");
+    expect(adminIndexQualitySummaryPath("project-1")).toBe(
+      "/admin/index-quality?projectId=project-1"
+    );
+    expect(adminIndexQualityDetailPath("SEARCH", "search-5")).toBe(
+      "/admin/index-quality/SEARCH/search-5"
+    );
+    expect(adminIndexQualityQueryAuditsPath("project-1")).toBe(
+      "/admin/index-quality/query-audits?projectId=project-1"
+    );
+    expect(
+      adminIndexQualityQueryAuditsPath("project-1", {
+        cursor: 25,
+        limit: 40
+      })
+    ).toBe(
+      "/admin/index-quality/query-audits?cursor=25&limit=40&projectId=project-1"
     );
   });
 });

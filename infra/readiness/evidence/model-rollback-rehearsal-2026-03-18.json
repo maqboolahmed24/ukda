@@ -1,0 +1,23 @@
+{
+  "id": "model-rollback-rehearsal-2026-03-18",
+  "status": "COMPLETED",
+  "completedAt": "2026-03-18T23:18:00+00:00",
+  "modelRole": "TRANSCRIPTION_PRIMARY",
+  "ownerUserId": "user-model-ops-owner",
+  "approvedModelLifecycleOwnerUserId": "user-model-governance-owner",
+  "summary": "Rolled primary transcription VLM to prior approved artifact and validated ingest-to-review smoke checks.",
+  "evidence": [
+    {
+      "label": "Model stack contract",
+      "path": "MODEL_STACK.md"
+    },
+    {
+      "label": "Readiness report",
+      "path": "output/readiness/latest/readiness-report.json"
+    },
+    {
+      "label": "Release smoke report",
+      "path": "output/smoke/latest/release-smoke-report.json"
+    }
+  ]
+}

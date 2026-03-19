@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/admin/security/risk-acceptances/[riskAcceptanceId]/review-schedule/route": "app/(authenticated)/admin/security/risk-acceptances/[riskAcceptanceId]/review-schedule/route.js"
+}

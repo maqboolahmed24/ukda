@@ -1,0 +1,18 @@
+{
+  "/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/runs/[runId]/pages/[pageId]/preview/route": "app/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/runs/[runId]/pages/[pageId]/preview/route.js",
+  "/(authenticated)/projects/[projectId]/documents/[documentId]/pages/[pageId]/image/route": "app/(authenticated)/projects/[projectId]/documents/[documentId]/pages/[pageId]/image/route.js",
+  "/(authenticated)/projects/[projectId]/documents/[documentId]/pages/[pageId]/variants/route": "app/(authenticated)/projects/[projectId]/documents/[documentId]/pages/[pageId]/variants/route.js",
+  "/(public)/login/page": "app/(public)/login/page.js",
+  "/(authenticated)/projects/page": "app/(authenticated)/projects/page.js",
+  "/(authenticated)/admin/design-system/page": "app/(authenticated)/admin/design-system/page.js",
+  "/(authenticated)/projects/[projectId]/overview/page": "app/(authenticated)/projects/[projectId]/overview/page.js",
+  "/(authenticated)/projects/[projectId]/jobs/page": "app/(authenticated)/projects/[projectId]/jobs/page.js",
+  "/(authenticated)/projects/[projectId]/settings/page": "app/(authenticated)/projects/[projectId]/settings/page.js",
+  "/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/workspace/page": "app/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/workspace/page.js",
+  "/(authenticated)/projects/[projectId]/documents/[documentId]/layout/workspace/page": "app/(authenticated)/projects/[projectId]/documents/[documentId]/layout/workspace/page.js",
+  "/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/runs/[runId]/page": "app/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/runs/[runId]/page.js",
+  "/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/compare/page": "app/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/compare/page.js",
+  "/(authenticated)/projects/[projectId]/documents/[documentId]/viewer/page": "app/(authenticated)/projects/[projectId]/documents/[documentId]/viewer/page.js",
+  "/(authenticated)/projects/[projectId]/documents/page": "app/(authenticated)/projects/[projectId]/documents/page.js",
+  "/(authenticated)/projects/[projectId]/documents/[documentId]/ingest-status/page": "app/(authenticated)/projects/[projectId]/documents/[documentId]/ingest-status/page.js"
+}

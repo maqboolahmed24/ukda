@@ -1,0 +1,146 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - link "Skip to work region" [ref=e3] [cursor=pointer]:
+      - /url: "#ukde-shell-work-region"
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - paragraph [ref=e6]: Queue Drain Shared Storage 201006
+        - paragraph [ref=e7]: Project workspace
+      - generic [ref=e8]:
+        - group "Global command controls" [ref=e9]:
+          - button "Project switcher" [ref=e10] [cursor=pointer]
+          - button "Command bar" [ref=e11] [cursor=pointer]:
+            - generic [ref=e12]: Command bar
+            - generic [ref=e13]: ⌘/Ctrl + K
+        - 'button "Theme preference: System (Light). Click to switch to Dark." [ref=e15] [cursor=pointer]':
+          - img [ref=e17]
+        - link "Help" [ref=e19] [cursor=pointer]:
+          - /url: /health
+        - generic [ref=e20]:
+          - generic [ref=e21]: Env Development
+          - generic [ref=e22]: Tier Controlled
+          - generic [ref=e23]: Compact
+        - group [ref=e24]:
+          - generic "User menu" [ref=e25] [cursor=pointer]: Dev Admin
+    - generic [ref=e26]:
+      - complementary [ref=e27]:
+        - paragraph [ref=e28]: Navigation
+        - navigation "Primary navigation" [ref=e29]:
+          - list [ref=e30]:
+            - listitem [ref=e31]:
+              - link [ref=e32] [cursor=pointer]:
+                - /url: /projects
+                - generic [ref=e33]: P
+            - listitem [ref=e34]:
+              - link [ref=e35] [cursor=pointer]:
+                - /url: /activity
+                - generic [ref=e36]: M
+            - listitem [ref=e37]:
+              - link [ref=e38] [cursor=pointer]:
+                - /url: /approved-models
+                - generic [ref=e39]: A
+            - listitem [ref=e40]:
+              - link [ref=e41] [cursor=pointer]:
+                - /url: /admin
+                - generic [ref=e42]: A
+      - generic [ref=e43]:
+        - navigation "Project context" [ref=e44]:
+          - list [ref=e45]:
+            - listitem [ref=e46]:
+              - link "Overview" [ref=e47] [cursor=pointer]:
+                - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/overview
+            - listitem [ref=e48]:
+              - link "Documents" [ref=e49] [cursor=pointer]:
+                - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/documents
+            - listitem [ref=e50]:
+              - link "Model assignments" [ref=e51] [cursor=pointer]:
+                - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/model-assignments
+            - listitem [ref=e52]:
+              - link "Search" [ref=e53] [cursor=pointer]:
+                - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/search
+            - listitem [ref=e54]:
+              - link "Entities" [ref=e55] [cursor=pointer]:
+                - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/entities
+            - listitem [ref=e56]:
+              - link "Indexes" [ref=e57] [cursor=pointer]:
+                - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/indexes
+            - listitem [ref=e58]:
+              - link "Policies" [ref=e59] [cursor=pointer]:
+                - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/policies
+            - listitem [ref=e60]:
+              - link "Pseudonym registry" [ref=e61] [cursor=pointer]:
+                - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/pseudonym-registry
+            - listitem [ref=e62]:
+              - link "Jobs" [ref=e63] [cursor=pointer]:
+                - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/jobs
+            - listitem [ref=e64]:
+              - link "Export candidates" [ref=e65] [cursor=pointer]:
+                - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/export-candidates
+            - listitem [ref=e66]:
+              - link "Export requests" [ref=e67] [cursor=pointer]:
+                - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/export-requests
+            - listitem [ref=e68]:
+              - link "Export review" [ref=e69] [cursor=pointer]:
+                - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/export-review
+            - listitem [ref=e70]:
+              - link "Activity" [ref=e71] [cursor=pointer]:
+                - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/activity
+            - listitem [ref=e72]:
+              - link "Settings" [ref=e73] [cursor=pointer]:
+                - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/settings
+        - generic [ref=e75]:
+          - generic [ref=e76]:
+            - generic [ref=e77]:
+              - paragraph [ref=e78]: Projects / Queue Drain Shared Storage 201006
+              - heading "Import" [level=1] [ref=e191]
+              - paragraph [ref=e80]: Dedicated route for controlled ingest and scan validation workflows.
+              - navigation "Breadcrumb" [ref=e82]:
+                - list [ref=e83]:
+                  - listitem [ref=e84]:
+                    - link "Projects" [ref=e85] [cursor=pointer]:
+                      - /url: /projects
+                    - text: /
+                  - listitem [ref=e86]:
+                    - link "Queue Drain Shared Storage 201006" [ref=e87] [cursor=pointer]:
+                      - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/overview
+                    - text: /
+                  - listitem [ref=e120]:
+                    - link "Documents" [ref=e192] [cursor=pointer]:
+                      - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/documents
+                    - text: /
+                  - listitem [ref=e193]:
+                    - generic [ref=e194]: Import
+            - link "Back to documents" [ref=e195] [cursor=pointer]:
+              - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/documents
+          - main [ref=e196]:
+            - generic [ref=e197]:
+              - paragraph [ref=e198]: Documents / Import
+              - heading "Controlled upload pipeline" [level=2] [ref=e199]
+              - paragraph [ref=e200]: Upload is validated server-side, stored in controlled raw storage, scanned, and then handed to document processing.
+            - generic [ref=e201]:
+              - heading "Workflow steps" [level=3] [ref=e202]
+              - list "Import steps" [ref=e203]:
+                - listitem [ref=e204]: 1. Select files
+                - listitem [ref=e205]: 2. Confirm metadata and destination project
+                - listitem [ref=e206]: 3. Upload and status
+            - generic [ref=e216]:
+              - 'heading "Step 2: Confirm upload metadata" [level=3] [ref=e217]'
+              - list [ref=e218]:
+                - listitem [ref=e219]:
+                  - generic [ref=e220]: Project
+                  - strong [ref=e221]: 8477beab-7e04-481a-a283-ef66c9e5cea6
+                - listitem [ref=e222]:
+                  - generic [ref=e223]: Filename
+                  - strong [ref=e224]: UK_Bank_statement_20-Jan-26.pdf
+                - listitem [ref=e225]:
+                  - generic [ref=e226]: Size
+                  - strong [ref=e227]: 344.5 KB
+                - listitem [ref=e228]:
+                  - generic [ref=e229]: Client type
+                  - strong [ref=e230]: application/pdf
+              - generic [ref=e231]:
+                - button "Back" [ref=e232] [cursor=pointer]
+                - link "Cancel" [ref=e233] [cursor=pointer]:
+                  - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/documents
+                - button "Upload" [ref=e234] [cursor=pointer]
+  - alert [ref=e118]

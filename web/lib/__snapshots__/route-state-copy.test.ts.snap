@@ -27,6 +27,12 @@ exports[`route state copy contract > keeps route-level copy stable 1`] = `
       "summary": "The project shell remains mounted. Retry this route or return to overview.",
       "title": "Project surface failed to load",
     },
+    "projectDerivatives": {
+      "eyebrow": "Route boundary",
+      "retryLabel": "Retry route",
+      "summary": "Safeguarded derivative content failed while project shell context stayed mounted.",
+      "title": "Derivative route failed",
+    },
     "projectDocumentIngestStatus": {
       "eyebrow": "Route boundary",
       "retryLabel": "Retry route",
@@ -78,6 +84,11 @@ exports[`route state copy contract > keeps route-level copy stable 1`] = `
       "eyebrow": "Loading project route",
       "summary": "Project context remains mounted while section data resolves.",
       "title": "Preparing project workspace",
+    },
+    "projectDerivatives": {
+      "eyebrow": "Loading derivatives route",
+      "summary": "Derivative snapshots and preview context remain stable while safeguarded index data resolves.",
+      "title": "Preparing safeguarded derivatives",
     },
     "projectDocument": {
       "eyebrow": "Loading document detail",

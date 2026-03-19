@@ -1,0 +1,78 @@
+{
+  "routeKey": "admin_design_system",
+  "url": "http://127.0.0.1:3100/admin/design-system",
+  "title": "UKDE",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "bodyOverflowX": 0,
+  "bodyOverflowY": 0,
+  "pageOverflowX": 0,
+  "pageOverflowY": 0,
+  "mainClass": "homeLayout dsPage",
+  "mainOverflowX": 0,
+  "mainOverflowY": 0,
+  "totalButtons": 28,
+  "totalLinks": 23,
+  "topOverflowElements": [
+    {
+      "selector": "p.authenticatedShellTitle",
+      "overflowX": 0,
+      "overflowY": 1,
+      "width": 541,
+      "height": 21
+    },
+    {
+      "selector": "aside.adminConsoleRail.ukde-panel",
+      "overflowX": 0,
+      "overflowY": 463,
+      "width": 315,
+      "height": 781
+    },
+    {
+      "selector": "div.adminConsoleContent",
+      "overflowX": 0,
+      "overflowY": 6496,
+      "width": 592,
+      "height": 783
+    },
+    {
+      "selector": "h1",
+      "overflowX": 0,
+      "overflowY": 1,
+      "width": 99,
+      "height": 136
+    },
+    {
+      "selector": "p.ukde-muted",
+      "overflowX": 0,
+      "overflowY": 11,
+      "width": 226,
+      "height": 34
+    },
+    {
+      "selector": "p.ukde-text-shell-title",
+      "overflowX": 0,
+      "overflowY": 1,
+      "width": 226,
+      "height": 59
+    },
+    {
+      "selector": "p.ukde-text-page-title",
+      "overflowX": 0,
+      "overflowY": 1,
+      "width": 226,
+      "height": 54
+    },
+    {
+      "selector": "caption.ukde-visually-hidden",
+      "overflowX": 126,
+      "overflowY": 16,
+      "width": 1,
+      "height": 1
+    }
+  ],
+  "navigationError": null,
+  "consoleErrors": []
+}

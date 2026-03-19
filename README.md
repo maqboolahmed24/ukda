@@ -16,7 +16,9 @@ The active build posture is web-first. Product behavior, governance rules, and l
 - Auth and session boundary design: [`/docs/architecture/auth-session-boundaries.md`](./docs/architecture/auth-session-boundaries.md)
 - Audit event model and integrity baseline: [`/docs/architecture/audit-logging-and-integrity.md`](./docs/architecture/audit-logging-and-integrity.md)
 - Observability baseline and operations surfaces: [`/docs/architecture/observability-and-operations.md`](./docs/architecture/observability-and-operations.md)
+- Resilience/recovery drills and degraded-mode contract: [`/docs/architecture/resilience-recovery-drills-and-degraded-mode-contract.md`](./docs/architecture/resilience-recovery-drills-and-degraded-mode-contract.md)
 - Secure-setting enforcement baseline: [`/docs/architecture/secure-setting-enforcement-baseline.md`](./docs/architecture/secure-setting-enforcement-baseline.md)
+- Security findings/risk-acceptance and boundary-hardening contract: [`/docs/architecture/security-findings-risk-acceptance-and-boundary-hardening-contract.md`](./docs/architecture/security-findings-risk-acceptance-and-boundary-hardening-contract.md)
 - Export request/release-pack/revision lineage contract: [`/docs/architecture/export-request-release-pack-and-lineage-contract.md`](./docs/architecture/export-request-release-pack-and-lineage-contract.md)
 - Export review dashboard/SLA/decision workflow contract: [`/docs/architecture/export-review-dashboard-sla-and-decision-workflow-contract.md`](./docs/architecture/export-review-dashboard-sla-and-decision-workflow-contract.md)
 - Export operations, retention, and resubmission handoff contract: [`/docs/architecture/export-operations-retention-and-resubmission-handoff-contract.md`](./docs/architecture/export-operations-retention-and-resubmission-handoff-contract.md)
@@ -72,6 +74,8 @@ The active build posture is web-first. Product behavior, governance rules, and l
 - Policy lineage, usage, and explainability contract: [`/docs/architecture/policy-lineage-usage-and-explainability-contract.md`](./docs/architecture/policy-lineage-usage-and-explainability-contract.md)
 - Discovery index model and rebuild lifecycle contract: [`/docs/architecture/discovery-index-model-and-rebuild-lifecycle-contract.md`](./docs/architecture/discovery-index-model-and-rebuild-lifecycle-contract.md)
 - Controlled full-text search and hit provenance contract: [`/docs/architecture/controlled-full-text-search-and-hit-provenance-contract.md`](./docs/architecture/controlled-full-text-search-and-hit-provenance-contract.md)
+- Search activation/freshness/query-audit controls contract: [`/docs/architecture/search-activation-freshness-and-query-audit-controls.md`](./docs/architecture/search-activation-freshness-and-query-audit-controls.md)
+- Cross-phase production readiness audit contract: [`/docs/architecture/cross-phase-production-readiness-audit-contract.md`](./docs/architecture/cross-phase-production-readiness-audit-contract.md)
 - Search UX, result cards, jump, and highlight contract: [`/docs/architecture/search-ux-result-cards-jump-and-highlight-contract.md`](./docs/architecture/search-ux-result-cards-jump-and-highlight-contract.md)
 - Pseudonym registry schema and event model: [`/docs/architecture/pseudonym-registry-schema-and-event-model.md`](./docs/architecture/pseudonym-registry-schema-and-event-model.md)
 - Pseudonym registry controlled-access and lineage contract: [`/docs/architecture/pseudonym-registry-controlled-access-and-lineage-contract.md`](./docs/architecture/pseudonym-registry-controlled-access-and-lineage-contract.md)
@@ -94,10 +98,14 @@ The active build posture is web-first. Product behavior, governance rules, and l
 - Directory ownership and boundaries: [`/docs/architecture/repo-topology-and-boundaries.md`](./docs/architecture/repo-topology-and-boundaries.md)
 - Future route and IA extensions: [`/docs/architecture/route-map-and-user-journeys.md`](./docs/architecture/route-map-and-user-journeys.md)
 - Delivery automation and merge gates: [`/docs/delivery/ci-cd-quality-gates.md`](./docs/delivery/ci-cd-quality-gates.md)
+- Release automation and promotion gates: [`/docs/delivery/release-automation-and-promotion-gates.md`](./docs/delivery/release-automation-and-promotion-gates.md)
+- Production ship/no-ship launch review: [`/docs/delivery/production-launch-ship-no-ship-review.md`](./docs/delivery/production-launch-ship-no-ship-review.md)
 - Internal preview posture: [`/docs/delivery/preview-environments.md`](./docs/delivery/preview-environments.md)
 - Local secure development workflow: [`/docs/development/local-secure-dev.md`](./docs/development/local-secure-dev.md)
 - Browser regression workflow: [`/docs/development/browser-regression-testing.md`](./docs/development/browser-regression-testing.md)
+- Non-prod seed data and release smoke suites: [`/docs/development/nonprod-seed-data-and-release-smoke-suites.md`](./docs/development/nonprod-seed-data-and-release-smoke-suites.md)
 - Deployment and operations runbooks: [`/docs/runbooks/deployment-runbook.md`](./docs/runbooks/deployment-runbook.md), [`/docs/runbooks/key-rotation-runbook.md`](./docs/runbooks/key-rotation-runbook.md), [`/docs/runbooks/backup-restore-runbook.md`](./docs/runbooks/backup-restore-runbook.md)
+- Production launch handover and post-launch guardrails runbook: [`/docs/runbooks/production-launch-handover-and-post-launch-guardrails.md`](./docs/runbooks/production-launch-handover-and-post-launch-guardrails.md)
 - Privacy regression triage runbook: [`/docs/runbooks/privacy-regression-triage.md`](./docs/runbooks/privacy-regression-triage.md)
 - Provenance replay drill and recovery runbook: [`/docs/runbooks/provenance-replay-drill-and-bundle-validation-recovery.md`](./docs/runbooks/provenance-replay-drill-and-bundle-validation-recovery.md)
 - Model service-map foundation: [`/MODEL_STACK.md`](./MODEL_STACK.md)
@@ -106,7 +114,7 @@ The active build posture is web-first. Product behavior, governance rules, and l
 
 - [`/web`](./web): Next.js App Router frontend
 - [`/api`](./api): FastAPI service skeleton
-- [`/workers`](./workers): queue worker runtime for ingest, preprocessing, and layout-analysis jobs
+- [`/workers`](./workers): queue worker runtime for ingest, preprocessing, layout-analysis, and transcription jobs
 - [`/packages/ui`](./packages/ui): shared tokens and browser primitives bootstrap
 - [`/packages/contracts`](./packages/contracts): shared TypeScript contract bootstrap
 - [`/infra`](./infra): infrastructure placeholders for containerization and environment separation
@@ -183,7 +191,14 @@ source .venv/bin/activate
 ukde-worker status
 ```
 
-Run one worker pass:
+Run the persistent worker loop (required to continuously drain queue jobs):
+
+```bash
+source .venv/bin/activate
+ukde-worker run
+```
+
+Run one worker pass for diagnostics:
 
 ```bash
 source .venv/bin/activate
@@ -207,11 +222,13 @@ ukde-provenance-replay <project_id> <export_request_id> <bundle_id> --profile <p
 The entry resolver route `/` is auth-aware: unauthenticated users go to `/login`, authenticated users go to `/projects`.
 The operational diagnostic route is `/health` and reads live status from the API.
 The safe error route is `/error`.
-Project workspace routes include `/projects/:projectId/overview`, `/projects/:projectId/documents`, `/projects/:projectId/documents/import`, `/projects/:projectId/documents/:documentId`, `/projects/:projectId/documents/:documentId/ingest-status`, `/projects/:projectId/documents/:documentId/viewer?page={pageNumber}`, `/projects/:projectId/documents/:documentId/preprocessing`, `/projects/:projectId/documents/:documentId/layout`, `/projects/:projectId/documents/:documentId/layout/runs/:runId`, `/projects/:projectId/documents/:documentId/layout/workspace?page={pageNumber}&runId={runId}`, `/projects/:projectId/search`, `/projects/:projectId/policies`, `/projects/:projectId/policies/active`, `/projects/:projectId/policies/:policyId`, `/projects/:projectId/policies/:policyId/compare?against={otherPolicyId}`, `/projects/:projectId/policies/:policyId/compare?againstBaselineSnapshotId={baselineSnapshotId}`, `/projects/:projectId/indexes`, `/projects/:projectId/indexes/search/:indexId`, `/projects/:projectId/indexes/entity/:indexId`, `/projects/:projectId/indexes/derivative/:indexId`, `/projects/:projectId/pseudonym-registry`, `/projects/:projectId/pseudonym-registry/:entryId`, `/projects/:projectId/pseudonym-registry/:entryId/events`, `/projects/:projectId/jobs`, `/projects/:projectId/jobs/:jobId`, `/projects/:projectId/activity`, and permission-scoped `/projects/:projectId/settings`.
+Project workspace routes include `/projects/:projectId/overview`, `/projects/:projectId/documents`, `/projects/:projectId/documents/import`, `/projects/:projectId/documents/:documentId`, `/projects/:projectId/documents/:documentId/ingest-status`, `/projects/:projectId/documents/:documentId/viewer?page={pageNumber}`, `/projects/:projectId/documents/:documentId/preprocessing`, `/projects/:projectId/documents/:documentId/layout`, `/projects/:projectId/documents/:documentId/layout/runs/:runId`, `/projects/:projectId/documents/:documentId/layout/workspace?page={pageNumber}&runId={runId}`, `/projects/:projectId/search`, `/projects/:projectId/derivatives`, `/projects/:projectId/derivatives/:derivativeId`, `/projects/:projectId/derivatives/:derivativeId/status`, `/projects/:projectId/derivatives/:derivativeId/preview`, `/projects/:projectId/policies`, `/projects/:projectId/policies/active`, `/projects/:projectId/policies/:policyId`, `/projects/:projectId/policies/:policyId/compare?against={otherPolicyId}`, `/projects/:projectId/policies/:policyId/compare?againstBaselineSnapshotId={baselineSnapshotId}`, `/projects/:projectId/indexes`, `/projects/:projectId/indexes/search/:indexId`, `/projects/:projectId/indexes/entity/:indexId`, `/projects/:projectId/indexes/derivative/:indexId`, `/projects/:projectId/pseudonym-registry`, `/projects/:projectId/pseudonym-registry/:entryId`, `/projects/:projectId/pseudonym-registry/:entryId/events`, `/projects/:projectId/jobs`, `/projects/:projectId/jobs/:jobId`, `/projects/:projectId/activity`, and permission-scoped `/projects/:projectId/settings`.
 Phase 8/9 requester and reviewer routes include `/projects/:projectId/export-candidates`, `/projects/:projectId/export-requests`, `/projects/:projectId/export-review`, receipt read surfaces under `/projects/:projectId/export-requests/:exportRequestId/{receipt|receipts}`, provenance surfaces under `/projects/:projectId/export-requests/:exportRequestId/provenance` plus `/projects/:projectId/export-requests/:exportRequestId/provenance/{proof|proofs}`, and deposit-bundle surfaces under `/projects/:projectId/export-requests/:exportRequestId/bundles` with detail/status/events/verification/validation by `bundleId` (`/verification`, `/verification/status`, `/verification-runs`, `/verification/{verificationRunId}`, `/verification/{verificationRunId}/status`, `/validation`, `/validation-status?profile=...`, `/validation-runs?profile=...`, `/validation-runs/{validationRunId}`, `/validation-runs/{validationRunId}/status`). Review-stage mutations remain optimistic-lock protected, receipt attachment remains internal gateway-only, provenance-proof regeneration is `ADMIN`-only, bundle verification start/cancel is `ADMIN`-only, bundle validation start/cancel is `ADMIN`-only, and `CONTROLLED_EVIDENCE` bundle build/read plus verification/validation reads are restricted to `ADMIN` and read-only `AUDITOR`.
 Audit routes include `/admin/audit`, `/admin/audit/:eventId`, and current-user `/activity`.
-Operations routes include `/admin/operations`, `/admin/operations/export-status`, `/admin/operations/slos`, `/admin/operations/alerts`, and `/admin/operations/timelines`.
-Security route includes `/admin/security`.
+Operations routes include `/admin/operations`, `/admin/operations/readiness`, `/admin/operations/export-status`, `/admin/operations/slos`, `/admin/operations/alerts`, and `/admin/operations/timelines`.
+Launch operations routes include `/admin/runbooks`, `/admin/runbooks/:runbookId`, `/admin/incidents`, `/admin/incidents/status`, `/admin/incidents/:incidentId`, and `/admin/incidents/:incidentId/timeline`.
+Recovery routes include `/admin/recovery/status`, `/admin/recovery/drills`, `/admin/recovery/drills/:drillId`, and `/admin/recovery/drills/:drillId/evidence`.
+Security routes include `/admin/security`, `/admin/security/findings`, `/admin/security/findings/:findingId`, `/admin/security/risk-acceptances`, `/admin/security/risk-acceptances/:riskAcceptanceId`, and `/admin/security/risk-acceptances/:riskAcceptanceId/events`.
 The web app expects the API at `http://127.0.0.1:8000` by default.
 Use `NEXT_PUBLIC_UKDE_API_ORIGIN` for browser-visible API URLs and `UKDE_API_ORIGIN_INTERNAL` for server-side fetches (for example `http://api:8000` in containerized smoke mode).
 
@@ -234,6 +251,7 @@ Validate images and deployment manifests:
 ```bash
 make verify-images
 make render-manifests
+make launch-package
 ```
 
 Direct JS and Python commands remain available when you want narrower feedback loops.
@@ -259,6 +277,9 @@ make test-preprocess-gold
 make test-privacy-regression
 make test-governance-integrity
 make test-export-hardening
+make smoke-release TARGET_ENV=staging
+make seed-nonprod-validate TARGET_ENV=staging
+make release-gate RELEASE_MODE=promote SOURCE_ENV=dev TARGET_ENV=staging
 python -m pytest api/tests
 python -m pytest workers/tests
 ```
@@ -275,6 +296,7 @@ python -m pytest workers/tests
 
 - GitHub workflows: [`/.github/workflows`](./.github/workflows)
 - Helm deployment skeleton: [`/infra/helm/ukde`](./infra/helm/ukde)
+- Non-production synthetic seed packs: [`/infra/seeds/nonprod`](./infra/seeds/nonprod)
 - Local runtime stack: [`/docker-compose.yml`](./docker-compose.yml)
 - Local CI entrypoint: [`/Makefile`](./Makefile)
 - Python CI lock: [`/requirements/python-ci.lock`](./requirements/python-ci.lock)

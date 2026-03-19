@@ -1,0 +1,124 @@
+{
+  "checkCount": 7,
+  "checks": [
+    {
+      "command": ".venv/bin/python -m pytest -q api/tests/test_auth.py api/tests/test_projects_service.py",
+      "detail": "Smoke check passed.",
+      "durationSeconds": 3.68,
+      "evidence": [
+        {
+          "label": "Execution log",
+          "path": "output/smoke/latest/logs/auth-project-access.log",
+          "sha256": "9162cbb0798e429ae3d8aa14d12bf2e40597036cc077d1bb750d0ae04c23d2f6"
+        }
+      ],
+      "exitCode": 0,
+      "id": "auth-project-access",
+      "status": "PASS",
+      "title": "Auth and project access sanity"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q api/tests/test_documents_routes.py",
+      "detail": "Smoke check passed.",
+      "durationSeconds": 4.968,
+      "evidence": [
+        {
+          "label": "Execution log",
+          "path": "output/smoke/latest/logs/ingest-document-handling.log",
+          "sha256": "a7688bd42f8ab0c544f8801d2eec37810b4ec343275d32008804d8d03342d244"
+        }
+      ],
+      "exitCode": 0,
+      "id": "ingest-document-handling",
+      "status": "PASS",
+      "title": "Ingest and document-handling sanity"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q api/tests/test_transcription_gold_set.py api/tests/test_documents_redaction_phase5_rules.py api/tests/test_governance_integrity.py",
+      "detail": "Smoke check passed.",
+      "durationSeconds": 0.704,
+      "evidence": [
+        {
+          "label": "Execution log",
+          "path": "output/smoke/latest/logs/transcription-privacy-governance.log",
+          "sha256": "9a3610701d57b402bb027ced4c94e710e8a43759f3a5556b7f9fc8a5d1b4aa32"
+        }
+      ],
+      "exitCode": 0,
+      "id": "transcription-privacy-governance",
+      "status": "PASS",
+      "title": "Transcription/privacy/governance happy-path sanity"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q api/tests/test_export_routes.py",
+      "detail": "Smoke check passed.",
+      "durationSeconds": 3.774,
+      "evidence": [
+        {
+          "label": "Execution log",
+          "path": "output/smoke/latest/logs/export-review-sanity.log",
+          "sha256": "9632c15ea1e1f6d611342a22ded6ed25b917edd45584142a7d7b86d21fc676f9"
+        }
+      ],
+      "exitCode": 0,
+      "id": "export-review-sanity",
+      "status": "PASS",
+      "title": "Export request and review flow sanity"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q api/tests/test_outbound_policy.py api/tests/test_export_hardening_regression.py",
+      "detail": "Smoke check passed.",
+      "durationSeconds": 18.385,
+      "evidence": [
+        {
+          "label": "Execution log",
+          "path": "output/smoke/latest/logs/egress-no-bypass-sanity.log",
+          "sha256": "e1bfca3cea651bde208995e096a24f5717c17df858c1840e2df686eac86878de"
+        }
+      ],
+      "exitCode": 0,
+      "id": "egress-no-bypass-sanity",
+      "status": "PASS",
+      "title": "No-bypass controls sanity"
+    },
+    {
+      "command": ".venv/bin/python -m pytest -q api/tests/test_operations_routes.py api/tests/test_security_routes.py api/tests/test_capacity_routes.py api/tests/test_recovery_routes.py",
+      "detail": "Smoke check passed.",
+      "durationSeconds": 17.29,
+      "evidence": [
+        {
+          "label": "Execution log",
+          "path": "output/smoke/latest/logs/admin-operations-status-sanity.log",
+          "sha256": "35f140367eb7b03eb64c3050b39b9ba3b2fcbea8eddd641015fa84cb93113105"
+        }
+      ],
+      "exitCode": 0,
+      "id": "admin-operations-status-sanity",
+      "status": "PASS",
+      "title": "Admin operations/status sanity"
+    },
+    {
+      "command": "pnpm -s vitest run web/lib/routes.test.ts web/lib/admin-console.test.ts web/lib/command-registry.test.ts web/lib/data/query-keys.test.ts packages/contracts/src/index.test.ts",
+      "detail": "Smoke check passed.",
+      "durationSeconds": 2.238,
+      "evidence": [
+        {
+          "label": "Execution log",
+          "path": "output/smoke/latest/logs/admin-shell-surface-sanity.log",
+          "sha256": "0b7f0331529324091444f6e11c1be780e7ea043671f2a54e84eca1aedee16539"
+        }
+      ],
+      "exitCode": 0,
+      "id": "admin-shell-surface-sanity",
+      "status": "PASS",
+      "title": "Admin shell route and command surface sanity"
+    }
+  ],
+  "detail": "Release smoke suite passed.",
+  "failureCount": 0,
+  "failures": [],
+  "generatedAt": "2026-03-18T23:48:02.209361+00:00",
+  "overallStatus": "PASS",
+  "profile": "prod",
+  "suiteVersion": "release-smoke-v1"
+}

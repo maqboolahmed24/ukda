@@ -1,0 +1,180 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - link "Skip to work region" [ref=e3] [cursor=pointer]:
+    - /url: "#ukde-shell-work-region"
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - paragraph [ref=e6]: Victorian Parish Registers
+      - paragraph [ref=e7]: Project workspace
+    - generic [ref=e8]:
+      - group "Global command controls" [ref=e9]:
+        - button "Project switcher" [ref=e10] [cursor=pointer]
+        - button "Command bar" [ref=e11] [cursor=pointer]:
+          - generic [ref=e12]: Command bar
+          - generic [ref=e13]: ⌘/Ctrl + K
+      - 'button "Theme preference: System (Dark). Click to switch to Dark." [ref=e15] [cursor=pointer]':
+        - img [ref=e17]
+      - link "Help" [ref=e19] [cursor=pointer]:
+        - /url: /health
+      - generic [ref=e20]:
+        - generic [ref=e21]: Env Test
+        - generic [ref=e22]: Tier Controlled
+        - generic [ref=e23]: Expanded
+      - group [ref=e24]:
+        - generic "User menu" [ref=e25] [cursor=pointer]: Fixture Admin
+  - generic [ref=e26]:
+    - complementary [ref=e27]:
+      - paragraph [ref=e28]: Navigation
+      - navigation "Primary navigation" [ref=e29]:
+        - list [ref=e30]:
+          - listitem [ref=e31]:
+            - link "Projects" [ref=e32] [cursor=pointer]:
+              - /url: /projects
+              - generic [ref=e33]: Projects
+          - listitem [ref=e34]:
+            - link "My activity" [ref=e35] [cursor=pointer]:
+              - /url: /activity
+              - generic [ref=e36]: My activity
+          - listitem [ref=e37]:
+            - link "Approved models" [ref=e38] [cursor=pointer]:
+              - /url: /approved-models
+              - generic [ref=e39]: Approved models
+          - listitem [ref=e40]:
+            - link "Admin" [ref=e41] [cursor=pointer]:
+              - /url: /admin
+              - generic [ref=e42]: Admin
+    - generic [ref=e43]:
+      - navigation "Project context" [ref=e44]:
+        - list [ref=e45]:
+          - listitem [ref=e46]:
+            - link "Overview" [ref=e47] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/overview
+          - listitem [ref=e48]:
+            - link "Documents" [ref=e49] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/documents
+          - listitem [ref=e50]:
+            - link "Model assignments" [ref=e51] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/model-assignments
+          - listitem [ref=e52]:
+            - link "Search" [ref=e53] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/search
+          - listitem [ref=e54]:
+            - link "Entities" [ref=e55] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/entities
+          - listitem [ref=e56]:
+            - link "Derivatives" [ref=e57] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/derivatives
+          - listitem [ref=e58]:
+            - link "Indexes" [ref=e59] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/indexes
+          - listitem [ref=e60]:
+            - link "Policies" [ref=e61] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/policies
+          - listitem [ref=e62]:
+            - link "Pseudonym registry" [ref=e63] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/pseudonym-registry
+          - listitem [ref=e64]:
+            - link "Jobs" [ref=e65] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/jobs
+          - listitem [ref=e66]:
+            - link "Export candidates" [ref=e67] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/export-candidates
+          - listitem [ref=e68]:
+            - link "Export requests" [ref=e69] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/export-requests
+          - listitem [ref=e70]:
+            - link "Export review" [ref=e71] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/export-review
+          - listitem [ref=e72]:
+            - link "Activity" [ref=e73] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/activity
+          - listitem [ref=e74]:
+            - link "Settings" [ref=e75] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/settings
+      - generic [ref=e77]:
+        - generic [ref=e79]:
+          - paragraph [ref=e80]: Projects / Victorian Parish Registers
+          - heading "Jobs" [level=1] [ref=e81]
+          - paragraph [ref=e82]: Project job queue, retry lineage, and worker execution status.
+          - navigation "Breadcrumb" [ref=e84]:
+            - list [ref=e85]:
+              - listitem [ref=e86]:
+                - link "Projects" [ref=e87] [cursor=pointer]:
+                  - /url: /projects
+                - text: /
+              - listitem [ref=e88]:
+                - link "Victorian Parish Registers" [ref=e89] [cursor=pointer]:
+                  - /url: /projects/project-fixture-alpha/overview
+                - text: /
+              - listitem [ref=e90]:
+                - generic [ref=e91]: Jobs
+        - main [ref=e93]:
+          - generic [ref=e94]:
+            - paragraph [ref=e95]: Project jobs
+            - heading "Job runs" [level=2] [ref=e96]
+            - paragraph [ref=e97]: Queue state, retry lineage, and worker-executed NOOP validation runs.
+          - generic [ref=e98]:
+            - heading "Run test job" [level=2] [ref=e99]
+            - generic [ref=e100]:
+              - generic [ref=e101]:
+                - text: Logical key
+                - textbox "Logical key" [ref=e102]: noop-1773877220226
+              - generic [ref=e103]:
+                - text: Mode
+                - combobox "Mode" [ref=e104]:
+                  - option "SUCCESS" [selected]
+                  - option "FAIL_ONCE"
+                  - option "FAIL_ALWAYS"
+              - generic [ref=e105]:
+                - text: Max attempts
+                - spinbutton "Max attempts" [ref=e106]: "1"
+              - button "Enqueue NOOP" [ref=e107] [cursor=pointer]
+          - table [ref=e110]:
+            - rowgroup [ref=e111]:
+              - row "Job Type Status Attempt Created Started Finished Error Actions" [ref=e112]:
+                - columnheader "Job" [ref=e113]
+                - columnheader "Type" [ref=e114]
+                - columnheader "Status" [ref=e115]
+                - columnheader "Attempt" [ref=e116]
+                - columnheader "Created" [ref=e117]
+                - columnheader "Started" [ref=e118]
+                - columnheader "Finished" [ref=e119]
+                - columnheader "Error" [ref=e120]
+                - columnheader "Actions" [ref=e121]
+            - rowgroup [ref=e122]:
+              - row "job-fixture-001 NOOP RUNNING 1 (1/1) 2026-03-13T09:58:00.000Z 2026-03-13T09:58:03.000Z - - Retry Cancel" [ref=e123]:
+                - cell "job-fixture-001" [ref=e124]:
+                  - link "job-fixture-001" [ref=e125] [cursor=pointer]:
+                    - /url: /projects/project-fixture-alpha/jobs/job-fixture-001
+                - cell "NOOP" [ref=e126]
+                - cell "RUNNING" [ref=e127]
+                - cell "1 (1/1)" [ref=e128]
+                - cell "2026-03-13T09:58:00.000Z" [ref=e129]
+                - cell "2026-03-13T09:58:03.000Z" [ref=e130]
+                - cell "-" [ref=e131]
+                - cell "-" [ref=e132]
+                - cell "Retry Cancel" [ref=e133]:
+                  - generic [ref=e134]:
+                    - button "Retry" [disabled] [ref=e136]
+                    - button "Cancel" [ref=e138] [cursor=pointer]
+    - complementary [ref=e139]:
+      - paragraph [ref=e140]: Adaptive state
+      - heading "Expanded" [level=2] [ref=e141]
+      - paragraph [ref=e142]: Rail, workspace, and inspector remain visible for dense review work.
+      - list [ref=e143]:
+        - listitem [ref=e144]:
+          - generic [ref=e145]: Task context
+          - strong [ref=e146]: standard
+        - listitem [ref=e147]:
+          - generic [ref=e148]: Focus override
+          - strong [ref=e149]: "off"
+        - listitem [ref=e150]:
+          - generic [ref=e151]: Role mode
+          - strong [ref=e152]: ADMIN
+      - paragraph [ref=e153]:
+        - text: "Keyboard path:"
+        - generic [ref=e154]: Tab
+        - text: through rail, context bar, then work region.
+```

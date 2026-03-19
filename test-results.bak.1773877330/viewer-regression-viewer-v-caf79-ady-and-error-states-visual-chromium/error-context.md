@@ -1,0 +1,250 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - link "Skip to work region" [ref=e3] [cursor=pointer]:
+      - /url: "#ukde-shell-work-region"
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - paragraph [ref=e6]: Victorian Parish Registers
+        - paragraph [ref=e7]: Project workspace
+      - generic [ref=e8]:
+        - group "Global command controls" [ref=e9]:
+          - button "Project switcher" [ref=e10] [cursor=pointer]
+          - button "Command bar" [ref=e11] [cursor=pointer]:
+            - generic [ref=e12]: Command bar
+            - generic [ref=e13]: ⌘/Ctrl + K
+        - 'button "Theme preference: System (Dark). Click to switch to Dark." [ref=e15] [cursor=pointer]':
+          - img [ref=e17]
+        - link "Help" [ref=e19] [cursor=pointer]:
+          - /url: /health
+        - generic [ref=e20]:
+          - generic [ref=e21]: Env Test
+          - generic [ref=e22]: Tier Controlled
+          - generic [ref=e23]: Expanded
+        - group [ref=e24]:
+          - generic "User menu" [ref=e25] [cursor=pointer]: Fixture Admin
+    - generic [ref=e26]:
+      - complementary [ref=e27]:
+        - paragraph [ref=e28]: Navigation
+        - navigation "Primary navigation" [ref=e29]:
+          - list [ref=e30]:
+            - listitem [ref=e31]:
+              - link "Projects" [ref=e32] [cursor=pointer]:
+                - /url: /projects
+                - generic [ref=e33]: Projects
+            - listitem [ref=e34]:
+              - link "My activity" [ref=e35] [cursor=pointer]:
+                - /url: /activity
+                - generic [ref=e36]: My activity
+            - listitem [ref=e37]:
+              - link "Approved models" [ref=e38] [cursor=pointer]:
+                - /url: /approved-models
+                - generic [ref=e39]: Approved models
+            - listitem [ref=e40]:
+              - link "Admin" [ref=e41] [cursor=pointer]:
+                - /url: /admin
+                - generic [ref=e42]: Admin
+      - generic [ref=e43]:
+        - navigation "Project context" [ref=e44]:
+          - list [ref=e45]:
+            - listitem [ref=e46]:
+              - link "Overview" [ref=e47] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/overview
+            - listitem [ref=e48]:
+              - link "Documents" [ref=e49] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/documents
+            - listitem [ref=e50]:
+              - link "Model assignments" [ref=e51] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/model-assignments
+            - listitem [ref=e52]:
+              - link "Search" [ref=e53] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/search
+            - listitem [ref=e54]:
+              - link "Entities" [ref=e55] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/entities
+            - listitem [ref=e56]:
+              - link "Derivatives" [ref=e57] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/derivatives
+            - listitem [ref=e58]:
+              - link "Indexes" [ref=e59] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/indexes
+            - listitem [ref=e60]:
+              - link "Policies" [ref=e61] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/policies
+            - listitem [ref=e62]:
+              - link "Pseudonym registry" [ref=e63] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/pseudonym-registry
+            - listitem [ref=e64]:
+              - link "Jobs" [ref=e65] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/jobs
+            - listitem [ref=e66]:
+              - link "Export candidates" [ref=e67] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/export-candidates
+            - listitem [ref=e68]:
+              - link "Export requests" [ref=e69] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/export-requests
+            - listitem [ref=e70]:
+              - link "Export review" [ref=e71] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/export-review
+            - listitem [ref=e72]:
+              - link "Activity" [ref=e73] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/activity
+            - listitem [ref=e74]:
+              - link "Settings" [ref=e75] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/settings
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - generic [ref=e79]:
+              - paragraph [ref=e80]: Projects / Victorian Parish Registers
+              - heading "Viewer" [level=1] [ref=e81]
+              - paragraph [ref=e82]: "Deep-linkable document viewer route. Browser `page` query remains 1-based."
+              - navigation "Breadcrumb" [ref=e84]:
+                - list [ref=e85]:
+                  - listitem [ref=e86]:
+                    - link "Projects" [ref=e87] [cursor=pointer]:
+                      - /url: /projects
+                    - text: /
+                  - listitem [ref=e88]:
+                    - link "Victorian Parish Registers" [ref=e89] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/overview
+                    - text: /
+                  - listitem [ref=e90]:
+                    - link "Documents" [ref=e91] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents
+                    - text: /
+                  - listitem [ref=e92]:
+                    - link "Document" [ref=e93] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents/doc-fixture-001
+                    - text: /
+                  - listitem [ref=e94]:
+                    - link "Viewer" [ref=e95] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents/doc-fixture-001/viewer?page=1
+                    - text: /
+                  - listitem [ref=e96]:
+                    - generic [ref=e97]: Page 1
+            - link "View ingest status" [ref=e99] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/documents/doc-fixture-001/ingest-status?page=1
+          - main [ref=e101]:
+            - generic [ref=e102]:
+              - generic [ref=e103]:
+                - generic [ref=e104]:
+                  - toolbar "Document viewer controls" [ref=e105]:
+                    - button "Previous page" [disabled] [ref=e106]
+                    - button "Next page" [disabled] [ref=e107]
+                    - button "Zoom out" [ref=e108] [cursor=pointer]
+                    - button "Zoom in" [ref=e109] [cursor=pointer]
+                    - button "Fit width" [disabled] [ref=e110]
+                    - button "Rotate" [disabled] [ref=e111]
+                    - button "Filmstrip visible" [disabled] [ref=e112]
+                    - button "Inspector visible" [disabled] [ref=e113]
+                  - button "More actions" [ref=e115] [cursor=pointer]
+                - group "Viewer mode" [ref=e116]:
+                  - button "Original" [pressed] [ref=e117] [cursor=pointer]
+                  - button "Preprocessed" [ref=e118] [cursor=pointer]
+                  - button "Compare" [ref=e119] [cursor=pointer]
+                - generic [ref=e120]:
+                  - generic [ref=e121]: Page
+                  - spinbutton "Page" [ref=e122]: "1"
+                  - generic [ref=e123]: / 1
+                  - button "Go" [ref=e124] [cursor=pointer]
+                - paragraph [ref=e125]: Zoom 100%
+              - paragraph [ref=e126]
+              - paragraph [ref=e127]:
+                - text: "Shortcuts:"
+                - generic [ref=e128]: ←
+                - text: /
+                - generic [ref=e129]: →
+                - text: page,
+                - generic [ref=e130]: +
+                - text: /
+                - generic [ref=e131]: "-"
+                - text: zoom,
+                - generic [ref=e132]: R
+                - text: rotate.
+              - paragraph [ref=e133]: "Workspace mode: Expanded"
+            - region "Viewer workspace" [ref=e134]:
+              - complementary "Filmstrip" [ref=e135]:
+                - heading "Pages" [level=2] [ref=e136]
+                - status [ref=e137]:
+                  - heading "No page thumbnails" [level=2] [ref=e139]
+                  - paragraph [ref=e140]: Thumbnails appear once extraction and rendering succeed.
+              - region "Canvas" [ref=e141]:
+                - status [ref=e142]:
+                  - heading "Page 1 is still processing" [level=2] [ref=e144]
+                  - paragraph [ref=e145]: Extraction and thumbnail rendering are still in progress.
+                  - generic [ref=e147]:
+                    - link "View ingest status" [ref=e148] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents/doc-fixture-001/ingest-status?page=1
+                    - link "Open document" [ref=e149] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents/doc-fixture-001
+                    - link "Open preprocessing" [ref=e150] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents/doc-fixture-001/preprocessing
+                    - link "Back to documents" [ref=e151] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents
+              - complementary "Inspector" [ref=e152]:
+                - heading "Inspector" [level=2] [ref=e153]
+                - list [ref=e154]:
+                  - listitem [ref=e155]:
+                    - generic [ref=e156]: Document
+                    - strong [ref=e157]: diary-1871-scan.pdf
+                  - listitem [ref=e158]:
+                    - generic [ref=e159]: Current page
+                    - strong [ref=e160]: "1"
+                  - listitem [ref=e161]:
+                    - generic [ref=e162]: Total pages
+                    - strong [ref=e163]: "1"
+                  - listitem [ref=e164]:
+                    - generic [ref=e165]: Viewer mode
+                    - strong [ref=e166]: Original
+                  - listitem [ref=e167]:
+                    - generic [ref=e168]: Run context
+                    - strong [ref=e169]: Original-only mode
+                  - listitem [ref=e170]:
+                    - generic [ref=e171]: Variant status
+                    - strong [ref=e172]: N/A
+                  - listitem [ref=e173]:
+                    - generic [ref=e174]: Quality gate
+                    - strong [ref=e175]: N/A
+                  - listitem [ref=e176]:
+                    - generic [ref=e177]: Page status
+                    - strong [ref=e178]: Unavailable
+                  - listitem [ref=e179]:
+                    - generic [ref=e180]: Dimensions
+                    - strong [ref=e181]: Unavailable
+                  - listitem [ref=e182]:
+                    - generic [ref=e183]: DPI
+                    - strong [ref=e184]: Unknown
+                  - listitem [ref=e185]:
+                    - generic [ref=e186]: Rotation
+                    - strong [ref=e187]: Unavailable
+                - generic [ref=e189]: SCANNING
+                - paragraph [ref=e190]: No warnings for the resolved preprocess page result.
+                - paragraph [ref=e191]: Metrics become visible once a preprocess run result is available for this page.
+                - generic [ref=e192]:
+                  - link "Open quality table" [ref=e193] [cursor=pointer]:
+                    - /url: /projects/project-fixture-alpha/documents/doc-fixture-001/preprocessing/quality?pageSize=25
+                  - link "Open preprocessing compare" [ref=e194] [cursor=pointer]:
+                    - /url: /projects/project-fixture-alpha/documents/doc-fixture-001/preprocessing/compare?page=1
+                - paragraph [ref=e195]: Viewer compare is an in-context reading aid. Full run diagnostics remain on the canonical preprocessing compare route.
+      - complementary [ref=e196]:
+        - paragraph [ref=e197]: Adaptive state
+        - heading "Expanded" [level=2] [ref=e198]
+        - paragraph [ref=e199]: Rail, workspace, and inspector remain visible for dense review work.
+        - list [ref=e200]:
+          - listitem [ref=e201]:
+            - generic [ref=e202]: Task context
+            - strong [ref=e203]: dense
+          - listitem [ref=e204]:
+            - generic [ref=e205]: Focus override
+            - strong [ref=e206]: "off"
+          - listitem [ref=e207]:
+            - generic [ref=e208]: Role mode
+            - strong [ref=e209]: ADMIN
+        - paragraph [ref=e210]:
+          - text: "Keyboard path:"
+          - generic [ref=e211]: Tab
+          - text: through rail, context bar, then work region.
+  - alert [ref=e212]
+```

@@ -1830,6 +1830,409 @@ class ExportStore:
             ) from error
         return inserted_count
 
+    def create_or_get_derivative_candidate_snapshot(
+        self,
+        *,
+        project_id: str,
+        derivative_snapshot_id: str,
+        derivative_index_id: str,
+        derivative_kind: str,
+        source_snapshot_json: dict[str, object],
+        policy_version_ref: str,
+        storage_key: str,
+        snapshot_sha256: str,
+        suppressed_field_names: tuple[str, ...],
+        row_count: int,
+        created_by: str,
+    ) -> tuple[ExportCandidateSnapshotRecord, bool]:
+        self.ensure_schema()
+
+        snapshot_id = derivative_snapshot_id.strip()
+        index_id = derivative_index_id.strip()
+        kind = derivative_kind.strip()
+        policy_version = policy_version_ref.strip()
+        storage_ref = storage_key.strip()
+        snapshot_hash = snapshot_sha256.strip().lower()
+        if not snapshot_id:
+            raise ExportStoreConflictError("derivative_snapshot_id must be provided.")
+        if not index_id:
+            raise ExportStoreConflictError("derivative_index_id must be provided.")
+        if not kind:
+            raise ExportStoreConflictError("derivative_kind must be provided.")
+        if not policy_version:
+            raise ExportStoreConflictError("policy_version_ref must be provided.")
+        if not storage_ref:
+            raise ExportStoreConflictError("storage_key must be provided.")
+        if not snapshot_hash:
+            raise ExportStoreConflictError("snapshot_sha256 must be provided.")
+        if row_count < 0:
+            raise ExportStoreConflictError("row_count must be greater than or equal to zero.")
+
+        normalized_source_snapshot = (
+            dict(source_snapshot_json) if isinstance(source_snapshot_json, dict) else {}
+        )
+        normalized_suppressed_fields = tuple(
+            sorted(
+                {
+                    value.strip()
+                    for value in suppressed_field_names
+                    if isinstance(value, str) and value.strip()
+                }
+            )
+        )
+
+        def _first_non_empty(*keys: str) -> str | None:
+            for key in keys:
+                value = normalized_source_snapshot.get(key)
+                if isinstance(value, str):
+                    trimmed = value.strip()
+                    if trimmed:
+                        return trimmed
+            return None
+
+        source_run_id = _first_non_empty(
+            "sourceRunId",
+            "source_run_id",
+            "runId",
+            "run_id",
+        )
+        governance_run_id = _first_non_empty(
+            "governanceRunId",
+            "governance_run_id",
+        )
+        governance_manifest_id = _first_non_empty(
+            "governanceManifestId",
+            "governance_manifest_id",
+            "manifestId",
+            "manifest_id",
+        )
+        governance_ledger_id = _first_non_empty(
+            "governanceLedgerId",
+            "governance_ledger_id",
+            "ledgerId",
+            "ledger_id",
+        )
+        governance_manifest_sha256 = _first_non_empty(
+            "governanceManifestSha256",
+            "governance_manifest_sha256",
+            "manifestSha256",
+            "manifest_sha256",
+        )
+        governance_ledger_sha256 = _first_non_empty(
+            "governanceLedgerSha256",
+            "governance_ledger_sha256",
+            "ledgerSha256",
+            "ledger_sha256",
+        )
+        policy_snapshot_hash = _first_non_empty(
+            "policySnapshotHash",
+            "policy_snapshot_hash",
+        )
+        policy_id = _first_non_empty("policyId", "policy_id")
+        policy_family_id = _first_non_empty("policyFamilyId", "policy_family_id")
+        policy_version_value = (
+            _first_non_empty("policyVersion", "policy_version") or policy_version
+        )
+
+        artefact_manifest_json: dict[str, object] = {
+            "schemaVersion": 1,
+            "sourceArtefactReferences": [
+                {
+                    "sourceArtifactKind": "DERIVATIVE_SNAPSHOT",
+                    "sourceArtifactId": snapshot_id,
+                    "sourceRunId": source_run_id,
+                    "storageKey": self._sanitize_reference(storage_ref),
+                    "snapshotSha256": snapshot_hash,
+                }
+            ],
+            "fileList": [
+                {
+                    "fileName": f"{snapshot_id}.json",
+                    "fileSizeBytes": 0,
+                    "sha256": snapshot_hash,
+                    "sourceRef": self._sanitize_reference(storage_ref),
+                    "sourceKind": "DERIVATIVE_SNAPSHOT_JSON",
+                }
+            ],
+            "outputs": [
+                {
+                    "kind": kind,
+                    "rowCount": int(row_count),
+                    "suppressedFieldCount": len(normalized_suppressed_fields),
+                    "suppressedFieldNames": list(normalized_suppressed_fields),
+                }
+            ],
+            "derivativeSnapshot": {
+                "derivativeSnapshotId": snapshot_id,
+                "derivativeIndexId": index_id,
+                "derivativeKind": kind,
+                "policyVersionRef": policy_version,
+            },
+            "releaseReviewChecklist": [
+                "candidate_snapshot_pinned",
+                "policy_lineage_pinned",
+                "suppression_fields_declared",
+                "anti_join_checks_passed",
+            ],
+        }
+
+        candidate_material = {
+            "sourcePhase": "PHASE10",
+            "sourceArtifactKind": "DERIVATIVE_SNAPSHOT",
+            "sourceArtifactId": snapshot_id,
+            "candidateKind": "SAFEGUARDED_DERIVATIVE",
+            "derivativeIndexId": index_id,
+            "derivativeKind": kind,
+            "policyVersionRef": policy_version,
+            "snapshotSha256": snapshot_hash,
+            "sourceSnapshotJson": normalized_source_snapshot,
+            "suppressedFieldNames": list(normalized_suppressed_fields),
+            "rowCount": int(row_count),
+            "manifest": artefact_manifest_json,
+        }
+        candidate_sha256 = self._sha256_hex(self._canonical_json_bytes(candidate_material))
+        candidate_id = (
+            "candidate-"
+            + self._sha256_hex(
+                f"{project_id}|DERIVATIVE_SNAPSHOT|{snapshot_id}|{candidate_sha256}".encode(
+                    "utf-8"
+                )
+            )[:24]
+        )
+
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          id,
+                          project_id,
+                          source_phase,
+                          source_artifact_kind,
+                          source_run_id,
+                          source_artifact_id,
+                          governance_run_id,
+                          governance_manifest_id,
+                          governance_ledger_id,
+                          governance_manifest_sha256,
+                          governance_ledger_sha256,
+                          policy_snapshot_hash,
+                          policy_id,
+                          policy_family_id,
+                          policy_version,
+                          candidate_kind,
+                          artefact_manifest_json,
+                          candidate_sha256,
+                          eligibility_status,
+                          supersedes_candidate_snapshot_id,
+                          superseded_by_candidate_snapshot_id,
+                          created_by,
+                          created_at
+                        FROM export_candidate_snapshots
+                        WHERE project_id = %(project_id)s
+                          AND source_artifact_kind = 'DERIVATIVE_SNAPSHOT'
+                          AND source_artifact_id = %(source_artifact_id)s
+                        ORDER BY created_at DESC, id DESC
+                        LIMIT 1
+                        """,
+                        {
+                            "project_id": project_id,
+                            "source_artifact_id": snapshot_id,
+                        },
+                    )
+                    existing_row = cursor.fetchone()
+                    if existing_row is not None:
+                        existing = self._as_candidate_record(existing_row)
+                        if existing.candidate_kind != "SAFEGUARDED_DERIVATIVE":
+                            raise ExportStoreConflictError(
+                                "Derivative snapshot is already frozen as a non-derivative candidate kind."
+                            )
+                        if existing.candidate_sha256 != candidate_sha256:
+                            raise ExportStoreConflictError(
+                                "Derivative snapshot freeze payload does not match existing immutable candidate lineage."
+                            )
+                        connection.commit()
+                        return existing, False
+
+                    cursor.execute(
+                        """
+                        INSERT INTO export_candidate_snapshots (
+                          id,
+                          project_id,
+                          source_phase,
+                          source_artifact_kind,
+                          source_run_id,
+                          source_artifact_id,
+                          governance_run_id,
+                          governance_manifest_id,
+                          governance_ledger_id,
+                          governance_manifest_sha256,
+                          governance_ledger_sha256,
+                          policy_snapshot_hash,
+                          policy_id,
+                          policy_family_id,
+                          policy_version,
+                          candidate_kind,
+                          artefact_manifest_json,
+                          candidate_sha256,
+                          eligibility_status,
+                          supersedes_candidate_snapshot_id,
+                          superseded_by_candidate_snapshot_id,
+                          created_by
+                        )
+                        VALUES (
+                          %(id)s,
+                          %(project_id)s,
+                          'PHASE10',
+                          'DERIVATIVE_SNAPSHOT',
+                          %(source_run_id)s,
+                          %(source_artifact_id)s,
+                          %(governance_run_id)s,
+                          %(governance_manifest_id)s,
+                          %(governance_ledger_id)s,
+                          %(governance_manifest_sha256)s,
+                          %(governance_ledger_sha256)s,
+                          %(policy_snapshot_hash)s,
+                          %(policy_id)s,
+                          %(policy_family_id)s,
+                          %(policy_version)s,
+                          'SAFEGUARDED_DERIVATIVE',
+                          %(artefact_manifest_json)s,
+                          %(candidate_sha256)s,
+                          'ELIGIBLE',
+                          NULL,
+                          NULL,
+                          %(created_by)s
+                        )
+                        ON CONFLICT (project_id, source_artifact_kind, source_artifact_id)
+                        DO NOTHING
+                        """,
+                        {
+                            "id": candidate_id,
+                            "project_id": project_id,
+                            "source_run_id": source_run_id,
+                            "source_artifact_id": snapshot_id,
+                            "governance_run_id": governance_run_id,
+                            "governance_manifest_id": governance_manifest_id,
+                            "governance_ledger_id": governance_ledger_id,
+                            "governance_manifest_sha256": governance_manifest_sha256,
+                            "governance_ledger_sha256": governance_ledger_sha256,
+                            "policy_snapshot_hash": policy_snapshot_hash,
+                            "policy_id": policy_id,
+                            "policy_family_id": policy_family_id,
+                            "policy_version": policy_version_value,
+                            "artefact_manifest_json": artefact_manifest_json,
+                            "candidate_sha256": candidate_sha256,
+                            "created_by": created_by,
+                        },
+                    )
+                    if int(cursor.rowcount or 0) == 0:
+                        cursor.execute(
+                            """
+                            SELECT
+                              id,
+                              project_id,
+                              source_phase,
+                              source_artifact_kind,
+                              source_run_id,
+                              source_artifact_id,
+                              governance_run_id,
+                              governance_manifest_id,
+                              governance_ledger_id,
+                              governance_manifest_sha256,
+                              governance_ledger_sha256,
+                              policy_snapshot_hash,
+                              policy_id,
+                              policy_family_id,
+                              policy_version,
+                              candidate_kind,
+                              artefact_manifest_json,
+                              candidate_sha256,
+                              eligibility_status,
+                              supersedes_candidate_snapshot_id,
+                              superseded_by_candidate_snapshot_id,
+                              created_by,
+                              created_at
+                            FROM export_candidate_snapshots
+                            WHERE project_id = %(project_id)s
+                              AND source_artifact_kind = 'DERIVATIVE_SNAPSHOT'
+                              AND source_artifact_id = %(source_artifact_id)s
+                            ORDER BY created_at DESC, id DESC
+                            LIMIT 1
+                            """,
+                            {
+                                "project_id": project_id,
+                                "source_artifact_id": snapshot_id,
+                            },
+                        )
+                        race_row = cursor.fetchone()
+                        if race_row is None:
+                            raise ExportStoreUnavailableError(
+                                "Derivative candidate snapshot creation returned no row."
+                            )
+                        candidate = self._as_candidate_record(race_row)
+                        if candidate.candidate_sha256 != candidate_sha256:
+                            raise ExportStoreConflictError(
+                                "Derivative snapshot freeze payload does not match existing immutable candidate lineage."
+                            )
+                        connection.commit()
+                        return candidate, False
+
+                    cursor.execute(
+                        """
+                        SELECT
+                          id,
+                          project_id,
+                          source_phase,
+                          source_artifact_kind,
+                          source_run_id,
+                          source_artifact_id,
+                          governance_run_id,
+                          governance_manifest_id,
+                          governance_ledger_id,
+                          governance_manifest_sha256,
+                          governance_ledger_sha256,
+                          policy_snapshot_hash,
+                          policy_id,
+                          policy_family_id,
+                          policy_version,
+                          candidate_kind,
+                          artefact_manifest_json,
+                          candidate_sha256,
+                          eligibility_status,
+                          supersedes_candidate_snapshot_id,
+                          superseded_by_candidate_snapshot_id,
+                          created_by,
+                          created_at
+                        FROM export_candidate_snapshots
+                        WHERE project_id = %(project_id)s
+                          AND id = %(id)s
+                        LIMIT 1
+                        """,
+                        {
+                            "project_id": project_id,
+                            "id": candidate_id,
+                        },
+                    )
+                    inserted_row = cursor.fetchone()
+                    if inserted_row is None:
+                        raise ExportStoreUnavailableError(
+                            "Derivative candidate snapshot lookup failed after insert."
+                        )
+                    candidate = self._as_candidate_record(inserted_row)
+                connection.commit()
+        except psycopg.Error as error:
+            if self._is_undefined_table_error(error):
+                raise ExportStoreUnavailableError(
+                    "Export candidate snapshot schema is unavailable."
+                ) from error
+            raise ExportStoreUnavailableError(
+                "Derivative candidate snapshot creation failed."
+            ) from error
+
+        return candidate, True
+
     def list_candidates(
         self,
         *,

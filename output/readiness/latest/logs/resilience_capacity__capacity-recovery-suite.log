@@ -1,0 +1,15 @@
+$ .venv/bin/python -m pytest api/tests/test_capacity_routes.py api/tests/test_capacity_service.py api/tests/test_recovery_routes.py api/tests/test_recovery_service.py
+
+============================= test session starts ==============================
+platform darwin -- Python 3.14.0, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/test/Code/UKDA/api
+configfile: pyproject.toml
+plugins: anyio-4.12.1
+collected 22 items
+
+api/tests/test_capacity_routes.py ....                                   [ 18%]
+api/tests/test_capacity_service.py ....                                  [ 36%]
+api/tests/test_recovery_routes.py ..........                             [ 81%]
+api/tests/test_recovery_service.py ....                                  [100%]
+
+============================== 22 passed in 2.67s ==============================

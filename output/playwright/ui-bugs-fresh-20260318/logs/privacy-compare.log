@@ -1,0 +1,78 @@
+
+> ukde@ test:browser /Users/test/Code/UKDA
+> playwright test --project=chromium web/tests/browser/privacy-workspace-regression.spec.ts --grep 'privacy run review and compare surfaces expose blockers, lock states, and keyboard-safe focus behavior'
+
+[2m[WebServer] [22m(node:62486) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:62487) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:62493) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:62497) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:62497) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:62551) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+[2m[WebServer] [22mRead more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+[2m[WebServer] [22m(node:62576) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:62583) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:62615) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:62616) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › web/tests/browser/privacy-workspace-regression.spec.ts:194:5 › privacy run review and compare surfaces expose blockers, lock states, and keyboard-safe focus behavior @privacy @visual @a11y @keyboard @reflow (28.8s)
+[2m[WebServer] [22m(node:62625) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+  1) [chromium] › web/tests/browser/privacy-workspace-regression.spec.ts:194:5 › privacy run review and compare surfaces expose blockers, lock states, and keyboard-safe focus behavior @privacy @visual @a11y @keyboard @reflow 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: locator('main.homeLayout')
+    Expected substring: [32m"Workspace update blocked"[39m
+    Received string:    [31m"Privacy workspaceregister-volume-04.pdfFast reviewer workspace with deterministic deep links, append-only finding decisions, page approval gating, and controlled versus safeguarded preview context.Back to triageRun detailWorkspace toolbarControlled viewSafeguarded previewPrevious pageNext pageNext unresolvedHide highlightsOpen preview assetPage 1 · APPROVEDUnresolved 0PagesPage 1APPROVEDFindings 1 · Unresolved 0Current pagePage 2APPROVEDFindings 1 · Unresolved 1Open pageCanvasTranscript and findingsFinding actionsFindingred-find-base-1StatusAPPROVEDDecision etagred-find-base-1-etag-v3AnchorTOKEN_LINKEDLineline-privacy-001Tokentoken-privacy-001Approve findingOverrideFalse positivePage approvalAPPROVEDReview etagred-review-base-page-001-v3First reviewed byuser-fixture-adminSecond reviewNOT_REQUIREDRequires second reviewNoApprove pageTranscriptline-privacy-001John Adams presented testimony in York.line-privacy-002No sensitive fields were identified in this line.FindingsPERSON_NAMEred-find-base-1 · APPROVED · Anchor TOKEN_LINKEDOpen findingOpen lineOpen tokenPage timelinePAGE_APPROVED2026-03-11T16:18:45.000Z · user-fixture-adminDeep-link contextRunredaction-run-fixture-001Page1Findingred-find-base-1Lineline-privacy-001TokenNoneHighlightsShownModeSafeguarded preview"[39m
+    Timeout: 10000ms
+
+    Call log:
+    [2m  - Expect "toContainText" with timeout 10000ms[22m
+    [2m  - waiting for locator('main.homeLayout')[22m
+    [2m    12 × locator resolved to <main class="homeLayout">…</main>[22m
+    [2m       - unexpected value "Privacy workspaceregister-volume-04.pdfFast reviewer workspace with deterministic deep links, append-only finding decisions, page approval gating, and controlled versus safeguarded preview context.Back to triageRun detailWorkspace toolbarControlled viewSafeguarded previewPrevious pageNext pageNext unresolvedHide highlightsOpen preview assetPage 1 · APPROVEDUnresolved 0PagesPage 1APPROVEDFindings 1 · Unresolved 0Current pagePage 2APPROVEDFindings 1 · Unresolved 1Open pageCanvasTranscript and findingsFinding actionsFindingred-find-base-1StatusAPPROVEDDecision etagred-find-base-1-etag-v3AnchorTOKEN_LINKEDLineline-privacy-001Tokentoken-privacy-001Approve findingOverrideFalse positivePage approvalAPPROVEDReview etagred-review-base-page-001-v3First reviewed byuser-fixture-adminSecond reviewNOT_REQUIREDRequires second reviewNoApprove pageTranscriptline-privacy-001John Adams presented testimony in York.line-privacy-002No sensitive fields were identified in this line.FindingsPERSON_NAMEred-find-base-1 · APPROVED · Anchor TOKEN_LINKEDOpen findingOpen lineOpen tokenPage timelinePAGE_APPROVED2026-03-11T16:18:45.000Z · user-fixture-adminDeep-link contextRunredaction-run-fixture-001Page1Findingred-find-base-1Lineline-privacy-001TokenNoneHighlightsShownModeSafeguarded preview"[22m
+
+
+      228 |   await page.getByLabel("Decision reason").fill("Locked-run mutation attempt.");
+      229 |   await page.getByRole("button", { name: "Save decision" }).click();
+    > 230 |   await expect(page.locator("main.homeLayout")).toContainText("Workspace update blocked");
+          |                                                 ^
+      231 |   await expect(page.locator("main.homeLayout")).toContainText(
+      232 |     "Approved runs are locked and cannot be mutated."
+      233 |   );
+        at /Users/test/Code/UKDA/web/tests/browser/privacy-workspace-regression.spec.ts:230:49
+
+    Error: apiRequestContext._wrapApiCall: ENOENT: no such file or directory, open '/Users/test/Code/UKDA/test-results/.playwright-artifacts-0/traces/2a34665a3833ea4fe063-13ea0d7df7d9eb622b76.network'
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/privacy-workspace-regressi-d2854-visual-a11y-keyboard-reflow-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/privacy-workspace-regressi-d2854-visual-a11y-keyboard-reflow-chromium/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/privacy-workspace-regressi-d2854-visual-a11y-keyboard-reflow-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/privacy-workspace-regressi-d2854-visual-a11y-keyboard-reflow-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › web/tests/browser/privacy-workspace-regression.spec.ts:194:5 › privacy run review and compare surfaces expose blockers, lock states, and keyboard-safe focus behavior @privacy @visual @a11y @keyboard @reflow 
+ ELIFECYCLE  Command failed with exit code 1.

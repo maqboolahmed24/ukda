@@ -1,0 +1,161 @@
+{
+  "blockerCount": 0,
+  "blockers": [],
+  "decision": "SHIP",
+  "detail": "All blocking launch checks are satisfied.",
+  "evidencePaths": {
+    "capacityEvidence": [
+      "output/readiness/latest/logs/resilience_capacity__capacity-recovery-suite.log"
+    ],
+    "egressEvidence": [
+      "output/readiness/latest/logs/egress_controls__egress-hardening-regression.log"
+    ],
+    "readinessReport": "output/readiness/latest/readiness-report.json",
+    "releaseGateReport": "output/release-gates/latest/release-gate-report.json",
+    "securityEvidence": [
+      "output/readiness/latest/logs/security_hardening__security-findings-boundary-suite.log"
+    ],
+    "smokeReport": "output/smoke/latest/release-smoke-report.json"
+  },
+  "evidenceStatus": {
+    "capacity": "PASS",
+    "exportNoBypass": "PASS",
+    "goLiveRehearsal": "COMPLETED",
+    "incidentTabletop": "COMPLETED",
+    "modelRollbackRehearsal": "COMPLETED",
+    "readiness": "PASS",
+    "releaseGate": "PASS",
+    "security": "PASS",
+    "sloOps": "PASS"
+  },
+  "generatedAt": "2026-03-19T00:21:11.354963+00:00",
+  "noGoCriteria": [
+    {
+      "detail": "Any blocking failure in readiness matrix or release gate blocks ship.",
+      "id": "no-go-readiness-blockers",
+      "title": "Readiness blockers present"
+    },
+    {
+      "detail": "Go-live rehearsal, incident tabletop, and model rollback rehearsal must all be COMPLETED.",
+      "id": "no-go-missing-rehearsals",
+      "title": "Rehearsal evidence missing"
+    },
+    {
+      "detail": "Any unresolved SEV1/SEV2 incident blocks ship.",
+      "id": "no-go-active-sev1-sev2",
+      "title": "Active high-severity incidents"
+    }
+  ],
+  "operationalHandover": {
+    "escalationPath": [
+      {
+        "level": "L1",
+        "ownerUserId": "user-oncall-primary",
+        "targetResponseSlaMinutes": 15,
+        "title": "On-call primary"
+      },
+      {
+        "level": "L2",
+        "ownerUserId": "user-oncall-secondary",
+        "targetResponseSlaMinutes": 30,
+        "title": "On-call secondary"
+      },
+      {
+        "level": "L3",
+        "ownerUserId": "user-release-manager",
+        "targetResponseSlaMinutes": 45,
+        "title": "Platform + governance leadership"
+      }
+    ],
+    "launchDayOwnerUserId": "user-release-manager",
+    "modelOwnership": {
+      "approvedModelLifecycleOwnerUserId": "user-model-governance-owner",
+      "modelServiceMapOwnerUserId": "user-model-platform-owner",
+      "rollbackExecutionOwnerUserId": "user-model-ops-owner"
+    },
+    "onCallPrimaryUserId": "user-oncall-primary",
+    "onCallSecondaryUserId": "user-oncall-secondary"
+  },
+  "postLaunchGuardrails": [
+    {
+      "checkWindow": "T+0h to T+72h every 2h",
+      "id": "guardrail-ingest-through-export",
+      "ownerUserId": "user-release-manager",
+      "rollbackAction": "Pause promotion and execute deployment rollback procedure",
+      "title": "Ingest through export review path remains healthy",
+      "trigger": "Any smoke critical-flow check fails"
+    },
+    {
+      "checkWindow": "T+0h to T+72h every 4h",
+      "id": "guardrail-security-and-egress",
+      "ownerUserId": "user-security-owner",
+      "rollbackAction": "Block release approval and route to incident commander",
+      "title": "No-bypass egress and security findings posture remains green",
+      "trigger": "Critical/high finding without ACTIVE risk acceptance or egress denial regression failure"
+    },
+    {
+      "checkWindow": "T+0h to T+24h every 6h",
+      "id": "guardrail-model-rollback",
+      "ownerUserId": "user-model-ops-owner",
+      "rollbackAction": "Execute approved-model rollback playbook and open incident timeline",
+      "title": "Primary transcription model rollback remains executable",
+      "trigger": "SLO breach on primary transcription model with elevated fallback/error rate"
+    }
+  ],
+  "runbookLinks": [
+    {
+      "id": "runbook-release-readiness",
+      "lastReviewedAt": "2026-03-18T23:40:00+00:00",
+      "ownerUserId": "user-release-manager",
+      "slug": "release-readiness-evidence-and-blocker-policy",
+      "status": "ACTIVE",
+      "storageKey": "docs/runbooks/release-readiness-evidence-and-blocker-policy.md",
+      "title": "Release readiness evidence and blocker policy"
+    },
+    {
+      "id": "runbook-production-launch-handover",
+      "lastReviewedAt": "2026-03-18T23:59:00+00:00",
+      "ownerUserId": "user-release-manager",
+      "slug": "production-launch-handover-and-post-launch-guardrails",
+      "status": "ACTIVE",
+      "storageKey": "docs/runbooks/production-launch-handover-and-post-launch-guardrails.md",
+      "title": "Production launch handover and post-launch guardrails"
+    },
+    {
+      "id": "runbook-deployment",
+      "lastReviewedAt": "2026-03-18T23:38:00+00:00",
+      "ownerUserId": "user-sre-primary",
+      "slug": "deployment-runbook",
+      "status": "ACTIVE",
+      "storageKey": "docs/runbooks/deployment-runbook.md",
+      "title": "Deployment runbook"
+    },
+    {
+      "id": "runbook-backup-restore",
+      "lastReviewedAt": "2026-03-18T23:36:00+00:00",
+      "ownerUserId": "user-sre-secondary",
+      "slug": "backup-restore-runbook",
+      "status": "ACTIVE",
+      "storageKey": "docs/runbooks/backup-restore-runbook.md",
+      "title": "Backup and restore runbook"
+    },
+    {
+      "id": "runbook-key-rotation",
+      "lastReviewedAt": "2026-03-18T23:35:00+00:00",
+      "ownerUserId": "user-security-owner",
+      "slug": "key-rotation-runbook",
+      "status": "ACTIVE",
+      "storageKey": "docs/runbooks/key-rotation-runbook.md",
+      "title": "Key rotation runbook"
+    },
+    {
+      "id": "runbook-provenance-replay",
+      "lastReviewedAt": "2026-03-18T23:34:00+00:00",
+      "ownerUserId": "user-governance-owner",
+      "slug": "provenance-replay-drill-and-bundle-validation-recovery",
+      "status": "ACTIVE",
+      "storageKey": "docs/runbooks/provenance-replay-drill-and-bundle-validation-recovery.md",
+      "title": "Provenance replay drill and bundle validation recovery"
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "version": "nonprod-seed-pack-v1",
+  "classification": "SYNTHETIC_ONLY",
+  "allowedEnvironments": ["dev", "staging"],
+  "users": [
+    {
+      "oidcSub": "seed-nonprod-admin-001",
+      "email": "seed-admin-001@example.invalid",
+      "displayName": "Seed Admin 001",
+      "platformRoles": ["ADMIN"]
+    },
+    {
+      "oidcSub": "seed-nonprod-reviewer-001",
+      "email": "seed-reviewer-001@example.invalid",
+      "displayName": "Seed Reviewer 001",
+      "platformRoles": []
+    },
+    {
+      "oidcSub": "seed-nonprod-researcher-001",
+      "email": "seed-researcher-001@example.invalid",
+      "displayName": "Seed Researcher 001",
+      "platformRoles": []
+    },
+    {
+      "oidcSub": "seed-nonprod-project-lead-001",
+      "email": "seed-project-lead-001@example.invalid",
+      "displayName": "Seed Project Lead 001",
+      "platformRoles": []
+    },
+    {
+      "oidcSub": "seed-nonprod-auditor-001",
+      "email": "seed-auditor-001@example.invalid",
+      "displayName": "Seed Auditor 001",
+      "platformRoles": ["AUDITOR"]
+    }
+  ],
+  "projects": [
+    {
+      "id": "seed-nonprod-project-alpha",
+      "name": "Seed Project Alpha",
+      "purpose": "Synthetic release-smoke workspace for non-production validation.",
+      "intendedAccessTier": "CONTROLLED",
+      "createdByUserOidcSub": "seed-nonprod-admin-001",
+      "members": [
+        {
+          "userOidcSub": "seed-nonprod-project-lead-001",
+          "role": "PROJECT_LEAD"
+        },
+        {
+          "userOidcSub": "seed-nonprod-researcher-001",
+          "role": "RESEARCHER"
+        },
+        {
+          "userOidcSub": "seed-nonprod-reviewer-001",
+          "role": "REVIEWER"
+        }
+      ]
+    },
+    {
+      "id": "seed-nonprod-project-beta",
+      "name": "Seed Project Beta",
+      "purpose": "Synthetic reviewer queue and export sanity workspace for staging.",
+      "intendedAccessTier": "SAFEGUARDED",
+      "createdByUserOidcSub": "seed-nonprod-admin-001",
+      "members": [
+        {
+          "userOidcSub": "seed-nonprod-admin-001",
+          "role": "PROJECT_LEAD"
+        },
+        {
+          "userOidcSub": "seed-nonprod-reviewer-001",
+          "role": "REVIEWER"
+        }
+      ]
+    }
+  ]
+}

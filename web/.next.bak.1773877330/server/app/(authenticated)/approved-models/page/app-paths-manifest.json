@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/approved-models/page": "app/(authenticated)/approved-models/page.js"
+}

@@ -107,11 +107,13 @@ pnpm dev:web
 
 ## Containerized Smoke Path
 
-Run the full smoke stack (`db`, `api`, `web`):
+Run the full smoke stack (`db`, `api`, `workers`, `web`):
 
 ```bash
 make dev-stack-up
 ```
+
+The compose stack mounts a shared controlled-storage volume between `api` and `workers` so queued document jobs can be drained by workers without manual retries caused by missing local objects.
 
 Stop it:
 
@@ -175,7 +177,10 @@ curl -sS -X POST -H "Authorization: Bearer <session_token>" -H "Content-Type: ap
   http://127.0.0.1:8000/projects/<project_id>/jobs \
   -d '{"logical_key":"local-noop","mode":"SUCCESS","max_attempts":1,"delay_ms":0}'
 
-# run one worker pass and inspect status
+# keep a worker loop running in another terminal
+ukde-worker run
+
+# optional: run one worker pass for diagnostics
 ukde-worker run-once
 curl -sS -H "Authorization: Bearer <session_token>" http://127.0.0.1:8000/projects/<project_id>/jobs/<job_id>/status
 curl -sS -H "Authorization: Bearer <session_token>" http://127.0.0.1:8000/projects/<project_id>/jobs/<job_id>/events

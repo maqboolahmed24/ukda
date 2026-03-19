@@ -344,9 +344,6 @@ export function ProjectDocumentViewerShell({
     useState(false);
   const [comparePreprocessedImageFailed, setComparePreprocessedImageFailed] =
     useState(false);
-  const [thumbnailFailures, setThumbnailFailures] = useState<Set<string>>(
-    () => new Set()
-  );
   const [copyLinkStatus, setCopyLinkStatus] = useState<
     "idle" | "copied" | "failed"
   >("idle");
@@ -722,10 +719,6 @@ export function ProjectDocumentViewerShell({
     setZoomPercent(initialZoomPercent);
     setPanOffset({ x: 0, y: 0 });
   }, [currentPage, initialZoomPercent]);
-
-  useEffect(() => {
-    setThumbnailFailures(new Set());
-  }, [documentId, pageCount]);
 
   useEffect(() => {
     if (viewerMode === "original") {
@@ -1320,14 +1313,18 @@ export function ProjectDocumentViewerShell({
         <Link className="secondaryButton" href={currentQualityPath}>
           Open quality table
         </Link>
-        <Link className="secondaryButton" href={preferredComparePath}>
-          Open preprocessing compare
-        </Link>
+        {viewerMode === "compare" ? (
+          <Link className="secondaryButton" href={preferredComparePath}>
+            Open preprocessing compare
+          </Link>
+        ) : null}
       </div>
-      <p className="ukde-muted">
-        Viewer compare is an in-context reading aid. Full run diagnostics remain on the
-        canonical preprocessing compare route.
-      </p>
+      {viewerMode === "compare" ? (
+        <p className="ukde-muted">
+          Viewer compare is an in-context reading aid. Full run diagnostics remain on the
+          canonical preprocessing compare route.
+        </p>
+      ) : null}
     </>
   );
 
@@ -1553,7 +1550,7 @@ export function ProjectDocumentViewerShell({
               {pages.map((page) => {
                 const pageNumber = page.pageIndex + 1;
                 const thumbnailPath =
-                  page.status === "READY" && !thumbnailFailures.has(page.id)
+                  page.status === "READY"
                     ? projectDocumentPageImagePath(
                         projectId,
                         documentId,
@@ -1586,16 +1583,6 @@ export function ProjectDocumentViewerShell({
                           alt=""
                           className="documentViewerFilmstripThumb"
                           height={84}
-                          onError={() => {
-                            setThumbnailFailures((current) => {
-                              if (current.has(page.id)) {
-                                return current;
-                              }
-                              const next = new Set(current);
-                              next.add(page.id);
-                              return next;
-                            });
-                          }}
                           src={thumbnailPath}
                           width={60}
                         />
@@ -1757,7 +1744,7 @@ export function ProjectDocumentViewerShell({
             {pages.map((page) => {
               const pageNumber = page.pageIndex + 1;
               const thumbnailPath =
-                page.status === "READY" && !thumbnailFailures.has(page.id)
+                page.status === "READY"
                   ? projectDocumentPageImagePath(
                       projectId,
                       documentId,
@@ -1789,16 +1776,6 @@ export function ProjectDocumentViewerShell({
                         alt=""
                         className="documentViewerFilmstripThumb"
                         height={84}
-                        onError={() => {
-                          setThumbnailFailures((current) => {
-                            if (current.has(page.id)) {
-                              return current;
-                            }
-                            const next = new Set(current);
-                            next.add(page.id);
-                            return next;
-                          });
-                        }}
                         src={thumbnailPath}
                         width={60}
                       />

@@ -43,6 +43,12 @@ export const routeLoadingCopy = {
     summary:
       "Entity list, filters, and occurrence context remain stable while active index data resolves."
   },
+  projectDerivatives: {
+    eyebrow: "Loading derivatives route",
+    title: "Preparing safeguarded derivatives",
+    summary:
+      "Derivative snapshots and preview context remain stable while safeguarded index data resolves."
+  },
   projectDocuments: {
     eyebrow: "Loading documents route",
     title: "Preparing document surface",
@@ -114,6 +120,13 @@ export const routeErrorCopy = {
     title: "Entity discovery route failed",
     summary:
       "Entity discovery content failed while project shell context stayed mounted.",
+    retryLabel: "Retry route"
+  },
+  projectDerivatives: {
+    eyebrow: "Route boundary",
+    title: "Derivative route failed",
+    summary:
+      "Safeguarded derivative content failed while project shell context stayed mounted.",
     retryLabel: "Retry route"
   },
   projectViewer: {

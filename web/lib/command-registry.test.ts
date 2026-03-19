@@ -102,6 +102,20 @@ describe("command registry", () => {
 
     expect(
       auditorCommands.some(
+        (command) => command.id === "admin.operations.readiness"
+      )
+    ).toBe(true);
+    expect(
+      auditorCommands.some((command) => command.id === "admin.incidents")
+    ).toBe(true);
+    expect(
+      auditorCommands.some((command) => command.id === "admin.incidents.status")
+    ).toBe(true);
+    expect(
+      auditorCommands.some((command) => command.id === "admin.runbooks")
+    ).toBe(false);
+    expect(
+      auditorCommands.some(
         (command) => command.id === "admin.operations.timelines"
       )
     ).toBe(true);
@@ -111,10 +125,50 @@ describe("command registry", () => {
       )
     ).toBe(true);
     expect(
+      auditorCommands.some((command) => command.id === "admin.capacity.tests")
+    ).toBe(true);
+    expect(
+      auditorCommands.some((command) => command.id === "admin.recovery.status")
+    ).toBe(false);
+    expect(
+      auditorCommands.some((command) => command.id === "admin.recovery.drills")
+    ).toBe(false);
+    expect(
       auditorCommands.some((command) => command.id === "admin.operations")
     ).toBe(false);
     expect(
+      auditorCommands.some((command) => command.id === "admin.index-quality")
+    ).toBe(true);
+    expect(
+      auditorCommands.some(
+        (command) => command.id === "admin.index-quality.query-audits"
+      )
+    ).toBe(true);
+    expect(
+      auditorCommands.some((command) => command.id === "admin.security.findings")
+    ).toBe(true);
+    expect(
+      auditorCommands.some(
+        (command) => command.id === "admin.security.risk-acceptances"
+      )
+    ).toBe(true);
+    expect(
       adminCommands.some((command) => command.id === "admin.operations")
+    ).toBe(true);
+    expect(
+      adminCommands.some((command) => command.id === "admin.recovery.status")
+    ).toBe(true);
+    expect(
+      adminCommands.some((command) => command.id === "admin.recovery.drills")
+    ).toBe(true);
+    expect(
+      adminCommands.some((command) => command.id === "admin.runbooks")
+    ).toBe(true);
+    expect(
+      adminCommands.some((command) => command.id === "admin.incidents")
+    ).toBe(true);
+    expect(
+      adminCommands.some((command) => command.id === "admin.incidents.status")
     ).toBe(true);
   });
 
@@ -177,6 +231,14 @@ describe("command registry", () => {
       projectB
     );
     expect(target).toBe("/projects/project-b/entities");
+  });
+
+  it("preserves derivatives section when switching projects", () => {
+    const target = resolveProjectSwitchHref(
+      "/projects/project-a/derivatives/dersnap-1/preview",
+      projectB
+    );
+    expect(target).toBe("/projects/project-b/derivatives");
   });
 
   it("falls back to overview when switching into project without settings access", () => {

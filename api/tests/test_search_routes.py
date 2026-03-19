@@ -111,7 +111,9 @@ class FakeSearchService:
         page_number: int | None,
         cursor: int,
         limit: int,
+        route: str | None = None,
     ) -> ProjectSearchResult:
+        _ = route
         if project_id != "project-1":
             raise IndexNotFoundError("Project not found.")
         if not self._can_read(current_user):

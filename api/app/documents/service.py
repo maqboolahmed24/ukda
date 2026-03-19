@@ -3,12 +3,14 @@ from __future__ import annotations
 import hashlib
 import json
 import tempfile
+import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
+from threading import Lock
 from typing import BinaryIO, Literal, Mapping, Sequence
 from uuid import uuid4
 
@@ -213,6 +215,8 @@ _ALLOWED_GOVERNANCE_VIEW_ROLES = {"PROJECT_LEAD", "REVIEWER"}
 _ALLOWED_GOVERNANCE_LEDGER_VIEW_ROLES = {"ADMIN", "AUDITOR"}
 _CONTROLLED_STORAGE_FAILURE_MESSAGE = "Controlled storage write failed."
 _PAGE_ASSET_CACHE_CONTROL = "private, no-cache, max-age=0, must-revalidate"
+_PAGE_ASSET_CACHE_TTL_SECONDS = 32
+_PAGE_ASSET_CACHE_MAX_ENTRIES = 256
 _PREPROCESS_DEFAULT_PIPELINE_VERSION = "preprocess-v1"
 _PREPROCESS_DEFAULT_CONTAINER_DIGEST = "ukde/preprocess:v1"
 _LAYOUT_DEFAULT_PIPELINE_VERSION = "layout-v1"
@@ -1207,6 +1211,11 @@ class DocumentService:
         self._project_service = project_service or get_project_service()
         self._storage = storage or get_document_storage()
         self._scanner = scanner or get_document_scanner()
+        self._asset_cache_lock = Lock()
+        self._asset_cache_ttl_seconds = _PAGE_ASSET_CACHE_TTL_SECONDS
+        self._asset_cache_max_entries = _PAGE_ASSET_CACHE_MAX_ENTRIES
+        self._overlay_asset_cache: dict[str, tuple[float, DocumentLayoutOverlayAsset]] = {}
+        self._thumbnail_asset_cache: dict[str, tuple[float, bytes]] = {}
 
     @staticmethod
     def _normalize_filters(filters: DocumentListFilters) -> DocumentListFilters:
@@ -1269,6 +1278,76 @@ class DocumentService:
     @staticmethod
     def _sha256_hex(payload: bytes) -> str:
         return hashlib.sha256(payload).hexdigest()
+
+    @staticmethod
+    def _cache_key_parts(*parts: str | None) -> str:
+        return "|".join((part if isinstance(part, str) and part else "-") for part in parts)
+
+    def _prune_asset_cache_unlocked(self, *, now_monotonic: float) -> None:
+        ttl = float(self._asset_cache_ttl_seconds)
+        for cache in (self._overlay_asset_cache, self._thumbnail_asset_cache):
+            stale_keys = [
+                cache_key
+                for cache_key, (cached_at, _) in cache.items()
+                if (now_monotonic - cached_at) > ttl
+            ]
+            for cache_key in stale_keys:
+                cache.pop(cache_key, None)
+            while len(cache) > self._asset_cache_max_entries:
+                cache.pop(next(iter(cache)))
+
+    def _get_cached_overlay_asset(
+        self,
+        *,
+        cache_key: str,
+    ) -> DocumentLayoutOverlayAsset | None:
+        now_monotonic = time.monotonic()
+        with self._asset_cache_lock:
+            self._prune_asset_cache_unlocked(now_monotonic=now_monotonic)
+            entry = self._overlay_asset_cache.get(cache_key)
+            if entry is None:
+                return None
+            cached_at, value = entry
+            if (now_monotonic - cached_at) > float(self._asset_cache_ttl_seconds):
+                self._overlay_asset_cache.pop(cache_key, None)
+                return None
+            self._overlay_asset_cache.pop(cache_key, None)
+            self._overlay_asset_cache[cache_key] = (cached_at, value)
+            return value
+
+    def _set_cached_overlay_asset(
+        self,
+        *,
+        cache_key: str,
+        value: DocumentLayoutOverlayAsset,
+    ) -> None:
+        now_monotonic = time.monotonic()
+        with self._asset_cache_lock:
+            self._overlay_asset_cache.pop(cache_key, None)
+            self._overlay_asset_cache[cache_key] = (now_monotonic, value)
+            self._prune_asset_cache_unlocked(now_monotonic=now_monotonic)
+
+    def _get_cached_thumbnail_bytes(self, *, cache_key: str) -> bytes | None:
+        now_monotonic = time.monotonic()
+        with self._asset_cache_lock:
+            self._prune_asset_cache_unlocked(now_monotonic=now_monotonic)
+            entry = self._thumbnail_asset_cache.get(cache_key)
+            if entry is None:
+                return None
+            cached_at, payload = entry
+            if (now_monotonic - cached_at) > float(self._asset_cache_ttl_seconds):
+                self._thumbnail_asset_cache.pop(cache_key, None)
+                return None
+            self._thumbnail_asset_cache.pop(cache_key, None)
+            self._thumbnail_asset_cache[cache_key] = (cached_at, payload)
+            return payload
+
+    def _set_cached_thumbnail_bytes(self, *, cache_key: str, payload: bytes) -> None:
+        now_monotonic = time.monotonic()
+        with self._asset_cache_lock:
+            self._thumbnail_asset_cache.pop(cache_key, None)
+            self._thumbnail_asset_cache[cache_key] = (now_monotonic, payload)
+            self._prune_asset_cache_unlocked(now_monotonic=now_monotonic)
 
     @staticmethod
     def _require_image_lib():
@@ -13085,6 +13164,22 @@ class DocumentService:
             page=page,
             page_result=page_result,
         )
+        active_layout_version = self._store.get_layout_active_version(
+            project_id=project_id,
+            document_id=document_id,
+            run_id=run_id,
+            page_id=page_id,
+        )
+        overlay_cache_key = self._cache_key_parts(
+            "layout-overlay",
+            page_result.overlay_json_key,
+            page_result.overlay_json_sha256,
+            active_layout_version.id if active_layout_version is not None else None,
+            active_layout_version.version_etag if active_layout_version is not None else None,
+        )
+        cached_overlay = self._get_cached_overlay_asset(cache_key=overlay_cache_key)
+        if cached_overlay is not None:
+            return cached_overlay
         try:
             payload_bytes = self._storage.read_object_bytes(page_result.overlay_json_key)
         except DocumentStorageError as error:
@@ -13117,12 +13212,6 @@ class DocumentService:
             resolved_meta = dict(reading_order_meta)
         else:
             resolved_meta = {}
-        active_layout_version = self._store.get_layout_active_version(
-            project_id=project_id,
-            document_id=document_id,
-            run_id=run_id,
-            page_id=page_id,
-        )
         if active_layout_version is not None:
             resolved_meta["versionEtag"] = active_layout_version.version_etag
             resolved_meta["layoutVersionId"] = active_layout_version.id
@@ -13148,10 +13237,15 @@ class DocumentService:
         enriched_payload = dict(normalized_payload)
         enriched_payload["readingOrderMeta"] = resolved_meta
         enriched_sha = self._sha256_hex(canonical_json_bytes(enriched_payload))
-        return DocumentLayoutOverlayAsset(
+        overlay_asset = DocumentLayoutOverlayAsset(
             payload=enriched_payload,
             etag_seed=enriched_sha,
         )
+        self._set_cached_overlay_asset(
+            cache_key=overlay_cache_key,
+            value=overlay_asset,
+        )
+        return overlay_asset
 
     def read_layout_page_xml(
         self,
@@ -14718,10 +14812,23 @@ class DocumentService:
                 page_index=page.page_index,
                 layout_version_id=page_result.active_layout_version_id,
             )
-        try:
-            payload = self._storage.read_object_bytes(object_key)
-        except DocumentStorageError as error:
-            raise DocumentPageAssetNotReadyError("Layout page thumbnail is not ready.") from error
+        thumbnail_cache_key = self._cache_key_parts(
+            "layout-thumbnail",
+            object_key,
+            page_result.active_layout_version_id,
+        )
+        payload = self._get_cached_thumbnail_bytes(cache_key=thumbnail_cache_key)
+        if payload is None:
+            try:
+                payload = self._storage.read_object_bytes(object_key)
+            except DocumentStorageError as error:
+                raise DocumentPageAssetNotReadyError(
+                    "Layout page thumbnail is not ready."
+                ) from error
+            self._set_cached_thumbnail_bytes(
+                cache_key=thumbnail_cache_key,
+                payload=payload,
+            )
         return DocumentPageImageAsset(
             payload=payload,
             media_type="image/png",
@@ -15405,8 +15512,20 @@ class DocumentService:
         if normalized_variant == "thumb":
             if not page.thumbnail_key:
                 raise DocumentPageAssetNotReadyError("Page thumbnail is not ready.")
+            thumbnail_cache_key = self._cache_key_parts(
+                "document-thumbnail",
+                page.thumbnail_key,
+                page.thumbnail_sha256,
+            )
+            payload = self._get_cached_thumbnail_bytes(cache_key=thumbnail_cache_key)
+            if payload is None:
+                payload = self._storage.read_object_bytes(page.thumbnail_key)
+                self._set_cached_thumbnail_bytes(
+                    cache_key=thumbnail_cache_key,
+                    payload=payload,
+                )
             return DocumentPageImageAsset(
-                payload=self._storage.read_object_bytes(page.thumbnail_key),
+                payload=payload,
                 media_type="image/jpeg",
                 etag_seed=page.thumbnail_sha256,
                 cache_control=_PAGE_ASSET_CACHE_CONTROL,

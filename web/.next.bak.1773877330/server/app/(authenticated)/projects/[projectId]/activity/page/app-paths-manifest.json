@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/projects/[projectId]/activity/page": "app/(authenticated)/projects/[projectId]/activity/page.js"
+}

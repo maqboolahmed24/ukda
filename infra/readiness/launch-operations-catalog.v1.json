@@ -1,0 +1,272 @@
+{
+  "version": "phase-11-launch-operations-v1",
+  "generatedAt": "2026-03-18T23:58:00+00:00",
+  "runbooks": [
+    {
+      "id": "runbook-release-readiness",
+      "slug": "release-readiness-evidence-and-blocker-policy",
+      "title": "Release readiness evidence and blocker policy",
+      "ownerUserId": "user-release-manager",
+      "lastReviewedAt": "2026-03-18T23:40:00+00:00",
+      "status": "ACTIVE",
+      "storageKey": "docs/runbooks/release-readiness-evidence-and-blocker-policy.md"
+    },
+    {
+      "id": "runbook-production-launch-handover",
+      "slug": "production-launch-handover-and-post-launch-guardrails",
+      "title": "Production launch handover and post-launch guardrails",
+      "ownerUserId": "user-release-manager",
+      "lastReviewedAt": "2026-03-18T23:59:00+00:00",
+      "status": "ACTIVE",
+      "storageKey": "docs/runbooks/production-launch-handover-and-post-launch-guardrails.md"
+    },
+    {
+      "id": "runbook-deployment",
+      "slug": "deployment-runbook",
+      "title": "Deployment runbook",
+      "ownerUserId": "user-sre-primary",
+      "lastReviewedAt": "2026-03-18T23:38:00+00:00",
+      "status": "ACTIVE",
+      "storageKey": "docs/runbooks/deployment-runbook.md"
+    },
+    {
+      "id": "runbook-backup-restore",
+      "slug": "backup-restore-runbook",
+      "title": "Backup and restore runbook",
+      "ownerUserId": "user-sre-secondary",
+      "lastReviewedAt": "2026-03-18T23:36:00+00:00",
+      "status": "ACTIVE",
+      "storageKey": "docs/runbooks/backup-restore-runbook.md"
+    },
+    {
+      "id": "runbook-key-rotation",
+      "slug": "key-rotation-runbook",
+      "title": "Key rotation runbook",
+      "ownerUserId": "user-security-owner",
+      "lastReviewedAt": "2026-03-18T23:35:00+00:00",
+      "status": "ACTIVE",
+      "storageKey": "docs/runbooks/key-rotation-runbook.md"
+    },
+    {
+      "id": "runbook-provenance-replay",
+      "slug": "provenance-replay-drill-and-bundle-validation-recovery",
+      "title": "Provenance replay drill and bundle validation recovery",
+      "ownerUserId": "user-governance-owner",
+      "lastReviewedAt": "2026-03-18T23:34:00+00:00",
+      "status": "ACTIVE",
+      "storageKey": "docs/runbooks/provenance-replay-drill-and-bundle-validation-recovery.md"
+    }
+  ],
+  "incidents": [
+    {
+      "id": "incident-2026-03-18-go-live-rehearsal",
+      "severity": "SEV3",
+      "status": "RESOLVED",
+      "startedAt": "2026-03-18T21:20:00+00:00",
+      "resolvedAt": "2026-03-18T21:58:00+00:00",
+      "incidentCommanderUserId": "user-release-manager",
+      "summary": "Go-live rehearsal across ingest, transcription, privacy review, and export review completed without blockers."
+    },
+    {
+      "id": "incident-2026-03-18-incident-tabletop",
+      "severity": "SEV4",
+      "status": "RESOLVED",
+      "startedAt": "2026-03-18T22:05:00+00:00",
+      "resolvedAt": "2026-03-18T22:42:00+00:00",
+      "incidentCommanderUserId": "user-oncall-primary",
+      "summary": "Incident response tabletop validated escalation paths, command ownership, and audit-safe handoff expectations."
+    },
+    {
+      "id": "incident-2026-03-18-model-rollback-rehearsal",
+      "severity": "SEV2",
+      "status": "RESOLVED",
+      "startedAt": "2026-03-18T22:48:00+00:00",
+      "resolvedAt": "2026-03-18T23:18:00+00:00",
+      "incidentCommanderUserId": "user-model-ops-owner",
+      "summary": "Primary transcription VLM rollback rehearsal executed from approved artifact and recovered to green SLO posture."
+    }
+  ],
+  "incidentTimelineEvents": [
+    {
+      "id": "event-2026-03-18-go-live-1",
+      "incidentId": "incident-2026-03-18-go-live-rehearsal",
+      "eventType": "INCIDENT_DECLARED",
+      "actorUserId": "user-release-manager",
+      "summary": "Declared launch rehearsal command incident and assigned commander.",
+      "createdAt": "2026-03-18T21:20:00+00:00"
+    },
+    {
+      "id": "event-2026-03-18-go-live-2",
+      "incidentId": "incident-2026-03-18-go-live-rehearsal",
+      "eventType": "REHEARSAL_EXECUTED",
+      "actorUserId": "user-sre-primary",
+      "summary": "Executed ingest-through-export-review rehearsal against production-like seed data.",
+      "createdAt": "2026-03-18T21:40:00+00:00"
+    },
+    {
+      "id": "event-2026-03-18-go-live-3",
+      "incidentId": "incident-2026-03-18-go-live-rehearsal",
+      "eventType": "INCIDENT_RESOLVED",
+      "actorUserId": "user-release-manager",
+      "summary": "Closed rehearsal incident after release-gate PASS and zero blocker confirmation.",
+      "createdAt": "2026-03-18T21:58:00+00:00"
+    },
+    {
+      "id": "event-2026-03-18-tabletop-1",
+      "incidentId": "incident-2026-03-18-incident-tabletop",
+      "eventType": "INCIDENT_DECLARED",
+      "actorUserId": "user-oncall-primary",
+      "summary": "Opened incident-tabletop scenario for launch-day escalation drill.",
+      "createdAt": "2026-03-18T22:05:00+00:00"
+    },
+    {
+      "id": "event-2026-03-18-tabletop-2",
+      "incidentId": "incident-2026-03-18-incident-tabletop",
+      "eventType": "ESCALATION_VALIDATED",
+      "actorUserId": "user-oncall-secondary",
+      "summary": "Validated commander escalation from on-call to platform and governance owners.",
+      "createdAt": "2026-03-18T22:21:00+00:00"
+    },
+    {
+      "id": "event-2026-03-18-tabletop-3",
+      "incidentId": "incident-2026-03-18-incident-tabletop",
+      "eventType": "INCIDENT_RESOLVED",
+      "actorUserId": "user-oncall-primary",
+      "summary": "Closed tabletop incident with documented response timeline and handover notes.",
+      "createdAt": "2026-03-18T22:42:00+00:00"
+    },
+    {
+      "id": "event-2026-03-18-rollback-1",
+      "incidentId": "incident-2026-03-18-model-rollback-rehearsal",
+      "eventType": "INCIDENT_DECLARED",
+      "actorUserId": "user-model-ops-owner",
+      "summary": "Opened model rollback rehearsal incident for primary transcription VLM.",
+      "createdAt": "2026-03-18T22:48:00+00:00"
+    },
+    {
+      "id": "event-2026-03-18-rollback-2",
+      "incidentId": "incident-2026-03-18-model-rollback-rehearsal",
+      "eventType": "ROLLBACK_EXECUTED",
+      "actorUserId": "user-model-platform-owner",
+      "summary": "Executed rollback to prior approved model artifact and verified route health + transcription checks.",
+      "createdAt": "2026-03-18T23:03:00+00:00"
+    },
+    {
+      "id": "event-2026-03-18-rollback-3",
+      "incidentId": "incident-2026-03-18-model-rollback-rehearsal",
+      "eventType": "INCIDENT_RESOLVED",
+      "actorUserId": "user-model-ops-owner",
+      "summary": "Marked rollback rehearsal complete after smoke and readiness checks remained PASS.",
+      "createdAt": "2026-03-18T23:18:00+00:00"
+    }
+  ],
+  "launchReadiness": {
+    "goLiveRehearsal": {
+      "status": "COMPLETED",
+      "completedAt": "2026-03-18T21:58:00+00:00",
+      "evidence": [
+        {
+          "label": "Release smoke report",
+          "path": "output/smoke/latest/release-smoke-report.json"
+        },
+        {
+          "label": "Go-live rehearsal evidence",
+          "path": "infra/readiness/evidence/go-live-rehearsal-2026-03-18.json"
+        }
+      ]
+    },
+    "incidentResponseTabletop": {
+      "status": "COMPLETED",
+      "completedAt": "2026-03-18T22:42:00+00:00",
+      "evidence": [
+        {
+          "label": "Incident tabletop evidence",
+          "path": "infra/readiness/evidence/incident-tabletop-2026-03-18.json"
+        }
+      ]
+    },
+    "modelRollbackRehearsal": {
+      "status": "COMPLETED",
+      "completedAt": "2026-03-18T23:18:00+00:00",
+      "evidence": [
+        {
+          "label": "Model rollback rehearsal evidence",
+          "path": "infra/readiness/evidence/model-rollback-rehearsal-2026-03-18.json"
+        }
+      ]
+    }
+  },
+  "handover": {
+    "launchDayOwnerUserId": "user-release-manager",
+    "onCallPrimaryUserId": "user-oncall-primary",
+    "onCallSecondaryUserId": "user-oncall-secondary",
+    "escalationPath": [
+      {
+        "level": "L1",
+        "title": "On-call primary",
+        "ownerUserId": "user-oncall-primary",
+        "targetResponseSlaMinutes": 15
+      },
+      {
+        "level": "L2",
+        "title": "On-call secondary",
+        "ownerUserId": "user-oncall-secondary",
+        "targetResponseSlaMinutes": 30
+      },
+      {
+        "level": "L3",
+        "title": "Platform + governance leadership",
+        "ownerUserId": "user-release-manager",
+        "targetResponseSlaMinutes": 45
+      }
+    ],
+    "modelOwnership": {
+      "modelServiceMapOwnerUserId": "user-model-platform-owner",
+      "approvedModelLifecycleOwnerUserId": "user-model-governance-owner",
+      "rollbackExecutionOwnerUserId": "user-model-ops-owner"
+    },
+    "postLaunchGuardrails": [
+      {
+        "id": "guardrail-ingest-through-export",
+        "title": "Ingest through export review path remains healthy",
+        "ownerUserId": "user-release-manager",
+        "checkWindow": "T+0h to T+72h every 2h",
+        "trigger": "Any smoke critical-flow check fails",
+        "rollbackAction": "Pause promotion and execute deployment rollback procedure"
+      },
+      {
+        "id": "guardrail-security-and-egress",
+        "title": "No-bypass egress and security findings posture remains green",
+        "ownerUserId": "user-security-owner",
+        "checkWindow": "T+0h to T+72h every 4h",
+        "trigger": "Critical/high finding without ACTIVE risk acceptance or egress denial regression failure",
+        "rollbackAction": "Block release approval and route to incident commander"
+      },
+      {
+        "id": "guardrail-model-rollback",
+        "title": "Primary transcription model rollback remains executable",
+        "ownerUserId": "user-model-ops-owner",
+        "checkWindow": "T+0h to T+24h every 6h",
+        "trigger": "SLO breach on primary transcription model with elevated fallback/error rate",
+        "rollbackAction": "Execute approved-model rollback playbook and open incident timeline"
+      }
+    ],
+    "noGoCriteria": [
+      {
+        "id": "no-go-readiness-blockers",
+        "title": "Readiness blockers present",
+        "detail": "Any blocking failure in readiness matrix or release gate blocks ship."
+      },
+      {
+        "id": "no-go-missing-rehearsals",
+        "title": "Rehearsal evidence missing",
+        "detail": "Go-live rehearsal, incident tabletop, and model rollback rehearsal must all be COMPLETED."
+      },
+      {
+        "id": "no-go-active-sev1-sev2",
+        "title": "Active high-severity incidents",
+        "detail": "Any unresolved SEV1/SEV2 incident blocks ship."
+      }
+    ]
+  }
+}

@@ -29,9 +29,17 @@ helm upgrade --install ukde infra/helm/ukde \
 ```bash
 curl -sS https://<api-host>/healthz
 curl -sS -H "Authorization: Bearer <admin_token>" https://<api-host>/admin/security/status
+curl -sS -H "Authorization: Bearer <admin_token>" https://<api-host>/admin/security/findings
 ```
 
-6. Confirm audit continuity on new requests in `/admin/audit`.
+6. Confirm high/critical findings are either `RESOLVED` or actively risk-accepted:
+
+```bash
+curl -sS -H "Authorization: Bearer <admin_token>" \
+  "https://<api-host>/admin/security/risk-acceptances?status=ACTIVE"
+```
+
+7. Confirm audit continuity on new requests in `/admin/audit`.
 
 ## Rollback
 

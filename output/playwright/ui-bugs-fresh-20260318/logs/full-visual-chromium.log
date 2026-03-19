@@ -1,0 +1,536 @@
+
+> ukde@ test:browser /Users/test/Code/UKDA
+> playwright test --project=chromium --grep @visual
+
+
+Running 12 tests using 4 workers
+
+  ✘   1 [chromium] › web/tests/browser/preprocessing-regression.spec.ts:23:5 › preprocessing route visual baselines for overview, runs, quality, compare, and state variants @visual @preprocess (17.0s)
+  ✘   4 [chromium] › web/tests/browser/layout-workspace-regression.spec.ts:24:5 › layout workspace visual baselines for overlay and inspector states @visual (19.0s)
+  ✓   2 [chromium] › web/tests/browser/privacy-workspace-regression.spec.ts:58:5 › privacy workspace visual baselines for default, selected finding, dialog, and controlled mode @privacy @visual (26.7s)
+  ✘   6 [chromium] › web/tests/browser/shell-regression.spec.ts:18:5 › login visual baselines in dark and light @visual (12.6s)
+  ✘   7 [chromium] › web/tests/browser/shell-regression.spec.ts:27:5 › authenticated shell visual baselines for projects and overview @visual (12.2s)
+  ✘   3 [chromium] › web/tests/browser/privacy-workspace-regression.spec.ts:194:5 › privacy run review and compare surfaces expose blockers, lock states, and keyboard-safe focus behavior @privacy @visual @a11y @keyboard @reflow (38.9s)
+  ✓   5 [chromium] › web/tests/browser/search-surface.spec.ts:42:5 › search surface visual baselines for zero-state and results @search @visual (18.0s)
+  ✘   9 [chromium] › web/tests/browser/shell-regression.spec.ts:83:5 › forced-colors shell visual baseline @visual @contrast (9.4s)
+  ✘  10 [chromium] › web/tests/browser/shell-regression.spec.ts:99:5 › reduced-motion overlay visual baseline @visual @motion (9.3s)
+  ✘  11 [chromium] › web/tests/browser/viewer-regression.spec.ts:56:5 › viewer visual baselines for loading, ready, and error states @visual (11.4s)
+  ✘   8 [chromium] › web/tests/browser/shell-regression.spec.ts:55:5 › design-system, command bar, and project switcher visual baselines @visual (12.3s)
+  ✘  12 [chromium] › web/tests/browser/viewer-regression.spec.ts:82:5 › viewer visual baselines include original, preprocessed, compare, and inspector drawer states @visual (4.5s)
+
+
+  1) [chromium] › web/tests/browser/layout-workspace-regression.spec.ts:24:5 › layout workspace visual baselines for overlay and inspector states @visual 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveScreenshot[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: locator('.layoutWorkspace')
+      45532 pixels (ratio 0.10 of all image pixels) are different.
+
+      Snapshot: layout-workspace-overlay-on.png
+
+    Call log:
+    [2m  - Expect "toHaveScreenshot(layout-workspace-overlay-on.png)" with timeout 10000ms[22m
+    [2m    - verifying given screenshot expectation[22m
+    [2m  - waiting for locator('.layoutWorkspace')[22m
+    [2m    - locator resolved to <section data-image-state="loaded" data-workspace-mode="inspect" data-workspace-state="Expanded" class="sectionCard ukde-panel documentViewerWorkspace layoutWorkspace">…</section>[22m
+    [2m  - taking element screenshot[22m
+    [2m    - disabled all CSS animations[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+    [2m  - attempting scroll into view action[22m
+    [2m    - waiting for element to be stable[22m
+    [2m  - 45532 pixels (ratio 0.10 of all image pixels) are different.[22m
+    [2m  - waiting 100ms before taking screenshot[22m
+    [2m  - waiting for locator('.layoutWorkspace')[22m
+    [2m    - locator resolved to <section data-image-state="loaded" data-workspace-mode="inspect" data-workspace-state="Expanded" class="sectionCard ukde-panel documentViewerWorkspace layoutWorkspace">…</section>[22m
+    [2m  - taking element screenshot[22m
+    [2m    - disabled all CSS animations[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+    [2m  - attempting scroll into view action[22m
+    [2m    - waiting for element to be stable[22m
+    [2m  - captured a stable screenshot[22m
+    [2m  - 45532 pixels (ratio 0.10 of all image pixels) are different.[22m
+
+
+      33 |   await gotoLayoutWorkspace(page, { page: 1, runId: RUN_ID });
+      34 |
+    > 35 |   await expect(page.locator(".layoutWorkspace")).toHaveScreenshot(
+         |                                                  ^
+      36 |     "layout-workspace-overlay-on.png"
+      37 |   );
+      38 |
+        at /Users/test/Code/UKDA/web/tests/browser/layout-workspace-regression.spec.ts:35:50
+
+    attachment #1: layout-workspace-overlay-on (image/png) ─────────────────────────────────────────
+    Expected: web/tests/browser/layout-workspace-regression.spec.ts-snapshots/layout-workspace-overlay-on-chromium-darwin.png
+    Received: test-results/layout-workspace-regressio-52e2e-and-inspector-states-visual-chromium/layout-workspace-overlay-on-actual.png
+    Diff:     test-results/layout-workspace-regressio-52e2e-and-inspector-states-visual-chromium/layout-workspace-overlay-on-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/layout-workspace-regressio-52e2e-and-inspector-states-visual-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/layout-workspace-regressio-52e2e-and-inspector-states-visual-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/layout-workspace-regressio-52e2e-and-inspector-states-visual-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/layout-workspace-regressio-52e2e-and-inspector-states-visual-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › web/tests/browser/preprocessing-regression.spec.ts:23:5 › preprocessing route visual baselines for overview, runs, quality, compare, and state variants @visual @preprocess 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveScreenshot[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: locator('main.homeLayout')
+      Expected an image 768px by 516px, received 769px by 517px. 12050 pixels (ratio 0.04 of all image pixels) are different.
+
+      Snapshot: preprocessing-overview-pages.png
+
+    Call log:
+    [2m  - Expect "toHaveScreenshot(preprocessing-overview-pages.png)" with timeout 10000ms[22m
+    [2m    - verifying given screenshot expectation[22m
+    [2m  - waiting for locator('main.homeLayout')[22m
+    [2m    - locator resolved to <main class="homeLayout homeLayout--preprocessing">…</main>[22m
+    [2m  - taking element screenshot[22m
+    [2m    - disabled all CSS animations[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+    [2m  - attempting scroll into view action[22m
+    [2m    - waiting for element to be stable[22m
+    [2m  - Expected an image 768px by 516px, received 769px by 517px. 12050 pixels (ratio 0.04 of all image pixels) are different.[22m
+    [2m  - waiting 100ms before taking screenshot[22m
+    [2m  - waiting for locator('main.homeLayout')[22m
+    [2m    - locator resolved to <main class="homeLayout homeLayout--preprocessing">…</main>[22m
+    [2m  - taking element screenshot[22m
+    [2m    - disabled all CSS animations[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+    [2m  - attempting scroll into view action[22m
+    [2m    - waiting for element to be stable[22m
+    [2m  - captured a stable screenshot[22m
+    [2m  - Expected an image 768px by 516px, received 769px by 517px. 12050 pixels (ratio 0.04 of all image pixels) are different.[22m
+
+
+      36 |     "/preprocessing"
+      37 |   );
+    > 38 |   await expect(page.locator("main.homeLayout")).toHaveScreenshot(
+         |                                                 ^
+      39 |     "preprocessing-overview-pages.png"
+      40 |   );
+      41 |
+        at /Users/test/Code/UKDA/web/tests/browser/preprocessing-regression.spec.ts:38:49
+
+    attachment #1: preprocessing-overview-pages (image/png) ────────────────────────────────────────
+    Expected: web/tests/browser/preprocessing-regression.spec.ts-snapshots/preprocessing-overview-pages-chromium-darwin.png
+    Received: test-results/preprocessing-regression-p-d670f--variants-visual-preprocess-chromium/preprocessing-overview-pages-actual.png
+    Diff:     test-results/preprocessing-regression-p-d670f--variants-visual-preprocess-chromium/preprocessing-overview-pages-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/preprocessing-regression-p-d670f--variants-visual-preprocess-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/preprocessing-regression-p-d670f--variants-visual-preprocess-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/preprocessing-regression-p-d670f--variants-visual-preprocess-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/preprocessing-regression-p-d670f--variants-visual-preprocess-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › web/tests/browser/privacy-workspace-regression.spec.ts:194:5 › privacy run review and compare surfaces expose blockers, lock states, and keyboard-safe focus behavior @privacy @visual @a11y @keyboard @reflow 
+
+    Error: page.goto: net::ERR_ABORTED at http://127.0.0.1:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002
+    Call log:
+    [2m  - navigating to "http://127.0.0.1:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002", waiting until "load"[22m
+
+
+      50 |
+      51 | async function gotoPrivacyCompare(page: Page): Promise<void> {
+    > 52 |   await page.goto(
+         |              ^
+      53 |     `/projects/${PROJECT_ID}/documents/${DOCUMENT_ID}/privacy/compare?baseRunId=${RUN_BASE_ID}&candidateRunId=${RUN_CANDIDATE_ID}`
+      54 |   );
+      55 |   await expect(page.getByRole("heading", { name: "Page deltas" })).toBeVisible();
+        at gotoPrivacyCompare (/Users/test/Code/UKDA/web/tests/browser/privacy-workspace-regression.spec.ts:52:14)
+        at /Users/test/Code/UKDA/web/tests/browser/privacy-workspace-regression.spec.ts:235:9
+
+    Error Context: test-results/privacy-workspace-regressi-d2854-visual-a11y-keyboard-reflow-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/privacy-workspace-regressi-d2854-visual-a11y-keyboard-reflow-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/privacy-workspace-regressi-d2854-visual-a11y-keyboard-reflow-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › web/tests/browser/shell-regression.spec.ts:18:5 › login visual baselines in dark and light @visual 
+
+    Error: A snapshot doesn't exist at /Users/test/Code/UKDA/web/tests/browser/shell-regression.spec.ts-snapshots/login-dark-chromium-darwin.png, writing actual.
+
+      18 | test("login visual baselines in dark and light @visual", async ({ page }) => {
+      19 |   await page.goto("/login");
+    > 20 |   await expect(page.locator(".loginCard")).toHaveScreenshot("login-dark.png");
+         |   ^
+      21 |
+      22 |   await setThemePreference(page, "light");
+      23 |   await page.goto("/login");
+        at /Users/test/Code/UKDA/web/tests/browser/shell-regression.spec.ts:20:3
+
+    Error: page.goto: net::ERR_ABORTED at http://127.0.0.1:3100/login
+    Call log:
+    [2m  - navigating to "http://127.0.0.1:3100/login", waiting until "load"[22m
+
+
+      21 |
+      22 |   await setThemePreference(page, "light");
+    > 23 |   await page.goto("/login");
+         |              ^
+      24 |   await expect(page.locator(".loginCard")).toHaveScreenshot("login-light.png");
+      25 | });
+      26 |
+        at /Users/test/Code/UKDA/web/tests/browser/shell-regression.spec.ts:23:14
+
+    attachment #1: login-dark (image/png) ──────────────────────────────────────────────────────────
+    Expected: web/tests/browser/shell-regression.spec.ts-snapshots/login-dark-chromium-darwin.png
+    Received: test-results/shell-regression-login-vis-bd758-es-in-dark-and-light-visual-chromium/login-dark-actual.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/shell-regression-login-vis-bd758-es-in-dark-and-light-visual-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/shell-regression-login-vis-bd758-es-in-dark-and-light-visual-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/shell-regression-login-vis-bd758-es-in-dark-and-light-visual-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/shell-regression-login-vis-bd758-es-in-dark-and-light-visual-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › web/tests/browser/shell-regression.spec.ts:27:5 › authenticated shell visual baselines for projects and overview @visual 
+
+    Error: A snapshot doesn't exist at /Users/test/Code/UKDA/web/tests/browser/shell-regression.spec.ts-snapshots/projects-shell-dark-chromium-darwin.png, writing actual.
+
+      37 |   const shellPage = new ShellPage(page);
+      38 |   await shellPage.gotoProjects();
+    > 39 |   await expect(page.locator(".authenticatedShell")).toHaveScreenshot(
+         |   ^
+      40 |     "projects-shell-dark.png"
+      41 |   );
+      42 |
+        at /Users/test/Code/UKDA/web/tests/browser/shell-regression.spec.ts:39:3
+
+    Error: page.goto: net::ERR_ABORTED at http://127.0.0.1:3100/projects/project-fixture-alpha/overview
+    Call log:
+    [2m  - navigating to "http://127.0.0.1:3100/projects/project-fixture-alpha/overview", waiting until "load"[22m
+
+
+       at helpers/shell-page.ts:18
+
+      16 |
+      17 |   async gotoProjectOverview(projectId: string): Promise<void> {
+    > 18 |     await this.page.goto(`/projects/${projectId}/overview`);
+         |                     ^
+      19 |     await expect(
+      20 |       this.page.getByRole("heading", { name: "Overview" })
+      21 |     ).toBeVisible();
+        at ShellPage.gotoProjectOverview (/Users/test/Code/UKDA/web/tests/browser/helpers/shell-page.ts:18:21)
+        at /Users/test/Code/UKDA/web/tests/browser/shell-regression.spec.ts:43:19
+
+    attachment #1: projects-shell-dark (image/png) ─────────────────────────────────────────────────
+    Expected: web/tests/browser/shell-regression.spec.ts-snapshots/projects-shell-dark-chromium-darwin.png
+    Received: test-results/shell-regression-authentic-701e8-rojects-and-overview-visual-chromium/projects-shell-dark-actual.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/shell-regression-authentic-701e8-rojects-and-overview-visual-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/shell-regression-authentic-701e8-rojects-and-overview-visual-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/shell-regression-authentic-701e8-rojects-and-overview-visual-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/shell-regression-authentic-701e8-rojects-and-overview-visual-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [chromium] › web/tests/browser/shell-regression.spec.ts:55:5 › design-system, command bar, and project switcher visual baselines @visual 
+
+    Error: A snapshot doesn't exist at /Users/test/Code/UKDA/web/tests/browser/shell-regression.spec.ts-snapshots/design-system-shell-dark-chromium-darwin.png, writing actual.
+
+      65 |   const shellPage = new ShellPage(page);
+      66 |   await shellPage.gotoDesignSystem();
+    > 67 |   await expect(page.locator(".authenticatedShell")).toHaveScreenshot(
+         |   ^
+      68 |     "design-system-shell-dark.png"
+      69 |   );
+      70 |
+        at /Users/test/Code/UKDA/web/tests/browser/shell-regression.spec.ts:67:3
+
+    Error: A snapshot doesn't exist at /Users/test/Code/UKDA/web/tests/browser/shell-regression.spec.ts-snapshots/command-bar-overlay-chromium-darwin.png, writing actual.
+
+      70 |
+      71 |   await shellPage.openCommandBar();
+    > 72 |   await expect(page.locator(".globalCommandDialog")).toHaveScreenshot(
+         |   ^
+      73 |     "command-bar-overlay.png"
+      74 |   );
+      75 |   await page.keyboard.press("Escape");
+        at /Users/test/Code/UKDA/web/tests/browser/shell-regression.spec.ts:72:3
+
+    Error: A snapshot doesn't exist at /Users/test/Code/UKDA/web/tests/browser/shell-regression.spec.ts-snapshots/project-switcher-overlay-chromium-darwin.png, writing actual.
+
+      76 |
+      77 |   await shellPage.openProjectSwitcher();
+    > 78 |   await expect(page.locator(".globalCommandDialog")).toHaveScreenshot(
+         |   ^
+      79 |     "project-switcher-overlay.png"
+      80 |   );
+      81 | });
+        at /Users/test/Code/UKDA/web/tests/browser/shell-regression.spec.ts:78:3
+
+    attachment #1: design-system-shell-dark (image/png) ────────────────────────────────────────────
+    Expected: web/tests/browser/shell-regression.spec.ts-snapshots/design-system-shell-dark-chromium-darwin.png
+    Received: test-results/shell-regression-design-sy-fef60-her-visual-baselines-visual-chromium/design-system-shell-dark-actual.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: command-bar-overlay (image/png) ─────────────────────────────────────────────────
+    Expected: web/tests/browser/shell-regression.spec.ts-snapshots/command-bar-overlay-chromium-darwin.png
+    Received: test-results/shell-regression-design-sy-fef60-her-visual-baselines-visual-chromium/command-bar-overlay-actual.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: project-switcher-overlay (image/png) ────────────────────────────────────────────
+    Expected: web/tests/browser/shell-regression.spec.ts-snapshots/project-switcher-overlay-chromium-darwin.png
+    Received: test-results/shell-regression-design-sy-fef60-her-visual-baselines-visual-chromium/project-switcher-overlay-actual.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #4: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/shell-regression-design-sy-fef60-her-visual-baselines-visual-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/shell-regression-design-sy-fef60-her-visual-baselines-visual-chromium/error-context.md
+
+    attachment #6: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/shell-regression-design-sy-fef60-her-visual-baselines-visual-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/shell-regression-design-sy-fef60-her-visual-baselines-visual-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) [chromium] › web/tests/browser/shell-regression.spec.ts:83:5 › forced-colors shell visual baseline @visual @contrast 
+
+    Error: A snapshot doesn't exist at /Users/test/Code/UKDA/web/tests/browser/shell-regression.spec.ts-snapshots/projects-shell-forced-colors-chromium-darwin.png, writing actual.
+
+      92 |   await page.emulateMedia({ colorScheme: "light", forcedColors: "active" });
+      93 |   await page.goto("/projects");
+    > 94 |   await expect(page.locator(".authenticatedShell")).toHaveScreenshot(
+         |   ^
+      95 |     "projects-shell-forced-colors.png"
+      96 |   );
+      97 | });
+        at /Users/test/Code/UKDA/web/tests/browser/shell-regression.spec.ts:94:3
+
+    attachment #1: projects-shell-forced-colors (image/png) ────────────────────────────────────────
+    Expected: web/tests/browser/shell-regression.spec.ts-snapshots/projects-shell-forced-colors-chromium-darwin.png
+    Received: test-results/shell-regression-forced-co-08d47-al-baseline-visual-contrast-chromium/projects-shell-forced-colors-actual.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/shell-regression-forced-co-08d47-al-baseline-visual-contrast-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/shell-regression-forced-co-08d47-al-baseline-visual-contrast-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/shell-regression-forced-co-08d47-al-baseline-visual-contrast-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/shell-regression-forced-co-08d47-al-baseline-visual-contrast-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  8) [chromium] › web/tests/browser/shell-regression.spec.ts:99:5 › reduced-motion overlay visual baseline @visual @motion 
+
+    Error: A snapshot doesn't exist at /Users/test/Code/UKDA/web/tests/browser/shell-regression.spec.ts-snapshots/dialog-overlay-reduced-motion-chromium-darwin.png, writing actual.
+
+      109 |   await page.goto("/admin/design-system");
+      110 |   await page.getByTestId("primitives-open-dialog").click();
+    > 111 |   await expect(page.locator(".ukde-dialog")).toHaveScreenshot(
+          |   ^
+      112 |     "dialog-overlay-reduced-motion.png"
+      113 |   );
+      114 |
+        at /Users/test/Code/UKDA/web/tests/browser/shell-regression.spec.ts:111:3
+
+    attachment #1: dialog-overlay-reduced-motion (image/png) ───────────────────────────────────────
+    Expected: web/tests/browser/shell-regression.spec.ts-snapshots/dialog-overlay-reduced-motion-chromium-darwin.png
+    Received: test-results/shell-regression-reduced-m-43f93-sual-baseline-visual-motion-chromium/dialog-overlay-reduced-motion-actual.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/shell-regression-reduced-m-43f93-sual-baseline-visual-motion-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/shell-regression-reduced-m-43f93-sual-baseline-visual-motion-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/shell-regression-reduced-m-43f93-sual-baseline-visual-motion-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/shell-regression-reduced-m-43f93-sual-baseline-visual-motion-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) [chromium] › web/tests/browser/viewer-regression.spec.ts:56:5 › viewer visual baselines for loading, ready, and error states @visual 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveScreenshot[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: locator('.documentViewerWorkspace')
+      26080 pixels (ratio 0.06 of all image pixels) are different.
+
+      Snapshot: viewer-state-loading.png
+
+    Call log:
+    [2m  - Expect "toHaveScreenshot(viewer-state-loading.png)" with timeout 10000ms[22m
+    [2m    - verifying given screenshot expectation[22m
+    [2m  - waiting for locator('.documentViewerWorkspace')[22m
+    [2m    - locator resolved to <section aria-label="Viewer workspace" data-workspace-state="Expanded" class="documentViewerWorkspace ukde-panel">…</section>[22m
+    [2m  - taking element screenshot[22m
+    [2m    - disabled all CSS animations[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+    [2m  - attempting scroll into view action[22m
+    [2m    - waiting for element to be stable[22m
+    [2m  - 26080 pixels (ratio 0.06 of all image pixels) are different.[22m
+    [2m  - waiting 100ms before taking screenshot[22m
+    [2m  - waiting for locator('.documentViewerWorkspace')[22m
+    [2m    - locator resolved to <section aria-label="Viewer workspace" data-workspace-state="Expanded" class="documentViewerWorkspace ukde-panel">…</section>[22m
+    [2m  - taking element screenshot[22m
+    [2m    - disabled all CSS animations[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+    [2m  - attempting scroll into view action[22m
+    [2m    - waiting for element to be stable[22m
+    [2m  - captured a stable screenshot[22m
+    [2m  - 26080 pixels (ratio 0.06 of all image pixels) are different.[22m
+
+
+      65 |
+      66 |   await gotoViewer(page, LOADING_DOCUMENT_ID, 1);
+    > 67 |   await expect(page.locator(".documentViewerWorkspace")).toHaveScreenshot(
+         |                                                          ^
+      68 |     "viewer-state-loading.png"
+      69 |   );
+      70 |
+        at /Users/test/Code/UKDA/web/tests/browser/viewer-regression.spec.ts:67:58
+
+    attachment #1: viewer-state-loading (image/png) ────────────────────────────────────────────────
+    Expected: web/tests/browser/viewer-regression.spec.ts-snapshots/viewer-state-loading-chromium-darwin.png
+    Received: test-results/viewer-regression-viewer-v-caf79-ady-and-error-states-visual-chromium/viewer-state-loading-actual.png
+    Diff:     test-results/viewer-regression-viewer-v-caf79-ady-and-error-states-visual-chromium/viewer-state-loading-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/viewer-regression-viewer-v-caf79-ady-and-error-states-visual-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/viewer-regression-viewer-v-caf79-ady-and-error-states-visual-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/viewer-regression-viewer-v-caf79-ady-and-error-states-visual-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/viewer-regression-viewer-v-caf79-ady-and-error-states-visual-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10) [chromium] › web/tests/browser/viewer-regression.spec.ts:82:5 › viewer visual baselines include original, preprocessed, compare, and inspector drawer states @visual 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveScreenshot[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: locator('.documentViewerWorkspace')
+      21008 pixels (ratio 0.05 of all image pixels) are different.
+
+      Snapshot: viewer-mode-preprocessed.png
+
+    Call log:
+    [2m  - Expect "toHaveScreenshot(viewer-mode-preprocessed.png)" with timeout 10000ms[22m
+    [2m    - verifying given screenshot expectation[22m
+    [2m  - waiting for locator('.documentViewerWorkspace')[22m
+    [2m    - locator resolved to <section aria-label="Viewer workspace" data-workspace-state="Expanded" class="documentViewerWorkspace ukde-panel">…</section>[22m
+    [2m  - taking element screenshot[22m
+    [2m    - disabled all CSS animations[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+    [2m  - attempting scroll into view action[22m
+    [2m    - waiting for element to be stable[22m
+    [2m  - 21008 pixels (ratio 0.05 of all image pixels) are different.[22m
+    [2m  - waiting 100ms before taking screenshot[22m
+    [2m  - waiting for locator('.documentViewerWorkspace')[22m
+    [2m    - locator resolved to <section aria-label="Viewer workspace" data-workspace-state="Expanded" class="documentViewerWorkspace ukde-panel">…</section>[22m
+    [2m  - taking element screenshot[22m
+    [2m    - disabled all CSS animations[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+    [2m  - attempting scroll into view action[22m
+    [2m    - waiting for element to be stable[22m
+    [2m  - captured a stable screenshot[22m
+    [2m  - 21008 pixels (ratio 0.05 of all image pixels) are different.[22m
+
+
+      102 |     1
+      103 |   );
+    > 104 |   await expect(page.locator(".documentViewerWorkspace")).toHaveScreenshot(
+          |                                                          ^
+      105 |     "viewer-mode-preprocessed.png"
+      106 |   );
+      107 |
+        at /Users/test/Code/UKDA/web/tests/browser/viewer-regression.spec.ts:104:58
+
+    attachment #1: viewer-mode-preprocessed (image/png) ────────────────────────────────────────────
+    Expected: web/tests/browser/viewer-regression.spec.ts-snapshots/viewer-mode-preprocessed-chromium-darwin.png
+    Received: test-results/viewer-regression-viewer-v-a1f72-pector-drawer-states-visual-chromium/viewer-mode-preprocessed-actual.png
+    Diff:     test-results/viewer-regression-viewer-v-a1f72-pector-drawer-states-visual-chromium/viewer-mode-preprocessed-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/viewer-regression-viewer-v-a1f72-pector-drawer-states-visual-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/viewer-regression-viewer-v-a1f72-pector-drawer-states-visual-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/viewer-regression-viewer-v-a1f72-pector-drawer-states-visual-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/viewer-regression-viewer-v-a1f72-pector-drawer-states-visual-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10 failed
+    [chromium] › web/tests/browser/layout-workspace-regression.spec.ts:24:5 › layout workspace visual baselines for overlay and inspector states @visual 
+    [chromium] › web/tests/browser/preprocessing-regression.spec.ts:23:5 › preprocessing route visual baselines for overview, runs, quality, compare, and state variants @visual @preprocess 
+    [chromium] › web/tests/browser/privacy-workspace-regression.spec.ts:194:5 › privacy run review and compare surfaces expose blockers, lock states, and keyboard-safe focus behavior @privacy @visual @a11y @keyboard @reflow 
+    [chromium] › web/tests/browser/shell-regression.spec.ts:18:5 › login visual baselines in dark and light @visual 
+    [chromium] › web/tests/browser/shell-regression.spec.ts:27:5 › authenticated shell visual baselines for projects and overview @visual 
+    [chromium] › web/tests/browser/shell-regression.spec.ts:55:5 › design-system, command bar, and project switcher visual baselines @visual 
+    [chromium] › web/tests/browser/shell-regression.spec.ts:83:5 › forced-colors shell visual baseline @visual @contrast 
+    [chromium] › web/tests/browser/shell-regression.spec.ts:99:5 › reduced-motion overlay visual baseline @visual @motion 
+    [chromium] › web/tests/browser/viewer-regression.spec.ts:56:5 › viewer visual baselines for loading, ready, and error states @visual 
+    [chromium] › web/tests/browser/viewer-regression.spec.ts:82:5 › viewer visual baselines include original, preprocessed, compare, and inspector drawer states @visual 
+  2 passed (1.1m)
+ ELIFECYCLE  Command failed with exit code 1.

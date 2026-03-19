@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/admin/capacity/tests/run/route": "app/(authenticated)/admin/capacity/tests/run/route.js"
+}

@@ -1,0 +1,35 @@
+{
+  "node": {
+    "4091e5aa835f0a8babd440d8e382a6f14540b78fdc": {
+      "workers": {
+        "app/(authenticated)/projects/[projectId]/documents/[documentId]/governance/runs/[runId]/ledger/page": {
+          "moduleId": 36913,
+          "async": false,
+          "exportedName": "$$RSC_SERVER_ACTION_0",
+          "filename": "web/app/(authenticated)/projects/[projectId]/documents/[documentId]/governance/runs/[runId]/ledger/page.tsx"
+        }
+      },
+      "layer": {
+        "app/(authenticated)/projects/[projectId]/documents/[documentId]/governance/runs/[runId]/ledger/page": "rsc"
+      },
+      "exportedName": "$$RSC_SERVER_ACTION_0",
+      "filename": "web/app/(authenticated)/projects/[projectId]/documents/[documentId]/governance/runs/[runId]/ledger/page.tsx"
+    },
+    "6009a0e1b9c860579f79495053c6bc4b7c6b55a2af": {
+      "workers": {
+        "app/(authenticated)/projects/[projectId]/documents/[documentId]/governance/runs/[runId]/ledger/page": {
+          "moduleId": 36913,
+          "async": false,
+          "exportedName": "$$RSC_SERVER_ACTION_1",
+          "filename": "web/app/(authenticated)/projects/[projectId]/documents/[documentId]/governance/runs/[runId]/ledger/page.tsx"
+        }
+      },
+      "layer": {
+        "app/(authenticated)/projects/[projectId]/documents/[documentId]/governance/runs/[runId]/ledger/page": "rsc"
+      },
+      "exportedName": "$$RSC_SERVER_ACTION_1",
+      "filename": "web/app/(authenticated)/projects/[projectId]/documents/[documentId]/governance/runs/[runId]/ledger/page.tsx"
+    }
+  },
+  "edge": {}
+}

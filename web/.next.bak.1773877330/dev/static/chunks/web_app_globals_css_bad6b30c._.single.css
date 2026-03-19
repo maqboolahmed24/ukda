@@ -1,0 +1,3419 @@
+/* [project]/web/app/globals.css [app-client] (css) */
+:root {
+  --ukde-app-padding-inline: var(--ukde-space-2);
+  --ukde-app-padding-top: var(--ukde-space-2);
+  --ukde-app-padding-bottom: var(--ukde-space-4);
+  --ukde-shell-max-inline-size: 1984px;
+  --ukde-workspace-max-inline-size: 1728px;
+  background: none;
+}
+
+body {
+  min-height: 100dvh;
+  padding: var(--ukde-app-padding-top) var(--ukde-app-padding-inline) var(--ukde-app-padding-bottom);
+  margin: 0;
+}
+
+html {
+  scroll-padding-block-start: 5rem;
+}
+
+main {
+  gap: var(--ukde-space-4);
+  display: grid;
+}
+
+h1, h2, h3, h4, p, ul {
+  margin: 0;
+}
+
+.healthHeader, .sectionCard, .loadingScreen, .routeSkeleton, .routeErrorState, .routeNotFoundState {
+  padding: var(--ukde-space-5);
+}
+
+.sectionCard {
+  gap: var(--ukde-space-3);
+  align-content: start;
+  display: grid;
+}
+
+.healthLayout, .homeLayout {
+  gap: var(--ukde-space-4);
+  align-content: start;
+  min-height: 0;
+  display: grid;
+}
+
+.layoutWorkspacePage {
+  min-height: 0;
+}
+
+:is(.authenticatedShell[data-shell-state="Compact"] .projectWorkspaceMain:has(.layoutWorkspacePage), .authenticatedShell[data-shell-state="Focus"] .projectWorkspaceMain:has(.layoutWorkspacePage)) {
+  grid-template-rows: minmax(0, 1fr);
+  align-content: stretch;
+}
+
+:is(.authenticatedShell[data-shell-state="Compact"] .projectWorkspaceMain:has(.layoutWorkspacePage) > .projectSectionHeader, .authenticatedShell[data-shell-state="Focus"] .projectWorkspaceMain:has(.layoutWorkspacePage) > .projectSectionHeader) {
+  display: none;
+}
+
+:is(.authenticatedShell[data-shell-state="Compact"] .projectWorkspaceMain:has(.layoutWorkspacePage) > .projectContentHost, .authenticatedShell[data-shell-state="Focus"] .projectWorkspaceMain:has(.layoutWorkspacePage) > .projectContentHost) {
+  align-content: stretch;
+  min-height: 0;
+}
+
+.homeLayout--preprocessing {
+  justify-self: center;
+  min-block-size: 515px;
+  max-block-size: 515px;
+  inline-size: min(100%, 767px);
+  overflow: auto;
+}
+
+.homeLayout--privacy-compare {
+  justify-self: center;
+  min-block-size: 555px;
+  inline-size: 888px;
+  max-inline-size: 888px;
+  overflow: hidden;
+}
+
+.homeLayout--privacy-compare > * {
+  min-inline-size: 0;
+}
+
+.preprocessingOverviewNav {
+  max-inline-size: 41rem;
+}
+
+.healthHeader h2, .sectionHeading h2, .loadingScreen h1 {
+  max-width: 42rem;
+  font-size: var(--ukde-type-page-title-size);
+  line-height: var(--ukde-type-page-title-line-height);
+  letter-spacing: var(--ukde-type-page-title-letter-spacing);
+}
+
+.statusCard {
+  align-content: flex-start;
+  gap: var(--ukde-space-3);
+  padding: var(--ukde-space-4);
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-lg);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ukde-surface-strong) 86%, transparent), var(--ukde-surface));
+  display: grid;
+}
+
+.statusCard h2 {
+  font-size: 1.55rem;
+  line-height: 1.1;
+}
+
+.statusCheck {
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-md);
+  padding: var(--ukde-space-2);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 82%, transparent);
+  gap: .35rem;
+  display: grid;
+}
+
+.tone-success {
+  color: var(--ukde-success);
+}
+
+.tone-warning {
+  color: var(--ukde-warning);
+}
+
+.statusChecks {
+  gap: .45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.statusChecks li {
+  justify-content: space-between;
+  gap: var(--ukde-space-2);
+  border-bottom: 1px solid var(--ukde-border);
+  padding-bottom: .45rem;
+  display: flex;
+}
+
+.statusDetail {
+  padding: var(--ukde-space-2);
+  border-radius: var(--ukde-radius-md);
+  background: color-mix(in srgb, var(--ukde-bg-alt) 88%, transparent);
+  color: var(--ukde-text-muted);
+  font-family: var(--ukde-font-mono);
+  font-size: .85rem;
+  overflow-x: auto;
+}
+
+.sectionHeading {
+  gap: .5rem;
+  display: grid;
+}
+
+.sectionHeading h2 {
+  font-size: var(--ukde-type-section-title-size);
+  line-height: var(--ukde-type-section-title-line-height);
+}
+
+.statCard {
+  padding: var(--ukde-space-3);
+}
+
+.stateList {
+  gap: 1rem;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.stateList li {
+  padding: var(--ukde-space-3);
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-md);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 82%, transparent);
+  gap: .35rem;
+  display: grid;
+}
+
+.loginShell {
+  place-items: center;
+  min-height: min(72vh, 36rem);
+  display: grid;
+}
+
+.loginCard {
+  width: min(36rem, 100%);
+  padding: var(--ukde-space-5);
+  gap: var(--ukde-space-3);
+  display: grid;
+}
+
+.loginMeta {
+  flex-wrap: wrap;
+  gap: .65rem;
+  display: flex;
+}
+
+.primaryButton, .secondaryButton {
+  border-radius: var(--ukde-radius-pill);
+  border: 1px solid var(--ukde-border);
+  letter-spacing: .01em;
+  cursor: pointer;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 2.35rem;
+  transition: transform var(--ukde-transition), border-color var(--ukde-transition), background var(--ukde-transition), box-shadow var(--ukde-transition);
+  justify-content: center;
+  justify-self: start;
+  align-items: center;
+  padding: .46rem .9rem;
+  font-size: .92rem;
+  font-weight: 580;
+  text-decoration: none;
+  display: inline-flex;
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, var(--ukde-accent), color-mix(in srgb, var(--ukde-accent) 58%, white));
+  color: var(--ukde-color-text-on-accent, var(--ukde-bg));
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--ukde-accent) 32%, transparent);
+  border-color: #0000;
+}
+
+.secondaryButton {
+  background: color-mix(in srgb, var(--ukde-surface-strong) 88%, transparent);
+  color: var(--ukde-text);
+}
+
+.primaryButton:hover:not(:disabled), .secondaryButton:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--ukde-accent) 38%, var(--ukde-border));
+  transform: translateY(-1px);
+}
+
+.primaryButton:disabled, .secondaryButton:disabled {
+  cursor: not-allowed;
+  opacity: .5;
+  box-shadow: none;
+  transform: none;
+}
+
+.buttonRow {
+  flex-wrap: wrap;
+  gap: .75rem;
+  display: flex;
+}
+
+.buttonRow form {
+  display: inline-flex;
+}
+
+.loginDevForm {
+  align-items: start;
+  gap: .6rem;
+  display: grid;
+}
+
+.loginThemeControl {
+  justify-self: start;
+}
+
+.loadingScreen {
+  place-content: center;
+  min-height: 24rem;
+}
+
+.routeSkeleton, .routeErrorState, .routeNotFoundState {
+  gap: var(--ukde-space-3);
+  align-content: start;
+  display: grid;
+}
+
+.routeSkeleton h2 {
+  font-size: var(--ukde-type-section-title-size);
+  line-height: var(--ukde-type-section-title-line-height);
+  margin: 0;
+}
+
+.adminConsoleFrame {
+  gap: var(--ukde-space-3);
+  grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
+  min-height: 0;
+  display: grid;
+}
+
+.adminConsoleRail {
+  min-height: 0;
+  padding: var(--ukde-space-3);
+  align-content: start;
+  gap: .7rem;
+  display: grid;
+  overflow: auto;
+}
+
+.adminConsoleRail h2 {
+  font-size: var(--ukde-type-section-title-size);
+  line-height: var(--ukde-type-section-title-line-height);
+  margin: 0;
+}
+
+.adminConsoleNav {
+  gap: .75rem;
+  display: grid;
+}
+
+.adminConsoleGroup {
+  gap: .35rem;
+  display: grid;
+}
+
+.adminConsoleGroup ul {
+  gap: .3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.adminConsoleLink {
+  border: 1px solid #0000;
+  border-radius: .6rem;
+  gap: .2rem;
+  padding: .46rem .5rem;
+  text-decoration: none;
+  display: grid;
+}
+
+.adminConsoleLinkHeading {
+  align-items: center;
+  gap: .45rem;
+  display: inline-flex;
+}
+
+.adminConsoleLink:hover {
+  border-color: color-mix(in srgb, var(--ukde-accent) 38%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-accent) 9%, var(--ukde-surface));
+}
+
+.adminConsoleLink[aria-current="page"] {
+  border-color: var(--ukde-border);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 86%, transparent);
+}
+
+.adminConsoleContent {
+  min-height: 0;
+  padding-inline: .2rem;
+  overflow: auto;
+}
+
+.authenticatedShell {
+  gap: var(--ukde-space-3);
+  min-height: 34rem;
+  block-size: calc(100dvh - (var(--ukde-app-padding-top)  + var(--ukde-app-padding-bottom)));
+  max-inline-size: min(100%, var(--ukde-shell-max-inline-size));
+  grid-template-rows: auto minmax(0, 1fr);
+  margin: 0 auto;
+  display: grid;
+}
+
+.authenticatedShellHeader {
+  align-items: center;
+  gap: var(--ukde-space-2);
+  z-index: 40;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-block-size: 4.15rem;
+  padding: .6rem .75rem;
+  display: grid;
+  position: relative;
+  overflow: visible;
+}
+
+.authenticatedShellIdentity {
+  min-width: 0;
+  align-content: center;
+  gap: .18rem;
+  min-block-size: 2.75rem;
+  display: grid;
+}
+
+.authenticatedShellTitle {
+  letter-spacing: -.02em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  margin: 0;
+  font-size: clamp(1.03rem, .8vw + .85rem, 1.38rem);
+  font-weight: 620;
+  line-height: 1.08;
+  overflow: hidden;
+}
+
+.authenticatedShellIdentity .ukde-muted {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.authenticatedShellActions {
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: .35rem;
+  min-width: 0;
+  display: flex;
+}
+
+.authenticatedShellActions > * {
+  flex: none;
+}
+
+.authenticatedShellGrid {
+  gap: var(--ukde-space-3);
+  z-index: 1;
+  min-height: 0;
+  display: grid;
+  position: relative;
+}
+
+.authenticatedShell[data-shell-state="Expanded"] .authenticatedShellGrid {
+  grid-template-columns: 14rem minmax(0, 1fr) 18rem;
+}
+
+.authenticatedShell[data-shell-state="Balanced"] .authenticatedShellGrid {
+  grid-template-columns: 11rem minmax(0, 1fr) 14rem;
+}
+
+.authenticatedShell[data-shell-state="Compact"] .authenticatedShellGrid {
+  grid-template-columns: 7.25rem minmax(0, 1fr);
+}
+
+.authenticatedShell[data-shell-state="Focus"] .authenticatedShellGrid {
+  grid-template-columns: 5rem minmax(0, 1fr);
+}
+
+.authenticatedShellRail {
+  padding: var(--ukde-space-3);
+  align-content: start;
+  gap: .7rem;
+  min-height: 0;
+  display: grid;
+  overflow: auto;
+}
+
+.authenticatedShellRailList {
+  gap: .35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.authenticatedShellRailLink {
+  min-height: 2.15rem;
+  color: var(--ukde-text-muted);
+  transition: border-color var(--ukde-transition), background var(--ukde-transition), color var(--ukde-transition);
+  border: 1px solid #0000;
+  border-radius: .72rem;
+  align-items: center;
+  gap: .45rem;
+  padding: .42rem .5rem;
+  text-decoration: none;
+  display: flex;
+}
+
+.authenticatedShellRailLinkShort {
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-pill);
+  justify-content: center;
+  align-items: center;
+  min-width: 1.35rem;
+  min-height: 1.35rem;
+  font-size: .76rem;
+  line-height: 1;
+  display: none;
+}
+
+.authenticatedShell[data-shell-state="Compact"] .authenticatedShellRailLink, .authenticatedShell[data-shell-state="Focus"] .authenticatedShellRailLink {
+  justify-content: center;
+  padding-inline: .3rem;
+}
+
+.authenticatedShell[data-shell-state="Compact"] .authenticatedShellRailLinkLabel, .authenticatedShell[data-shell-state="Focus"] .authenticatedShellRailLinkLabel {
+  display: none;
+}
+
+.authenticatedShell[data-shell-state="Compact"] .authenticatedShellRailLinkShort, .authenticatedShell[data-shell-state="Focus"] .authenticatedShellRailLinkShort {
+  display: inline-flex;
+}
+
+.authenticatedShellRailLink:hover {
+  border-color: color-mix(in srgb, var(--ukde-accent) 42%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-accent) 10%, var(--ukde-surface));
+}
+
+.authenticatedShellRailLink[aria-current="page"] {
+  border-color: var(--ukde-border);
+  color: var(--ukde-text);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 88%, transparent);
+}
+
+.authenticatedShellMain {
+  gap: var(--ukde-space-2);
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  display: grid;
+}
+
+.projectContextBar, .adminContextBar {
+  padding: .48rem .55rem;
+  overflow: auto hidden;
+}
+
+.shellContextDrawer {
+  padding: .48rem .55rem;
+}
+
+.shellContextDrawerTrigger {
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-pill);
+  min-height: 2rem;
+  color: var(--ukde-text-muted);
+  cursor: pointer;
+  align-items: center;
+  padding: .3rem .68rem;
+  list-style: none;
+  display: inline-flex;
+}
+
+.shellContextDrawerTrigger::-webkit-details-marker {
+  display: none;
+}
+
+.shellContextDrawer[open] .shellContextDrawerTrigger {
+  border-color: color-mix(in srgb, var(--ukde-accent) 42%, var(--ukde-border));
+}
+
+.shellContextDrawer nav {
+  margin-top: .45rem;
+  overflow-x: auto;
+}
+
+.authenticatedShellContextList {
+  flex-wrap: nowrap;
+  gap: .35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+}
+
+.authenticatedShellContextLink {
+  border-radius: var(--ukde-radius-pill);
+  min-height: 2rem;
+  color: var(--ukde-text-muted);
+  white-space: nowrap;
+  border: 1px solid #0000;
+  align-items: center;
+  padding: .3rem .68rem;
+  text-decoration: none;
+  display: inline-flex;
+}
+
+.authenticatedShellContextLink:hover {
+  border-color: color-mix(in srgb, var(--ukde-accent) 38%, var(--ukde-border));
+}
+
+.authenticatedShellContextLink[aria-current="page"] {
+  color: var(--ukde-text);
+  border-color: var(--ukde-border);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 85%, transparent);
+}
+
+.authenticatedShellWorkRegion {
+  gap: var(--ukde-space-3);
+  align-content: start;
+  min-height: 0;
+  padding-inline: .2rem;
+  scroll-padding-block-start: 5rem;
+  display: grid;
+  overflow: auto;
+}
+
+.authenticatedShellWorkRegion :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  scroll-margin-block-start: 5rem;
+}
+
+.authenticatedShellContext {
+  min-height: 0;
+  padding: var(--ukde-space-3);
+  align-content: start;
+  gap: .65rem;
+  display: grid;
+  overflow: auto;
+}
+
+.pageHeader {
+  align-items: start;
+  gap: var(--ukde-space-3);
+  padding: var(--ukde-space-3);
+  grid-template-columns: minmax(0, 1fr) auto;
+  display: grid;
+}
+
+.pageHeaderIdentity {
+  gap: .45rem;
+  display: grid;
+}
+
+.pageHeader h1 {
+  font-size: var(--ukde-type-page-title-size);
+  line-height: var(--ukde-type-page-title-line-height);
+  letter-spacing: var(--ukde-type-page-title-letter-spacing);
+  margin: 0;
+}
+
+.pageHeaderMeta {
+  flex-wrap: wrap;
+  gap: .5rem;
+  display: flex;
+}
+
+.pageHeaderActions {
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: .55rem;
+  min-width: 0;
+  min-height: 2.35rem;
+  display: flex;
+}
+
+.pageHeaderActions > * {
+  flex: none;
+}
+
+.pageHeaderOverflow {
+  position: relative;
+}
+
+.pageHeaderOverflow[open] {
+  z-index: 20;
+}
+
+.pageHeaderOverflowTrigger {
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-pill);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 88%, transparent);
+  min-height: 2.35rem;
+  color: var(--ukde-text-muted);
+  cursor: pointer;
+  align-items: center;
+  padding: .45rem .85rem;
+  list-style: none;
+  display: inline-flex;
+}
+
+.pageHeaderOverflowTrigger::-webkit-details-marker {
+  display: none;
+}
+
+.pageHeaderOverflowMenu {
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-md);
+  background: var(--ukde-surface-strong);
+  min-width: 12.5rem;
+  box-shadow: var(--ukde-shadow);
+  gap: .25rem;
+  padding: .5rem;
+  display: grid;
+  position: absolute;
+  top: calc(100% + .35rem);
+  right: 0;
+}
+
+.pageHeaderOverflowMenu a {
+  border-radius: .6rem;
+  padding: .4rem .5rem;
+  text-decoration: none;
+}
+
+.pageHeaderOverflowMenu a:hover {
+  background: color-mix(in srgb, var(--ukde-surface) 84%, transparent);
+}
+
+.workspaceRoot {
+  gap: var(--ukde-space-3);
+  max-width: min(100%, var(--ukde-workspace-max-inline-size));
+  margin: 0 auto;
+  display: grid;
+}
+
+.workspaceHeader {
+  align-items: center;
+  gap: var(--ukde-space-3);
+  z-index: 11;
+  min-height: 3.9rem;
+  margin-top: calc(var(--ukde-space-4) * -1);
+  box-shadow: none;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ukde-accent) 7%, transparent), transparent 56%), linear-gradient(180deg, color-mix(in srgb, var(--ukde-surface-strong) 94%, transparent), color-mix(in srgb, var(--ukde-bg-alt) 96%, transparent));
+  border-top: 0;
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: .45rem clamp(1rem, 2vw, 2rem);
+  display: grid;
+  position: sticky;
+  top: 0;
+  overflow: visible;
+}
+
+.workspaceIdentity {
+  justify-self: start;
+  align-items: flex-start;
+  gap: .12rem;
+  min-width: 0;
+  display: grid;
+}
+
+.workspaceHeader .ukde-eyebrow {
+  letter-spacing: .05em;
+  font-size: .8rem;
+}
+
+.workspaceIdentity h1 {
+  font-size: var(--ukde-type-shell-title-size);
+  line-height: var(--ukde-type-shell-title-line-height);
+  letter-spacing: var(--ukde-type-shell-title-letter-spacing);
+  white-space: normal;
+  margin: 0;
+}
+
+.workspaceUtilities {
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  justify-self: end;
+  align-items: center;
+  gap: .35rem;
+  max-width: 100%;
+  display: flex;
+  overflow: visible;
+}
+
+.workspaceBadges {
+  flex-wrap: nowrap;
+  gap: .35rem;
+  display: flex;
+}
+
+.workspaceBadges .ukde-status-chip {
+  justify-content: center;
+  min-width: 15ch;
+}
+
+.workspaceMenu {
+  position: relative;
+}
+
+.workspaceMenu[open] {
+  z-index: 60;
+}
+
+.workspaceMenuTrigger {
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-pill);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 84%, transparent);
+  min-height: 2.1rem;
+  color: var(--ukde-text-muted);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color var(--ukde-transition), background var(--ukde-transition);
+  justify-content: center;
+  align-items: center;
+  padding: .25rem .78rem;
+  font-size: .82rem;
+  list-style: none;
+  display: inline-flex;
+}
+
+.workspaceMenuTrigger::-webkit-details-marker {
+  display: none;
+}
+
+.workspaceMenuTrigger:hover {
+  border-color: color-mix(in srgb, var(--ukde-accent) 42%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-accent) 10%, var(--ukde-surface));
+}
+
+.workspaceMenuPanel {
+  z-index: 70;
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-md);
+  background: var(--ukde-surface-strong);
+  min-width: 15rem;
+  max-height: min(60vh, 24rem);
+  box-shadow: var(--ukde-shadow);
+  gap: .35rem;
+  padding: .7rem;
+  display: grid;
+  position: absolute;
+  top: calc(100% + .45rem);
+  right: 0;
+  overflow: auto;
+}
+
+.workspaceMenuPanel a {
+  border-radius: .55rem;
+  padding: .45rem .5rem;
+  text-decoration: none;
+}
+
+.workspaceMenuPanel a:hover {
+  background: color-mix(in srgb, var(--ukde-surface) 82%, transparent);
+}
+
+.workspaceMenuPanel form {
+  justify-self: start;
+  width: fit-content;
+  margin: 0;
+}
+
+.globalCommandControls {
+  align-items: center;
+  gap: .35rem;
+  display: inline-flex;
+}
+
+.globalCommandTrigger {
+  gap: .45rem;
+}
+
+.globalCommandTrigger .ukde-kbd {
+  font-size: .72rem;
+}
+
+.globalCommandDialog {
+  width: min(48rem, 100vw - 2rem);
+}
+
+.globalCommandBody {
+  gap: var(--ukde-space-2);
+  display: grid;
+}
+
+.globalCommandInput {
+  width: 100%;
+}
+
+.globalCommandResults {
+  gap: var(--ukde-space-2);
+  max-height: min(58vh, 26rem);
+  padding-right: .2rem;
+  display: grid;
+  overflow: auto;
+}
+
+.globalCommandGroup {
+  gap: .45rem;
+  display: grid;
+}
+
+.globalCommandGroup ul {
+  gap: .35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.globalCommandOption {
+  text-align: left;
+  border: 1px solid var(--ukde-border);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 86%, transparent);
+  width: 100%;
+  color: var(--ukde-text);
+  cursor: pointer;
+  transition: border-color var(--ukde-transition), background var(--ukde-transition);
+  border-radius: .65rem;
+  gap: .2rem;
+  padding: .5rem .58rem;
+  display: grid;
+}
+
+.globalCommandOption:hover, .globalCommandOption[data-selected="yes"] {
+  border-color: color-mix(in srgb, var(--ukde-accent) 42%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-accent) 10%, var(--ukde-surface));
+}
+
+.globalCommandLabel {
+  font-weight: 560;
+}
+
+.globalCommandMeta {
+  color: var(--ukde-text-muted);
+  font-size: .76rem;
+}
+
+.workspaceHelpLink {
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-pill);
+  min-height: 2.1rem;
+  color: var(--ukde-text-muted);
+  white-space: nowrap;
+  transition: border-color var(--ukde-transition), background var(--ukde-transition);
+  justify-content: center;
+  align-items: center;
+  padding: .25rem .78rem;
+  font-size: .82rem;
+  text-decoration: none;
+  display: inline-flex;
+}
+
+.workspaceHelpLink:hover {
+  border-color: color-mix(in srgb, var(--ukde-accent) 42%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-accent) 10%, var(--ukde-surface));
+}
+
+.workspaceSignOutButton {
+  border-radius: var(--ukde-radius-pill);
+  color: #fff;
+  white-space: nowrap;
+  cursor: pointer;
+  width: auto;
+  min-height: 0;
+  transition: border-color var(--ukde-transition), background var(--ukde-transition), color var(--ukde-transition);
+  background: #dc2626;
+  border: 1px solid #991b1b;
+  justify-content: center;
+  align-items: center;
+  padding: .28rem .58rem;
+  font-weight: 620;
+  line-height: 1;
+  display: inline-flex;
+}
+
+.workspaceSignOutButton:hover {
+  color: #fff;
+  background: #b91c1c;
+  border-color: #7f1d1d;
+}
+
+.workspaceThemeControl {
+  flex: none;
+  min-width: 0;
+}
+
+.workspaceHeader .ukde-badge {
+  white-space: nowrap;
+  min-height: 2.1rem;
+  padding: .25rem .78rem;
+  font-size: .78rem;
+}
+
+@media (max-width: 72rem) {
+  .workspaceHeader {
+    margin-top: calc(var(--ukde-space-4) * -1);
+    grid-template-columns: minmax(0, 1fr);
+    align-items: flex-start;
+    padding: .55rem 1rem;
+  }
+
+  .workspaceUtilities {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    justify-self: start;
+  }
+
+  .workspaceBadges {
+    flex-wrap: wrap;
+  }
+}
+
+.projectsIndexGrid {
+  gap: var(--ukde-space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: grid;
+}
+
+.projectsPanel {
+  gap: var(--ukde-space-3);
+  padding: var(--ukde-space-4);
+  align-content: start;
+  display: grid;
+}
+
+.projectsPanelHeader {
+  gap: .55rem;
+  display: grid;
+}
+
+.projectsPanelHeader h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.projectForm {
+  align-content: start;
+  gap: .55rem;
+  display: grid;
+}
+
+.projectInput, .projectTextarea, .projectSelect, .jobsCreateForm input:not([type="hidden"]), .jobsCreateForm select, .addMemberForm input:not([type="hidden"]), .addMemberForm select, .auditFilterForm input:not([type="hidden"]), .auditFilterForm select, .documentsFilterBar .ukde-field, .documentsFilterBar .ukde-select {
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-sm);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 86%, transparent);
+  width: 100%;
+  min-height: 2.35rem;
+  color: var(--ukde-text);
+  transition: border-color var(--ukde-transition), background var(--ukde-transition), box-shadow var(--ukde-transition);
+  padding: .5rem .7rem;
+}
+
+.projectTextarea {
+  resize: vertical;
+  min-height: 5.5rem;
+}
+
+.projectSelect, .jobsCreateForm select, .addMemberForm select, .auditFilterForm select, .documentsFilterBar .ukde-select {
+  appearance: none;
+  color: var(--ukde-text-muted);
+  background-image: linear-gradient(45deg, #0000 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, #0000 50%);
+  background-position: calc(100% - .95rem) calc(50% - .12rem), calc(100% - .6rem) calc(50% - .12rem);
+  background-repeat: no-repeat;
+  background-size: .32rem .32rem, .32rem .32rem;
+  padding-inline-end: 2rem;
+}
+
+.projectInput:focus-visible, .projectTextarea:focus-visible, .projectSelect:focus-visible, .jobsCreateForm input:not([type="hidden"]):focus-visible, .jobsCreateForm select:focus-visible, .addMemberForm input:not([type="hidden"]):focus-visible, .addMemberForm select:focus-visible, .auditFilterForm input:not([type="hidden"]):focus-visible, .auditFilterForm select:focus-visible, .documentsFilterBar .ukde-field:focus-visible, .documentsFilterBar .ukde-select:focus-visible {
+  border-color: color-mix(in srgb, var(--ukde-accent) 55%, var(--ukde-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ukde-accent) 20%, transparent);
+  outline: none;
+}
+
+.documentsFilterBar {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+  gap: .6rem;
+  display: grid;
+}
+
+.documentsFilterField {
+  align-content: start;
+  gap: .32rem;
+  display: grid;
+}
+
+.documentsFilterField:last-child {
+  align-self: end;
+}
+
+.documentsFilterBar label {
+  font-size: var(--ukde-type-meta-size);
+  color: var(--ukde-text-muted);
+}
+
+.documentsFilterActions {
+  flex-wrap: wrap;
+  gap: .5rem;
+  display: inline-flex;
+}
+
+.documentsActiveFilters {
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: .8rem;
+  display: flex;
+}
+
+.projectSearchIntro {
+  gap: .55rem;
+}
+
+.projectSearchSkipLink {
+  color: var(--ukde-text-muted);
+  font-size: var(--ukde-type-meta-size);
+  justify-self: start;
+}
+
+.projectSearchSkipLink:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ukde-accent) 65%, transparent);
+  outline-offset: 2px;
+}
+
+.projectSearchQueryCard {
+  gap: .9rem;
+}
+
+.projectSearchQueryForm {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+  gap: .6rem;
+  display: grid;
+}
+
+.projectSearchFormActions {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+  display: inline-flex;
+}
+
+.projectSearchActiveFilters {
+  flex-wrap: wrap;
+  gap: .4rem;
+  display: flex;
+}
+
+.projectSearchResultsCard {
+  gap: 1rem;
+}
+
+.projectSearchResultsHeader {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: .65rem;
+  display: flex;
+}
+
+.projectSearchKeyboardHint {
+  margin: 0;
+}
+
+.projectSearchResultGroups {
+  gap: .9rem;
+  display: grid;
+}
+
+.projectSearchResultGroup {
+  gap: .55rem;
+  display: grid;
+}
+
+.projectSearchGroupHeader {
+  justify-content: space-between;
+  align-items: center;
+  gap: .6rem;
+  display: flex;
+}
+
+.projectSearchGroupHeader h4 {
+  margin: 0;
+  font-size: .98rem;
+}
+
+.projectSearchCardList {
+  gap: .55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.projectSearchResultCard {
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-md);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 84%, transparent);
+  gap: .55rem;
+  padding: .72rem;
+  display: grid;
+}
+
+.projectSearchResultCard.is-selected {
+  border-color: color-mix(in srgb, var(--ukde-accent) 55%, var(--ukde-border));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ukde-accent) 14%, transparent);
+}
+
+.projectSearchCardMeta {
+  flex-wrap: wrap;
+  gap: .35rem;
+  display: flex;
+}
+
+.projectSearchSnippet {
+  color: var(--ukde-text);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.projectSearchSnippetMark {
+  background: color-mix(in srgb, var(--ukde-accent) 28%, transparent);
+  color: inherit;
+  border-radius: .2rem;
+  padding: 0 .1rem;
+}
+
+.projectSearchEllipsis {
+  color: var(--ukde-text-muted);
+}
+
+.projectSearchProvenance {
+  margin: 0;
+}
+
+.projectSearchPagination {
+  flex-wrap: wrap;
+  gap: .5rem;
+  display: inline-flex;
+}
+
+@media (max-width: 1200px) {
+  .documentsFilterBar, .projectSearchQueryForm {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .documentsFilterBar, .projectSearchQueryForm {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .documentsFilterBar, .projectSearchQueryForm {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.projectPrimaryButton, .projectSecondaryButton, .projectDangerButton {
+  border-radius: var(--ukde-radius-pill);
+  border: 1px solid var(--ukde-border);
+  letter-spacing: .01em;
+  cursor: pointer;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 2.35rem;
+  transition: transform var(--ukde-transition), border-color var(--ukde-transition), background var(--ukde-transition), box-shadow var(--ukde-transition);
+  justify-content: center;
+  justify-self: start;
+  align-items: center;
+  padding: .45rem .88rem;
+  font-size: .9rem;
+  font-weight: 580;
+  display: inline-flex;
+}
+
+.projectPrimaryButton {
+  background: linear-gradient(135deg, var(--ukde-accent), color-mix(in srgb, var(--ukde-accent) 58%, white));
+  color: var(--ukde-color-text-on-accent, var(--ukde-bg));
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--ukde-accent) 30%, transparent);
+  border-color: #0000;
+}
+
+.projectSecondaryButton {
+  background: color-mix(in srgb, var(--ukde-surface-strong) 88%, transparent);
+  color: var(--ukde-text);
+}
+
+.projectDangerButton {
+  background: color-mix(in srgb, var(--ukde-danger) 12%, var(--ukde-surface));
+  color: var(--ukde-danger);
+}
+
+.projectPrimaryButton:hover:not(:disabled), .projectSecondaryButton:hover:not(:disabled), .projectDangerButton:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--ukde-accent) 40%, var(--ukde-border));
+  transform: translateY(-1px);
+}
+
+.projectPrimaryButton:disabled, .projectSecondaryButton:disabled, .projectDangerButton:disabled {
+  cursor: not-allowed;
+  opacity: .5;
+  box-shadow: none;
+  transform: none;
+}
+
+.emptyProjectState {
+  border: 1px dashed var(--ukde-border);
+  border-radius: var(--ukde-radius-md);
+  padding: var(--ukde-space-3);
+  gap: .5rem;
+  display: grid;
+}
+
+.projectList {
+  gap: .65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.projectCard {
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-md);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 86%, transparent);
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: .65rem;
+  padding: .75rem;
+  text-decoration: none;
+  display: flex;
+}
+
+.projectCard h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.projectCardMeta {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .4rem;
+  display: flex;
+}
+
+.projectWorkspaceFrame {
+  gap: var(--ukde-space-3);
+  grid-template-columns: 15rem minmax(0, 1fr);
+  min-height: 56vh;
+  display: grid;
+}
+
+.projectSideNav {
+  padding: var(--ukde-space-3);
+  align-content: start;
+  gap: .65rem;
+  display: grid;
+}
+
+.projectSideNav ul {
+  gap: .35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.projectSideNav a {
+  color: var(--ukde-text-muted);
+  border: 1px solid #0000;
+  border-radius: .65rem;
+  padding: .5rem .6rem;
+  text-decoration: none;
+  display: block;
+}
+
+.projectSideNav a[aria-current="page"] {
+  border-color: var(--ukde-border);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 84%, transparent);
+  color: var(--ukde-text);
+}
+
+.projectWorkspaceMain {
+  gap: var(--ukde-space-3);
+  align-content: start;
+  min-height: 0;
+  display: grid;
+}
+
+.projectSectionHeader {
+  padding: var(--ukde-space-3);
+  gap: .45rem;
+  display: grid;
+}
+
+.projectSectionHeader h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.projectContentHost {
+  gap: var(--ukde-space-3);
+  align-content: start;
+  min-height: 0;
+  display: grid;
+}
+
+.projectSectionGrid {
+  gap: var(--ukde-space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: grid;
+}
+
+.projectDetailCard, .projectPlaceholder, .settingsCard {
+  padding: var(--ukde-space-3);
+  align-content: start;
+  gap: .6rem;
+  display: grid;
+}
+
+.projectDetailCard h3, .projectPlaceholder h3, .settingsCard h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.projectMetaList {
+  gap: .35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.projectMetaList li {
+  border-bottom: 1px solid var(--ukde-border);
+  justify-content: space-between;
+  gap: .6rem;
+  padding-bottom: .35rem;
+  display: flex;
+}
+
+.policyEditorSurface {
+  padding: var(--ukde-space-3);
+  align-content: start;
+  gap: .9rem;
+  display: grid;
+}
+
+.policyEditorHeader {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: .8rem;
+  display: flex;
+}
+
+.policyEditorHeader h3 {
+  margin: 0;
+}
+
+.policyEditorStatusRow {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: .45rem;
+  display: inline-flex;
+}
+
+.policyEditorLayout {
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  gap: .9rem;
+  min-height: 0;
+  display: grid;
+}
+
+.policyEditorMainColumn, .policyEditorSideColumn {
+  align-content: start;
+  gap: .75rem;
+  min-height: 0;
+  display: grid;
+}
+
+.policyEditorForm {
+  gap: .75rem;
+  display: grid;
+}
+
+.policyEditorBlock {
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-md);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 87%, transparent);
+  gap: .6rem;
+  padding: .75rem;
+  display: grid;
+}
+
+.policyEditorBlock h4, .policyEditorRetireImpact h5 {
+  margin: 0;
+}
+
+.policyEditorBlockHead {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: .55rem;
+  display: flex;
+}
+
+.policyEditorFieldGrid {
+  gap: .6rem;
+  display: grid;
+}
+
+.policyEditorFieldGrid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.policyEditorFieldGrid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.policyEditorFieldGrid--four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.policyEditorField, .policyEditorToggle {
+  color: var(--ukde-text-muted);
+  font-size: var(--ukde-type-label-size);
+  align-content: start;
+  gap: .32rem;
+  display: grid;
+}
+
+.policyEditorToggle {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: .45rem;
+  min-height: 2.35rem;
+}
+
+.policyEditorField input, .policyEditorField select, .policyRuleTable input, .policyRuleTable select, .policyEditorJsonPreview textarea {
+  border-radius: var(--ukde-radius-sm);
+  border: 1px solid var(--ukde-border);
+  background: color-mix(in srgb, var(--ukde-surface) 90%, transparent);
+  min-height: 2.2rem;
+  color: var(--ukde-text);
+  padding: .42rem .56rem;
+  font-size: .9rem;
+}
+
+.policyEditorField input:focus-visible, .policyEditorField select:focus-visible, .policyRuleTable input:focus-visible, .policyRuleTable select:focus-visible, .policyEditorJsonPreview textarea:focus-visible {
+  border-color: color-mix(in srgb, var(--ukde-accent) 58%, var(--ukde-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ukde-accent) 22%, transparent);
+  outline: none;
+}
+
+.policyRuleTableWrap, .policySimulationTableWrap {
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-sm);
+  background: color-mix(in srgb, var(--ukde-surface) 88%, transparent);
+  max-height: 18.5rem;
+  overflow: auto;
+}
+
+.policyRuleTable, .policySimulationTable {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 34rem;
+}
+
+.policyRuleTable th, .policyRuleTable td, .policySimulationTable th, .policySimulationTable td {
+  border-bottom: 1px solid var(--ukde-border);
+  text-align: left;
+  vertical-align: top;
+  padding: .45rem;
+}
+
+.policyRuleTable th, .policySimulationTable th {
+  color: var(--ukde-text-muted);
+  font-size: .81rem;
+}
+
+.policyEditorFormActions {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+  display: flex;
+}
+
+.policyEditorCompareLinks {
+  gap: .45rem;
+  display: grid;
+}
+
+.policyEditorLifecycleActions {
+  flex-wrap: wrap;
+  gap: .42rem;
+  display: flex;
+}
+
+.policyEditorLifecycleActions form {
+  display: inline-flex;
+}
+
+.policyEditorRetireImpact {
+  border-top: 1px solid var(--ukde-border);
+  gap: .35rem;
+  padding-top: .45rem;
+  display: grid;
+}
+
+.policyEditorRetireImpact ul {
+  color: var(--ukde-text-muted);
+  gap: .35rem;
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+}
+
+.policySimulationSummary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .45rem;
+  display: grid;
+}
+
+.policySimulationSummaryItem {
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-sm);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 84%, transparent);
+  gap: .15rem;
+  padding: .4rem .45rem;
+  display: grid;
+}
+
+.policySimulationSummaryItem span {
+  color: var(--ukde-text-muted);
+  font-size: .78rem;
+}
+
+.policySimulationSummaryItem strong {
+  font-size: 1rem;
+}
+
+.policyGuardrailSummary {
+  flex-wrap: wrap;
+  gap: .4rem;
+  display: inline-flex;
+}
+
+.policyGuardrailList {
+  gap: .5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.policyGuardrailList li {
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-sm);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 84%, transparent);
+  gap: .3rem;
+  padding: .5rem;
+  display: grid;
+}
+
+.policyEditorJsonPreview {
+  gap: .45rem;
+  display: grid;
+}
+
+.policyEditorJsonPreview summary {
+  color: var(--ukde-text-muted);
+  cursor: pointer;
+}
+
+.policyCompareSectionSummary {
+  flex-wrap: wrap;
+  gap: .42rem;
+  margin-bottom: .55rem;
+  display: flex;
+}
+
+@media (max-width: 1300px) {
+  .policyEditorLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .policyEditorStatusRow {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 1024px) {
+  .policyEditorFieldGrid--two, .policyEditorFieldGrid--three, .policyEditorFieldGrid--four, .policySimulationSummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .policyEditorFieldGrid--two, .policyEditorFieldGrid--three, .policyEditorFieldGrid--four, .policySimulationSummary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.governanceFilterForm label {
+  min-width: 8.5rem;
+  color: var(--ukde-text-muted);
+  font-size: var(--ukde-type-label-size);
+  gap: .3rem;
+  display: grid;
+}
+
+.governanceFilterForm input {
+  min-width: 8.5rem;
+}
+
+.importStepper {
+  gap: .45rem;
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+}
+
+.importStepper li {
+  color: var(--ukde-text-muted);
+}
+
+.importStepper li[aria-current="step"] {
+  color: var(--ukde-text);
+  font-weight: 620;
+}
+
+.importWizardPanel {
+  gap: .75rem;
+  display: grid;
+}
+
+.timelineList {
+  gap: .8rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.timelineList li {
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-md);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 86%, transparent);
+  gap: .4rem;
+  padding: .7rem .75rem;
+  display: grid;
+}
+
+.qualityTriageControls {
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: .7rem;
+  margin-bottom: .7rem;
+  display: grid;
+}
+
+.qualityTriageControls label {
+  color: var(--ukde-text-muted);
+  font-size: var(--ukde-type-label-size);
+  gap: .35rem;
+  display: grid;
+}
+
+.qualityTriageCheckbox {
+  align-items: center;
+  gap: .45rem;
+  margin-top: 1.35rem;
+  display: flex !important;
+}
+
+.qualityTriageActiveFilters {
+  color: var(--ukde-text-muted);
+  font-size: var(--ukde-type-label-size);
+  margin: .2rem 0 .6rem;
+}
+
+.qualityTriageActionBar {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: .6rem;
+  margin-bottom: .65rem;
+  display: flex;
+}
+
+.qualityTriageActionBar p {
+  margin: 0;
+}
+
+.qualityTriageTableWrap {
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-md);
+  max-height: min(30rem, 100dvh - 19rem);
+  overflow: auto;
+}
+
+.qualityTriageTable {
+  min-width: 52rem;
+}
+
+.qualityTriageSubStatus {
+  color: var(--ukde-text-muted);
+  font-size: var(--ukde-type-label-size);
+  margin-top: .2rem;
+  display: block;
+}
+
+.qualityDetailsDrawerBody {
+  gap: .85rem;
+  display: grid;
+}
+
+.qualityDetailsPreviewGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65rem;
+  display: grid;
+}
+
+.qualityDetailsPreviewGrid figure {
+  gap: .35rem;
+  margin: 0;
+  display: grid;
+}
+
+.qualityDetailsPreviewGrid figcaption {
+  color: var(--ukde-text-muted);
+  font-size: var(--ukde-type-label-size);
+}
+
+.qualityDetailsPreviewGrid img {
+  object-fit: contain;
+  border-radius: calc(var(--ukde-radius-md)  - 2px);
+  border: 1px solid var(--ukde-border);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 80%, transparent);
+  width: 100%;
+  max-height: 10rem;
+}
+
+.qualityWizardStep {
+  gap: .65rem;
+  display: grid;
+}
+
+.qualityWizardStep h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.qualityWizardChoice {
+  align-items: center;
+  gap: .45rem;
+  display: flex;
+}
+
+.documentLibraryThumbnailPreview {
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-md);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 86%, transparent);
+  gap: .45rem;
+  margin: 0;
+  padding: .65rem;
+  display: grid;
+}
+
+.documentLibraryThumbnailImage {
+  border-radius: calc(var(--ukde-radius-md)  - 2px);
+  object-fit: contain;
+  background: color-mix(in srgb, var(--ukde-surface) 75%, transparent);
+  width: min(100%, 18rem);
+  max-height: 14rem;
+}
+
+.documentLibraryThumbnailPreview figcaption {
+  font-size: var(--ukde-type-label-size);
+  color: var(--ukde-text-muted);
+  margin: 0;
+}
+
+.documentViewerToolbar {
+  padding: var(--ukde-space-3);
+}
+
+.authenticatedShell[data-shell-state="Compact"] .layoutWorkspacePage .documentViewerToolbar {
+  padding-block: var(--ukde-space-2);
+}
+
+.authenticatedShell[data-shell-state="Compact"] .layoutWorkspacePage .documentViewerShortcutHint {
+  display: none;
+}
+
+.documentViewerToolbarRow {
+  gap: var(--ukde-space-2);
+  flex-wrap: wrap;
+  align-items: center;
+  display: flex;
+}
+
+.documentViewerToolbarRow .ukde-toolbar-primitive {
+  flex: 22rem;
+  min-width: 0;
+}
+
+.documentViewerModeSelector {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .35rem;
+  display: inline-flex;
+}
+
+.documentViewerModeSelector .secondaryButton[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--ukde-accent) 54%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-surface-strong) 92%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ukde-accent) 40%, transparent);
+}
+
+.documentViewerRunSelector {
+  color: var(--ukde-text-muted);
+  font-size: var(--ukde-type-label-size);
+  align-items: center;
+  gap: .45rem;
+  display: inline-flex;
+}
+
+.documentViewerRunSelector select {
+  min-width: 14.5rem;
+}
+
+.documentViewerPageJump {
+  white-space: nowrap;
+  align-items: center;
+  gap: .5rem;
+  display: flex;
+}
+
+.documentViewerPageJump label {
+  font-size: var(--ukde-type-label-size);
+  color: var(--ukde-text-muted);
+}
+
+.documentViewerPageJump input {
+  width: 4.5rem;
+}
+
+.documentViewerZoomReadout {
+  font-size: var(--ukde-type-label-size);
+  color: var(--ukde-text-muted);
+  white-space: nowrap;
+  margin: 0;
+}
+
+.documentViewerLinkStatus {
+  min-height: 1.2rem;
+  font-size: var(--ukde-type-label-size);
+  color: var(--ukde-text-muted);
+  margin: .4rem 0 0;
+}
+
+.documentViewerShortcutHint {
+  font-size: var(--ukde-type-label-size);
+  color: var(--ukde-text-muted);
+  margin: .35rem 0 0;
+}
+
+.documentViewerWorkspace {
+  inline-size: min(100%, 767px);
+  padding: var(--ukde-space-3);
+  grid-template-columns: minmax(9.5rem, var(--viewer-filmstrip-width, 13rem)) minmax(0, 1fr) minmax(12.5rem, var(--viewer-inspector-width, 16.75rem));
+  justify-self: center;
+  gap: var(--ukde-space-3);
+  min-height: min(612px, 100dvh - 18rem);
+  max-height: min(612px, 100dvh - 18rem);
+  margin-inline: auto;
+  display: grid;
+  overflow: hidden;
+}
+
+.documentViewerWorkspace[data-workspace-state="Balanced"] {
+  grid-template-columns: minmax(8rem, var(--viewer-filmstrip-width, 11rem)) minmax(0, 1fr) minmax(10.5rem, var(--viewer-inspector-width, 14rem));
+}
+
+.documentViewerWorkspace[data-workspace-state="Compact"] {
+  grid-template-columns: minmax(6.5rem, var(--viewer-filmstrip-width, 9rem)) minmax(0, 1fr);
+}
+
+.documentViewerWorkspace[data-workspace-state="Focus"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.documentViewerFilmstrip, .documentViewerInspector {
+  align-content: start;
+  gap: .7rem;
+  min-height: 0;
+  display: grid;
+  overflow: auto;
+}
+
+.documentViewerFilmstrip h2, .documentViewerInspector h2 {
+  margin: 0;
+  font-size: 1.02rem;
+}
+
+.documentViewerFilmstrip ul {
+  gap: .45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.documentViewerFilmstripLink {
+  color: var(--ukde-text-muted);
+  border: 1px solid #0000;
+  border-radius: .62rem;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: .6rem;
+  padding: .42rem;
+  text-decoration: none;
+  display: grid;
+}
+
+.documentViewerFilmstripLink:hover {
+  border-color: color-mix(in srgb, var(--ukde-accent) 40%, var(--ukde-border));
+}
+
+.documentViewerFilmstripLink[aria-current="page"] {
+  border-color: color-mix(in srgb, var(--ukde-accent) 48%, var(--ukde-border));
+  color: var(--ukde-text);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 88%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ukde-accent) 34%, transparent);
+}
+
+.documentViewerFilmstripThumb {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 90%, transparent);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 88%, transparent);
+  border-radius: .35rem;
+  display: block;
+}
+
+.documentViewerFilmstripThumbPlaceholder {
+  border: 1px dashed color-mix(in srgb, var(--ukde-border) 85%, transparent);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 86%, transparent);
+  width: 60px;
+  height: 84px;
+  color: var(--ukde-text-muted);
+  font-size: var(--ukde-type-micro-size);
+  text-align: center;
+  border-radius: .35rem;
+  place-items: center;
+  padding-inline: .2rem;
+  display: grid;
+}
+
+.documentViewerFilmstripThumbPlaceholder[data-status="failed"], .documentViewerFilmstripThumbPlaceholder[data-status="canceled"] {
+  border-color: color-mix(in srgb, var(--ukde-danger) 55%, var(--ukde-border));
+  color: color-mix(in srgb, var(--ukde-danger) 72%, var(--ukde-text));
+}
+
+.documentViewerCanvas {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 85%, transparent);
+  border-radius: var(--ukde-radius-md);
+  background: radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--ukde-surface-strong) 88%, transparent), color-mix(in srgb, var(--ukde-surface) 94%, transparent));
+  min-height: 0;
+  display: grid;
+  overflow: hidden;
+}
+
+.documentViewerCanvasViewport {
+  min-height: 0;
+  place-items: center;
+  block-size: 100%;
+  padding: .65rem;
+  display: grid;
+  overflow: hidden;
+}
+
+.transcriptionWorkspaceRoot {
+  gap: var(--ukde-space-3);
+  display: grid;
+}
+
+.transcriptionWorkspaceToolbar {
+  gap: .6rem;
+  display: grid;
+}
+
+.transcriptionWorkspaceToolbarMain, .transcriptionWorkspaceToolbarSub {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.transcriptionWorkspace {
+  --viewer-filmstrip-width: 11.5rem;
+  --viewer-inspector-width: 22.5rem;
+}
+
+.transcriptionFilmstrip ul {
+  gap: .5rem;
+}
+
+.transcriptionCanvas {
+  align-items: stretch;
+}
+
+.transcriptionCanvasViewport {
+  place-items: stretch stretch;
+  padding: .75rem;
+}
+
+.transcriptionCanvasStage {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 80%, transparent);
+  border-radius: calc(var(--ukde-radius-md)  - .06rem);
+  background: radial-gradient(160% 120% at 0% 0%, color-mix(in srgb, var(--ukde-surface-strong) 82%, transparent), transparent), color-mix(in srgb, var(--ukde-surface) 94%, transparent);
+  min-height: 0;
+  position: relative;
+  overflow: auto;
+}
+
+.transcriptionCanvasImage {
+  object-fit: contain;
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.transcriptionOverlay {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+}
+
+.transcriptionOverlayLine {
+  cursor: pointer;
+  fill: color-mix(in srgb, var(--ukde-accent) 8%, transparent);
+  stroke: color-mix(in srgb, var(--ukde-accent) 55%, var(--ukde-border));
+  stroke-width: 1.2px;
+  vector-effect: non-scaling-stroke;
+  transition: fill var(--ukde-transition), stroke var(--ukde-transition), stroke-width var(--ukde-transition);
+}
+
+.transcriptionOverlayLine[data-selected="true"] {
+  fill: color-mix(in srgb, var(--ukde-accent) 20%, transparent);
+  stroke: color-mix(in srgb, var(--ukde-accent) 78%, white);
+  stroke-width: 2.2px;
+}
+
+.transcriptionOverlayLine[data-low="true"] {
+  fill: color-mix(in srgb, var(--ukde-warning) 22%, transparent);
+  stroke: color-mix(in srgb, var(--ukde-warning) 72%, var(--ukde-border));
+}
+
+.transcriptionOverlayToken {
+  fill: color-mix(in srgb, var(--ukde-accent) 16%, transparent);
+  stroke: color-mix(in srgb, var(--ukde-accent) 82%, white);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+
+.transcriptionEditor {
+  border-left: 1px solid color-mix(in srgb, var(--ukde-border) 78%, transparent);
+  gap: .8rem;
+  padding-left: .5rem;
+}
+
+.transcriptionVariantToggle .secondaryButton[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--ukde-accent) 54%, var(--ukde-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ukde-accent) 36%, transparent);
+}
+
+.transcriptionModeHint {
+  margin-top: -.2rem;
+}
+
+.transcriptionLineList {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 84%, transparent);
+  border-radius: calc(var(--ukde-radius-md)  - .08rem);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 82%, transparent);
+  min-height: 0;
+  padding: .35rem;
+  overflow: auto;
+}
+
+.transcriptionLineRow {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 86%, transparent);
+  border-radius: calc(var(--ukde-radius-sm)  + .05rem);
+  background: color-mix(in srgb, var(--ukde-surface) 90%, transparent);
+  gap: .45rem;
+  margin-bottom: .3rem;
+  padding: .5rem;
+  display: grid;
+}
+
+.transcriptionLineRow[data-selected="true"] {
+  border-color: color-mix(in srgb, var(--ukde-accent) 52%, var(--ukde-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ukde-accent) 32%, transparent);
+}
+
+.transcriptionLineRow[data-dirty="true"] {
+  border-color: color-mix(in srgb, var(--ukde-warning) 42%, var(--ukde-border));
+}
+
+.transcriptionLineRow[data-low="true"] {
+  background: color-mix(in srgb, var(--ukde-warning) 9%, var(--ukde-surface));
+}
+
+.transcriptionLineRowHeader {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: .5rem;
+  display: flex;
+}
+
+.transcriptionLineDraft {
+  resize: vertical;
+  width: 100%;
+  min-height: 3.5rem;
+  font-family: var(--ukde-font-mono);
+}
+
+.transcriptionLineReadOnly {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 82%, transparent);
+  border-radius: calc(var(--ukde-radius-sm)  - .05rem);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 85%, transparent);
+  margin: 0;
+  padding: .45rem;
+}
+
+.transcriptionLineRowActions, .transcriptionEditorFooter {
+  flex-wrap: wrap;
+}
+
+.transcriptionInspectorGrid {
+  gap: var(--ukde-space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: grid;
+}
+
+.transcriptionLineCropPreview {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 82%, transparent);
+  border-radius: var(--ukde-radius-sm);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 80%, transparent);
+  overflow: hidden;
+}
+
+.transcriptionLineCropSvg {
+  width: 100%;
+  block-size: 9.5rem;
+  display: block;
+}
+
+.transcriptionLineCropOutline {
+  fill: color-mix(in srgb, var(--ukde-accent) 18%, transparent);
+  stroke: color-mix(in srgb, var(--ukde-accent) 82%, white);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+
+.transcriptionAssistSection {
+  gap: .7rem;
+}
+
+.transcriptionDrawerList, .transcriptionDrawerEditor {
+  gap: .6rem;
+  display: grid;
+}
+
+.layoutWorkspace[data-filmstrip-collapsed="true"] {
+  grid-template-columns: minmax(0, 1fr) minmax(12.5rem, var(--viewer-inspector-width, 16.75rem));
+}
+
+.layoutWorkspaceToolbarRow {
+  align-items: center;
+}
+
+.layoutWorkspaceToolbarRow > * {
+  min-width: 0;
+}
+
+.layoutWorkspaceToolbarMeta, .layoutWorkspacePrimaryActions {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.layoutWorkspaceOverflowPanel {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 85%, transparent);
+  border-radius: var(--ukde-radius-sm);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 82%, transparent);
+  min-width: 11rem;
+  margin: 0;
+}
+
+.layoutWorkspaceOverflowPanel > summary {
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  color: var(--ukde-text-muted);
+  font-size: var(--ukde-type-label-size);
+  padding: .42rem .6rem;
+  list-style: none;
+}
+
+.layoutWorkspaceOverflowPanel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.layoutWorkspaceOverflowBody {
+  border-top: 1px solid color-mix(in srgb, var(--ukde-border) 82%, transparent);
+  gap: .45rem;
+  padding: .55rem;
+  display: grid;
+}
+
+.layoutWorkspacePaneControls {
+  gap: .3rem;
+  display: grid;
+}
+
+.layoutWorkspacePaneControls > span {
+  font-size: var(--ukde-type-label-size);
+  color: var(--ukde-text-muted);
+}
+
+.layoutWorkspacePendingTransition {
+  border: 1px solid color-mix(in srgb, var(--ukde-warning) 36%, var(--ukde-border));
+  border-radius: var(--ukde-radius-sm);
+  background: color-mix(in srgb, var(--ukde-warning) 12%, var(--ukde-surface));
+  gap: .45rem;
+  margin-top: .55rem;
+  padding: .55rem;
+  display: grid;
+}
+
+.layoutWorkspacePendingTransition p {
+  margin: 0;
+}
+
+.layoutWorkspaceConflictActions {
+  margin-top: .35rem;
+}
+
+.layoutEditToolRow {
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: .35rem;
+}
+
+.layoutEditToolRow .secondaryButton[data-selected="true"] {
+  border-color: color-mix(in srgb, var(--ukde-accent) 58%, var(--ukde-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ukde-accent) 36%, transparent);
+}
+
+.layoutWorkspaceOpacity {
+  font-size: var(--ukde-type-label-size);
+  color: var(--ukde-text-muted);
+  align-items: center;
+  gap: .45rem;
+  display: inline-flex;
+}
+
+.layoutWorkspaceOpacity input[type="range"] {
+  width: 8.5rem;
+  min-height: 24px;
+  block-size: 24px;
+}
+
+.layoutFilmstripButton {
+  text-align: left;
+  width: 100%;
+  font: inherit;
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+.layoutWorkspaceCanvas {
+  align-items: stretch;
+}
+
+.layoutWorkspace[data-workspace-mode="edit"] .layoutWorkspaceCanvas {
+  border-color: color-mix(in srgb, var(--ukde-warning) 58%, var(--ukde-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ukde-warning) 34%, transparent);
+}
+
+.layoutWorkspaceCanvasViewport {
+  place-items: stretch stretch;
+  padding: .75rem;
+  display: grid;
+}
+
+.layoutWorkspaceCanvasScroller {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 82%, transparent);
+  border-radius: calc(var(--ukde-radius-md)  - .08rem);
+  background: radial-gradient(170% 130% at 0% 0%, color-mix(in srgb, var(--ukde-surface-strong) 80%, transparent), transparent), color-mix(in srgb, var(--ukde-surface) 94%, transparent);
+  min-height: 0;
+  padding: .65rem;
+  overflow: auto;
+}
+
+.layoutWorkspaceCanvasStage {
+  border-radius: calc(var(--ukde-radius-md)  - .08rem);
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 84%, transparent);
+  background: linear-gradient(45deg, color-mix(in srgb, var(--ukde-surface-strong) 86%, transparent) 25%, transparent 25%, transparent 50%, color-mix(in srgb, var(--ukde-surface-strong) 86%, transparent) 50%, color-mix(in srgb, var(--ukde-surface-strong) 86%, transparent) 75%, transparent 75%, transparent);
+  background-size: 1.25rem 1.25rem;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+}
+
+.layoutWorkspacePageImage {
+  object-fit: fill;
+  image-rendering: auto;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+}
+
+.layoutWorkspaceOverlayLayer {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+}
+
+.layoutWorkspaceOverlayLayer path, .layoutWorkspaceOverlayLayer line, .layoutWorkspaceOverlayLayer marker, .layoutWorkspaceOverlayLayer polygon, .layoutWorkspaceOverlayLayer polyline {
+  transition: stroke var(--ukde-transition), stroke-width var(--ukde-transition), fill var(--ukde-transition), opacity var(--ukde-transition);
+}
+
+.layoutWorkspaceCanvasOverlayState {
+  z-index: 3;
+  position: absolute;
+  inset: 1rem;
+}
+
+.layoutOverlayRegion {
+  cursor: pointer;
+  fill: color-mix(in srgb, var(--ukde-accent) 16%, transparent);
+  stroke: color-mix(in srgb, var(--ukde-accent) 72%, var(--ukde-border));
+  stroke-width: 1.4px;
+}
+
+.layoutOverlayRegion[data-hovered="true"] {
+  fill: color-mix(in srgb, var(--ukde-accent) 24%, transparent);
+  stroke: color-mix(in srgb, var(--ukde-accent) 88%, white 12%);
+  stroke-width: 2px;
+}
+
+.layoutOverlayRegion[data-selected="true"] {
+  fill: color-mix(in srgb, var(--ukde-accent) 30%, transparent);
+  stroke: color-mix(in srgb, var(--ukde-accent) 90%, white 16%);
+  stroke-width: 2.4px;
+}
+
+.layoutOverlayLine {
+  cursor: pointer;
+  fill: color-mix(in srgb, var(--ukde-warning) 22%, transparent);
+  stroke: color-mix(in srgb, var(--ukde-warning) 78%, var(--ukde-border));
+  stroke-width: 1.2px;
+}
+
+.layoutOverlayLine[data-hovered="true"] {
+  fill: color-mix(in srgb, var(--ukde-warning) 30%, transparent);
+  stroke: color-mix(in srgb, var(--ukde-warning) 90%, white 12%);
+  stroke-width: 1.8px;
+}
+
+.layoutOverlayLine[data-selected="true"] {
+  fill: color-mix(in srgb, var(--ukde-warning) 36%, transparent);
+  stroke: color-mix(in srgb, var(--ukde-warning) 94%, white 18%);
+  stroke-width: 2.2px;
+}
+
+.layoutOverlayLine[data-merge-selected="true"] {
+  fill: color-mix(in srgb, var(--ukde-info, var(--ukde-accent)) 30%, transparent);
+  stroke: color-mix(in srgb, var(--ukde-info, var(--ukde-accent)) 90%, white 12%);
+  stroke-width: 2.1px;
+}
+
+.layoutOverlayBaseline {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ukde-success) 82%, white 12%);
+  stroke-width: 1.3px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.layoutOverlayReadingEdge {
+  stroke: color-mix(in srgb, var(--ukde-info, var(--ukde-accent)) 76%, white 12%);
+  stroke-width: 1.2px;
+  stroke-dasharray: 5 3;
+}
+
+.layoutWorkspaceOverlayLayer marker path {
+  fill: color-mix(in srgb, var(--ukde-info, var(--ukde-accent)) 82%, white 8%);
+}
+
+.layoutOverlayDraftPolyline {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ukde-accent) 78%, white 12%);
+  stroke-width: 1.8px;
+  stroke-dasharray: 5 4;
+}
+
+.layoutOverlayDraftPolygon {
+  fill: color-mix(in srgb, var(--ukde-accent) 18%, transparent);
+  stroke: color-mix(in srgb, var(--ukde-accent) 72%, white 10%);
+  stroke-width: 1.3px;
+}
+
+.layoutOverlayVertexHandle {
+  cursor: grab;
+  fill: color-mix(in srgb, var(--ukde-surface) 92%, transparent);
+  stroke: color-mix(in srgb, var(--ukde-accent) 84%, white 10%);
+  stroke-width: 1.6px;
+}
+
+.layoutOverlayVertexHandle:active {
+  cursor: grabbing;
+}
+
+.layoutInspectorHeadingRow {
+  justify-content: space-between;
+  align-items: center;
+  gap: .45rem;
+  display: flex;
+}
+
+.layoutInspectorList {
+  gap: .35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.layoutInspectorButton {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 84%, transparent);
+  border-radius: var(--ukde-radius-sm);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 82%, transparent);
+  width: 100%;
+  color: var(--ukde-text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  justify-content: space-between;
+  align-items: center;
+  gap: .7rem;
+  padding: .4rem .5rem;
+  display: flex;
+}
+
+.layoutInspectorButton:hover {
+  border-color: color-mix(in srgb, var(--ukde-accent) 44%, var(--ukde-border));
+}
+
+.layoutInspectorButton[data-selected="true"] {
+  border-color: color-mix(in srgb, var(--ukde-accent) 58%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-surface-strong) 90%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ukde-accent) 34%, transparent);
+}
+
+.layoutInspectorTabs .secondaryButton[data-selected="true"] {
+  border-color: color-mix(in srgb, var(--ukde-accent) 52%, var(--ukde-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ukde-accent) 30%, transparent);
+}
+
+.layoutReadingOrderControls {
+  margin: .35rem 0;
+}
+
+.layoutReadingOrderCheckbox {
+  color: var(--ukde-text-muted);
+  font-size: var(--ukde-type-label-size);
+  align-items: center;
+  gap: .4rem;
+  display: inline-flex;
+}
+
+.layoutReadingOrderList {
+  margin-top: .2rem;
+  padding-left: .45rem;
+}
+
+.layoutEditInspectorPanel {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 84%, transparent);
+  border-radius: var(--ukde-radius-sm);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 82%, transparent);
+  gap: .45rem;
+  margin-top: .55rem;
+  padding: .55rem;
+  display: grid;
+}
+
+.layoutEditVerticesList {
+  gap: .3rem;
+  display: grid;
+}
+
+.layoutEditVerticesList label {
+  font-size: var(--ukde-type-label-size);
+  grid-template-columns: auto 1fr 1fr;
+  align-items: center;
+  gap: .35rem;
+  display: grid;
+}
+
+.layoutEditVerticesList input {
+  width: 100%;
+}
+
+.documentViewerCompareViewport {
+  overflow: auto;
+}
+
+.documentViewerCompareSplit {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65rem;
+  width: 100%;
+  height: 100%;
+  display: grid;
+}
+
+.documentViewerComparePane {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 85%, transparent);
+  border-radius: calc(var(--ukde-radius-md)  - .1rem);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 82%, transparent);
+  align-content: start;
+  justify-items: center;
+  gap: .45rem;
+  min-height: 0;
+  margin: 0;
+  padding: .5rem;
+  display: grid;
+  overflow: hidden;
+}
+
+.documentViewerComparePane figcaption {
+  width: 100%;
+  font-size: var(--ukde-type-label-size);
+  color: var(--ukde-text-muted);
+  margin: 0;
+}
+
+.documentViewerImageFrame {
+  border-radius: calc(var(--ukde-radius-md)  - .1rem);
+  place-items: center;
+  block-size: 100%;
+  inline-size: 100%;
+  margin: 0;
+  display: grid;
+  overflow: hidden;
+}
+
+.documentViewerImageFrame[data-pan-enabled="yes"] {
+  cursor: grab;
+}
+
+.documentViewerImageFrame[data-pan-enabled="yes"][data-dragging="yes"] {
+  cursor: grabbing;
+}
+
+.documentViewerImage {
+  -webkit-user-select: none;
+  user-select: none;
+  transform-origin: center;
+  max-width: none;
+  height: auto;
+  transition: transform var(--ukde-transition);
+  will-change: transform;
+  border-radius: .4rem;
+  display: block;
+}
+
+.documentViewerImageFrame[data-pan-enabled="no"] .documentViewerImage {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.documentViewerWarningChips {
+  flex-wrap: wrap;
+  gap: .35rem;
+  display: flex;
+}
+
+.documentViewerLoadingChip {
+  border-radius: var(--ukde-radius-sm);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ukde-surface-strong) 72%, transparent), color-mix(in srgb, var(--ukde-surface-strong) 92%, transparent), color-mix(in srgb, var(--ukde-surface-strong) 72%, transparent));
+  background-size: 240% 100%;
+  min-width: 7rem;
+  min-height: 2.1rem;
+  animation: 1.5s linear infinite ukde-skeleton-shimmer;
+}
+
+.documentViewerSkeletonRail {
+  gap: .45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.documentViewerSkeletonThumb {
+  border-radius: var(--ukde-radius-sm);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ukde-surface-strong) 72%, transparent), color-mix(in srgb, var(--ukde-surface-strong) 92%, transparent), color-mix(in srgb, var(--ukde-surface-strong) 72%, transparent));
+  background-size: 240% 100%;
+  width: 100%;
+  min-height: 4.6rem;
+  animation: 1.5s linear infinite ukde-skeleton-shimmer;
+}
+
+.documentViewerSkeletonCanvas {
+  border-radius: var(--ukde-radius-md);
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 80%, transparent);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 76%, transparent);
+  inline-size: min(100%, 32rem);
+  padding: .85rem;
+}
+
+.documentViewerDrawerFilmstripList {
+  gap: .45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.documentProcessingTimeline {
+  gap: .75rem;
+  display: grid;
+}
+
+.documentProcessingStageList {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.documentProcessingStageItem {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 88%, transparent);
+  border-radius: var(--ukde-radius-sm);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 84%, transparent);
+  gap: .35rem;
+  padding: .55rem .65rem;
+  display: grid;
+}
+
+@media (max-width: 900px) {
+  .documentProcessingStageList {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1180px) {
+  .documentViewerToolbarRow {
+    align-items: stretch;
+  }
+
+  .documentViewerZoomReadout {
+    width: 100%;
+  }
+
+  .documentViewerWorkspace {
+    grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
+  }
+
+  .documentViewerInspector {
+    display: none;
+  }
+
+  .documentViewerWorkspace[data-workspace-state="Focus"], .layoutWorkspace[data-filmstrip-collapsed="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .layoutWorkspacePrimaryActions, .layoutWorkspaceOverflowPanel {
+    width: 100%;
+  }
+
+  .transcriptionInspectorGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .documentViewerToolbarRow {
+    align-items: stretch;
+  }
+
+  .documentViewerPageJump {
+    justify-content: flex-start;
+  }
+
+  .documentViewerWorkspace {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    min-height: min(42rem, 100dvh - 18rem);
+    max-height: min(42rem, 100dvh - 18rem);
+  }
+
+  .layoutWorkspacePage > .layoutWorkspace {
+    min-height: min(39.5rem, 100dvh - 20rem);
+    max-height: min(39.5rem, 100dvh - 20rem);
+  }
+
+  .layoutWorkspacePage {
+    min-height: min(45.25rem, 100dvh - 11.5rem);
+  }
+
+  .documentViewerFilmstrip {
+    border-right: 1px solid color-mix(in srgb, var(--ukde-border) 80%, transparent);
+    padding-right: .35rem;
+  }
+
+  .documentViewerWorkspace[data-workspace-state="Focus"], .documentViewerCompareSplit {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .transcriptionWorkspaceToolbarSub {
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 720px) {
+  .documentViewerWorkspace {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: auto;
+    max-height: none;
+  }
+
+  .documentViewerFilmstrip {
+    border-right: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--ukde-border) 80%, transparent);
+    max-height: 11rem;
+    padding-bottom: .45rem;
+    padding-right: 0;
+  }
+
+  .documentViewerFilmstrip ul {
+    grid-auto-columns: minmax(8.2rem, 1fr);
+    grid-auto-flow: column;
+    padding-bottom: .2rem;
+    display: grid;
+    overflow: auto;
+  }
+
+  .documentViewerCanvas {
+    min-height: 22rem;
+  }
+
+  .layoutWorkspaceOpacity {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .layoutWorkspaceOpacity input[type="range"] {
+    width: 9.75rem;
+  }
+
+  .layoutWorkspaceOverflowBody {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .transcriptionLineRowHeader {
+    align-items: flex-start;
+  }
+
+  .transcriptionLineCropSvg {
+    block-size: 8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .documentViewerImage {
+    transition: none;
+  }
+
+  .documentViewerLoadingChip, .documentViewerSkeletonThumb {
+    animation: none;
+  }
+
+  .layoutWorkspaceOverlayLayer path, .layoutWorkspaceOverlayLayer line, .layoutWorkspaceOverlayLayer marker, .layoutWorkspaceOverlayLayer polygon, .layoutWorkspaceOverlayLayer polyline, .transcriptionOverlayLine {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .layoutOverlayRegion {
+    fill: color-mix(in srgb, var(--ukde-accent) 28%, var(--ukde-surface));
+  }
+
+  .layoutOverlayLine {
+    fill: color-mix(in srgb, var(--ukde-warning) 30%, var(--ukde-surface));
+  }
+}
+
+.settingsGrid {
+  gap: var(--ukde-space-3);
+  display: grid;
+}
+
+.settingsHeader {
+  justify-content: space-between;
+  gap: var(--ukde-space-2);
+  align-items: flex-start;
+  display: flex;
+}
+
+.memberList {
+  gap: .6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.memberRow {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 90%, transparent);
+  border-radius: calc(var(--ukde-radius-sm)  + .1rem);
+  background: linear-gradient(165deg, color-mix(in srgb, var(--ukde-surface-strong) 91%, transparent), color-mix(in srgb, var(--ukde-surface) 88%, transparent));
+  gap: .7rem;
+  padding: .85rem .9rem;
+  display: grid;
+  box-shadow: inset 0 1px #ffffff14;
+}
+
+.memberIdentity {
+  gap: .25rem;
+  display: grid;
+}
+
+.memberIdentity strong {
+  letter-spacing: -.01em;
+  font-size: 1rem;
+}
+
+.memberIdentity .ukde-muted {
+  font-size: .9rem;
+}
+
+.memberActions {
+  border-top: 1px dashed color-mix(in srgb, var(--ukde-border) 82%, transparent);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .55rem;
+  padding-top: .38rem;
+  display: flex;
+}
+
+.memberActions form {
+  align-items: center;
+  gap: .4rem;
+  display: inline-flex;
+}
+
+.memberActions > .ukde-badge {
+  letter-spacing: .05em;
+  font-size: .72rem;
+}
+
+.memberActions form:first-of-type {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 88%, transparent);
+  border-radius: var(--ukde-radius-pill);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 90%, transparent);
+  padding: .2rem;
+}
+
+.memberActions form:first-of-type .projectSelect {
+  border-radius: var(--ukde-radius-pill);
+  background-color: #0000;
+  border-color: #0000;
+  width: auto;
+  min-width: 10.75rem;
+  max-width: 13rem;
+  min-height: 2rem;
+  padding: .34rem 2rem .34rem .72rem;
+}
+
+.memberActions form:first-of-type .projectSelect:focus-visible {
+  border-color: color-mix(in srgb, var(--ukde-accent) 55%, var(--ukde-border));
+  background-color: color-mix(in srgb, var(--ukde-accent) 9%, transparent);
+}
+
+.memberActions .projectSecondaryButton {
+  border-color: color-mix(in srgb, var(--ukde-accent) 34%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-accent) 11%, var(--ukde-surface));
+  min-height: 2rem;
+  padding: .35rem .82rem;
+}
+
+.memberActions .projectDangerButton {
+  border-color: color-mix(in srgb, var(--ukde-danger) 46%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-danger) 14%, var(--ukde-surface));
+  min-height: 2rem;
+  padding: .35rem .82rem;
+}
+
+.memberActions .projectDangerButton:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--ukde-danger) 62%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-danger) 20%, var(--ukde-surface));
+}
+
+.jobsCreateForm {
+  gap: .55rem;
+  width: min(100%, 30rem);
+  display: grid;
+}
+
+.jobsCreateForm label {
+  color: var(--ukde-text-muted);
+  gap: .35rem;
+  display: grid;
+}
+
+.jobsActionRow {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .45rem;
+  display: flex;
+}
+
+.jobsActionRow form {
+  display: inline-flex;
+}
+
+.addMemberForm {
+  border-top: 1px solid var(--ukde-border);
+  gap: .5rem;
+  width: min(100%, 30rem);
+  padding-top: .7rem;
+  display: grid;
+}
+
+.auditIntegrityRow {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+  display: flex;
+}
+
+.auditFilterForm {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .5rem;
+  display: grid;
+}
+
+.auditFilterForm button {
+  justify-self: start;
+}
+
+.auditTableWrap {
+  overflow-x: auto;
+}
+
+.auditTable {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 48rem;
+}
+
+.auditTable th, .auditTable td {
+  border-bottom: 1px solid var(--ukde-border);
+  text-align: left;
+  vertical-align: top;
+  padding: .5rem .45rem;
+}
+
+.auditTable th {
+  color: var(--ukde-text-muted);
+  font-size: .85rem;
+  font-weight: 600;
+}
+
+.auditDetailGrid, .auditHashGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+  display: grid;
+}
+
+.dsPage {
+  gap: var(--ukde-space-5);
+}
+
+.dsSection {
+  gap: var(--ukde-space-4);
+  display: grid;
+}
+
+.dsSectionHeading {
+  gap: var(--ukde-space-3);
+}
+
+.dsSectionControls {
+  gap: var(--ukde-space-2);
+  flex-wrap: wrap;
+  align-items: center;
+  display: flex;
+}
+
+.dsTokenGrid {
+  gap: var(--ukde-space-3);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: grid;
+}
+
+.dsTokenCard {
+  gap: var(--ukde-space-2);
+  padding: var(--ukde-space-3);
+  border: 1px solid var(--ukde-border);
+  border-radius: var(--ukde-radius-md);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 84%, transparent);
+  display: grid;
+}
+
+.dsTokenCard code {
+  font-size: var(--ukde-type-micro-size);
+  color: var(--ukde-text-muted);
+}
+
+.dsTokenSwatch {
+  border-radius: var(--ukde-radius-sm);
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 80%, transparent);
+  block-size: 2.2rem;
+  display: block;
+}
+
+.dsTypeGrid {
+  gap: var(--ukde-space-3);
+  display: grid;
+}
+
+.dsTypeRow {
+  gap: var(--ukde-space-1);
+  border-bottom: 1px solid var(--ukde-border);
+  padding-bottom: var(--ukde-space-2);
+  display: grid;
+}
+
+.dsScaleColumns {
+  gap: var(--ukde-space-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: grid;
+}
+
+.dsScaleList {
+  gap: var(--ukde-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+}
+
+.dsScaleList li {
+  justify-content: space-between;
+  gap: var(--ukde-space-2);
+  border-bottom: 1px solid var(--ukde-border);
+  padding-bottom: var(--ukde-space-1);
+  display: flex;
+}
+
+.dsScaleList code {
+  color: var(--ukde-text-muted);
+  font-size: var(--ukde-type-micro-size);
+}
+
+.dsSurfaceStack {
+  gap: var(--ukde-space-3);
+  display: grid;
+}
+
+.dsSurfaceSample {
+  min-height: 4rem;
+  padding: var(--ukde-space-3);
+  align-items: center;
+  display: flex;
+}
+
+.dsInteractionGrid {
+  gap: var(--ukde-space-2);
+  display: grid;
+}
+
+@media (max-height: 52rem) {
+  .authenticatedShell {
+    gap: var(--ukde-space-2);
+  }
+
+  .authenticatedShellHeader {
+    min-block-size: 3.7rem;
+    padding-block: .45rem;
+  }
+
+  .authenticatedShellWorkRegion {
+    gap: var(--ukde-space-2);
+  }
+}
+
+@media (max-width: 86rem) {
+  .authenticatedShellHeader {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .authenticatedShellActions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 56rem) {
+  .pageHeader {
+    grid-template-columns: 1fr;
+  }
+
+  .pageHeaderActions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 52rem) {
+  .authenticatedShell {
+    block-size: auto;
+    min-height: calc(100dvh - (var(--ukde-app-padding-top)  + var(--ukde-app-padding-bottom)));
+  }
+
+  .authenticatedShellGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .authenticatedShellRail {
+    padding: .55rem;
+  }
+
+  .authenticatedShellRailList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .authenticatedShellContext {
+    display: none;
+  }
+
+  .adminConsoleFrame {
+    grid-template-columns: 1fr;
+  }
+
+  .adminConsoleRail {
+    max-height: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .authenticatedShell, .authenticatedShellWorkRegion, .authenticatedShellContext, .workspaceMenuPanel, .pageHeaderOverflowMenu {
+    forced-color-adjust: auto;
+  }
+
+  .primaryButton, .secondaryButton, .projectPrimaryButton, .projectSecondaryButton, .projectDangerButton, .authenticatedShellRailLink, .authenticatedShellContextLink, .workspaceMenuTrigger, .workspaceHelpLink, .pageHeaderOverflowTrigger, .shellContextDrawerTrigger, .globalCommandOption, .adminConsoleLink {
+    forced-color-adjust: auto;
+    border-color: canvastext;
+  }
+
+  .globalCommandOption[data-selected="yes"] {
+    color: highlighttext;
+    background: highlight;
+  }
+
+  .authenticatedShellRailLink[aria-current="page"], .authenticatedShellContextLink[aria-current="page"] {
+    color: highlighttext;
+    background: highlight;
+    outline: 1px solid highlight;
+  }
+}
+
+@media (max-width: 42rem) {
+  .healthHeader, .sectionCard, .loadingScreen, .routeSkeleton, .routeErrorState, .routeNotFoundState {
+    padding: var(--ukde-space-4);
+  }
+
+  .statusChecks li {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 68rem) {
+  :root {
+    --ukde-app-padding-inline: var(--ukde-space-1);
+    --ukde-app-padding-top: var(--ukde-space-1);
+    --ukde-app-padding-bottom: var(--ukde-space-2);
+  }
+
+  .projectsIndexGrid, .projectSectionGrid, .projectWorkspaceFrame, .auditFilterForm, .auditDetailGrid, .auditHashGrid, .dsTokenGrid, .dsScaleColumns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.privacyWorkspaceToolbarCard {
+  gap: .7rem;
+  display: grid;
+}
+
+.privacyWorkspaceToolbarSupport {
+  align-items: center;
+}
+
+.privacyWorkspaceShellCard {
+  min-height: 0;
+}
+
+.privacyWorkspaceShell {
+  grid-template-columns: minmax(14rem, 16rem) minmax(0, 1fr) minmax(21rem, 24rem);
+  gap: .85rem;
+  min-height: min(68vh, 44rem);
+  max-height: min(68vh, 44rem);
+  display: grid;
+}
+
+.privacyWorkspaceRail, .privacyWorkspaceInspector, .privacyWorkspaceCanvas {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 86%, transparent);
+  border-radius: var(--ukde-radius-md);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 84%, transparent);
+  min-height: 0;
+  padding: .7rem;
+}
+
+.privacyWorkspaceRail, .privacyWorkspaceInspector {
+  overflow: auto;
+}
+
+.privacyWorkspaceCanvas {
+  align-content: start;
+  gap: .7rem;
+  display: grid;
+  overflow: hidden;
+}
+
+.privacyWorkspaceCanvasFrame {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 82%, transparent);
+  background: color-mix(in srgb, var(--ukde-bg-alt) 76%, transparent);
+  border-radius: .55rem;
+  block-size: 100%;
+  min-block-size: min(54vh, 34rem);
+  inline-size: 100%;
+  position: relative;
+  overflow: auto;
+}
+
+.privacyWorkspaceImage {
+  object-fit: contain;
+  block-size: 100%;
+  inline-size: 100%;
+  position: absolute;
+  inset: 0;
+}
+
+.privacyWorkspaceControlledPanel {
+  max-block-size: 100%;
+  padding: .75rem;
+  overflow: auto;
+}
+
+.privacyWorkspaceInspector {
+  align-content: start;
+  gap: .7rem;
+  display: grid;
+}
+
+.privacyWorkspaceSection {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 84%, transparent);
+  border-radius: var(--ukde-radius-sm);
+  background: color-mix(in srgb, var(--ukde-surface) 88%, transparent);
+  gap: .55rem;
+  padding: .55rem;
+  display: grid;
+}
+
+.privacyWorkspaceSection h4 {
+  margin: 0;
+}
+
+.privacyWorkspaceTranscriptList, .privacyWorkspaceFindingList {
+  max-block-size: min(27vh, 17rem);
+  overflow: auto;
+}
+
+.privacyWorkspaceListButton {
+  text-align: left;
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 90%, transparent);
+  border-radius: var(--ukde-radius-sm);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 83%, transparent);
+  width: 100%;
+  color: var(--ukde-text);
+  transition: border-color var(--ukde-transition), background var(--ukde-transition), box-shadow var(--ukde-transition);
+  gap: .2rem;
+  padding: .42rem .55rem;
+  display: grid;
+}
+
+.privacyWorkspaceListButton:hover, .privacyWorkspaceListButton:focus-visible, .privacyWorkspaceListButton[data-selected="true"] {
+  border-color: color-mix(in srgb, var(--ukde-accent) 42%, var(--ukde-border));
+  background: color-mix(in srgb, var(--ukde-accent) 12%, var(--ukde-surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ukde-accent) 14%, transparent);
+  outline: none;
+}
+
+.privacyWorkspaceListTitle {
+  font-weight: 600;
+}
+
+.privacyWorkspaceDialogBody {
+  gap: .55rem;
+  display: grid;
+}
+
+.privacyWorkspaceReasonInput {
+  border-radius: var(--ukde-radius-sm);
+  border: 1px solid var(--ukde-border);
+  background: color-mix(in srgb, var(--ukde-surface-strong) 84%, transparent);
+  width: 100%;
+  min-height: 7.5rem;
+  color: var(--ukde-text);
+  resize: vertical;
+  padding: .5rem .7rem;
+}
+
+.privacyWorkspaceReasonInput:focus-visible {
+  border-color: color-mix(in srgb, var(--ukde-accent) 52%, var(--ukde-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ukde-accent) 18%, transparent);
+  outline: none;
+}
+
+@media (max-width: 72rem) {
+  .privacyWorkspaceShell {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: auto;
+    max-height: none;
+  }
+
+  .privacyWorkspaceCanvasFrame {
+    min-block-size: min(58vh, 36rem);
+  }
+
+  .privacyWorkspaceTranscriptList, .privacyWorkspaceFindingList {
+    max-block-size: min(22vh, 14rem);
+  }
+}
+
+/*# sourceMappingURL=web_app_globals_css_bad6b30c._.single.css.map*/

@@ -1,0 +1,8 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - status [ref=e3]:
+      - generic [ref=e4]:
+        - paragraph [ref=e5]: Loading public route
+        - heading "Preparing public surface" [level=2] [ref=e6]
+      - paragraph [ref=e7]: Public routes load without dropping global shell continuity.
+  - alert [ref=e13]

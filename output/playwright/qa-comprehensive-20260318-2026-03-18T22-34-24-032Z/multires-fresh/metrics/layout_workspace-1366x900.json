@@ -1,0 +1,92 @@
+{
+  "routeKey": "layout_workspace",
+  "url": "http://127.0.0.1:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-001",
+  "title": "UKDE",
+  "viewport": {
+    "width": 1366,
+    "height": 900
+  },
+  "bodyOverflowX": 0,
+  "bodyOverflowY": 0,
+  "pageOverflowX": 0,
+  "pageOverflowY": 0,
+  "mainClass": "homeLayout layoutWorkspacePage",
+  "mainOverflowX": 0,
+  "mainOverflowY": 462,
+  "totalButtons": 34,
+  "totalLinks": 30,
+  "topOverflowElements": [
+    {
+      "selector": "p.authenticatedShellTitle",
+      "overflowX": 0,
+      "overflowY": 1,
+      "width": 1321,
+      "height": 21
+    },
+    {
+      "selector": "nav.projectContextBar.ukde-panel",
+      "overflowX": 666,
+      "overflowY": 0,
+      "width": 853,
+      "height": 43
+    },
+    {
+      "selector": "ul.authenticatedShellContextList",
+      "overflowX": 674,
+      "overflowY": 0,
+      "width": 837,
+      "height": 29
+    },
+    {
+      "selector": "div#ukde-shell-work-region",
+      "overflowX": 0,
+      "overflowY": 463,
+      "width": 855,
+      "height": 696
+    },
+    {
+      "selector": "section.projectWorkspaceMain",
+      "overflowX": 0,
+      "overflowY": 463,
+      "width": 849,
+      "height": 696
+    },
+    {
+      "selector": "h1",
+      "overflowX": 0,
+      "overflowY": 1,
+      "width": 440,
+      "height": 27
+    },
+    {
+      "selector": "div.projectContentHost",
+      "overflowX": 0,
+      "overflowY": 462,
+      "width": 849,
+      "height": 517
+    },
+    {
+      "selector": "main.homeLayout.layoutWorkspacePage",
+      "overflowX": 0,
+      "overflowY": 462,
+      "width": 849,
+      "height": 517
+    },
+    {
+      "selector": "div.layoutWorkspaceCanvasScroller",
+      "overflowX": 966,
+      "overflowY": 1263,
+      "width": 253,
+      "height": 556
+    },
+    {
+      "selector": "aside.documentViewerInspector",
+      "overflowX": 0,
+      "overflowY": 404,
+      "width": 241,
+      "height": 581
+    }
+  ],
+  "navigationError": null,
+  "consoleErrors": []
+}

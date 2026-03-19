@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/projects/[projectId]/documents/[documentId]/layout/workspace/page": "app/(authenticated)/projects/[projectId]/documents/[documentId]/layout/workspace/page.js"
+}

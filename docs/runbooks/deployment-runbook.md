@@ -8,6 +8,20 @@ Deploy UKDE with Phase 0.5 secure defaults:
 - export gateway-only egress enforcement active
 - security headers and rate limiting active
 - admin security status endpoint available
+- promotion and rollback executed through one gated workflow path
+
+## Canonical Automation Path
+
+Use:
+
+- [`/.github/workflows/deploy-environments.yml`](../../.github/workflows/deploy-environments.yml)
+
+Modes:
+
+- `promote` for `dev -> staging` or `staging -> prod`
+- `rollback` for explicit Helm revision rollback
+
+Do not perform ad hoc direct production deploys outside this pipeline.
 
 ## Pre-Deploy Checks
 
@@ -17,6 +31,8 @@ From repo root:
 make render-manifests
 pnpm test
 .venv/bin/python -m pytest api/tests
+make smoke-release TARGET_ENV=staging
+make release-gate RELEASE_MODE=promote SOURCE_ENV=dev TARGET_ENV=staging
 ```
 
 Validate model posture for target environment variables:
@@ -26,6 +42,7 @@ Validate model posture for target environment variables:
 ```
 
 If target is `staging` or `prod`, deployment must be blocked unless status is `ok`.
+Promotion must also be blocked when release-gate output reports blocking failures.
 
 ## Helm Render/Apply
 

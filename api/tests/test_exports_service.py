@@ -120,6 +120,15 @@ class FakeProjectService:
         )
 
 
+class SpyTelemetryService:
+    def __init__(self) -> None:
+        self.export_review_latencies: list[dict[str, object]] = []
+
+    def record_export_review_latency(self, **kwargs):  # type: ignore[no-untyped-def]
+        self.export_review_latencies.append(kwargs)
+        return None
+
+
 class InMemoryExportStore:
     def __init__(self, candidates: tuple[ExportCandidateSnapshotRecord, ...]) -> None:
         self._candidates: dict[str, ExportCandidateSnapshotRecord] = {
@@ -2244,6 +2253,7 @@ def _build_service(
     *,
     store: InMemoryExportStore,
     role_map: dict[str, Literal["PROJECT_LEAD", "RESEARCHER", "REVIEWER"]] | None = None,
+    telemetry_service: SpyTelemetryService | None = None,
 ) -> ExportService:
     roles = role_map or {
         "researcher-1": "RESEARCHER",
@@ -2261,6 +2271,7 @@ def _build_service(
         settings=settings,  # type: ignore[arg-type]
         store=store,  # type: ignore[arg-type]
         project_service=project_service,  # type: ignore[arg-type]
+        telemetry_service=telemetry_service,  # type: ignore[arg-type]
     )
 
 
@@ -2767,6 +2778,58 @@ def test_review_queue_filters_mutations_and_terminal_projection_flow() -> None:
         status="APPROVED",
     )
     assert len(approved_queue) == 1
+
+
+def test_decide_export_request_records_export_review_latency_metric() -> None:
+    store = InMemoryExportStore((_candidate(candidate_id="candidate-1"),))
+    spy_telemetry = SpyTelemetryService()
+    service = _build_service(store=store, telemetry_service=spy_telemetry)
+    requester = _principal(user_id="researcher-1")
+    reviewer = _principal(user_id="reviewer-1")
+
+    created = service.create_export_request(
+        current_user=requester,
+        project_id="project-1",
+        candidate_snapshot_id="candidate-1",
+        purpose_statement="Request to validate export review latency telemetry.",
+        bundle_profile=None,
+    )
+    review = service.get_export_request_reviews(
+        current_user=reviewer,
+        project_id="project-1",
+        export_request_id=created.id,
+    )[0]
+    _, claimed = service.claim_export_request_review(
+        current_user=reviewer,
+        project_id="project-1",
+        export_request_id=created.id,
+        review_id=review.id,
+        review_etag=review.review_etag,
+    )
+    _, started = service.start_export_request_review(
+        current_user=reviewer,
+        project_id="project-1",
+        export_request_id=created.id,
+        review_id=claimed.id,
+        review_etag=claimed.review_etag,
+    )
+    approved_request, _ = service.decide_export_request(
+        current_user=reviewer,
+        project_id="project-1",
+        export_request_id=created.id,
+        review_id=started.id,
+        review_etag=started.review_etag,
+        decision="APPROVE",
+        decision_reason="Approve and emit latency metric.",
+        return_comment=None,
+    )
+
+    assert approved_request.status == "APPROVED"
+    assert len(spy_telemetry.export_review_latencies) == 1
+    sample = spy_telemetry.export_review_latencies[0]
+    assert sample["request_id"] == f"export:project-1:{created.id}"
+    assert isinstance(sample["latency_ms"], float)
+    assert float(sample["latency_ms"]) >= 0.0
 
 
 def test_review_decision_validation_and_access_restrictions() -> None:

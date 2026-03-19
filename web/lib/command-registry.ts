@@ -3,18 +3,30 @@ import type { PlatformRole, ProjectSummary, SessionResponse } from "@ukde/contra
 import {
   activityPath,
   adminAuditPath,
+  adminCapacityTestsPath,
   adminDesignSystemPath,
+  adminIncidentStatusPath,
+  adminIncidentsPath,
+  adminIndexQualityPath,
+  adminIndexQualityQueryAuditsBasePath,
   adminOperationsExportStatusPath,
+  adminOperationsReadinessPath,
   adminOperationsAlertsPath,
   adminOperationsPath,
   adminOperationsSlosPath,
   adminOperationsTimelinesPath,
+  adminRecoveryDrillsPath,
+  adminRecoveryStatusPath,
+  adminRunbooksPath,
+  adminSecurityFindingsPath,
+  adminSecurityRiskAcceptancesPath,
   adminPath,
   adminSecurityPath,
   approvedModelsPath,
   healthPath,
   projectActivityPath,
   projectAnchorPath,
+  projectDerivativesPath,
   projectDocumentImportPath,
   projectDocumentsPath,
   projectEntitiesPath,
@@ -174,6 +186,19 @@ const BASE_COMMAND_SPECS: BaseCommandSpec[] = [
   },
   {
     description:
+      "Open safeguarded derivative snapshots, suppression metadata, and candidate-freeze controls.",
+    group: "Workspace",
+    id: "project.derivatives",
+    keywords: ["project", "derivatives", "safeguarded", "suppression", "preview"],
+    label: "Open derivatives",
+    requiresCurrentProject: true,
+    requiresProjectMembership: true,
+    resolveHref: ({ currentProject }) =>
+      currentProject ? projectDerivativesPath(currentProject.id) : null,
+    scope: "project"
+  },
+  {
+    description:
       "Open versioned search/entity/derivative index lineage and active projection controls.",
     group: "Workspace",
     id: "project.indexes",
@@ -264,11 +289,83 @@ const BASE_COMMAND_SPECS: BaseCommandSpec[] = [
   },
   {
     group: "Admin",
+    id: "admin.runbooks",
+    keywords: ["admin", "runbooks", "rollback", "procedures", "launch"],
+    label: "Open runbooks",
+    requiresAnyPlatformRole: ["ADMIN"],
+    resolveHref: () => adminRunbooksPath,
+    scope: "admin"
+  },
+  {
+    group: "Admin",
+    id: "admin.incidents",
+    keywords: ["admin", "incidents", "launch", "timeline", "command"],
+    label: "Open incidents",
+    requiresAnyPlatformRole: ["ADMIN", "AUDITOR"],
+    resolveHref: () => adminIncidentsPath,
+    scope: "admin"
+  },
+  {
+    group: "Admin",
+    id: "admin.incidents.status",
+    keywords: ["admin", "incidents", "status", "no-go", "severity"],
+    label: "Open incident status",
+    requiresAnyPlatformRole: ["ADMIN", "AUDITOR"],
+    resolveHref: () => adminIncidentStatusPath,
+    scope: "admin"
+  },
+  {
+    group: "Admin",
+    id: "admin.index-quality",
+    keywords: ["admin", "index", "quality", "freshness", "rollback"],
+    label: "Open index quality",
+    requiresAnyPlatformRole: ["ADMIN", "AUDITOR"],
+    resolveHref: () => adminIndexQualityPath,
+    scope: "admin"
+  },
+  {
+    group: "Admin",
+    id: "admin.index-quality.query-audits",
+    keywords: ["admin", "index", "quality", "search", "query", "audits"],
+    label: "Open index query audits",
+    requiresAnyPlatformRole: ["ADMIN", "AUDITOR"],
+    resolveHref: () => adminIndexQualityQueryAuditsBasePath,
+    scope: "admin"
+  },
+  {
+    group: "Admin",
     id: "admin.security",
     keywords: ["admin", "security", "status"],
     label: "Open admin security",
     requiresAnyPlatformRole: ["ADMIN", "AUDITOR"],
     resolveHref: () => adminSecurityPath,
+    scope: "admin"
+  },
+  {
+    group: "Admin",
+    id: "admin.security.findings",
+    keywords: ["admin", "security", "findings", "pen-test", "remediation"],
+    label: "Open security findings",
+    requiresAnyPlatformRole: ["ADMIN", "AUDITOR"],
+    resolveHref: () => adminSecurityFindingsPath,
+    scope: "admin"
+  },
+  {
+    group: "Admin",
+    id: "admin.security.risk-acceptances",
+    keywords: ["admin", "security", "risk", "acceptances"],
+    label: "Open risk acceptances",
+    requiresAnyPlatformRole: ["ADMIN", "AUDITOR"],
+    resolveHref: () => adminSecurityRiskAcceptancesPath,
+    scope: "admin"
+  },
+  {
+    group: "Admin",
+    id: "admin.operations.readiness",
+    keywords: ["admin", "operations", "readiness", "audit", "evidence"],
+    label: "Open operations readiness",
+    requiresAnyPlatformRole: ["ADMIN", "AUDITOR"],
+    resolveHref: () => adminOperationsReadinessPath,
     scope: "admin"
   },
   {
@@ -318,6 +415,33 @@ const BASE_COMMAND_SPECS: BaseCommandSpec[] = [
   },
   {
     group: "Admin",
+    id: "admin.capacity.tests",
+    keywords: ["admin", "capacity", "benchmark", "load", "soak", "p95"],
+    label: "Open capacity tests",
+    requiresAnyPlatformRole: ["ADMIN", "AUDITOR"],
+    resolveHref: () => adminCapacityTestsPath,
+    scope: "admin"
+  },
+  {
+    group: "Admin",
+    id: "admin.recovery.status",
+    keywords: ["admin", "recovery", "status", "degraded", "restore"],
+    label: "Open recovery status",
+    requiresAnyPlatformRole: ["ADMIN"],
+    resolveHref: () => adminRecoveryStatusPath,
+    scope: "admin"
+  },
+  {
+    group: "Admin",
+    id: "admin.recovery.drills",
+    keywords: ["admin", "recovery", "drills", "evidence", "restore"],
+    label: "Open recovery drills",
+    requiresAnyPlatformRole: ["ADMIN"],
+    resolveHref: () => adminRecoveryDrillsPath,
+    scope: "admin"
+  },
+  {
+    group: "Admin",
     id: "admin.design-system",
     keywords: ["admin", "design", "system", "gallery", "diagnostics"],
     label: "Open design-system diagnostics",
@@ -342,6 +466,7 @@ const PROJECT_SECTION_PATHS = [
   "documents/import",
   "search",
   "entities",
+  "derivatives",
   "model-assignments",
   "indexes",
   "policies",
@@ -391,6 +516,7 @@ function resolveCurrentProjectSection(pathname: string): string | null {
   if (
     section === "documents" ||
     section === "model-assignments" ||
+    section === "derivatives" ||
     section === "indexes" ||
     section === "policies" ||
     section === "pseudonym-registry" ||
@@ -423,6 +549,8 @@ function resolveSectionPathForProject(
       return projectSearchPath(targetProject.id);
     case "entities":
       return projectEntitiesPath(targetProject.id);
+    case "derivatives":
+      return projectDerivativesPath(targetProject.id);
     case "model-assignments":
       return projectModelAssignmentsPath(targetProject.id);
     case "indexes":

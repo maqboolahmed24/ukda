@@ -56,8 +56,16 @@ const TYPE_EXAMPLES = [
 const SCALE_ENTRIES = Object.entries(spacingTokens);
 const RADIUS_ENTRIES = Object.entries(radiusTokens);
 const MOTION_ENTRIES = [
-  ...Object.entries(motionTokens.duration),
-  ...Object.entries(motionTokens.easing)
+  ...Object.entries(motionTokens.duration).map(([token, value]) => ({
+    key: `duration-${token}`,
+    token: `duration.${token}`,
+    value
+  })),
+  ...Object.entries(motionTokens.easing).map(([token, value]) => ({
+    key: `easing-${token}`,
+    token: `easing.${token}`,
+    value
+  }))
 ];
 
 export default async function DesignSystemPage() {
@@ -199,10 +207,10 @@ export default async function DesignSystemPage() {
           </div>
           <p className="ukde-eyebrow">Motion tokens</p>
           <ul className="dsScaleList">
-            {MOTION_ENTRIES.map(([token, value]) => (
-              <li key={`motion-${token}`}>
-                <span>{token}</span>
-                <code>{value}</code>
+            {MOTION_ENTRIES.map((entry) => (
+              <li key={entry.key}>
+                <span>{entry.token}</span>
+                <code>{entry.value}</code>
               </li>
             ))}
           </ul>

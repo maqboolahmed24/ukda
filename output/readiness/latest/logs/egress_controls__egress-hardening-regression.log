@@ -1,0 +1,13 @@
+$ make test-export-hardening PYTHON=.venv/bin/python
+
+.venv/bin/python -m pytest api/tests/test_export_hardening_regression.py
+============================= test session starts ==============================
+platform darwin -- Python 3.14.0, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/test/Code/UKDA/api
+configfile: pyproject.toml
+plugins: anyio-4.12.1
+collected 1 item
+
+api/tests/test_export_hardening_regression.py .                          [100%]
+
+============================== 1 passed in 2.00s ===============================

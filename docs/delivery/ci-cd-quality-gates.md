@@ -8,12 +8,13 @@ UKDE now has a deterministic delivery skeleton for Phase 0 Iteration 0.1. The pi
 - [`/.github/workflows/dependency-review.yml`](../../.github/workflows/dependency-review.yml): dependency review for PRs plus runtime vulnerability audits for JS and Python.
 - [`/.github/workflows/images.yml`](../../.github/workflows/images.yml): PR verification builds for `web`, `api`, and `workers`, plus internal-registry publishing on trusted branches.
 - [`/.github/workflows/deploy-preview.yml`](../../.github/workflows/deploy-preview.yml): internal preview deployment and cleanup for labeled pull requests.
-- [`/.github/workflows/deploy-environments.yml`](../../.github/workflows/deploy-environments.yml): manual gated deployment to `dev`, `staging`, or `prod`.
+- [`/.github/workflows/deploy-environments.yml`](../../.github/workflows/deploy-environments.yml): single promotion/rollback pipeline for `dev -> staging -> prod`, with machine-readable release-gate artifacts.
 
 ## What Blocks Merges
 
 - `CI / javascript`
 - `CI / python`
+- `CI / readiness-audit`
 - `Dependency Review / dependency-review`
 - `Dependency Review / vulnerability-audit`
 - `Images / verify`
@@ -79,6 +80,30 @@ Canonical export-hardening gate (release-pack validation, audit completeness, an
 make test-export-hardening
 ```
 
+Canonical cross-phase readiness matrix gate (accessibility, governance, privacy, provenance, egress, discovery, plus admin-only security/recovery/capacity slices):
+
+```bash
+make readiness-audit
+```
+
+Canonical release smoke suite (launch-critical cross-slice sanity):
+
+```bash
+make smoke-release TARGET_ENV=staging
+```
+
+Canonical non-prod seed-pack validation:
+
+```bash
+make seed-nonprod-validate TARGET_ENV=staging
+```
+
+Canonical release gate aggregation:
+
+```bash
+make release-gate RELEASE_MODE=promote SOURCE_ENV=dev TARGET_ENV=staging
+```
+
 ## Toolchain Pins
 
 - Node.js: [`.node-version`](../../.node-version)
@@ -131,6 +156,20 @@ When preprocessing, privacy, governance, or export-hardening regression gates fa
 - `api/tests/.artifacts/export-hardening`
 
 These artifacts contain deterministic drift/failure details for triage, including request-level release-pack and audit-completeness failures plus no-bypass egress denial checks.
+
+When readiness audit runs in CI, the `readiness-audit` job uploads:
+
+- `output/readiness/latest/readiness-report.json`
+- `output/readiness/latest/logs/*.log`
+
+This artifact is the canonical machine-readable release-readiness evidence bundle.
+
+When the promotion workflow runs, it uploads:
+
+- `output/release-gates/latest/release-gate-report.json`
+- `output/release-gates/latest/promotion-intent.json`
+- `output/release-gates/latest/deployment-record.json` (promote mode)
+- `output/release-gates/latest/rollback-record.json` (rollback mode)
 
 ## Prompt 30 Phase 1 Quality Gates
 

@@ -1,0 +1,33 @@
+--- 1366x900
+{
+  "navWidth": 798,
+  "navScrollWidth": 1667,
+  "hiddenOrClippedCount": 8,
+  "firstHidden": {
+    "text": "Policies",
+    "fullyWithinNav": false,
+    "partiallyVisible": true
+  }
+}
+--- 1440x900
+{
+  "navWidth": 872,
+  "navScrollWidth": 1667,
+  "hiddenOrClippedCount": 7,
+  "firstHidden": {
+    "text": "Pseudonym registry",
+    "fullyWithinNav": false,
+    "partiallyVisible": true
+  }
+}
+--- 1920x1080
+{
+  "navWidth": 1352,
+  "navScrollWidth": 1667,
+  "hiddenOrClippedCount": 4,
+  "firstHidden": {
+    "text": "Export requests",
+    "fullyWithinNav": false,
+    "partiallyVisible": true
+  }
+}

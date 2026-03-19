@@ -1,0 +1,14 @@
+[
+  {
+    "src": "/projects/project-fixture-alpha/documents/doc-fixture-002/pages/page-fixture-001/image?variant=thumb",
+    "complete": true,
+    "naturalWidth": 0,
+    "naturalHeight": 0
+  },
+  {
+    "src": "/projects/project-fixture-alpha/documents/doc-fixture-002/pages/page-fixture-002/image?variant=thumb",
+    "complete": true,
+    "naturalWidth": 0,
+    "naturalHeight": 0
+  }
+]

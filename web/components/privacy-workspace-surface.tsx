@@ -23,7 +23,10 @@ import {
 } from "../lib/routes";
 
 type PrivacyWorkspaceMode = "controlled" | "safeguarded";
-type FindingDecisionMutationStatus = "APPROVED" | "OVERRIDDEN" | "FALSE_POSITIVE";
+type FindingDecisionMutationStatus =
+  | "APPROVED"
+  | "OVERRIDDEN"
+  | "FALSE_POSITIVE";
 
 type WorkspaceServerAction = (formData: FormData) => void | Promise<void>;
 
@@ -59,7 +62,10 @@ interface PrivacyWorkspaceSurfaceProps {
   onPatchPageReviewAction: WorkspaceServerAction;
 }
 
-function resolveFindingHighlightColor(anchorKind: string): { border: string; fill: string } {
+function resolveFindingHighlightColor(anchorKind: string): {
+  border: string;
+  fill: string;
+} {
   if (anchorKind === "AREA_MASK_BACKED") {
     return {
       border: "rgba(245, 166, 35, 0.95)",
@@ -104,15 +110,21 @@ function toShortIso(value: string | null | undefined): string {
   return parsed.toISOString();
 }
 
-function resolveFindingLineId(finding: DocumentRedactionFinding): string | null {
+function resolveFindingLineId(
+  finding: DocumentRedactionFinding
+): string | null {
   return finding.geometry.lineId ?? finding.lineId ?? null;
 }
 
-function resolveFindingTokenId(finding: DocumentRedactionFinding): string | null {
+function resolveFindingTokenId(
+  finding: DocumentRedactionFinding
+): string | null {
   return finding.geometry.tokenIds[0] ?? null;
 }
 
-function resolvePolicyDualReviewCategorySet(policySnapshotJson: Record<string, unknown>): Set<string> {
+function resolvePolicyDualReviewCategorySet(
+  policySnapshotJson: Record<string, unknown>
+): Set<string> {
   const candidates = new Set<string>();
   const queue: unknown[] = [policySnapshotJson];
   while (queue.length > 0) {
@@ -159,7 +171,9 @@ function resolvePolicyDualReviewCategorySet(policySnapshotJson: Record<string, u
   return candidates;
 }
 
-function hasDisagreementMarkers(basisSecondaryJson: Record<string, unknown> | null): boolean {
+function hasDisagreementMarkers(
+  basisSecondaryJson: Record<string, unknown> | null
+): boolean {
   if (!basisSecondaryJson || typeof basisSecondaryJson !== "object") {
     return false;
   }
@@ -175,7 +189,9 @@ function hasDisagreementMarkers(basisSecondaryJson: Record<string, unknown> | nu
       }
       continue;
     }
-    for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
+    for (const [key, nested] of Object.entries(
+      value as Record<string, unknown>
+    )) {
       const normalized = key.trim().toLowerCase();
       if (
         normalized.includes("detector_disagreement") ||
@@ -184,7 +200,12 @@ function hasDisagreementMarkers(basisSecondaryJson: Record<string, unknown> | nu
         normalized.includes("ambiguousoverlap") ||
         normalized.includes("overlap_ambiguous")
       ) {
-        if (nested === true || nested === "true" || nested === 1 || nested === "1") {
+        if (
+          nested === true ||
+          nested === "true" ||
+          nested === 1 ||
+          nested === "1"
+        ) {
           return true;
         }
       }
@@ -192,7 +213,12 @@ function hasDisagreementMarkers(basisSecondaryJson: Record<string, unknown> | nu
         normalized.includes("disagreement") ||
         normalized.includes("ambiguous")
       ) {
-        if (nested === true || nested === "true" || nested === 1 || nested === "1") {
+        if (
+          nested === true ||
+          nested === "true" ||
+          nested === 1 ||
+          nested === "1"
+        ) {
           return true;
         }
       }
@@ -212,10 +238,14 @@ function resolveHighRiskSignals(options: {
   if (targetStatus === "FALSE_POSITIVE") {
     reasons.push("Decision changes finding to FALSE_POSITIVE");
   }
-  if (finding.areaMaskId || finding.geometry.anchorKind === "AREA_MASK_BACKED") {
+  if (
+    finding.areaMaskId ||
+    finding.geometry.anchorKind === "AREA_MASK_BACKED"
+  ) {
     reasons.push("Finding is linked to a conservative area mask");
   }
-  const dualReviewCategories = resolvePolicyDualReviewCategorySet(policySnapshotJson);
+  const dualReviewCategories =
+    resolvePolicyDualReviewCategorySet(policySnapshotJson);
   if (dualReviewCategories.has(finding.category.trim().toUpperCase())) {
     reasons.push("Pinned policy marks this category as dual-review-required");
   }
@@ -223,7 +253,9 @@ function resolveHighRiskSignals(options: {
     reasons.push("Detector disagreement or ambiguous overlap is recorded");
   }
   if (finding.overrideRiskClassification === "HIGH") {
-    reasons.push("Finding is already classified as high-risk by the decision engine");
+    reasons.push(
+      "Finding is already classified as high-risk by the decision engine"
+    );
   }
   return reasons;
 }
@@ -248,12 +280,15 @@ function parseAssistSummary(finding: DocumentRedactionFinding): string | null {
   return normalized;
 }
 
-function parseGeneralizationExplanation(finding: DocumentRedactionFinding): string | null {
+function parseGeneralizationExplanation(
+  finding: DocumentRedactionFinding
+): string | null {
   const basis = finding.basisSecondaryJson;
   if (!basis || typeof basis !== "object") {
     return null;
   }
-  const explanation = (basis as Record<string, unknown>).generalizationExplanation;
+  const explanation = (basis as Record<string, unknown>)
+    .generalizationExplanation;
   if (!explanation || typeof explanation !== "object") {
     return null;
   }
@@ -268,7 +303,9 @@ function parseGeneralizationExplanation(finding: DocumentRedactionFinding): stri
   return normalized;
 }
 
-function parseGeneralizationGranularity(finding: DocumentRedactionFinding): string | null {
+function parseGeneralizationGranularity(
+  finding: DocumentRedactionFinding
+): string | null {
   const basis = finding.basisSecondaryJson;
   if (!basis || typeof basis !== "object") {
     return null;
@@ -277,7 +314,9 @@ function parseGeneralizationGranularity(finding: DocumentRedactionFinding): stri
   if (!transformation || typeof transformation !== "object") {
     return null;
   }
-  const sourceType = String((transformation as Record<string, unknown>).sourceType ?? "").trim();
+  const sourceType = String(
+    (transformation as Record<string, unknown>).sourceType ?? ""
+  ).trim();
   const specificityApplied = String(
     (transformation as Record<string, unknown>).specificityApplied ?? ""
   ).trim();
@@ -326,25 +365,34 @@ export function PrivacyWorkspaceSurface({
 }: PrivacyWorkspaceSurfaceProps) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogStatus, setDialogStatus] = useState<FindingDecisionMutationStatus>("OVERRIDDEN");
+  const [dialogStatus, setDialogStatus] =
+    useState<FindingDecisionMutationStatus>("OVERRIDDEN");
   const [dialogReason, setDialogReason] = useState("");
-  const [dialogValidationError, setDialogValidationError] = useState<string | null>(null);
+  const [dialogValidationError, setDialogValidationError] = useState<
+    string | null
+  >(null);
   const [localNotice, setLocalNotice] = useState<string | null>(null);
   const dialogReturnFocusRef = useRef<HTMLElement | null>(null);
   const lineButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
   const selectedFinding = useMemo(() => {
     if (selectedFindingId) {
-      return findings.find((finding) => finding.id === selectedFindingId) ?? null;
+      return (
+        findings.find((finding) => finding.id === selectedFindingId) ?? null
+      );
     }
     if (selectedTokenId) {
       return (
-        findings.find((finding) => finding.geometry.tokenIds.includes(selectedTokenId)) ?? null
+        findings.find((finding) =>
+          finding.geometry.tokenIds.includes(selectedTokenId)
+        ) ?? null
       );
     }
     if (selectedLineId) {
       return (
-        findings.find((finding) => resolveFindingLineId(finding) === selectedLineId) ?? null
+        findings.find(
+          (finding) => resolveFindingLineId(finding) === selectedLineId
+        ) ?? null
       );
     }
     return null;
@@ -413,14 +461,17 @@ export function PrivacyWorkspaceSurface({
       mode: nextMode,
       tokenId: nextTokenId
     });
-    router.push(
-      nextShowHighlights ? path : `${path}&highlights=off`,
-      { scroll: false }
-    );
+    router.push(nextShowHighlights ? path : `${path}&highlights=off`, {
+      scroll: false
+    });
   };
 
-  const selectedFindingLineId = selectedFinding ? resolveFindingLineId(selectedFinding) : null;
-  const selectedFindingTokenId = selectedFinding ? resolveFindingTokenId(selectedFinding) : null;
+  const selectedFindingLineId = selectedFinding
+    ? resolveFindingLineId(selectedFinding)
+    : null;
+  const selectedFindingTokenId = selectedFinding
+    ? resolveFindingTokenId(selectedFinding)
+    : null;
   const highRiskSignals =
     selectedFinding !== null
       ? resolveHighRiskSignals({
@@ -537,7 +588,9 @@ export function PrivacyWorkspaceSurface({
           <SectionState
             kind="success"
             title="Workspace updated"
-            description={serverNotice ?? localNotice ?? "Latest workspace state loaded."}
+            description={
+              serverNotice ?? localNotice ?? "Latest workspace state loaded."
+            }
           />
         </section>
       ) : null}
@@ -576,7 +629,8 @@ export function PrivacyWorkspaceSurface({
                       </StatusChip>
                     </div>
                     <p className="ukde-muted">
-                      Findings {page.findingCount} · Unresolved {page.unresolvedCount}
+                      Findings {page.findingCount} · Unresolved{" "}
+                      {page.unresolvedCount}
                     </p>
                     <div className="buttonRow">
                       <button
@@ -603,7 +657,11 @@ export function PrivacyWorkspaceSurface({
 
           <div className="privacyWorkspaceCanvas" aria-label="Page canvas">
             <h3>Canvas</h3>
-            <div className="privacyWorkspaceCanvasFrame">
+            <div
+              aria-label="Privacy workspace canvas"
+              className="privacyWorkspaceCanvasFrame"
+              tabIndex={0}
+            >
               {mode === "safeguarded" ? (
                 previewStatus?.status === "READY" ? (
                   <img
@@ -624,7 +682,9 @@ export function PrivacyWorkspaceSurface({
                 )
               ) : (
                 <div className="privacyWorkspaceControlledPanel">
-                  <p className="ukde-muted">Controlled transcript source for page {pageNumber}</p>
+                  <p className="ukde-muted">
+                    Controlled transcript source for page {pageNumber}
+                  </p>
                   {lineLoadError ? (
                     <SectionState
                       kind="degraded"
@@ -632,7 +692,9 @@ export function PrivacyWorkspaceSurface({
                       description={lineLoadError}
                     />
                   ) : lines.length === 0 ? (
-                    <p className="ukde-muted">No transcription lines available.</p>
+                    <p className="ukde-muted">
+                      No transcription lines available.
+                    </p>
                   ) : (
                     <ul className="timelineList">
                       {lines.map((line) => (
@@ -640,7 +702,9 @@ export function PrivacyWorkspaceSurface({
                           <p>
                             <strong>{line.lineId}</strong>
                           </p>
-                          <p className="ukde-muted">{line.textDiplomatic || "(empty line)"}</p>
+                          <p className="ukde-muted">
+                            {line.textDiplomatic || "(empty line)"}
+                          </p>
                         </li>
                       ))}
                     </ul>
@@ -650,7 +714,9 @@ export function PrivacyWorkspaceSurface({
               {mode === "safeguarded" && showHighlights
                 ? findingsForOverlay.flatMap((finding) =>
                     finding.geometry.boxes.map((box, index) => {
-                      const palette = resolveFindingHighlightColor(finding.geometry.anchorKind);
+                      const palette = resolveFindingHighlightColor(
+                        finding.geometry.anchorKind
+                      );
                       return (
                         <div
                           key={`${finding.id}:${index}:${box.x}:${box.y}`}
@@ -673,12 +739,18 @@ export function PrivacyWorkspaceSurface({
             </div>
           </div>
 
-          <aside className="privacyWorkspaceInspector" aria-label="Transcript and findings">
+          <aside
+            className="privacyWorkspaceInspector"
+            aria-label="Transcript and findings"
+          >
             <h3>Transcript and findings</h3>
             <div className="privacyWorkspaceSection">
               <h4>Finding actions</h4>
               {!selectedFinding ? (
-                <p className="ukde-muted">Select a finding to apply approve, override, or false-positive actions.</p>
+                <p className="ukde-muted">
+                  Select a finding to apply approve, override, or false-positive
+                  actions.
+                </p>
               ) : (
                 <>
                   <ul className="projectMetaList">
@@ -709,18 +781,39 @@ export function PrivacyWorkspaceSurface({
                   </ul>
                   {!canMutate ? (
                     <p className="ukde-muted">
-                      Read-only role: finding decisions are restricted to REVIEWER, PROJECT_LEAD, or ADMIN.
+                      Read-only role: finding decisions are restricted to
+                      REVIEWER, PROJECT_LEAD, or ADMIN.
                     </p>
                   ) : null}
                   <div className="buttonRow">
                     <form action={onPatchFindingAction}>
                       <input name="runId" type="hidden" value={runId} />
-                      <input name="pageNumber" type="hidden" value={String(pageNumber)} />
+                      <input
+                        name="pageNumber"
+                        type="hidden"
+                        value={String(pageNumber)}
+                      />
                       <input name="mode" type="hidden" value={mode} />
-                      <input name="highlights" type="hidden" value={showHighlights ? "on" : "off"} />
-                      <input name="findingId" type="hidden" value={selectedFinding.id} />
-                      <input name="decisionStatus" type="hidden" value="APPROVED" />
-                      <input name="decisionEtag" type="hidden" value={selectedFinding.decisionEtag} />
+                      <input
+                        name="highlights"
+                        type="hidden"
+                        value={showHighlights ? "on" : "off"}
+                      />
+                      <input
+                        name="findingId"
+                        type="hidden"
+                        value={selectedFinding.id}
+                      />
+                      <input
+                        name="decisionStatus"
+                        type="hidden"
+                        value="APPROVED"
+                      />
+                      <input
+                        name="decisionEtag"
+                        type="hidden"
+                        value={selectedFinding.decisionEtag}
+                      />
                       <input
                         name="returnLineId"
                         type="hidden"
@@ -731,7 +824,11 @@ export function PrivacyWorkspaceSurface({
                         type="hidden"
                         value={selectedFindingTokenId ?? ""}
                       />
-                      <button className="secondaryButton" disabled={!canMutate} type="submit">
+                      <button
+                        className="secondaryButton"
+                        disabled={!canMutate}
+                        type="submit"
+                      >
                         Approve finding
                       </button>
                     </form>
@@ -790,7 +887,9 @@ export function PrivacyWorkspaceSurface({
                     </li>
                     <li>
                       <span>First reviewed by</span>
-                      <strong>{pageReview.firstReviewedBy ?? "Not reviewed"}</strong>
+                      <strong>
+                        {pageReview.firstReviewedBy ?? "Not reviewed"}
+                      </strong>
                     </li>
                     <li>
                       <span>Second review</span>
@@ -798,15 +897,29 @@ export function PrivacyWorkspaceSurface({
                     </li>
                     <li>
                       <span>Requires second review</span>
-                      <strong>{pageReview.requiresSecondReview ? "Yes" : "No"}</strong>
+                      <strong>
+                        {pageReview.requiresSecondReview ? "Yes" : "No"}
+                      </strong>
                     </li>
                   </ul>
                   <form action={onPatchPageReviewAction}>
                     <input name="runId" type="hidden" value={runId} />
-                    <input name="pageId" type="hidden" value={selectedPage.pageId} />
-                    <input name="pageNumber" type="hidden" value={String(pageNumber)} />
+                    <input
+                      name="pageId"
+                      type="hidden"
+                      value={selectedPage.pageId}
+                    />
+                    <input
+                      name="pageNumber"
+                      type="hidden"
+                      value={String(pageNumber)}
+                    />
                     <input name="mode" type="hidden" value={mode} />
-                    <input name="highlights" type="hidden" value={showHighlights ? "on" : "off"} />
+                    <input
+                      name="highlights"
+                      type="hidden"
+                      value={showHighlights ? "on" : "off"}
+                    />
                     <input
                       name="returnFindingId"
                       type="hidden"
@@ -823,8 +936,16 @@ export function PrivacyWorkspaceSurface({
                       value={selectedTokenId ?? selectedFindingTokenId ?? ""}
                     />
                     <input name="reviewStatus" type="hidden" value="APPROVED" />
-                    <input name="reviewEtag" type="hidden" value={pageReview.reviewEtag} />
-                    <button className="secondaryButton" disabled={approvePageDisabled} type="submit">
+                    <input
+                      name="reviewEtag"
+                      type="hidden"
+                      value={pageReview.reviewEtag}
+                    />
+                    <button
+                      className="secondaryButton"
+                      disabled={approvePageDisabled}
+                      type="submit"
+                    >
                       Approve page
                     </button>
                   </form>
@@ -839,7 +960,9 @@ export function PrivacyWorkspaceSurface({
                   ) : null}
                 </>
               ) : (
-                <p className="ukde-muted">Page review projection unavailable.</p>
+                <p className="ukde-muted">
+                  Page review projection unavailable.
+                </p>
               )}
             </div>
 
@@ -854,7 +977,10 @@ export function PrivacyWorkspaceSurface({
               ) : lines.length === 0 ? (
                 <p className="ukde-muted">No transcription lines available.</p>
               ) : (
-                <ul className="timelineList privacyWorkspaceTranscriptList" aria-label="Transcript lines">
+                <ul
+                  className="timelineList privacyWorkspaceTranscriptList"
+                  aria-label="Transcript lines"
+                >
                   {lines.map((line) => {
                     const isFocused = focusLineId === line.lineId;
                     return (
@@ -879,8 +1005,12 @@ export function PrivacyWorkspaceSurface({
                           }}
                           type="button"
                         >
-                          <span className="privacyWorkspaceListTitle">{line.lineId}</span>
-                          <span className="ukde-muted">{line.textDiplomatic || "(empty line)"}</span>
+                          <span className="privacyWorkspaceListTitle">
+                            {line.lineId}
+                          </span>
+                          <span className="ukde-muted">
+                            {line.textDiplomatic || "(empty line)"}
+                          </span>
                         </button>
                       </li>
                     );
@@ -900,7 +1030,10 @@ export function PrivacyWorkspaceSurface({
               ) : findings.length === 0 ? (
                 <p className="ukde-muted">No findings for this page.</p>
               ) : (
-                <ul className="timelineList privacyWorkspaceFindingList" aria-label="Findings list">
+                <ul
+                  className="timelineList privacyWorkspaceFindingList"
+                  aria-label="Findings list"
+                >
                   {findings.map((finding) => {
                     const isSelected = finding.id === selectedFinding?.id;
                     const assistSummary = parseAssistSummary(finding);
@@ -928,9 +1061,12 @@ export function PrivacyWorkspaceSurface({
                           }}
                           type="button"
                         >
-                          <span className="privacyWorkspaceListTitle">{finding.category}</span>
+                          <span className="privacyWorkspaceListTitle">
+                            {finding.category}
+                          </span>
                           <span className="ukde-muted">
-                            {finding.id} · {finding.decisionStatus} · Anchor {finding.geometry.anchorKind}
+                            {finding.id} · {finding.decisionStatus} · Anchor{" "}
+                            {finding.geometry.anchorKind}
                           </span>
                         </button>
                         <div className="buttonRow">
@@ -983,7 +1119,8 @@ export function PrivacyWorkspaceSurface({
                         ) : null}
                         {generalizationExplanation ? (
                           <p className="ukde-muted">
-                            Generalization rationale: {generalizationExplanation}
+                            Generalization rationale:{" "}
+                            {generalizationExplanation}
                           </p>
                         ) : null}
                         {generalizationGranularity ? (
@@ -993,7 +1130,8 @@ export function PrivacyWorkspaceSurface({
                         ) : null}
                         {findingHighRiskSignals.length > 0 ? (
                           <p className="ukde-muted">
-                            High-risk override signals present. Second review will be required later.
+                            High-risk override signals present. Second review
+                            will be required later.
                           </p>
                         ) : null}
                       </li>
@@ -1052,7 +1190,11 @@ export function PrivacyWorkspaceSurface({
                 </li>
                 <li>
                   <span>Mode</span>
-                  <strong>{mode === "controlled" ? "Controlled view" : "Safeguarded preview"}</strong>
+                  <strong>
+                    {mode === "controlled"
+                      ? "Controlled view"
+                      : "Safeguarded preview"}
+                  </strong>
                 </li>
               </ul>
             </div>
@@ -1068,14 +1210,22 @@ export function PrivacyWorkspaceSurface({
         }
         footer={
           <div className="buttonRow">
-            <button className="secondaryButton" onClick={() => setDialogOpen(false)} type="button">
+            <button
+              className="secondaryButton"
+              onClick={() => setDialogOpen(false)}
+              type="button"
+            >
               Cancel
             </button>
             <button
               className="secondaryButton"
               type="submit"
               form="privacy-finding-reason-form"
-              disabled={!selectedFinding || !canMutate || dialogReason.trim().length === 0}
+              disabled={
+                !selectedFinding ||
+                !canMutate ||
+                dialogReason.trim().length === 0
+              }
             >
               Save decision
             </button>
@@ -1084,7 +1234,11 @@ export function PrivacyWorkspaceSurface({
         onClose={() => setDialogOpen(false)}
         open={dialogOpen}
         returnFocusRef={dialogReturnFocusRef}
-        title={dialogStatus === "FALSE_POSITIVE" ? "Mark as false positive" : "Override finding"}
+        title={
+          dialogStatus === "FALSE_POSITIVE"
+            ? "Mark as false positive"
+            : "Override finding"
+        }
       >
         {!selectedFinding ? (
           <SectionState
@@ -1099,17 +1253,27 @@ export function PrivacyWorkspaceSurface({
             onSubmit={(event) => {
               if (!dialogReason.trim()) {
                 event.preventDefault();
-                setDialogValidationError("Reason is required for override decisions.");
+                setDialogValidationError(
+                  "Reason is required for override decisions."
+                );
               }
             }}
           >
             <input name="runId" type="hidden" value={runId} />
             <input name="pageNumber" type="hidden" value={String(pageNumber)} />
             <input name="mode" type="hidden" value={mode} />
-            <input name="highlights" type="hidden" value={showHighlights ? "on" : "off"} />
+            <input
+              name="highlights"
+              type="hidden"
+              value={showHighlights ? "on" : "off"}
+            />
             <input name="findingId" type="hidden" value={selectedFinding.id} />
             <input name="decisionStatus" type="hidden" value={dialogStatus} />
-            <input name="decisionEtag" type="hidden" value={selectedFinding.decisionEtag} />
+            <input
+              name="decisionEtag"
+              type="hidden"
+              value={selectedFinding.decisionEtag}
+            />
             <input name="actionType" type="hidden" value="MASK" />
             <input
               name="returnLineId"
@@ -1123,12 +1287,14 @@ export function PrivacyWorkspaceSurface({
             />
             <div className="privacyWorkspaceDialogBody">
               <p className="ukde-muted">
-                {selectedFinding.id} · {selectedFinding.category} · current status {selectedFinding.decisionStatus}
+                {selectedFinding.id} · {selectedFinding.category} · current
+                status {selectedFinding.decisionStatus}
               </p>
               {highRiskSignals.length > 0 ? (
                 <div className="panelCard panelSubtle">
                   <p className="ukde-muted">
-                    High-risk override detected. Prompt 64 will enforce second-review completion for these decisions.
+                    High-risk override detected. Prompt 64 will enforce
+                    second-review completion for these decisions.
                   </p>
                   <ul className="timelineList">
                     {highRiskSignals.map((reason) => (
@@ -1139,7 +1305,10 @@ export function PrivacyWorkspaceSurface({
                   </ul>
                 </div>
               ) : null}
-              <label className="ukde-muted" htmlFor="privacy-finding-reason-input">
+              <label
+                className="ukde-muted"
+                htmlFor="privacy-finding-reason-input"
+              >
                 Decision reason
               </label>
               <textarea

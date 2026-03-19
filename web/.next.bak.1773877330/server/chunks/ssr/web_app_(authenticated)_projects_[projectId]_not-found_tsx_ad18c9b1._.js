@@ -1,0 +1,3 @@
+module.exports=[91844,a=>{"use strict";var b=a.i(92969),c=a.i(54757),d=a.i(91333),e=a.i(69390);function f(){return(0,b.jsx)(c.RouteNotFoundState,{backHref:e.projectsPath,backLabel:"Back to projects",summary:d.routeNotFoundCopy.project.summary,title:d.routeNotFoundCopy.project.title})}a.s(["default",()=>f])}];
+
+//# sourceMappingURL=web_app_%28authenticated%29_projects_%5BprojectId%5D_not-found_tsx_ad18c9b1._.js.map

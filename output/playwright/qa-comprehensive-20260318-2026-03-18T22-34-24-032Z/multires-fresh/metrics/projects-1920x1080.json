@@ -1,0 +1,36 @@
+{
+  "routeKey": "projects",
+  "url": "http://127.0.0.1:3100/projects",
+  "title": "UKDE",
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "bodyOverflowX": 0,
+  "bodyOverflowY": 0,
+  "pageOverflowX": 0,
+  "pageOverflowY": 0,
+  "mainClass": "homeLayout",
+  "mainOverflowX": 0,
+  "mainOverflowY": 0,
+  "totalButtons": 5,
+  "totalLinks": 9,
+  "topOverflowElements": [
+    {
+      "selector": "p.authenticatedShellTitle",
+      "overflowX": 0,
+      "overflowY": 1,
+      "width": 1021,
+      "height": 21
+    },
+    {
+      "selector": "h1",
+      "overflowX": 0,
+      "overflowY": 1,
+      "width": 1358,
+      "height": 27
+    }
+  ],
+  "navigationError": null,
+  "consoleErrors": []
+}

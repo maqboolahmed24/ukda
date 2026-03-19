@@ -16,6 +16,8 @@ spec:
         {{- include "ukde.labels" . | nindent 8 }}
         app.kubernetes.io/component: workers
     spec:
+      serviceAccountName: {{ include "ukde.workersServiceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.services.workers.serviceAccount.automountServiceAccountToken }}
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml .Values.imagePullSecrets | nindent 8 }}
@@ -24,12 +26,40 @@ spec:
         - name: workers
           image: {{ include "ukde.image" (dict "root" . "service" .Values.services.workers) | quote }}
           imagePullPolicy: {{ .Values.services.workers.image.pullPolicy }}
+          command: ["ukde-worker", "run"]
           env:
+            - name: APP_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Release.Name }}-config
+                  key: UKDE_WORKER_ENVIRONMENT
             - name: UKDE_WORKER_ENVIRONMENT
               valueFrom:
                 configMapKeyRef:
                   name: {{ .Release.Name }}-config
                   key: UKDE_WORKER_ENVIRONMENT
+            - name: WORKER_QUEUE_NAME
+              value: {{ .Values.services.workers.env.WORKER_QUEUE_NAME | quote }}
+            - name: WORKER_HEARTBEAT_SECONDS
+              value: {{ .Values.services.workers.env.WORKER_HEARTBEAT_SECONDS | quote }}
+            - name: WORKER_POLL_SECONDS
+              value: {{ .Values.services.workers.env.WORKER_POLL_SECONDS | quote }}
+            - name: WORKER_MAX_ITERATIONS
+              value: {{ .Values.services.workers.env.WORKER_MAX_ITERATIONS | quote }}
+            {{- if .Values.storage.controlled.enabled }}
+            - name: STORAGE_CONTROLLED_ROOT
+              value: {{ .Values.storage.controlled.mountPath | quote }}
+            {{- end }}
+          {{- if .Values.storage.controlled.enabled }}
+          volumeMounts:
+            - name: controlled-storage
+              mountPath: {{ .Values.storage.controlled.mountPath | quote }}
+          {{- end }}
           resources:
             {{- toYaml .Values.resources.workers | nindent 12 }}
-
+      {{- if .Values.storage.controlled.enabled }}
+      volumes:
+        - name: controlled-storage
+          persistentVolumeClaim:
+            claimName: {{ include "ukde.controlledStoragePvcName" . }}
+      {{- end }}

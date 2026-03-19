@@ -44,6 +44,24 @@ describe("mutation rule policy", () => {
     ]);
   });
 
+  it("revalidates derivative surfaces and export-candidate list after freeze", () => {
+    const paths = resolveMutationRevalidationPaths("derivatives.freeze", {
+      projectId: "project-1",
+      indexId: "dersnap-1"
+    });
+    expect(paths).toContain("/projects/project-1/derivatives");
+    expect(paths).toContain("/projects/project-1/derivatives/dersnap-1");
+    expect(paths).toContain("/projects/project-1/derivatives/dersnap-1/status");
+    expect(paths).toContain("/projects/project-1/derivatives/dersnap-1/preview");
+    expect(paths).toContain(
+      "/projects/project-1/derivatives/dersnap-1?status=frozen"
+    );
+    expect(paths).toContain(
+      "/projects/project-1/derivatives/dersnap-1/preview?status=freeze-existing"
+    );
+    expect(paths).toContain("/projects/project-1/export-candidates");
+  });
+
   it("revalidates protected shell surfaces when auth boundaries change", () => {
     const paths = resolveMutationRevalidationPaths("auth.logout", {});
     expect(paths).toContain("/projects");

@@ -25,6 +25,13 @@ This document captures the implemented Phase 0.5 enforcement posture for no-egre
   - API: `GET /admin/security/status` (`ADMIN` and read-only `AUDITOR`)
   - Web: `/admin/security`
   - includes egress deny test state, CSP mode, last backup timestamp, and diagnostic preference signals
+- Security findings and risk acceptance:
+  - APIs under `/admin/security/findings` and `/admin/security/risk-acceptances`
+  - append-only risk-acceptance events with projection state (`ACTIVE | EXPIRED | REVOKED`)
+  - system expiry evaluator appends `ACCEPTANCE_EXPIRED`
+- Deployment boundary hardening:
+  - dedicated API/worker service accounts with `automountServiceAccountToken: false`
+  - deny-by-default and internal-allowlist network policy templates remain encoded in Helm
 
 ## Configuration Surface
 
@@ -49,6 +56,16 @@ See [`.env.example`](/Users/test/Code/UKDA/.env.example) for defaults.
 - `BASELINE_POLICY_SNAPSHOT_SEEDED`
 - `PROJECT_BASELINE_POLICY_ATTACHED`
 - `ADMIN_SECURITY_STATUS_VIEWED`
+- `SECURITY_FINDINGS_VIEWED`
+- `SECURITY_FINDING_VIEWED`
+- `RISK_ACCEPTANCE_CREATED`
+- `RISK_ACCEPTANCE_RENEWED`
+- `RISK_ACCEPTANCE_REVIEW_SCHEDULED`
+- `RISK_ACCEPTANCE_EXPIRED`
+- `SECURITY_RISK_ACCEPTANCES_VIEWED`
+- `SECURITY_RISK_ACCEPTANCE_VIEWED`
+- `SECURITY_RISK_ACCEPTANCE_EVENTS_VIEWED`
+- `RISK_ACCEPTANCE_REVOKED`
 
 Additional security telemetry events emitted in this baseline:
 

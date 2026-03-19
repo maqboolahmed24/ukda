@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/admin/recovery/drills/run/route": "app/(authenticated)/admin/recovery/drills/run/route.js"
+}

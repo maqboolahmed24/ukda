@@ -1,0 +1,97 @@
+[console.error] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <HTTPAccessFallbackErrorBoundary pathname="/admin/des..." notFound={<SegmentViewNode>} forbidden={undefined} ...>
+      <RedirectBoundary>
+        <RedirectErrorBoundary router={{...}}>
+          <InnerLayoutRouter url="/admin/des..." tree={[...]} params={{}} cacheNode={{...}} segmentPath={[...]} ...>
+            <SegmentViewNode type="layout" pagePath="(authentic...">
+              <SegmentTrieNode>
+              <AuthenticatedLayout>
+                <AuthenticatedShell csrfToken="fixture-cs..." projects={[...]} session={{...}}>
+                  <div className="authentica..." data-shell-state="Expanded">
+                    <a>
+                    <header className="authentica...">
+                      <div>
+                      <div className="authentica...">
+                        <GlobalCommandBar>
+                        <ThemePreferenceControl>
+                        <LinkComponent>
+                        <div>
+                        <details className="workspaceMenu">
+                          <summary>
+                          <div className="workspaceM...">
+                            <span>
+                            <span>
+                            <LinkComponent>
+                            <form action="/auth/logout" method="post">
+                              <input
+                                name="csrf_token"
+                                type="hidden"
+                                value="fixture-csrf-token"
+-                               style={{caret-color:"transparent"}}
+                              >
+                              ...
+                    ...
+          ...
+
+[console.error] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <ScrollAndFocusHandler segmentPath={[...]}>
+      <InnerScrollAndFocusHandler segmentPath={[...]} focusAndScrollRef={{apply:false, ...}}>
+        <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+          <LoadingBoundary name="design-sys..." loading={null}>
+            <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <InnerLayoutRouter url="/admin/des..." tree={[...]} params={{}} cacheNode={{rsc:<Fragment>, ...}} ...>
+                    <SegmentViewNode type="page" pagePath="(authentic...">
+                      <SegmentTrieNode>
+                      <DesignSystemPage>
+                        <main className="homeLayout...">
+                          <PageHeader>
+                          <section>
+                          <section>
+                          <section>
+                          <section>
+                          <section className="ukde-grid" data-columns="2">
+                            <article>
+                            <article className="sectionCar...">
+                              <div>
+                              <div className="dsInteract...">
+                                <button>
+                                <button>
+                                <button>
+                                <input
+                                  className="ukde-field"
+                                  defaultValue="Focusable field"
+                                  aria-label="Focusable field sample"
+                                  readOnly={true}
+-                                 style={{caret-color:"transparent"}}
+                                >
+                              ...
+                          ...
+                    ...
+                  ...
+        ...

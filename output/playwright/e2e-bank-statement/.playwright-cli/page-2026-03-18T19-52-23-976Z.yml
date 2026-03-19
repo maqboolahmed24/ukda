@@ -1,0 +1,26 @@
+- generic [active] [ref=e1]:
+  - main [ref=e14]:
+    - region "Session boundaries start here." [ref=e15]:
+      - paragraph [ref=e16]: Authentication
+      - heading "Session boundaries start here." [level=1] [ref=e17]
+      - paragraph [ref=e18]: Use a governed sign-in path. Sessions are issued server-side, stored in secure HttpOnly cookies, and checked on every protected route.
+      - generic [ref=e19]:
+        - generic [ref=e20]: Public route
+        - generic [ref=e21]: Keyboard-first
+        - generic [ref=e22]: Dark-first
+        - generic [ref=e23]: Env dev
+      - 'button "Theme preference: System (Light). Click to switch to Dark." [ref=e25] [cursor=pointer]':
+        - img [ref=e27]
+      - status [ref=e29]:
+        - heading "OIDC sign-in unavailable" [level=2] [ref=e31]
+        - paragraph [ref=e32]: "OIDC is not configured in this environment. Configure `OIDC_*` variables to enable governed SSO."
+      - generic [ref=e33]:
+        - generic [ref=e34]: Dev sign-in identity
+        - combobox "Dev sign-in identity" [ref=e35]:
+          - option "Dev Project Lead (No platform role)" [selected]
+          - option "Dev Researcher (No platform role)"
+          - option "Dev Reviewer (No platform role)"
+          - option "Dev Admin (ADMIN)"
+          - option "Dev Auditor (AUDITOR)"
+        - button "Sign in with dev fixture" [ref=e36] [cursor=pointer]
+  - alert [ref=e13]

@@ -1,0 +1,3 @@
+module.exports=[52796,a=>{"use strict";var b=a.i(92969),c=a.i(54757),d=a.i(91333),e=a.i(69390);async function f({params:a}){let f=a instanceof Promise?await a:a??{projectId:void 0},g=f.projectId?.trim()||"";return(0,b.jsx)(c.RouteNotFoundState,{backHref:g?(0,e.projectDocumentsPath)(g):"/projects",backLabel:"Back to documents",summary:d.routeNotFoundCopy.projectDocument.summary,title:d.routeNotFoundCopy.projectDocument.title})}a.s(["default",()=>f])}];
+
+//# sourceMappingURL=f2ec3_projects_%5BprojectId%5D_documents_%5BdocumentId%5D_not-found_tsx_b425b6d6._.js.map

@@ -23,6 +23,7 @@ import {
   activityPath,
   adminPath,
   approvedModelsPath,
+  projectDerivativesPath,
   projectEntitiesPath,
   healthPath,
   projectIndexesPath,
@@ -65,6 +66,7 @@ const PROJECT_CONTEXT_LINKS: NavLink[] = [
   },
   { href: "search", label: "Search", requiresProjectMembership: true },
   { href: "entities", label: "Entities", requiresProjectMembership: true },
+  { href: "derivatives", label: "Derivatives", requiresProjectMembership: true },
   { href: "indexes", label: "Indexes", requiresProjectMembership: true },
   { href: "policies", label: "Policies", requiresProjectMembership: true },
   {
@@ -155,6 +157,9 @@ function resolveProjectContextHref(projectId: string, linkHref: string): string 
   }
   if (linkHref === "entities") {
     return projectEntitiesPath(projectId);
+  }
+  if (linkHref === "derivatives") {
+    return projectDerivativesPath(projectId);
   }
   if (linkHref === "policies") {
     return projectPoliciesPath(projectId);

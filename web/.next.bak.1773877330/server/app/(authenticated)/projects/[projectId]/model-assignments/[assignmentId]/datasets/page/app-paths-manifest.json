@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/projects/[projectId]/model-assignments/[assignmentId]/datasets/page": "app/(authenticated)/projects/[projectId]/model-assignments/[assignmentId]/datasets/page.js"
+}

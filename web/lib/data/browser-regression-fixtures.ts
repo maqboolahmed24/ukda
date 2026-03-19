@@ -76,6 +76,12 @@ import type {
   ProjectSearchHit,
   ProjectSearchResponse,
   ProjectSearchResultOpenResponse,
+  ProjectDerivativeCandidateSnapshotCreateResponse,
+  ProjectDerivativeDetailResponse,
+  ProjectDerivativeListResponse,
+  ProjectDerivativePreviewResponse,
+  ProjectDerivativeSnapshot,
+  ProjectDerivativeStatusResponse,
   ProjectEntityDetailResponse,
   ProjectEntityListResponse,
   ProjectEntityOccurrencesResponse,
@@ -293,6 +299,27 @@ const FIXTURE_OPERATIONS_OVERVIEW: OperationsOverviewResponse = {
   requestErrorCount: 27,
   errorRatePercent: 0.296,
   p95LatencyMs: 188.22,
+  jobsPerMinute: 14.25,
+  jobsCompletedCount: 20_512,
+  queueLatencyAvgMs: 1_250.4,
+  queueLatencyP95Ms: 4_884.75,
+  gpuUtilizationAvgPercent: 42.3,
+  gpuUtilizationMaxPercent: 78.1,
+  gpuUtilizationSampleCount: 144,
+  gpuUtilizationSource: "fixture-worker-gpu",
+  gpuUtilizationDetail: "Fixture GPU sampler attached to worker runtime.",
+  modelRequestCount: 3_482,
+  modelErrorCount: 41,
+  modelErrorRatePercent: 1.177,
+  modelFallbackInvocationCount: 134,
+  modelFallbackInvocationRatePercent: 3.848,
+  modelRequestP95LatencyMs: 842.31,
+  exportReviewLatencyAvgMs: 128_300.23,
+  exportReviewLatencyP95Ms: 356_889.5,
+  exportReviewLatencySampleCount: 83,
+  storageRequestCount: 18_462,
+  storageErrorCount: 21,
+  storageErrorRatePercent: 0.114,
   readinessDbChecks: 48,
   readinessDbFailures: 0,
   readinessDbLastLatencyMs: 7.8,
@@ -311,6 +338,72 @@ const FIXTURE_OPERATIONS_OVERVIEW: OperationsOverviewResponse = {
     state: "healthy",
     detail: "Fixture telemetry exporter is active."
   },
+  storage: [
+    {
+      operation: "READ",
+      requestCount: 11_050,
+      errorCount: 9,
+      averageLatencyMs: 38.61,
+      p95LatencyMs: 72.1
+    },
+    {
+      operation: "WRITE",
+      requestCount: 7_412,
+      errorCount: 12,
+      averageLatencyMs: 54.2,
+      p95LatencyMs: 109.32
+    }
+  ],
+  modelDeployments: [
+    {
+      deploymentUnit: "transcription-primary-a10g",
+      requestCount: 2_710,
+      errorCount: 19,
+      errorRatePercent: 0.701,
+      fallbackInvocationCount: 74,
+      fallbackInvocationRatePercent: 2.73,
+      averageLatencyMs: 412.9,
+      p95LatencyMs: 840.2,
+      coldStartP95Ms: 1_540.25,
+      warmStartP95Ms: 799.61
+    },
+    {
+      deploymentUnit: "governed-fallback",
+      requestCount: 772,
+      errorCount: 22,
+      errorRatePercent: 2.85,
+      fallbackInvocationCount: 60,
+      fallbackInvocationRatePercent: 7.772,
+      averageLatencyMs: 523.2,
+      p95LatencyMs: 1_102.4,
+      coldStartP95Ms: 1_860.41,
+      warmStartP95Ms: 1_035.09
+    }
+  ],
+  models: [
+    {
+      modelKey: "vlm-primary-2026.03",
+      deploymentUnit: "transcription-primary-a10g",
+      requestCount: 2_710,
+      errorCount: 19,
+      errorRatePercent: 0.701,
+      fallbackInvocationCount: 74,
+      fallbackInvocationRatePercent: 2.73,
+      averageLatencyMs: 412.9,
+      p95LatencyMs: 840.2
+    },
+    {
+      modelKey: "KRAKEN_LINE",
+      deploymentUnit: "governed-fallback",
+      requestCount: 772,
+      errorCount: 22,
+      errorRatePercent: 2.85,
+      fallbackInvocationCount: 60,
+      fallbackInvocationRatePercent: 7.772,
+      averageLatencyMs: 523.2,
+      p95LatencyMs: 1_102.4
+    }
+  ],
   topRoutes: [
     {
       routeTemplate: "/projects/{projectId}/overview",
@@ -2939,6 +3032,165 @@ const FIXTURE_PROJECT_ENTITY_OCCURRENCES: Record<string, EntityOccurrence[]> = {
   ]
 };
 
+const FIXTURE_PROJECT_DERIVATIVE_INDEX_ID: Record<string, string | null> = {
+  "project-fixture-alpha": "derivative-index-fixture-002",
+  "project-fixture-beta": null
+};
+
+const FIXTURE_PROJECT_DERIVATIVES: Record<string, ProjectDerivativeSnapshot[]> = {
+  "project-fixture-alpha": [
+    {
+      id: "dersnap-fixture-002",
+      projectId: "project-fixture-alpha",
+      derivativeIndexId: "derivative-index-fixture-002",
+      derivativeKind: "SAFE_ENTITY_COUNTS",
+      sourceSnapshotJson: {
+        sourceRunId: "redaction-run-fixture-002",
+        policyVersionRef: "policy-fixture-v3",
+        antiJoinQuasiIdentifierFields: ["category", "period", "region"],
+        antiJoinMinimumGroupSize: 2
+      },
+      policyVersionRef: "policy-fixture-v3",
+      status: "SUCCEEDED",
+      supersedesDerivativeSnapshotId: "dersnap-fixture-001",
+      supersededByDerivativeSnapshotId: null,
+      storageKey:
+        "indexes/derivatives/project-fixture-alpha/derivative-index-fixture-002/dersnap-fixture-002.json",
+      snapshotSha256: "fixture-derivative-sha-002",
+      candidateSnapshotId: null,
+      createdBy: "user-fixture-admin",
+      createdAt: "2026-03-12T10:32:00.000Z",
+      startedAt: "2026-03-12T10:31:40.000Z",
+      finishedAt: "2026-03-12T10:32:00.000Z",
+      failureReason: null,
+      isActiveGeneration: true
+    },
+    {
+      id: "dersnap-fixture-001",
+      projectId: "project-fixture-alpha",
+      derivativeIndexId: "derivative-index-fixture-001",
+      derivativeKind: "SAFE_ENTITY_COUNTS",
+      sourceSnapshotJson: {
+        sourceRunId: "redaction-run-fixture-001",
+        policyVersionRef: "policy-fixture-v2",
+        antiJoinQuasiIdentifierFields: ["category", "period", "region"],
+        antiJoinMinimumGroupSize: 2
+      },
+      policyVersionRef: "policy-fixture-v2",
+      status: "SUCCEEDED",
+      supersedesDerivativeSnapshotId: null,
+      supersededByDerivativeSnapshotId: "dersnap-fixture-002",
+      storageKey:
+        "indexes/derivatives/project-fixture-alpha/derivative-index-fixture-001/dersnap-fixture-001.json",
+      snapshotSha256: "fixture-derivative-sha-001",
+      candidateSnapshotId: "candidate-derivative-fixture-001",
+      createdBy: "user-fixture-admin",
+      createdAt: "2026-03-11T17:04:00.000Z",
+      startedAt: "2026-03-11T17:03:40.000Z",
+      finishedAt: "2026-03-11T17:04:00.000Z",
+      failureReason: null,
+      isActiveGeneration: false
+    }
+  ]
+};
+
+const FIXTURE_PROJECT_DERIVATIVE_PREVIEW_ROWS: Record<string, Array<{
+  id: string;
+  derivativeIndexId: string;
+  derivativeSnapshotId: string;
+  derivativeKind: string;
+  sourceSnapshotJson: Record<string, unknown>;
+  displayPayloadJson: Record<string, unknown>;
+  suppressedFieldsJson: Record<string, unknown>;
+  createdAt: string;
+}>> = {
+  "dersnap-fixture-002": [
+    {
+      id: "derrow-fixture-002-1",
+      derivativeIndexId: "derivative-index-fixture-002",
+      derivativeSnapshotId: "dersnap-fixture-002",
+      derivativeKind: "SAFE_ENTITY_COUNTS",
+      sourceSnapshotJson: {
+        basis: "entity-index-fixture-002",
+        category: "occupation",
+        period: "1841",
+        region: "yorkshire"
+      },
+      displayPayloadJson: {
+        category: "occupation",
+        period: "1841",
+        region: "yorkshire",
+        value: "farm labourer",
+        count: 3
+      },
+      suppressedFieldsJson: {
+        fields: {
+          "source.person_name": "IDENTIFIER_SUPPRESSED",
+          "source.address": "IDENTIFIER_SUPPRESSED"
+        },
+        suppressedCount: 2
+      },
+      createdAt: "2026-03-12T10:31:59.000Z"
+    },
+    {
+      id: "derrow-fixture-002-2",
+      derivativeIndexId: "derivative-index-fixture-002",
+      derivativeSnapshotId: "dersnap-fixture-002",
+      derivativeKind: "SAFE_ENTITY_COUNTS",
+      sourceSnapshotJson: {
+        basis: "entity-index-fixture-002",
+        category: "occupation",
+        period: "1841",
+        region: "yorkshire"
+      },
+      displayPayloadJson: {
+        category: "occupation",
+        period: "1841",
+        region: "yorkshire",
+        value: "maid servant",
+        count: 2
+      },
+      suppressedFieldsJson: {
+        fields: {
+          "source.person_name": "IDENTIFIER_SUPPRESSED"
+        },
+        suppressedCount: 1
+      },
+      createdAt: "2026-03-12T10:31:59.500Z"
+    }
+  ],
+  "dersnap-fixture-001": [
+    {
+      id: "derrow-fixture-001-1",
+      derivativeIndexId: "derivative-index-fixture-001",
+      derivativeSnapshotId: "dersnap-fixture-001",
+      derivativeKind: "SAFE_ENTITY_COUNTS",
+      sourceSnapshotJson: {
+        basis: "entity-index-fixture-001",
+        category: "occupation",
+        period: "1841",
+        region: "yorkshire"
+      },
+      displayPayloadJson: {
+        category: "occupation",
+        period: "1841",
+        region: "yorkshire",
+        value: "farm labourer",
+        count: 2
+      },
+      suppressedFieldsJson: {
+        fields: {
+          "source.person_name": "IDENTIFIER_SUPPRESSED"
+        },
+        suppressedCount: 1
+      },
+      createdAt: "2026-03-11T17:03:59.000Z"
+    }
+  ]
+};
+
+const FIXTURE_DERIVATIVE_FREEZE_TIMESTAMP = "2026-03-13T10:04:00.000Z";
+
 function normalizeFixturePath(path: string): URL {
   try {
     if (path.startsWith("http://") || path.startsWith("https://")) {
@@ -2992,6 +3244,26 @@ function cloneEntityOccurrence(occurrence: EntityOccurrence): EntityOccurrence {
     tokenGeometryJson: occurrence.tokenGeometryJson
       ? { ...occurrence.tokenGeometryJson }
       : null
+  };
+}
+
+function cloneDerivativeSnapshot(
+  snapshot: ProjectDerivativeSnapshot
+): ProjectDerivativeSnapshot {
+  return {
+    ...snapshot,
+    sourceSnapshotJson: cloneJson(snapshot.sourceSnapshotJson)
+  };
+}
+
+function cloneDerivativePreviewRow(
+  row: (typeof FIXTURE_PROJECT_DERIVATIVE_PREVIEW_ROWS)[string][number]
+): (typeof FIXTURE_PROJECT_DERIVATIVE_PREVIEW_ROWS)[string][number] {
+  return {
+    ...row,
+    sourceSnapshotJson: cloneJson(row.sourceSnapshotJson),
+    displayPayloadJson: cloneJson(row.displayPayloadJson),
+    suppressedFieldsJson: cloneJson(row.suppressedFieldsJson)
   };
 }
 
@@ -3861,6 +4133,12 @@ function canUseProjectSearch(profile: BrowserFixtureSessionProfile | null): bool
   );
 }
 
+function canFreezeDerivativeCandidateSnapshot(
+  profile: BrowserFixtureSessionProfile | null
+): boolean {
+  return profile === "admin" || profile === "project-lead" || profile === "reviewer";
+}
+
 function canCancelVerificationRun(status: GovernanceArtifactStatus): boolean {
   return status === "QUEUED" || status === "RUNNING";
 }
@@ -3890,6 +4168,16 @@ function resolveProjectDocumentFixture(
     return null;
   }
   return documents.find((document) => document.id === documentId) ?? null;
+}
+
+function resolveProjectDerivativeSnapshotFixture(
+  projectId: string,
+  derivativeId: string
+): ProjectDerivativeSnapshot | null {
+  const snapshots = FIXTURE_PROJECT_DERIVATIVES[projectId] ?? [];
+  const snapshot =
+    snapshots.find((candidate) => candidate.id === derivativeId) ?? null;
+  return snapshot ? cloneDerivativeSnapshot(snapshot) : null;
 }
 
 function resolveDocumentPagesFixture(
@@ -4246,6 +4534,205 @@ export function resolveBrowserRegressionApiResult<T>(options: {
       entity: cloneControlledEntity(entity),
       items,
       nextCursor
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDerivativesMatch = pathname.match(/^\/projects\/([^/]+)\/derivatives$/);
+  if (method === "GET" && projectDerivativesMatch) {
+    const project = resolveProjectFixture(projectDerivativesMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    if (!canUseProjectSearch(fixtureProfile)) {
+      return forbidden<T>("Safeguarded derivative previews are not available for this role.");
+    }
+
+    const rawScope = parsedPath.searchParams.get("scope")?.trim().toLowerCase() ?? "active";
+    if (rawScope !== "active" && rawScope !== "historical") {
+      return validationError<T>("scope must be one of: active, historical.");
+    }
+    const scope = rawScope as "active" | "historical";
+    const activeDerivativeIndexId = FIXTURE_PROJECT_DERIVATIVE_INDEX_ID[project.id] ?? null;
+    if (scope === "active" && !activeDerivativeIndexId) {
+      return conflict<T>("No active derivative index is available for this project.");
+    }
+
+    const snapshots = FIXTURE_PROJECT_DERIVATIVES[project.id] ?? [];
+    const filtered =
+      scope === "active"
+        ? snapshots.filter(
+            (snapshot) => snapshot.derivativeIndexId === activeDerivativeIndexId
+          )
+        : snapshots.filter(
+            (snapshot) =>
+              snapshot.status === "SUCCEEDED" &&
+              snapshot.supersededByDerivativeSnapshotId === null
+          );
+    const items = filtered
+      .map((snapshot) => ({
+        ...cloneDerivativeSnapshot(snapshot),
+        isActiveGeneration: snapshot.derivativeIndexId === activeDerivativeIndexId
+      }))
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    const payload: ProjectDerivativeListResponse = {
+      scope,
+      activeDerivativeIndexId,
+      items
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDerivativeStatusMatch = pathname.match(
+    /^\/projects\/([^/]+)\/derivatives\/([^/]+)\/status$/
+  );
+  if (method === "GET" && projectDerivativeStatusMatch) {
+    const project = resolveProjectFixture(projectDerivativeStatusMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    if (!canUseProjectSearch(fixtureProfile)) {
+      return forbidden<T>("Safeguarded derivative previews are not available for this role.");
+    }
+    const derivativeId = projectDerivativeStatusMatch[2];
+    const snapshot = resolveProjectDerivativeSnapshotFixture(project.id, derivativeId);
+    if (!snapshot) {
+      return notFound<T>("Derivative snapshot was not found.");
+    }
+    const payload: ProjectDerivativeStatusResponse = {
+      derivativeId: snapshot.id,
+      derivativeIndexId: snapshot.derivativeIndexId,
+      status: snapshot.status,
+      startedAt: snapshot.startedAt,
+      finishedAt: snapshot.finishedAt,
+      failureReason: snapshot.failureReason,
+      candidateSnapshotId: snapshot.candidateSnapshotId
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDerivativePreviewMatch = pathname.match(
+    /^\/projects\/([^/]+)\/derivatives\/([^/]+)\/preview$/
+  );
+  if (method === "GET" && projectDerivativePreviewMatch) {
+    const project = resolveProjectFixture(projectDerivativePreviewMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    if (!canUseProjectSearch(fixtureProfile)) {
+      return forbidden<T>("Safeguarded derivative previews are not available for this role.");
+    }
+    const derivativeId = projectDerivativePreviewMatch[2];
+    const snapshot = resolveProjectDerivativeSnapshotFixture(project.id, derivativeId);
+    if (!snapshot) {
+      return notFound<T>("Derivative snapshot was not found.");
+    }
+    const rows = (FIXTURE_PROJECT_DERIVATIVE_PREVIEW_ROWS[snapshot.id] ?? []).map((row) =>
+      cloneDerivativePreviewRow(row)
+    );
+    const payload: ProjectDerivativePreviewResponse = {
+      derivativeIndexId: snapshot.derivativeIndexId,
+      derivativeSnapshotId: snapshot.id,
+      derivativeKind: snapshot.derivativeKind,
+      status: snapshot.status,
+      rows,
+      previewCount: rows.length
+    };
+    return ok<T>(payload as T);
+  }
+
+  const projectDerivativeCandidateFreezeMatch = pathname.match(
+    /^\/projects\/([^/]+)\/derivatives\/([^/]+)\/candidate-snapshots$/
+  );
+  if (method === "POST" && projectDerivativeCandidateFreezeMatch) {
+    const project = resolveProjectFixture(projectDerivativeCandidateFreezeMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    if (!canFreezeDerivativeCandidateSnapshot(fixtureProfile)) {
+      return forbidden<T>(
+        "Candidate freeze is restricted to project leads, reviewers, or administrators."
+      );
+    }
+    const derivativeId = projectDerivativeCandidateFreezeMatch[2];
+    const snapshots = FIXTURE_PROJECT_DERIVATIVES[project.id] ?? [];
+    const snapshotIndex = snapshots.findIndex((snapshot) => snapshot.id === derivativeId);
+    if (snapshotIndex < 0) {
+      return notFound<T>("Derivative snapshot was not found.");
+    }
+    const snapshot = snapshots[snapshotIndex];
+    if (snapshot.status !== "SUCCEEDED") {
+      return conflict<T>(
+        "Candidate freeze is allowed only for SUCCEEDED derivative snapshots."
+      );
+    }
+    if (snapshot.supersededByDerivativeSnapshotId) {
+      return conflict<T>("Superseded derivative snapshots cannot be frozen.");
+    }
+    if (!snapshot.storageKey || !snapshot.snapshotSha256) {
+      return conflict<T>(
+        "Candidate freeze is blocked until storageKey and snapshotSha256 are available."
+      );
+    }
+    const rows = FIXTURE_PROJECT_DERIVATIVE_PREVIEW_ROWS[snapshot.id] ?? [];
+    if (rows.length < 1) {
+      return conflict<T>(
+        "Candidate freeze is blocked until derivative preview rows are materialized."
+      );
+    }
+
+    const candidateSnapshotId =
+      snapshot.candidateSnapshotId ?? `candidate-derivative-${snapshot.id.replace(/^dersnap-/, "")}`;
+    const created = !snapshot.candidateSnapshotId;
+    if (created) {
+      snapshots[snapshotIndex] = {
+        ...snapshot,
+        candidateSnapshotId
+      };
+    }
+
+    const payload: ProjectDerivativeCandidateSnapshotCreateResponse = {
+      derivativeId: snapshot.id,
+      derivativeIndexId: snapshot.derivativeIndexId,
+      candidateSnapshotId,
+      created,
+      candidate: {
+        id: candidateSnapshotId,
+        candidateKind: "SAFEGUARDED_DERIVATIVE",
+        sourcePhase: "PHASE10",
+        sourceArtifactKind: "DERIVATIVE_SNAPSHOT",
+        sourceArtifactId: snapshot.id,
+        createdAt: FIXTURE_DERIVATIVE_FREEZE_TIMESTAMP
+      }
+    };
+    return {
+      ok: true,
+      status: 201,
+      data: payload as T
+    };
+  }
+
+  const projectDerivativeDetailMatch = pathname.match(
+    /^\/projects\/([^/]+)\/derivatives\/([^/]+)$/
+  );
+  if (method === "GET" && projectDerivativeDetailMatch) {
+    const project = resolveProjectFixture(projectDerivativeDetailMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    if (!canUseProjectSearch(fixtureProfile)) {
+      return forbidden<T>("Safeguarded derivative previews are not available for this role.");
+    }
+    const derivativeId = projectDerivativeDetailMatch[2];
+    const snapshot = resolveProjectDerivativeSnapshotFixture(project.id, derivativeId);
+    if (!snapshot) {
+      return notFound<T>("Derivative snapshot was not found.");
+    }
+    const payload: ProjectDerivativeDetailResponse = {
+      derivative: {
+        ...snapshot,
+        isActiveGeneration: false
+      }
     };
     return ok<T>(payload as T);
   }

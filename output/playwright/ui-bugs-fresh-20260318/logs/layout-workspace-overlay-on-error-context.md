@@ -1,0 +1,291 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - link "Skip to work region" [ref=e3] [cursor=pointer]:
+      - /url: "#ukde-shell-work-region"
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - paragraph [ref=e6]: Victorian Parish Registers
+        - paragraph [ref=e7]: Project workspace
+      - generic [ref=e8]:
+        - group "Global command controls" [ref=e9]:
+          - button "Project switcher" [ref=e10] [cursor=pointer]
+          - button "Command bar" [ref=e11] [cursor=pointer]:
+            - generic [ref=e12]: Command bar
+            - generic [ref=e13]: ⌘/Ctrl + K
+        - 'button "Theme preference: System (Dark). Click to switch to Dark." [ref=e15] [cursor=pointer]':
+          - img [ref=e17]
+        - link "Help" [ref=e19] [cursor=pointer]:
+          - /url: /health
+        - generic [ref=e20]:
+          - generic [ref=e21]: Env Test
+          - generic [ref=e22]: Tier Controlled
+          - generic [ref=e23]: Expanded
+        - group [ref=e24]:
+          - generic "User menu" [ref=e25] [cursor=pointer]: Fixture Admin
+    - generic [ref=e26]:
+      - complementary [ref=e27]:
+        - paragraph [ref=e28]: Navigation
+        - navigation "Primary navigation" [ref=e29]:
+          - list [ref=e30]:
+            - listitem [ref=e31]:
+              - link "Projects" [ref=e32] [cursor=pointer]:
+                - /url: /projects
+                - generic [ref=e33]: Projects
+            - listitem [ref=e34]:
+              - link "My activity" [ref=e35] [cursor=pointer]:
+                - /url: /activity
+                - generic [ref=e36]: My activity
+            - listitem [ref=e37]:
+              - link "Approved models" [ref=e38] [cursor=pointer]:
+                - /url: /approved-models
+                - generic [ref=e39]: Approved models
+            - listitem [ref=e40]:
+              - link "Admin" [ref=e41] [cursor=pointer]:
+                - /url: /admin
+                - generic [ref=e42]: Admin
+      - generic [ref=e43]:
+        - navigation "Project context" [ref=e44]:
+          - list [ref=e45]:
+            - listitem [ref=e46]:
+              - link "Overview" [ref=e47] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/overview
+            - listitem [ref=e48]:
+              - link "Documents" [ref=e49] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/documents
+            - listitem [ref=e50]:
+              - link "Model assignments" [ref=e51] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/model-assignments
+            - listitem [ref=e52]:
+              - link "Search" [ref=e53] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/search
+            - listitem [ref=e54]:
+              - link "Entities" [ref=e55] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/entities
+            - listitem [ref=e56]:
+              - link "Derivatives" [ref=e57] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/derivatives
+            - listitem [ref=e58]:
+              - link "Indexes" [ref=e59] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/indexes
+            - listitem [ref=e60]:
+              - link "Policies" [ref=e61] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/policies
+            - listitem [ref=e62]:
+              - link "Pseudonym registry" [ref=e63] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/pseudonym-registry
+            - listitem [ref=e64]:
+              - link "Jobs" [ref=e65] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/jobs
+            - listitem [ref=e66]:
+              - link "Export candidates" [ref=e67] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/export-candidates
+            - listitem [ref=e68]:
+              - link "Export requests" [ref=e69] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/export-requests
+            - listitem [ref=e70]:
+              - link "Export review" [ref=e71] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/export-review
+            - listitem [ref=e72]:
+              - link "Activity" [ref=e73] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/activity
+            - listitem [ref=e74]:
+              - link "Settings" [ref=e75] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/settings
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - generic [ref=e79]:
+              - paragraph [ref=e80]: Projects / Victorian Parish Registers
+              - heading "Layout workspace" [level=1] [ref=e81]
+              - paragraph [ref=e82]: Read-only segmentation workspace with filmstrip, page canvas, and inspector panes.
+              - navigation "Breadcrumb" [ref=e84]:
+                - list [ref=e85]:
+                  - listitem [ref=e86]:
+                    - link "Projects" [ref=e87] [cursor=pointer]:
+                      - /url: /projects
+                    - text: /
+                  - listitem [ref=e88]:
+                    - link "Victorian Parish Registers" [ref=e89] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/overview
+                    - text: /
+                  - listitem [ref=e90]:
+                    - link "Documents" [ref=e91] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents
+                    - text: /
+                  - listitem [ref=e92]:
+                    - link "Document" [ref=e93] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents/doc-fixture-002
+                    - text: /
+                  - listitem [ref=e94]:
+                    - link "Layout" [ref=e95] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/layout
+                    - text: /
+                  - listitem [ref=e96]:
+                    - generic [ref=e97]: Workspace
+            - generic [ref=e98]:
+              - link "Open triage" [ref=e99] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/layout?runId=layout-run-fixture-002&tab=triage
+              - link "Open viewer" [ref=e100] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1
+              - link "Document detail" [ref=e101] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/documents/doc-fixture-002
+          - main [ref=e103]:
+            - generic [ref=e104]:
+              - paragraph [ref=e105]: Layout workspace
+              - heading "register-volume-04.pdf" [level=2] [ref=e106]
+              - generic [ref=e107]:
+                - generic [ref=e108]:
+                  - generic [ref=e109]:
+                    - generic [ref=e110]: Run selector
+                    - combobox "Run selector" [ref=e111]:
+                      - option "layout-run-fixture-002 · SUCCEEDED" [selected]
+                      - option "layout-run-fixture-001 · SUCCEEDED"
+                  - group "Workspace mode" [ref=e112]:
+                    - button "Inspect" [pressed] [ref=e113] [cursor=pointer]
+                    - button "Reading order" [ref=e114] [cursor=pointer]
+                    - button "Edit" [ref=e115] [cursor=pointer]
+                  - toolbar "Layout overlay controls" [ref=e117]:
+                    - button "Regions (2)" [pressed] [ref=e118] [cursor=pointer]
+                    - button "Lines (6)" [pressed] [ref=e119] [cursor=pointer]
+                    - button "Baselines" [pressed] [ref=e120] [cursor=pointer]
+                    - button "Reading order" [pressed] [ref=e121] [cursor=pointer]
+                  - generic [ref=e122]:
+                    - generic [ref=e123]: Overlay opacity
+                    - slider "Overlay opacity 72%" [ref=e124]: "72"
+                    - strong [ref=e125]: 72%
+                - generic [ref=e126]:
+                  - button "Open triage" [ref=e128] [cursor=pointer]
+                  - group [ref=e129]:
+                    - generic "Workspace tools" [ref=e130] [cursor=pointer]
+              - generic [ref=e131]:
+                - generic [ref=e132]: Run SUCCEEDED
+                - generic [ref=e133]: Inspect mode
+                - generic [ref=e134]: Zoom 100%
+                - generic [ref=e135]: No unsaved changes
+              - paragraph [ref=e136]:
+                - text: "Shortcuts:"
+                - generic [ref=e137]: Ctrl/Cmd+S
+                - text: save,
+                - generic [ref=e138]: Ctrl/Cmd+Z
+                - text: undo,
+                - generic [ref=e139]: Ctrl/Cmd+Shift+Z
+                - text: redo.
+            - generic [ref=e140]:
+              - complementary "Layout page filmstrip" [ref=e141]:
+                - heading "Page filmstrip" [level=2] [ref=e142]
+                - list [ref=e143]:
+                  - listitem [ref=e144]:
+                    - button "Page 1 Page 1 SUCCEEDED" [ref=e145] [cursor=pointer]:
+                      - generic [ref=e146]: Page 1
+                      - generic [ref=e147]:
+                        - strong [ref=e148]: Page 1
+                        - generic [ref=e149]: SUCCEEDED
+                  - listitem [ref=e150]:
+                    - button "Page 2 Page 2 SUCCEEDED" [ref=e151] [cursor=pointer]:
+                      - generic [ref=e152]: Page 2
+                      - generic [ref=e153]:
+                        - strong [ref=e154]: Page 2
+                        - generic [ref=e155]: SUCCEEDED
+              - generic [ref=e159]:
+                - img "Preprocessed page 1" [ref=e160]
+                - img "Layout overlay geometry" [ref=e161]
+              - complementary "Layout inspector" [ref=e184]:
+                - heading "Inspector" [level=2] [ref=e185]
+                - generic [ref=e186]:
+                  - button "Geometry" [ref=e187] [cursor=pointer]
+                  - button "Reading order" [ref=e188] [cursor=pointer]
+                - generic [ref=e189]:
+                  - generic [ref=e190]: SUCCEEDED
+                  - generic [ref=e191]: COMPLETE
+                - list [ref=e192]:
+                  - listitem [ref=e193]:
+                    - generic [ref=e194]: Run ID
+                    - strong [ref=e195]: layout-run-fixture-002
+                  - listitem [ref=e196]:
+                    - generic [ref=e197]: Page
+                    - strong [ref=e198]: "1"
+                  - listitem [ref=e199]:
+                    - generic [ref=e200]: Regions
+                    - strong [ref=e201]: "2"
+                  - listitem [ref=e202]:
+                    - generic [ref=e203]: Lines
+                    - strong [ref=e204]: "6"
+                  - listitem [ref=e205]:
+                    - generic [ref=e206]: Region coverage
+                    - strong [ref=e207]: 27.45%
+                  - listitem [ref=e208]:
+                    - generic [ref=e209]: Line coverage
+                    - strong [ref=e210]: 13.40%
+                  - listitem [ref=e211]:
+                    - generic [ref=e212]: Reading edges
+                    - strong [ref=e213]: "7"
+                - heading "Warnings" [level=3] [ref=e214]
+                - paragraph [ref=e215]: No warning codes on this page result.
+                - heading "Recall risk" [level=3] [ref=e216]
+                - status [ref=e217]:
+                  - heading "Recall status unavailable" [level=2] [ref=e219]
+                  - paragraph [ref=e220]: Fixture route not found.
+                - heading "Rescue candidates" [level=3] [ref=e221]
+                - status [ref=e222]:
+                  - heading "Rescue candidates unavailable" [level=2] [ref=e224]
+                  - paragraph [ref=e225]: Fixture route not found.
+                - generic [ref=e226]:
+                  - heading "Region tree" [level=3] [ref=e227]
+                  - button "Clear selection" [disabled] [ref=e228]
+                - tree [ref=e229]:
+                  - treeitem "r-0001-0001 3 lines" [ref=e230]:
+                    - button "r-0001-0001 3 lines" [ref=e231] [cursor=pointer]:
+                      - generic [ref=e232]: r-0001-0001
+                      - generic [ref=e233]: 3 lines
+                  - treeitem "r-0001-0002 3 lines" [ref=e234]:
+                    - button "r-0001-0002 3 lines" [ref=e235] [cursor=pointer]:
+                      - generic [ref=e236]: r-0001-0002
+                      - generic [ref=e237]: 3 lines
+                - heading "Line list" [level=3] [ref=e238]
+                - list [ref=e239]:
+                  - listitem [ref=e240]:
+                    - button "l-0001-0001 r-0001-0001" [ref=e241] [cursor=pointer]:
+                      - generic [ref=e242]: l-0001-0001
+                      - generic [ref=e243]: r-0001-0001
+                  - listitem [ref=e244]:
+                    - button "l-0001-0004 r-0001-0002" [ref=e245] [cursor=pointer]:
+                      - generic [ref=e246]: l-0001-0004
+                      - generic [ref=e247]: r-0001-0002
+                  - listitem [ref=e248]:
+                    - button "l-0001-0002 r-0001-0001" [ref=e249] [cursor=pointer]:
+                      - generic [ref=e250]: l-0001-0002
+                      - generic [ref=e251]: r-0001-0001
+                  - listitem [ref=e252]:
+                    - button "l-0001-0005 r-0001-0002" [ref=e253] [cursor=pointer]:
+                      - generic [ref=e254]: l-0001-0005
+                      - generic [ref=e255]: r-0001-0002
+                  - listitem [ref=e256]:
+                    - button "l-0001-0003 r-0001-0001" [ref=e257] [cursor=pointer]:
+                      - generic [ref=e258]: l-0001-0003
+                      - generic [ref=e259]: r-0001-0001
+                  - listitem [ref=e260]:
+                    - button "l-0001-0006 r-0001-0002" [ref=e261] [cursor=pointer]:
+                      - generic [ref=e262]: l-0001-0006
+                      - generic [ref=e263]: r-0001-0002
+      - complementary [ref=e264]:
+        - paragraph [ref=e265]: Adaptive state
+        - heading "Expanded" [level=2] [ref=e266]
+        - paragraph [ref=e267]: Rail, workspace, and inspector remain visible for dense review work.
+        - list [ref=e268]:
+          - listitem [ref=e269]:
+            - generic [ref=e270]: Task context
+            - strong [ref=e271]: standard
+          - listitem [ref=e272]:
+            - generic [ref=e273]: Focus override
+            - strong [ref=e274]: "off"
+          - listitem [ref=e275]:
+            - generic [ref=e276]: Role mode
+            - strong [ref=e277]: ADMIN
+        - paragraph [ref=e278]:
+          - text: "Keyboard path:"
+          - generic [ref=e279]: Tab
+          - text: through rail, context bar, then work region.
+  - alert [ref=e280]
+```

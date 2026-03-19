@@ -1,0 +1,3 @@
+module.exports=[38683,a=>{"use strict";function b(a,b,c,d,e){let f=new URLSearchParams({variant:d});return e?.runId&&e.runId.trim().length>0&&f.set("runId",e.runId.trim()),`/projects/${encodeURIComponent(a)}/documents/${encodeURIComponent(b)}/pages/${encodeURIComponent(c)}/image?${f.toString()}`}a.s(["projectDocumentPageImagePath",()=>b])}];
+
+//# sourceMappingURL=web_lib_document-page-image_ts_e7f303a2._.js.map

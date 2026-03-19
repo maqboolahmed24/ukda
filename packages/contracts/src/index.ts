@@ -69,6 +69,16 @@ export type AuditEventType =
   | "BUNDLE_VALIDATION_VIEWED"
   | "BUNDLE_VALIDATION_STATUS_VIEWED"
   | "ADMIN_SECURITY_STATUS_VIEWED"
+  | "SECURITY_FINDINGS_VIEWED"
+  | "SECURITY_FINDING_VIEWED"
+  | "RISK_ACCEPTANCE_CREATED"
+  | "RISK_ACCEPTANCE_RENEWED"
+  | "RISK_ACCEPTANCE_REVIEW_SCHEDULED"
+  | "RISK_ACCEPTANCE_EXPIRED"
+  | "SECURITY_RISK_ACCEPTANCES_VIEWED"
+  | "SECURITY_RISK_ACCEPTANCE_VIEWED"
+  | "SECURITY_RISK_ACCEPTANCE_EVENTS_VIEWED"
+  | "RISK_ACCEPTANCE_REVOKED"
   | "ACCESS_DENIED"
   | "JOB_LIST_VIEWED"
   | "JOB_RUN_CREATED"
@@ -87,6 +97,7 @@ export type AuditEventType =
   | "SEARCH_INDEX_RUN_FINISHED"
   | "SEARCH_INDEX_RUN_FAILED"
   | "SEARCH_INDEX_RUN_CANCELED"
+  | "SEARCH_INDEX_ACTIVATED"
   | "ENTITY_INDEX_LIST_VIEWED"
   | "ENTITY_INDEX_DETAIL_VIEWED"
   | "ENTITY_INDEX_STATUS_VIEWED"
@@ -103,10 +114,20 @@ export type AuditEventType =
   | "DERIVATIVE_INDEX_RUN_FINISHED"
   | "DERIVATIVE_INDEX_RUN_FAILED"
   | "DERIVATIVE_INDEX_RUN_CANCELED"
+  | "DERIVATIVE_INDEX_ACTIVATED"
+  | "SEARCH_QUERY_EXECUTED"
   | "SEARCH_RESULT_OPENED"
+  | "INDEX_QUALITY_VIEWED"
+  | "INDEX_QUALITY_DETAIL_VIEWED"
+  | "INDEX_QUALITY_QUERY_AUDITS_VIEWED"
   | "ENTITY_LIST_VIEWED"
   | "ENTITY_DETAIL_VIEWED"
   | "ENTITY_OCCURRENCES_VIEWED"
+  | "DERIVATIVE_LIST_VIEWED"
+  | "DERIVATIVE_DETAIL_VIEWED"
+  | "DERIVATIVE_STATUS_VIEWED"
+  | "DERIVATIVE_PREVIEW_VIEWED"
+  | "DERIVATIVE_CANDIDATE_SNAPSHOT_CREATED"
   | "DOCUMENT_LIBRARY_VIEWED"
   | "DOCUMENT_DETAIL_VIEWED"
   | "DOCUMENT_TIMELINE_VIEWED"
@@ -242,7 +263,28 @@ export type AuditEventType =
   | "PAGE_METADATA_VIEWED"
   | "PAGE_IMAGE_VIEWED"
   | "PAGE_THUMBNAIL_VIEWED"
+  | "CAPACITY_TEST_RUN_CREATED"
+  | "CAPACITY_TEST_RUNS_VIEWED"
+  | "CAPACITY_TEST_RUN_VIEWED"
+  | "CAPACITY_TEST_RESULTS_VIEWED"
+  | "RECOVERY_STATUS_VIEWED"
+  | "RECOVERY_DRILLS_VIEWED"
+  | "RECOVERY_DRILL_VIEWED"
+  | "RECOVERY_DRILL_STATUS_VIEWED"
+  | "RECOVERY_DRILL_EVIDENCE_VIEWED"
+  | "RECOVERY_DRILL_CREATED"
+  | "RECOVERY_DRILL_STARTED"
+  | "RECOVERY_DRILL_FINISHED"
+  | "RECOVERY_DRILL_FAILED"
+  | "RECOVERY_DRILL_CANCELED"
+  | "RUNBOOK_LIST_VIEWED"
+  | "RUNBOOK_DETAIL_VIEWED"
+  | "INCIDENT_LIST_VIEWED"
+  | "INCIDENT_STATUS_VIEWED"
+  | "INCIDENT_VIEWED"
+  | "INCIDENT_TIMELINE_VIEWED"
   | "OPERATIONS_OVERVIEW_VIEWED"
+  | "OPERATIONS_READINESS_VIEWED"
   | "OPERATIONS_EXPORT_STATUS_VIEWED"
   | "OPERATIONS_SLOS_VIEWED"
   | "OPERATIONS_ALERTS_VIEWED"
@@ -3579,6 +3621,95 @@ export interface ProjectIndexActivateResponse {
   projection: ProjectIndexProjection;
 }
 
+export type IndexFreshnessStatus = "current" | "stale" | "missing" | "blocked";
+export type SearchActivationBlockerCode =
+  | "RUN_NOT_SUCCEEDED"
+  | "SEARCH_ELIGIBLE_INPUTS_MISSING"
+  | "SEARCH_LINE_ONLY_EXCLUDED_INVALID"
+  | "SEARCH_LINE_ONLY_FALLBACK_MARKER_MISSING"
+  | "SEARCH_LINE_ONLY_FALLBACK_REASON_MISSING"
+  | "TOKEN_ANCHOR_VALIDITY_MISSING"
+  | "TOKEN_ANCHOR_VALIDITY_FAILED"
+  | "TOKEN_GEOMETRY_COVERAGE_MISSING"
+  | "TOKEN_GEOMETRY_COVERAGE_FAILED";
+
+export interface SearchCoverageSummary {
+  eligibleInputCount: number | null;
+  tokenAnchorValidInputCount: number | null;
+  tokenGeometryCoveredInputCount: number | null;
+  historicalLineOnlyExcludedCount: number;
+  historicalLineOnlyFallbackAllowed: boolean;
+  historicalLineOnlyFallbackReason: string | null;
+}
+
+export interface SearchActivationGateBlocker {
+  code: SearchActivationBlockerCode;
+  message: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface SearchActivationGateEvaluation {
+  passed: boolean;
+  blockers: SearchActivationGateBlocker[];
+}
+
+export interface IndexFreshnessSnapshot {
+  status: IndexFreshnessStatus;
+  activeIndexId: string | null;
+  activeVersion: number | null;
+  activeStatus: IndexStatus | null;
+  latestSucceededIndexId: string | null;
+  latestSucceededVersion: number | null;
+  latestSucceededFinishedAt: string | null;
+  staleGenerationGap: number | null;
+  reason: string | null;
+  blockedCodes: string[];
+}
+
+export interface ProjectIndexQualitySummaryItem {
+  kind: IndexKind;
+  freshness: IndexFreshnessSnapshot;
+  searchCoverage: SearchCoverageSummary | null;
+  searchActivationBlockerCount: number;
+}
+
+export interface ProjectIndexQualitySummaryResponse {
+  projectId: string;
+  projectionUpdatedAt: string | null;
+  items: ProjectIndexQualitySummaryItem[];
+}
+
+export interface ProjectIndexQualityDetailResponse {
+  projectId: string;
+  kind: IndexKind;
+  index: ProjectIndex;
+  freshness: IndexFreshnessSnapshot;
+  activeIndexId: string | null;
+  isActiveGeneration: boolean;
+  isLatestSucceededGeneration: boolean;
+  rollbackEligible: boolean;
+  searchCoverage: SearchCoverageSummary | null;
+  searchActivationEvaluation: SearchActivationGateEvaluation | null;
+}
+
+export interface SearchQueryAuditRecord {
+  id: string;
+  projectId: string;
+  actorUserId: string;
+  searchIndexId: string;
+  querySha256: string;
+  queryTextKey: string;
+  filtersJson: Record<string, unknown>;
+  resultCount: number;
+  createdAt: string;
+}
+
+export interface SearchQueryAuditListResponse {
+  projectId: string;
+  items: SearchQueryAuditRecord[];
+  nextCursor: number | null;
+}
+
 export interface ProjectSearchHit {
   searchDocumentId: string;
   searchIndexId: string;
@@ -3666,6 +3797,86 @@ export interface ProjectEntityOccurrencesResponse {
   entity: ControlledEntity;
   items: EntityOccurrence[];
   nextCursor: number | null;
+}
+
+export type DerivativeSnapshotScope = "active" | "historical";
+
+export interface ProjectDerivativeSnapshot {
+  id: string;
+  projectId: string;
+  derivativeIndexId: string;
+  derivativeKind: string;
+  sourceSnapshotJson: Record<string, unknown>;
+  policyVersionRef: string;
+  status: IndexStatus;
+  supersedesDerivativeSnapshotId: string | null;
+  supersededByDerivativeSnapshotId: string | null;
+  storageKey: string | null;
+  snapshotSha256: string | null;
+  candidateSnapshotId: string | null;
+  createdBy: string;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  failureReason: string | null;
+  isActiveGeneration: boolean;
+}
+
+export interface ProjectDerivativeListResponse {
+  scope: DerivativeSnapshotScope;
+  activeDerivativeIndexId: string | null;
+  items: ProjectDerivativeSnapshot[];
+}
+
+export interface ProjectDerivativeDetailResponse {
+  derivative: ProjectDerivativeSnapshot;
+}
+
+export interface ProjectDerivativeStatusResponse {
+  derivativeId: string;
+  derivativeIndexId: string;
+  status: IndexStatus;
+  startedAt: string | null;
+  finishedAt: string | null;
+  failureReason: string | null;
+  candidateSnapshotId: string | null;
+}
+
+export interface ProjectDerivativePreviewRow {
+  id: string;
+  derivativeIndexId: string;
+  derivativeSnapshotId: string;
+  derivativeKind: string;
+  sourceSnapshotJson: Record<string, unknown>;
+  displayPayloadJson: Record<string, unknown>;
+  suppressedFieldsJson: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface ProjectDerivativePreviewResponse {
+  derivativeIndexId: string;
+  derivativeSnapshotId: string;
+  derivativeKind: string;
+  status: IndexStatus;
+  rows: ProjectDerivativePreviewRow[];
+  previewCount: number;
+}
+
+export interface ProjectDerivativeCandidateSnapshot {
+  id: string;
+  candidateKind: ExportCandidateKind;
+  sourcePhase: ExportCandidateSourcePhase;
+  sourceArtifactKind: ExportCandidateSourceArtifactKind;
+  sourceArtifactId: string;
+  createdAt: string;
+}
+
+export interface ProjectDerivativeCandidateSnapshotCreateResponse {
+  derivativeId: string;
+  derivativeIndexId: string;
+  candidateSnapshotId: string;
+  created: boolean;
+  candidate: ProjectDerivativeCandidateSnapshot;
 }
 
 export type JobType =
@@ -3817,8 +4028,10 @@ export type OperationsTimelineScope =
   | "api"
   | "auth"
   | "audit"
+  | "model"
   | "readiness"
   | "operations"
+  | "storage"
   | "worker"
   | "telemetry";
 
@@ -3827,6 +4040,39 @@ export interface OperationsRouteMetric {
   method: string;
   requestCount: number;
   errorCount: number;
+  averageLatencyMs: number | null;
+  p95LatencyMs: number | null;
+}
+
+export interface OperationsStorageMetric {
+  operation: "READ" | "WRITE";
+  requestCount: number;
+  errorCount: number;
+  averageLatencyMs: number | null;
+  p95LatencyMs: number | null;
+}
+
+export interface OperationsModelDeploymentMetric {
+  deploymentUnit: string;
+  requestCount: number;
+  errorCount: number;
+  errorRatePercent: number;
+  fallbackInvocationCount: number;
+  fallbackInvocationRatePercent: number;
+  averageLatencyMs: number | null;
+  p95LatencyMs: number | null;
+  coldStartP95Ms: number | null;
+  warmStartP95Ms: number | null;
+}
+
+export interface OperationsModelMetric {
+  modelKey: string;
+  deploymentUnit: string;
+  requestCount: number;
+  errorCount: number;
+  errorRatePercent: number;
+  fallbackInvocationCount: number;
+  fallbackInvocationRatePercent: number;
   averageLatencyMs: number | null;
   p95LatencyMs: number | null;
 }
@@ -3845,6 +4091,27 @@ export interface OperationsOverviewResponse {
   requestErrorCount: number;
   errorRatePercent: number;
   p95LatencyMs: number | null;
+  jobsPerMinute: number | null;
+  jobsCompletedCount: number;
+  queueLatencyAvgMs: number | null;
+  queueLatencyP95Ms: number | null;
+  gpuUtilizationAvgPercent: number | null;
+  gpuUtilizationMaxPercent: number | null;
+  gpuUtilizationSampleCount: number;
+  gpuUtilizationSource: string;
+  gpuUtilizationDetail: string;
+  modelRequestCount: number;
+  modelErrorCount: number;
+  modelErrorRatePercent: number | null;
+  modelFallbackInvocationCount: number;
+  modelFallbackInvocationRatePercent: number | null;
+  modelRequestP95LatencyMs: number | null;
+  exportReviewLatencyAvgMs: number | null;
+  exportReviewLatencyP95Ms: number | null;
+  exportReviewLatencySampleCount: number;
+  storageRequestCount: number;
+  storageErrorCount: number;
+  storageErrorRatePercent: number | null;
   readinessDbChecks: number;
   readinessDbFailures: number;
   readinessDbLastLatencyMs: number | null;
@@ -3858,6 +4125,9 @@ export interface OperationsOverviewResponse {
   queueDepthSource: string;
   queueDepthDetail: string;
   exporter: OperationsExporterStatus;
+  storage: OperationsStorageMetric[];
+  modelDeployments: OperationsModelDeploymentMetric[];
+  models: OperationsModelMetric[];
   topRoutes: OperationsRouteMetric[];
 }
 
@@ -3917,6 +4187,52 @@ export interface OperationsExportStatusResponse {
   policy: OperationsExportPolicySummary;
 }
 
+export interface OperationsReadinessEvidence {
+  label: string;
+  path: string;
+  sha256: string | null;
+}
+
+export interface OperationsReadinessCheck {
+  id: string;
+  title: string;
+  status: "PASS" | "FAIL" | "UNAVAILABLE";
+  blockingPolicy: "BLOCKING" | "WARNING";
+  detail: string;
+  durationSeconds: number;
+  evidence: OperationsReadinessEvidence[];
+  command: string | null;
+  exitCode: number | null;
+}
+
+export interface OperationsReadinessCategory {
+  id: string;
+  title: string;
+  status: "PASS" | "FAIL" | "UNAVAILABLE";
+  blockingPolicy: "BLOCKING" | "WARNING";
+  summary: string;
+  auditorVisible: boolean;
+  checks: OperationsReadinessCheck[];
+}
+
+export interface OperationsReadinessBlocker {
+  categoryId: string;
+  checkId: string;
+  detail: string;
+  evidencePath: string | null;
+}
+
+export interface OperationsReadinessResponse {
+  matrixVersion: string;
+  generatedAt: string;
+  overallStatus: "PASS" | "FAIL" | "UNAVAILABLE";
+  detail: string;
+  blockingFailureCount: number;
+  categoryCount: number;
+  categories: OperationsReadinessCategory[];
+  blockers: OperationsReadinessBlocker[];
+}
+
 export interface OperationsSlo {
   key: string;
   name: string;
@@ -3964,6 +4280,367 @@ export interface OperationsTimelineListResponse {
   nextCursor: number | null;
 }
 
+export interface AdminRunbook {
+  id: string;
+  slug: string;
+  title: string;
+  ownerUserId: string;
+  lastReviewedAt: string;
+  status: "ACTIVE" | "REVIEW_REQUIRED" | "DRAFT" | "ARCHIVED";
+  storageKey: string;
+}
+
+export interface AdminRunbookListResponse {
+  items: AdminRunbook[];
+}
+
+export interface AdminRunbookContentResponse {
+  runbook: AdminRunbook;
+  contentMarkdown: string;
+  contentHtml: string;
+}
+
+export interface AdminIncident {
+  id: string;
+  severity: "SEV1" | "SEV2" | "SEV3" | "SEV4";
+  status: "OPEN" | "MITIGATING" | "RESOLVED";
+  startedAt: string;
+  resolvedAt: string | null;
+  incidentCommanderUserId: string;
+  summary: string;
+}
+
+export interface AdminIncidentListResponse {
+  items: AdminIncident[];
+}
+
+export interface AdminIncidentStatusBucket {
+  key: string;
+  count: number;
+}
+
+export interface AdminIncidentStatusResponse {
+  generatedAt: string;
+  openIncidentCount: number;
+  unresolvedHighSeverityCount: number;
+  byStatus: AdminIncidentStatusBucket[];
+  bySeverity: AdminIncidentStatusBucket[];
+  noGoTriggered: boolean;
+  noGoReasons: string[];
+  latestStartedAt: string | null;
+  goLiveRehearsalStatus: "COMPLETED" | "PENDING" | "BLOCKED";
+  incidentResponseTabletopStatus: "COMPLETED" | "PENDING" | "BLOCKED";
+  modelRollbackRehearsalStatus: "COMPLETED" | "PENDING" | "BLOCKED";
+}
+
+export interface AdminIncidentTimelineEvent {
+  id: string;
+  incidentId: string;
+  eventType: string;
+  actorUserId: string;
+  summary: string;
+  createdAt: string;
+}
+
+export interface AdminIncidentTimelineResponse {
+  incidentId: string;
+  items: AdminIncidentTimelineEvent[];
+}
+
+export type CapacityTestKind = "LOAD" | "SOAK" | "BENCHMARK";
+export type CapacityTestStatus =
+  | "QUEUED"
+  | "RUNNING"
+  | "SUCCEEDED"
+  | "FAILED"
+  | "CANCELED";
+export type CapacityEnvelopeRole =
+  | "transcription-vlm"
+  | "assist-llm"
+  | "privacy-ner"
+  | "privacy-rules"
+  | "transcription-fallback"
+  | "embedding-search";
+export type CapacityEnvelopeStatus = "MEETING" | "BREACHING" | "UNAVAILABLE";
+
+export interface CapacityScenarioCatalogItem {
+  name: string;
+  description: string;
+  defaultTestKind: CapacityTestKind;
+}
+
+export interface CapacityTestRun {
+  id: string;
+  testKind: CapacityTestKind;
+  scenarioName: string;
+  status: CapacityTestStatus;
+  resultsKey: string | null;
+  resultsSha256: string | null;
+  startedBy: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  createdAt: string;
+  failureReason: string | null;
+}
+
+export interface CapacityEnvelopeExpectation {
+  targetP95LatencyMs: number;
+  maxErrorRatePercent: number;
+  maxConcurrency: number;
+  queueDepthCeiling: number;
+}
+
+export interface CapacityEnvelopeResult {
+  role: CapacityEnvelopeRole;
+  status: CapacityEnvelopeStatus;
+  deploymentUnits: string[];
+  requestCount: number;
+  errorCount: number;
+  fallbackInvocationCount: number;
+  errorRatePercent: number | null;
+  fallbackInvocationRatePercent: number | null;
+  p95LatencyMs: number | null;
+  warmStartP95Ms: number | null;
+  estimatedConcurrency: number | null;
+  expectation: CapacityEnvelopeExpectation;
+  detail: string;
+}
+
+export interface CapacityTestResults {
+  schemaVersion: number;
+  generatedAt: string;
+  runId: string;
+  testKind: CapacityTestKind;
+  scenarioName: string;
+  scenarioDescription: string;
+  criticalFlowP95Ms: {
+    uploadMs: number | null;
+    viewerRenderMs: number | null;
+    inferenceMs: number | null;
+    reviewWorkspaceMs: number | null;
+    searchMs: number | null;
+  };
+  criticalFlowGateStatus: Record<string, CapacityEnvelopeStatus>;
+  throughput: {
+    targetJobsPerMinute: number;
+    observedJobsPerMinute: number | null;
+    metTarget: boolean;
+    detail: string;
+  };
+  soak: {
+    requiredHours: number;
+    observedHours: number;
+    memoryLeakDetected: boolean;
+    passed: boolean;
+    detail: string;
+  };
+  gpu: {
+    avgUtilizationPercent: number | null;
+    maxUtilizationPercent: number | null;
+    sampleCount: number;
+    status: CapacityEnvelopeStatus;
+    detail: string;
+  };
+  warmStart: {
+    targetP95Ms: number;
+    observedP95Ms: number | null;
+    status: CapacityEnvelopeStatus;
+    detail: string;
+  };
+  capacityModel: {
+    storage: {
+      requestCount: number;
+      errorRatePercent: number | null;
+      readP95Ms: number | null;
+      writeP95Ms: number | null;
+    };
+    cpu: {
+      sampleAvailable: boolean;
+      utilizationPercent: number | null;
+      loadAverage: {
+        oneMinute: number;
+        fiveMinute: number;
+        fifteenMinute: number;
+      } | null;
+      cpuCount: number;
+      detail: string;
+    };
+    gpu: {
+      utilizationAvgPercent: number | null;
+      utilizationMaxPercent: number | null;
+      sampleCount: number;
+    };
+    modelServiceConcurrency: Record<string, number | null>;
+    queue: {
+      depth: number | null;
+      depthSource: string;
+      depthDetail: string;
+      latencyP95Ms: number | null;
+    };
+  };
+  capacityEnvelopes: CapacityEnvelopeResult[];
+  tuningHooks: {
+    gpuBatching: {
+      enabled: boolean;
+      batchSize: number;
+      detail: string;
+    };
+    modelWarmup: {
+      enabled: boolean;
+      roles: string[];
+      detail: string;
+    };
+    thumbnailCache: {
+      enabled: boolean;
+      ttlSeconds: number;
+      maxEntries: number;
+    };
+    overlayCache: {
+      enabled: boolean;
+      ttlSeconds: number;
+      maxEntries: number;
+    };
+    searchTuning: {
+      trigramIndexExpected: boolean;
+      documentFilterIndexExpected: boolean;
+      detail: string;
+    };
+  };
+  gates: {
+    criticalFlowP95Meeting: boolean;
+    throughputMeeting: boolean;
+    soakPassed: boolean;
+    gpuSloMeeting: boolean;
+    warmStartMeeting: boolean;
+    capacityEnvelopesMeeting: boolean;
+    evidencePersisted: boolean;
+  };
+  notes: string[];
+}
+
+export interface CapacityTestCreateRequest {
+  testKind: CapacityTestKind;
+  scenarioName: string;
+}
+
+export interface CapacityTestCreateResponse {
+  run: CapacityTestRun;
+  hasResults: boolean;
+}
+
+export interface CapacityTestRunListResponse {
+  items: CapacityTestRun[];
+  nextCursor: number | null;
+  scenarioCatalog: CapacityScenarioCatalogItem[];
+}
+
+export interface CapacityTestRunDetailResponse {
+  run: CapacityTestRun;
+  hasResults: boolean;
+}
+
+export interface CapacityTestRunResultsResponse {
+  runId: string;
+  resultsKey: string;
+  resultsSha256: string;
+  results: CapacityTestResults;
+}
+
+export type RecoveryDrillScope =
+  | "QUEUE_REPLAY"
+  | "STORAGE_INTERRUPT"
+  | "RESTORE_CLEAN_ENV"
+  | "FULL_RECOVERY";
+export type RecoveryDrillStatus =
+  | "QUEUED"
+  | "RUNNING"
+  | "SUCCEEDED"
+  | "FAILED"
+  | "CANCELED";
+
+export interface RecoveryScopeCatalogItem {
+  scope: RecoveryDrillScope;
+  description: string;
+}
+
+export interface RecoveryDrillSummary {
+  id: string;
+  scope: RecoveryDrillScope;
+  status: RecoveryDrillStatus;
+  startedBy: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  canceledBy: string | null;
+  canceledAt: string | null;
+  failureReason: string | null;
+  evidenceStorageKey: string | null;
+  evidenceStorageSha256: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RecoveryStatusResponse {
+  generatedAt: string;
+  mode: "ACTIVE" | "STANDBY" | string;
+  degraded: boolean;
+  summary: string;
+  activeDrillCount: number;
+  queueDepth: number;
+  deadLetterCount: number;
+  replayEligibleCount: number;
+  storageRoot: string;
+  modelArtifactRoot: string;
+  latestDrill:
+    | {
+        id: string;
+        scope: RecoveryDrillScope;
+        status: RecoveryDrillStatus;
+        startedAt: string | null;
+        finishedAt: string | null;
+      }
+    | null;
+  supportedScopes: RecoveryScopeCatalogItem[];
+}
+
+export interface RecoveryDrillCreateRequest {
+  scope: RecoveryDrillScope;
+}
+
+export interface RecoveryDrillCreateResponse {
+  drill: RecoveryDrillSummary;
+  hasEvidence: boolean;
+}
+
+export interface RecoveryDrillListResponse {
+  items: RecoveryDrillSummary[];
+  nextCursor: number | null;
+  scopeCatalog: RecoveryScopeCatalogItem[];
+}
+
+export interface RecoveryDrillDetailResponse {
+  drill: RecoveryDrillSummary;
+  hasEvidence: boolean;
+}
+
+export interface RecoveryDrillStatusResponse {
+  drillId: string;
+  status: RecoveryDrillStatus;
+  startedAt: string | null;
+  finishedAt: string | null;
+  canceledAt: string | null;
+}
+
+export interface RecoveryDrillEvidenceResponse {
+  drillId: string;
+  evidenceStorageKey: string | null;
+  evidenceStorageSha256: string | null;
+  evidence: Record<string, unknown>;
+}
+
+export interface RecoveryDrillCancelResponse {
+  drill: RecoveryDrillSummary;
+}
+
 export interface ExportStubDisabledResponse {
   status: "DISABLED";
   code: "EXPORT_GATEWAY_DISABLED_PHASE0";
@@ -3994,6 +4671,98 @@ export interface SecurityStatusResponse {
   reducedMotionPreferenceState: string;
   reducedTransparencyPreferenceState: string;
   exportGatewayState: string;
+}
+
+export type SecurityFindingSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export type SecurityFindingStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED";
+
+export interface SecurityPenTestChecklistItem {
+  key: string;
+  title: string;
+  status: string;
+  detail: string;
+}
+
+export interface SecurityFinding {
+  id: string;
+  status: SecurityFindingStatus;
+  severity: SecurityFindingSeverity;
+  ownerUserId: string;
+  source: string;
+  openedAt: string;
+  resolvedAt: string | null;
+  resolutionSummary: string | null;
+}
+
+export interface SecurityFindingsListResponse {
+  items: SecurityFinding[];
+  criticalHighGatePassed: boolean;
+  criticalHighUnresolvedFindingIds: string[];
+  penTestChecklistComplete: boolean;
+  penTestChecklist: SecurityPenTestChecklistItem[];
+}
+
+export type RiskAcceptanceStatus = "ACTIVE" | "EXPIRED" | "REVOKED";
+export type RiskAcceptanceEventType =
+  | "ACCEPTANCE_CREATED"
+  | "ACCEPTANCE_REVIEW_SCHEDULED"
+  | "ACCEPTANCE_RENEWED"
+  | "ACCEPTANCE_EXPIRED"
+  | "ACCEPTANCE_REVOKED";
+
+export interface RiskAcceptance {
+  id: string;
+  findingId: string;
+  status: RiskAcceptanceStatus;
+  justification: string;
+  approvedBy: string;
+  acceptedAt: string;
+  expiresAt: string | null;
+  reviewDate: string | null;
+  revokedBy: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RiskAcceptanceEvent {
+  id: number;
+  riskAcceptanceId: string;
+  eventType: RiskAcceptanceEventType;
+  actorUserId: string | null;
+  expiresAt: string | null;
+  reviewDate: string | null;
+  reason: string | null;
+  createdAt: string;
+}
+
+export interface CreateRiskAcceptanceRequest {
+  justification: string;
+  expiresAt?: string | null;
+  reviewDate?: string | null;
+}
+
+export interface RenewRiskAcceptanceRequest {
+  justification: string;
+  expiresAt?: string | null;
+  reviewDate?: string | null;
+}
+
+export interface ReviewScheduleRequest {
+  reviewDate: string;
+  reason?: string | null;
+}
+
+export interface RevokeRiskAcceptanceRequest {
+  reason: string;
+}
+
+export interface RiskAcceptanceListResponse {
+  items: RiskAcceptance[];
+}
+
+export interface RiskAcceptanceEventsResponse {
+  items: RiskAcceptanceEvent[];
 }
 
 export interface BootstrapSurface {
@@ -4142,6 +4911,26 @@ export const bootstrapSurfaces: BootstrapSurface[] = [
   {
     label: "Project entity detail",
     route: "/projects/:projectId/entities/:entityId",
+    scope: "project"
+  },
+  {
+    label: "Project derivatives",
+    route: "/projects/:projectId/derivatives",
+    scope: "project"
+  },
+  {
+    label: "Project derivative detail",
+    route: "/projects/:projectId/derivatives/:derivativeId",
+    scope: "project"
+  },
+  {
+    label: "Project derivative status",
+    route: "/projects/:projectId/derivatives/:derivativeId/status",
+    scope: "project"
+  },
+  {
+    label: "Project derivative preview",
+    route: "/projects/:projectId/derivatives/:derivativeId/preview",
     scope: "project"
   },
   {
@@ -4341,6 +5130,11 @@ export const bootstrapSurfaces: BootstrapSurface[] = [
   },
   { label: "My activity", route: "/activity", scope: "project" },
   { label: "Operations", route: "/admin/operations", scope: "admin" },
+  {
+    label: "Operations readiness",
+    route: "/admin/operations/readiness",
+    scope: "admin"
+  },
   { label: "Operations SLOs", route: "/admin/operations/slos", scope: "admin" },
   {
     label: "Operations alerts",
@@ -4352,13 +5146,105 @@ export const bootstrapSurfaces: BootstrapSurface[] = [
     route: "/admin/operations/timelines",
     scope: "admin"
   },
+  { label: "Runbooks", route: "/admin/runbooks", scope: "admin" },
+  {
+    label: "Runbook detail",
+    route: "/admin/runbooks/:runbookId",
+    scope: "admin"
+  },
+  { label: "Incidents", route: "/admin/incidents", scope: "admin" },
+  {
+    label: "Incident status",
+    route: "/admin/incidents/status",
+    scope: "admin"
+  },
+  {
+    label: "Incident detail",
+    route: "/admin/incidents/:incidentId",
+    scope: "admin"
+  },
+  {
+    label: "Incident timeline",
+    route: "/admin/incidents/:incidentId/timeline",
+    scope: "admin"
+  },
+  {
+    label: "Capacity tests",
+    route: "/admin/capacity/tests",
+    scope: "admin"
+  },
+  {
+    label: "Capacity test detail",
+    route: "/admin/capacity/tests/:testRunId",
+    scope: "admin"
+  },
+  {
+    label: "Recovery status",
+    route: "/admin/recovery/status",
+    scope: "admin"
+  },
+  {
+    label: "Recovery drills",
+    route: "/admin/recovery/drills",
+    scope: "admin"
+  },
+  {
+    label: "Recovery drill detail",
+    route: "/admin/recovery/drills/:drillId",
+    scope: "admin"
+  },
+  {
+    label: "Recovery drill evidence",
+    route: "/admin/recovery/drills/:drillId/evidence",
+    scope: "admin"
+  },
   { label: "Admin audit list", route: "/admin/audit", scope: "admin" },
   {
     label: "Admin audit detail",
     route: "/admin/audit/:eventId",
     scope: "admin"
   },
+  {
+    label: "Admin index quality",
+    route: "/admin/index-quality",
+    scope: "admin"
+  },
+  {
+    label: "Admin index quality detail",
+    route: "/admin/index-quality/:indexKind/:indexId",
+    scope: "admin"
+  },
+  {
+    label: "Admin index query audits",
+    route: "/admin/index-quality/query-audits",
+    scope: "admin"
+  },
   { label: "Admin security", route: "/admin/security", scope: "admin" },
+  {
+    label: "Security findings",
+    route: "/admin/security/findings",
+    scope: "admin"
+  },
+  {
+    label: "Security finding detail",
+    route: "/admin/security/findings/:findingId",
+    scope: "admin"
+  },
+  {
+    label: "Risk acceptances",
+    route: "/admin/security/risk-acceptances",
+    scope: "admin"
+  },
+  {
+    label: "Risk acceptance detail",
+    route: "/admin/security/risk-acceptances/:riskAcceptanceId",
+    scope: "admin"
+  },
+  {
+    label: "Risk acceptance events",
+    route: "/admin/security/risk-acceptances/:riskAcceptanceId/events",
+    scope: "admin"
+  },
   { label: "Design system", route: "/admin/design-system", scope: "admin" }
 ];
 

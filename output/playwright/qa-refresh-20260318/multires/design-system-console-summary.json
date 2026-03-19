@@ -1,0 +1,14 @@
+[
+  {
+    "viewport": "1366x900",
+    "errors": 2
+  },
+  {
+    "viewport": "1440x900",
+    "errors": 0
+  },
+  {
+    "viewport": "1920x1080",
+    "errors": 0
+  }
+]

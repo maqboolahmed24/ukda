@@ -1,0 +1,98 @@
+
+> ukde@ test:browser /Users/test/Code/UKDA
+> playwright test --project=chromium web/tests/browser/viewer-regression.spec.ts --grep 'viewer visual baselines include original, preprocessed, compare, and inspector drawer states'
+
+[2m[WebServer] [22m(node:49420) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:49421) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:49427) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:49473) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:49473) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:49520) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:49522) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+[2m[WebServer] [22mRead more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+[2m[WebServer] [22m(node:49558) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:49559) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:49561) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › web/tests/browser/viewer-regression.spec.ts:82:5 › viewer visual baselines include original, preprocessed, compare, and inspector drawer states @visual (4.7s)
+
+
+  1) [chromium] › web/tests/browser/viewer-regression.spec.ts:82:5 › viewer visual baselines include original, preprocessed, compare, and inspector drawer states @visual 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveScreenshot[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: locator('.documentViewerWorkspace')
+      21008 pixels (ratio 0.05 of all image pixels) are different.
+
+      Snapshot: viewer-mode-preprocessed.png
+
+    Call log:
+    [2m  - Expect "toHaveScreenshot(viewer-mode-preprocessed.png)" with timeout 10000ms[22m
+    [2m    - verifying given screenshot expectation[22m
+    [2m  - waiting for locator('.documentViewerWorkspace')[22m
+    [2m    - locator resolved to <section aria-label="Viewer workspace" data-workspace-state="Expanded" class="documentViewerWorkspace ukde-panel">…</section>[22m
+    [2m  - taking element screenshot[22m
+    [2m    - disabled all CSS animations[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+    [2m  - attempting scroll into view action[22m
+    [2m    - waiting for element to be stable[22m
+    [2m  - 21008 pixels (ratio 0.05 of all image pixels) are different.[22m
+    [2m  - waiting 100ms before taking screenshot[22m
+    [2m  - waiting for locator('.documentViewerWorkspace')[22m
+    [2m    - locator resolved to <section aria-label="Viewer workspace" data-workspace-state="Expanded" class="documentViewerWorkspace ukde-panel">…</section>[22m
+    [2m  - taking element screenshot[22m
+    [2m    - disabled all CSS animations[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+    [2m  - attempting scroll into view action[22m
+    [2m    - waiting for element to be stable[22m
+    [2m  - captured a stable screenshot[22m
+    [2m  - 21008 pixels (ratio 0.05 of all image pixels) are different.[22m
+
+
+      102 |     1
+      103 |   );
+    > 104 |   await expect(page.locator(".documentViewerWorkspace")).toHaveScreenshot(
+          |                                                          ^
+      105 |     "viewer-mode-preprocessed.png"
+      106 |   );
+      107 |
+        at /Users/test/Code/UKDA/web/tests/browser/viewer-regression.spec.ts:104:58
+
+    attachment #1: viewer-mode-preprocessed (image/png) ────────────────────────────────────────────
+    Expected: web/tests/browser/viewer-regression.spec.ts-snapshots/viewer-mode-preprocessed-chromium-darwin.png
+    Received: test-results/viewer-regression-viewer-v-a1f72-pector-drawer-states-visual-chromium/viewer-mode-preprocessed-actual.png
+    Diff:     test-results/viewer-regression-viewer-v-a1f72-pector-drawer-states-visual-chromium/viewer-mode-preprocessed-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/viewer-regression-viewer-v-a1f72-pector-drawer-states-visual-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/viewer-regression-viewer-v-a1f72-pector-drawer-states-visual-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/viewer-regression-viewer-v-a1f72-pector-drawer-states-visual-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/viewer-regression-viewer-v-a1f72-pector-drawer-states-visual-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › web/tests/browser/viewer-regression.spec.ts:82:5 › viewer visual baselines include original, preprocessed, compare, and inspector drawer states @visual 
+ ELIFECYCLE  Command failed with exit code 1.

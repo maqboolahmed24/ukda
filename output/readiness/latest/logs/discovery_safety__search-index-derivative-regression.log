@@ -1,0 +1,15 @@
+$ .venv/bin/python -m pytest api/tests/test_search_routes.py api/tests/test_search_service.py api/tests/test_indexes_routes.py api/tests/test_indexes_service.py
+
+============================= test session starts ==============================
+platform darwin -- Python 3.14.0, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/test/Code/UKDA/api
+configfile: pyproject.toml
+plugins: anyio-4.12.1
+collected 52 items
+
+api/tests/test_search_routes.py ......                                   [ 11%]
+api/tests/test_search_service.py ....                                    [ 19%]
+api/tests/test_indexes_routes.py ......................                  [ 61%]
+api/tests/test_indexes_service.py ....................                   [100%]
+
+============================== 52 passed in 2.03s ==============================

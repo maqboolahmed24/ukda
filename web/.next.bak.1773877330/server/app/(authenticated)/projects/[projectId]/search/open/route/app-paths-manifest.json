@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/projects/[projectId]/search/open/route": "app/(authenticated)/projects/[projectId]/search/open/route.js"
+}

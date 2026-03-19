@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/projects/[projectId]/pseudonym-registry/[entryId]/page": "app/(authenticated)/projects/[projectId]/pseudonym-registry/[entryId]/page.js"
+}

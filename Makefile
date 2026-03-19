@@ -4,7 +4,7 @@ PIP ?= $(PYTHON) -m pip
 HELM_IMAGE ?= alpine/helm:3.17.3
 ROOT_DIR := $(CURDIR)
 
-.PHONY: install-js install-python lint format-check typecheck test test-browser test-preprocess-gold test-privacy-regression test-governance-integrity test-export-hardening update-preprocess-gold-baseline build audit ci ci-js ci-python verify-images render-manifests dev-db-up dev-db-down dev-stack-up dev-stack-down smoke-health clean
+.PHONY: install-js install-python lint format-check typecheck test test-browser test-preprocess-gold test-privacy-regression test-governance-integrity test-provenance-readiness test-discovery-safety test-security-readiness test-capacity-recovery-readiness test-accessibility-readiness test-cross-phase-readiness readiness-audit smoke-release seed-nonprod-validate seed-nonprod-refresh release-gate launch-package test-export-hardening update-preprocess-gold-baseline build audit ci ci-js ci-python verify-images render-manifests dev-db-up dev-db-down dev-stack-up dev-stack-down smoke-health clean
 
 install-js:
 	pnpm install --frozen-lockfile
@@ -48,6 +48,83 @@ test-governance-integrity:
 		api/tests/test_governance_integrity.py \
 		api/tests/test_evidence_ledger.py \
 		api/tests/test_documents_governance_routes.py
+
+test-provenance-readiness:
+	$(PYTHON) -m pytest \
+		api/tests/test_bundle_verification.py \
+		api/tests/test_export_provenance.py \
+		api/tests/test_exports_replay.py
+
+test-discovery-safety:
+	$(PYTHON) -m pytest \
+		api/tests/test_search_routes.py \
+		api/tests/test_search_service.py \
+		api/tests/test_indexes_routes.py \
+		api/tests/test_indexes_service.py
+
+test-security-readiness:
+	$(PYTHON) -m pytest \
+		api/tests/test_security_findings_service.py \
+		api/tests/test_security_routes.py \
+		api/tests/test_model_stack.py
+
+test-capacity-recovery-readiness:
+	$(PYTHON) -m pytest \
+		api/tests/test_capacity_routes.py \
+		api/tests/test_capacity_service.py \
+		api/tests/test_recovery_routes.py \
+		api/tests/test_recovery_service.py
+
+test-accessibility-readiness:
+	pnpm -s vitest run \
+		web/components/authenticated-shell.a11y.test.tsx \
+		web/components/route-states.a11y.test.tsx
+
+test-cross-phase-readiness:
+	$(MAKE) test-accessibility-readiness
+	$(MAKE) test-privacy-regression PYTHON=$(PYTHON)
+	$(MAKE) test-governance-integrity PYTHON=$(PYTHON)
+	$(MAKE) test-provenance-readiness PYTHON=$(PYTHON)
+	$(MAKE) test-export-hardening PYTHON=$(PYTHON)
+	$(MAKE) test-discovery-safety PYTHON=$(PYTHON)
+	$(MAKE) test-security-readiness PYTHON=$(PYTHON)
+	$(MAKE) test-capacity-recovery-readiness PYTHON=$(PYTHON)
+
+readiness-audit:
+	$(PYTHON) scripts/run_readiness_audit.py --strict --python-bin "$(PYTHON)"
+
+TARGET_ENV ?= dev
+SOURCE_ENV ?= dev
+RELEASE_MODE ?= promote
+DATABASE_URL ?=
+
+smoke-release:
+	$(PYTHON) scripts/run_release_smoke_suite.py \
+		--profile "$(TARGET_ENV)" \
+		--strict \
+		--python-bin "$(PYTHON)"
+
+seed-nonprod-validate:
+	$(PYTHON) scripts/refresh_nonprod_seed_data.py \
+		--environment "$(TARGET_ENV)" \
+		--strict
+
+seed-nonprod-refresh:
+	$(PYTHON) scripts/refresh_nonprod_seed_data.py \
+		--environment "$(TARGET_ENV)" \
+		--apply \
+		--database-url "$(DATABASE_URL)" \
+		--strict
+
+release-gate:
+	$(PYTHON) scripts/run_release_gate.py \
+		--mode "$(RELEASE_MODE)" \
+		--source-env "$(SOURCE_ENV)" \
+		--target-env "$(TARGET_ENV)" \
+		--strict
+
+launch-package:
+	$(PYTHON) scripts/build_launch_readiness_package.py --strict
 
 test-export-hardening:
 	$(PYTHON) -m pytest api/tests/test_export_hardening_regression.py
@@ -109,7 +186,7 @@ ci:
 verify-images:
 	docker build -f web/Dockerfile -t ukde/web:local .
 	docker build -f api/Dockerfile -t ukde/api:local api
-	docker build -f workers/Dockerfile -t ukde/workers:local workers
+	docker build -f workers/Dockerfile -t ukde/workers:local .
 
 render-manifests:
 	docker run --rm -v "$(ROOT_DIR)/infra/helm/ukde:/chart" $(HELM_IMAGE) template ukde-preview /chart -f /chart/values.yaml -f /chart/values-preview.yaml >/dev/null

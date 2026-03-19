@@ -1,0 +1,9 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - status [ref=e3]:
+      - generic [ref=e4]:
+        - paragraph [ref=e5]: Loading app
+        - heading "Preparing secure shell" [level=2] [ref=e6]
+      - paragraph [ref=e7]: The shell mounts first while route content streams.
+  - alert [ref=e13]
+  - text: / / /

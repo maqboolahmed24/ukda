@@ -6,6 +6,8 @@ from typing import Literal
 
 IndexKind = Literal["SEARCH", "ENTITY", "DERIVATIVE"]
 IndexStatus = Literal["QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELED"]
+DerivativeSnapshotStatus = Literal["QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELED"]
+DerivativeScope = Literal["active", "historical"]
 SearchDocumentSourceKind = Literal["LINE", "RESCUE_CANDIDATE", "PAGE_WINDOW"]
 EntityType = Literal["PERSON", "PLACE", "ORGANISATION", "DATE"]
 OccurrenceSpanBasisKind = Literal["LINE_TEXT", "PAGE_WINDOW_TEXT", "NONE"]
@@ -88,6 +90,25 @@ class CreateSearchDocumentInput:
 @dataclass(frozen=True)
 class SearchDocumentPage:
     items: list[SearchDocumentRecord]
+    next_cursor: int | None
+
+
+@dataclass(frozen=True)
+class SearchQueryAuditRecord:
+    id: str
+    project_id: str
+    actor_user_id: str
+    search_index_id: str
+    query_sha256: str
+    query_text_key: str
+    filters_json: dict[str, object]
+    result_count: int
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class SearchQueryAuditPage:
+    items: list[SearchQueryAuditRecord]
     next_cursor: int | None
 
 
@@ -175,6 +196,47 @@ class DerivativeIndexRowRecord:
     display_payload_json: dict[str, object]
     suppressed_fields_json: dict[str, object]
     created_at: datetime
+
+
+@dataclass(frozen=True)
+class CreateDerivativeIndexRowInput:
+    derivative_kind: str
+    source_snapshot_json: dict[str, object]
+    display_payload_json: dict[str, object]
+    suppressed_fields_json: dict[str, object]
+
+
+@dataclass(frozen=True)
+class DerivativeIndexRowPage:
+    items: list[DerivativeIndexRowRecord]
+    next_cursor: int | None
+
+
+@dataclass(frozen=True)
+class DerivativeSnapshotRecord:
+    id: str
+    project_id: str
+    derivative_index_id: str
+    derivative_kind: str
+    source_snapshot_json: dict[str, object]
+    policy_version_ref: str
+    status: DerivativeSnapshotStatus
+    supersedes_derivative_snapshot_id: str | None
+    superseded_by_derivative_snapshot_id: str | None
+    storage_key: str | None
+    snapshot_sha256: str | None
+    candidate_snapshot_id: str | None
+    created_by: str
+    created_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+    failure_reason: str | None
+
+
+@dataclass(frozen=True)
+class DerivativeSnapshotListItem:
+    snapshot: DerivativeSnapshotRecord
+    is_active_generation: bool
 
 
 @dataclass(frozen=True)

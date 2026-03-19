@@ -1,0 +1,18 @@
+$ make test-governance-integrity PYTHON=.venv/bin/python
+
+.venv/bin/python -m pytest \
+		api/tests/test_governance_integrity.py \
+		api/tests/test_evidence_ledger.py \
+		api/tests/test_documents_governance_routes.py
+============================= test session starts ==============================
+platform darwin -- Python 3.14.0, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/test/Code/UKDA/api
+configfile: pyproject.toml
+plugins: anyio-4.12.1
+collected 18 items
+
+api/tests/test_governance_integrity.py ......                            [ 33%]
+api/tests/test_evidence_ledger.py ....                                   [ 55%]
+api/tests/test_documents_governance_routes.py ........                   [100%]
+
+============================== 18 passed in 2.07s ==============================

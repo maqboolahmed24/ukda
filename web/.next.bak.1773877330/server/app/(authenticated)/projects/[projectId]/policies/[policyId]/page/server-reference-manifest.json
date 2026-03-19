@@ -1,0 +1,20 @@
+{
+  "node": {
+    "6073b1498ac66b3615b7713fe4e7743cf482e27334": {
+      "workers": {
+        "app/(authenticated)/projects/[projectId]/policies/[policyId]/page": {
+          "moduleId": 1567,
+          "async": false,
+          "exportedName": "$$RSC_SERVER_ACTION_0",
+          "filename": "web/app/(authenticated)/projects/[projectId]/policies/[policyId]/page.tsx"
+        }
+      },
+      "layer": {
+        "app/(authenticated)/projects/[projectId]/policies/[policyId]/page": "rsc"
+      },
+      "exportedName": "$$RSC_SERVER_ACTION_0",
+      "filename": "web/app/(authenticated)/projects/[projectId]/policies/[policyId]/page.tsx"
+    }
+  },
+  "edge": {}
+}

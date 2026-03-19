@@ -1,0 +1,281 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - link "Skip to work region" [ref=e3] [cursor=pointer]:
+    - /url: "#ukde-shell-work-region"
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - paragraph [ref=e6]: Victorian Parish Registers
+      - paragraph [ref=e7]: Project workspace
+    - generic [ref=e8]:
+      - group "Global command controls" [ref=e9]:
+        - button "Project switcher" [ref=e10] [cursor=pointer]
+        - button "Command bar" [ref=e11] [cursor=pointer]:
+          - generic [ref=e12]: Command bar
+          - generic [ref=e13]: ⌘/Ctrl + K
+      - 'button "Theme preference: System (Dark). Click to switch to Dark." [ref=e15] [cursor=pointer]':
+        - img [ref=e17]
+      - link "Help" [ref=e19] [cursor=pointer]:
+        - /url: /health
+      - generic [ref=e20]:
+        - generic [ref=e21]: Env Test
+        - generic [ref=e22]: Tier Controlled
+        - generic [ref=e23]: Expanded
+      - group [ref=e24]:
+        - generic "User menu" [ref=e25] [cursor=pointer]: Fixture Admin
+  - generic [ref=e26]:
+    - complementary [ref=e27]:
+      - paragraph [ref=e28]: Navigation
+      - navigation "Primary navigation" [ref=e29]:
+        - list [ref=e30]:
+          - listitem [ref=e31]:
+            - link "Projects" [ref=e32] [cursor=pointer]:
+              - /url: /projects
+              - generic [ref=e33]: Projects
+          - listitem [ref=e34]:
+            - link "My activity" [ref=e35] [cursor=pointer]:
+              - /url: /activity
+              - generic [ref=e36]: My activity
+          - listitem [ref=e37]:
+            - link "Approved models" [ref=e38] [cursor=pointer]:
+              - /url: /approved-models
+              - generic [ref=e39]: Approved models
+          - listitem [ref=e40]:
+            - link "Admin" [ref=e41] [cursor=pointer]:
+              - /url: /admin
+              - generic [ref=e42]: Admin
+    - generic [ref=e43]:
+      - navigation "Project context" [ref=e44]:
+        - list [ref=e45]:
+          - listitem [ref=e46]:
+            - link "Overview" [ref=e47] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/overview
+          - listitem [ref=e48]:
+            - link "Documents" [ref=e49] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/documents
+          - listitem [ref=e50]:
+            - link "Model assignments" [ref=e51] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/model-assignments
+          - listitem [ref=e52]:
+            - link "Search" [ref=e53] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/search
+          - listitem [ref=e54]:
+            - link "Entities" [ref=e55] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/entities
+          - listitem [ref=e56]:
+            - link "Derivatives" [ref=e57] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/derivatives
+          - listitem [ref=e58]:
+            - link "Indexes" [ref=e59] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/indexes
+          - listitem [ref=e60]:
+            - link "Policies" [ref=e61] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/policies
+          - listitem [ref=e62]:
+            - link "Pseudonym registry" [ref=e63] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/pseudonym-registry
+          - listitem [ref=e64]:
+            - link "Jobs" [ref=e65] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/jobs
+          - listitem [ref=e66]:
+            - link "Export candidates" [ref=e67] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/export-candidates
+          - listitem [ref=e68]:
+            - link "Export requests" [ref=e69] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/export-requests
+          - listitem [ref=e70]:
+            - link "Export review" [ref=e71] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/export-review
+          - listitem [ref=e72]:
+            - link "Activity" [ref=e73] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/activity
+          - listitem [ref=e74]:
+            - link "Settings" [ref=e75] [cursor=pointer]:
+              - /url: /projects/project-fixture-alpha/settings
+      - generic [ref=e77]:
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - paragraph [ref=e80]: Projects / Victorian Parish Registers
+            - heading "Document doc-fixture-002" [level=1] [ref=e81]
+            - paragraph [ref=e82]: Stable document detail anchor for metadata, run history, and viewer access.
+            - navigation "Breadcrumb" [ref=e84]:
+              - list [ref=e85]:
+                - listitem [ref=e86]:
+                  - link "Projects" [ref=e87] [cursor=pointer]:
+                    - /url: /projects
+                  - text: /
+                - listitem [ref=e88]:
+                  - link "Victorian Parish Registers" [ref=e89] [cursor=pointer]:
+                    - /url: /projects/project-fixture-alpha/overview
+                  - text: /
+                - listitem [ref=e90]:
+                  - link "Documents" [ref=e91] [cursor=pointer]:
+                    - /url: /projects/project-fixture-alpha/documents
+                  - text: /
+                - listitem [ref=e92]:
+                  - generic [ref=e93]: Document
+          - link "Open viewer" [ref=e95] [cursor=pointer]:
+            - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1
+        - main [ref=e97]:
+          - generic [ref=e98]:
+            - paragraph [ref=e99]: Privacy workspace
+            - heading "register-volume-04.pdf" [level=2] [ref=e100]
+            - paragraph [ref=e101]: Fast reviewer workspace with deterministic deep links, append-only finding decisions, page approval gating, and controlled versus safeguarded preview context.
+            - generic [ref=e102]:
+              - link "Back to triage" [ref=e103] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/privacy?runId=redaction-run-fixture-002&tab=triage
+              - link "Run detail" [ref=e104] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/privacy/runs/redaction-run-fixture-002
+          - status [ref=e106]:
+            - heading "Workspace updated" [level=2] [ref=e108]
+            - paragraph [ref=e109]: Page review status is now APPROVED.
+          - generic [ref=e110]:
+            - heading "Workspace toolbar" [level=3] [ref=e111]
+            - toolbar "Privacy review controls" [ref=e113]:
+              - button "Controlled view" [ref=e114] [cursor=pointer]
+              - button "Safeguarded preview" [ref=e115] [cursor=pointer]
+              - button "Previous page" [disabled] [ref=e116]
+              - button "Next page" [ref=e117] [cursor=pointer]
+              - button "Next unresolved" [ref=e118] [cursor=pointer]
+              - button "Hide highlights" [pressed] [ref=e119] [cursor=pointer]
+            - generic [ref=e120]:
+              - link "Open preview asset" [ref=e121] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/privacy/runs/redaction-run-fixture-002/pages/page-fixture-001/preview
+              - generic [ref=e122]: Page 1 · IN_REVIEW
+              - generic [ref=e123]: Unresolved 1
+          - generic [ref=e125]:
+            - complementary "Page queue" [ref=e126]:
+              - heading "Pages" [level=3] [ref=e127]
+              - list [ref=e128]:
+                - listitem [ref=e129]:
+                  - generic [ref=e130]:
+                    - generic [ref=e131]: Page 1
+                    - generic [ref=e132]: IN_REVIEW
+                  - paragraph [ref=e133]: Findings 1 · Unresolved 1
+                  - button "Current page" [ref=e135] [cursor=pointer]
+                - listitem [ref=e136]:
+                  - generic [ref=e137]:
+                    - generic [ref=e138]: Page 2
+                    - generic [ref=e139]: NOT_STARTED
+                  - paragraph [ref=e140]: Findings 1 · Unresolved 1
+                  - button "Open page" [ref=e142] [cursor=pointer]
+            - generic "Page canvas" [ref=e143]:
+              - heading "Canvas" [level=3] [ref=e144]
+              - generic "Privacy workspace canvas" [ref=e145]:
+                - img "Safeguarded preview for page 1" [ref=e146]
+                - generic "PERSON_NAME geometry" [ref=e147]
+            - complementary "Transcript and findings" [ref=e148]:
+              - heading "Transcript and findings" [level=3] [ref=e149]
+              - generic [ref=e150]:
+                - heading "Finding actions" [level=4] [ref=e151]
+                - list [ref=e152]:
+                  - listitem [ref=e153]:
+                    - generic [ref=e154]: Finding
+                    - strong [ref=e155]: red-find-1
+                  - listitem [ref=e156]:
+                    - generic [ref=e157]: Status
+                    - strong [ref=e158]: NEEDS_REVIEW
+                  - listitem [ref=e159]:
+                    - generic [ref=e160]: Decision etag
+                    - strong [ref=e161]: red-find-1-etag-v1
+                  - listitem [ref=e162]:
+                    - generic [ref=e163]: Anchor
+                    - strong [ref=e164]: TOKEN_LINKED
+                  - listitem [ref=e165]:
+                    - generic [ref=e166]: Line
+                    - strong [ref=e167]: line-privacy-001
+                  - listitem [ref=e168]:
+                    - generic [ref=e169]: Token
+                    - strong [ref=e170]: token-privacy-001
+                - generic [ref=e171]:
+                  - button "Approve finding" [ref=e173] [cursor=pointer]
+                  - button "Override" [ref=e174] [cursor=pointer]
+                  - button "False positive" [ref=e175] [cursor=pointer]
+              - generic [ref=e176]:
+                - generic [ref=e177]:
+                  - heading "Page approval" [level=4] [ref=e178]
+                  - generic [ref=e179]: IN_REVIEW
+                - list [ref=e180]:
+                  - listitem [ref=e181]:
+                    - generic [ref=e182]: Review etag
+                    - strong [ref=e183]: red-review-page-001-v1
+                  - listitem [ref=e184]:
+                    - generic [ref=e185]: First reviewed by
+                    - strong [ref=e186]: user-fixture-admin
+                  - listitem [ref=e187]:
+                    - generic [ref=e188]: Second review
+                    - strong [ref=e189]: NOT_REQUIRED
+                  - listitem [ref=e190]:
+                    - generic [ref=e191]: Requires second review
+                    - strong [ref=e192]: "No"
+                - button "Approve page" [disabled] [ref=e194]
+                - paragraph [ref=e195]: Approve page is disabled until unresolved count reaches 0.
+              - generic [ref=e196]:
+                - heading "Transcript" [level=4] [ref=e197]
+                - list "Transcript lines" [ref=e198]:
+                  - listitem [ref=e199]:
+                    - button "line-privacy-001 John Adams presented testimony in York." [pressed] [ref=e200]:
+                      - generic [ref=e201]: line-privacy-001
+                      - generic [ref=e202]: John Adams presented testimony in York.
+              - generic [ref=e203]:
+                - heading "Findings" [level=4] [ref=e204]
+                - list "Findings list" [ref=e205]:
+                  - listitem [ref=e206]:
+                    - button "PERSON_NAME red-find-1 · NEEDS_REVIEW · Anchor TOKEN_LINKED" [pressed] [ref=e207]:
+                      - generic [ref=e208]: PERSON_NAME
+                      - generic [ref=e209]: red-find-1 · NEEDS_REVIEW · Anchor TOKEN_LINKED
+                    - generic [ref=e210]:
+                      - button "Open finding" [ref=e211] [cursor=pointer]
+                      - button "Open line" [ref=e212] [cursor=pointer]
+                      - button "Open token" [ref=e213] [cursor=pointer]
+              - generic [ref=e214]:
+                - heading "Page timeline" [level=4] [ref=e215]
+                - list [ref=e216]:
+                  - listitem [ref=e217]:
+                    - paragraph [ref=e218]:
+                      - strong [ref=e219]: PAGE_REVIEW_STARTED
+                    - paragraph [ref=e220]: 2026-03-12T09:15:45.000Z · user-fixture-admin
+              - generic [ref=e221]:
+                - heading "Deep-link context" [level=4] [ref=e222]
+                - list [ref=e223]:
+                  - listitem [ref=e224]:
+                    - generic [ref=e225]: Run
+                    - strong [ref=e226]: redaction-run-fixture-002
+                  - listitem [ref=e227]:
+                    - generic [ref=e228]: Page
+                    - strong [ref=e229]: "1"
+                  - listitem [ref=e230]:
+                    - generic [ref=e231]: Finding
+                    - strong [ref=e232]: red-find-1
+                  - listitem [ref=e233]:
+                    - generic [ref=e234]: Line
+                    - strong [ref=e235]: line-privacy-001
+                  - listitem [ref=e236]:
+                    - generic [ref=e237]: Token
+                    - strong [ref=e238]: token-privacy-001
+                  - listitem [ref=e239]:
+                    - generic [ref=e240]: Highlights
+                    - strong [ref=e241]: Shown
+                  - listitem [ref=e242]:
+                    - generic [ref=e243]: Mode
+                    - strong [ref=e244]: Safeguarded preview
+    - complementary [ref=e245]:
+      - paragraph [ref=e246]: Adaptive state
+      - heading "Expanded" [level=2] [ref=e247]
+      - paragraph [ref=e248]: Rail, workspace, and inspector remain visible for dense review work.
+      - list [ref=e249]:
+        - listitem [ref=e250]:
+          - generic [ref=e251]: Task context
+          - strong [ref=e252]: standard
+        - listitem [ref=e253]:
+          - generic [ref=e254]: Focus override
+          - strong [ref=e255]: "off"
+        - listitem [ref=e256]:
+          - generic [ref=e257]: Role mode
+          - strong [ref=e258]: ADMIN
+      - paragraph [ref=e259]:
+        - text: "Keyboard path:"
+        - generic [ref=e260]: Tab
+        - text: through rail, context bar, then work region.
+```

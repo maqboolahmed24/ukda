@@ -1,0 +1,50 @@
+{
+  "routeKey": "project_search",
+  "url": "http://127.0.0.1:3100/projects/project-fixture-alpha/search?q=register&page=1",
+  "title": "UKDE",
+  "viewport": {
+    "width": 1366,
+    "height": 900
+  },
+  "bodyOverflowX": 0,
+  "bodyOverflowY": 0,
+  "pageOverflowX": 0,
+  "pageOverflowY": 0,
+  "mainClass": "homeLayout",
+  "mainOverflowX": 0,
+  "mainOverflowY": 0,
+  "totalButtons": 5,
+  "totalLinks": 27,
+  "topOverflowElements": [
+    {
+      "selector": "p.authenticatedShellTitle",
+      "overflowX": 0,
+      "overflowY": 1,
+      "width": 1321,
+      "height": 21
+    },
+    {
+      "selector": "nav.projectContextBar.ukde-panel",
+      "overflowX": 666,
+      "overflowY": 0,
+      "width": 853,
+      "height": 43
+    },
+    {
+      "selector": "ul.authenticatedShellContextList",
+      "overflowX": 674,
+      "overflowY": 0,
+      "width": 837,
+      "height": 29
+    },
+    {
+      "selector": "h1",
+      "overflowX": 0,
+      "overflowY": 1,
+      "width": 680,
+      "height": 27
+    }
+  ],
+  "navigationError": null,
+  "consoleErrors": []
+}

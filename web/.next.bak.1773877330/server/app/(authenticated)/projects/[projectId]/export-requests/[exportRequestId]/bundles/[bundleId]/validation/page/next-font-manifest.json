@@ -1,0 +1,10 @@
+{
+  "pages": {},
+  "app": {
+    "[project]/web/app/(authenticated)/projects/[projectId]/export-requests/[exportRequestId]/bundles/[bundleId]/validation/page": [
+      "static/media/a343f882a40d2cc9-s.p.71e1367e.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pagesUsingSizeAdjust": false
+}

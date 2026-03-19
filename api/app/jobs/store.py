@@ -1478,6 +1478,78 @@ class JobStore:
             return 0
         return int(row["total"])
 
+    def count_dead_letter_jobs(self) -> int:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor_obj:
+                    cursor_obj.execute(
+                        """
+                        SELECT COUNT(*)::INT AS total
+                        FROM jobs
+                        WHERE status = 'FAILED'
+                          AND superseded_by_job_id IS NULL
+                          AND attempts >= max_attempts
+                        """
+                    )
+                    row = cursor_obj.fetchone()
+        except psycopg.Error as error:
+            raise JobStoreUnavailableError("Dead-letter query failed.") from error
+        if row is None:
+            return 0
+        return int(row["total"])
+
+    def count_replay_eligible_jobs(self) -> int:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor_obj:
+                    cursor_obj.execute(
+                        """
+                        SELECT COUNT(*)::INT AS total
+                        FROM jobs
+                        WHERE status IN ('FAILED', 'CANCELED')
+                          AND superseded_by_job_id IS NULL
+                        """
+                    )
+                    row = cursor_obj.fetchone()
+        except psycopg.Error as error:
+            raise JobStoreUnavailableError("Replay-eligible query failed.") from error
+        if row is None:
+            return 0
+        return int(row["total"])
+
+    def list_dead_letter_jobs(self, *, limit: int) -> list[dict[str, object]]:
+        self.ensure_schema()
+        safe_limit = max(1, min(limit, 200))
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor_obj:
+                    cursor_obj.execute(
+                        """
+                        SELECT
+                          id,
+                          project_id,
+                          type,
+                          attempts,
+                          max_attempts,
+                          error_code,
+                          error_message,
+                          finished_at
+                        FROM jobs
+                        WHERE status = 'FAILED'
+                          AND superseded_by_job_id IS NULL
+                          AND attempts >= max_attempts
+                        ORDER BY finished_at DESC NULLS LAST, id DESC
+                        LIMIT %(limit)s
+                        """,
+                        {"limit": safe_limit},
+                    )
+                    rows = cursor_obj.fetchall()
+        except psycopg.Error as error:
+            raise JobStoreUnavailableError("Dead-letter listing failed.") from error
+        return [dict(row) for row in rows]
+
     def project_job_activity(
         self,
         *,

@@ -16,7 +16,11 @@ import {
   projectDocumentPreprocessingQualityPath,
   projectDocumentPreprocessingRunPath,
   projectDocumentViewerPath,
+  projectDerivativePath,
   projectDerivativeIndexPath,
+  projectDerivativePreviewPath,
+  projectDerivativesPath,
+  projectDerivativeStatusPath,
   projectEntitiesPath,
   projectEntityPath,
   projectEntityIndexPath,
@@ -86,6 +90,11 @@ const SECTION_MAP: Record<string, { title: string; summary: string }> = {
     title: "Entities",
     summary:
       "Controlled entity discovery with active-index lineage, confidence summaries, and occurrence provenance."
+  },
+  derivatives: {
+    title: "Derivatives",
+    summary:
+      "Safeguarded derivative snapshots with suppression metadata, anti-join safety, and candidate-freeze controls."
   },
   "export-candidates": {
     title: "Export candidates",
@@ -504,6 +513,43 @@ export function ProjectSectionHeader({ projectName }: { projectName: string }) {
       {
         href: projectEntitiesPath(projectId),
         label: "Back to entities"
+      }
+    ];
+  } else if (sectionKey === "derivatives") {
+    breadcrumbs.push({
+      href: projectDerivativesPath(projectId),
+      label: SECTION_MAP.derivatives.title
+    });
+    if (sectionDetail) {
+      title = `Derivative ${sectionDetail}`;
+      summary =
+        "Derivative snapshot detail with policy pinning, suppression lineage, and candidate-freeze state.";
+      breadcrumbs.push({
+        href: projectDerivativePath(projectId, sectionDetail),
+        label: `Derivative ${sectionDetail}`
+      });
+      if (sectionLeaf === "status") {
+        title = "Derivative status";
+        summary =
+          "Lifecycle status for one safeguarded derivative snapshot and freeze readiness.";
+        breadcrumbs.push({
+          href: projectDerivativeStatusPath(projectId, sectionDetail),
+          label: "Status"
+        });
+      } else if (sectionLeaf === "preview") {
+        title = "Derivative preview";
+        summary =
+          "Scoped safeguarded preview rows from one derivative snapshot and one generation.";
+        breadcrumbs.push({
+          href: projectDerivativePreviewPath(projectId, sectionDetail),
+          label: "Preview"
+        });
+      }
+    }
+    secondaryActions = [
+      {
+        href: projectDerivativesPath(projectId),
+        label: "Back to derivatives"
       }
     ];
   } else if (sectionKey === "settings") {

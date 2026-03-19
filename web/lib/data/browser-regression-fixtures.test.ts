@@ -11,6 +11,11 @@ import type {
   DocumentPreprocessRunListResponse,
   DocumentPreprocessRunPageListResponse,
   DocumentPreprocessRunStatusResponse,
+  ProjectDerivativeCandidateSnapshotCreateResponse,
+  ProjectDerivativeDetailResponse,
+  ProjectDerivativeListResponse,
+  ProjectDerivativePreviewResponse,
+  ProjectDerivativeStatusResponse,
   ProjectEntityDetailResponse,
   ProjectEntityListResponse,
   ProjectEntityOccurrencesResponse,
@@ -380,6 +385,167 @@ describe("browser regression fixtures document page patch support", () => {
     expect(occurrencesResult?.data?.items[0]?.workspacePath).toContain(
       "/transcription/workspace?"
     );
+  });
+
+  it("serves derivative list/detail/status/preview and blocks auditor profile", () => {
+    process.env[MODE_FLAG] = "1";
+    const reviewerToken = getBrowserFixtureSessionToken("reviewer");
+    const auditorToken = getBrowserFixtureSessionToken("auditor");
+    const derivativeId = "dersnap-fixture-002";
+
+    const activeListResult =
+      resolveBrowserRegressionApiResult<ProjectDerivativeListResponse>({
+        authToken: reviewerToken,
+        method: "GET",
+        path: "/projects/project-fixture-alpha/derivatives"
+      });
+    expect(activeListResult).not.toBeNull();
+    expect(activeListResult?.ok).toBe(true);
+    expect(activeListResult?.data?.scope).toBe("active");
+    expect(activeListResult?.data?.activeDerivativeIndexId).toBe(
+      "derivative-index-fixture-002"
+    );
+    expect(activeListResult?.data?.items[0]?.id).toBe(derivativeId);
+
+    const historicalListResult =
+      resolveBrowserRegressionApiResult<ProjectDerivativeListResponse>({
+        authToken: reviewerToken,
+        method: "GET",
+        path: "/projects/project-fixture-alpha/derivatives?scope=historical"
+      });
+    expect(historicalListResult).not.toBeNull();
+    expect(historicalListResult?.ok).toBe(true);
+    expect(historicalListResult?.data?.scope).toBe("historical");
+    expect(historicalListResult?.data?.items.map((item) => item.id)).toEqual([
+      derivativeId
+    ]);
+
+    const detailResult =
+      resolveBrowserRegressionApiResult<ProjectDerivativeDetailResponse>({
+        authToken: reviewerToken,
+        method: "GET",
+        path: `/projects/project-fixture-alpha/derivatives/${derivativeId}`
+      });
+    expect(detailResult).not.toBeNull();
+    expect(detailResult?.ok).toBe(true);
+    expect(detailResult?.data?.derivative.id).toBe(derivativeId);
+    expect(detailResult?.data?.derivative.isActiveGeneration).toBe(false);
+
+    const statusResult =
+      resolveBrowserRegressionApiResult<ProjectDerivativeStatusResponse>({
+        authToken: reviewerToken,
+        method: "GET",
+        path: `/projects/project-fixture-alpha/derivatives/${derivativeId}/status`
+      });
+    expect(statusResult).not.toBeNull();
+    expect(statusResult?.ok).toBe(true);
+    expect(statusResult?.data?.derivativeId).toBe(derivativeId);
+    expect(statusResult?.data?.status).toBe("SUCCEEDED");
+
+    const previewResult =
+      resolveBrowserRegressionApiResult<ProjectDerivativePreviewResponse>({
+        authToken: reviewerToken,
+        method: "GET",
+        path: `/projects/project-fixture-alpha/derivatives/${derivativeId}/preview`
+      });
+    expect(previewResult).not.toBeNull();
+    expect(previewResult?.ok).toBe(true);
+    expect(previewResult?.data?.derivativeSnapshotId).toBe(derivativeId);
+    expect(previewResult?.data?.rows.length).toBeGreaterThan(0);
+    expect(
+      previewResult?.data?.rows.every((row) => row.derivativeSnapshotId === derivativeId)
+    ).toBe(true);
+
+    const auditorResult =
+      resolveBrowserRegressionApiResult<ProjectDerivativeListResponse>({
+        authToken: auditorToken,
+        method: "GET",
+        path: "/projects/project-fixture-alpha/derivatives"
+      });
+    expect(auditorResult).not.toBeNull();
+    expect(auditorResult?.ok).toBe(false);
+    expect(auditorResult?.status).toBe(403);
+  });
+
+  it("freezes derivative candidate snapshots idempotently and restricts freeze roles", () => {
+    process.env[MODE_FLAG] = "1";
+    const reviewerToken = getBrowserFixtureSessionToken("reviewer");
+    const researcherToken = getBrowserFixtureSessionToken("researcher");
+    const derivativeId = "dersnap-fixture-002";
+
+    const firstFreeze =
+      resolveBrowserRegressionApiResult<ProjectDerivativeCandidateSnapshotCreateResponse>(
+        {
+          authToken: reviewerToken,
+          method: "POST",
+          path: `/projects/project-fixture-alpha/derivatives/${derivativeId}/candidate-snapshots`
+        }
+      );
+    expect(firstFreeze).not.toBeNull();
+    expect(firstFreeze?.ok).toBe(true);
+    expect(firstFreeze?.status).toBe(201);
+    expect(firstFreeze?.data?.created).toBe(true);
+    expect(firstFreeze?.data?.candidate.sourceArtifactId).toBe(derivativeId);
+    expect(firstFreeze?.data?.candidateSnapshotId).toBe(
+      "candidate-derivative-fixture-002"
+    );
+
+    const secondFreeze =
+      resolveBrowserRegressionApiResult<ProjectDerivativeCandidateSnapshotCreateResponse>(
+        {
+          authToken: reviewerToken,
+          method: "POST",
+          path: `/projects/project-fixture-alpha/derivatives/${derivativeId}/candidate-snapshots`
+        }
+      );
+    expect(secondFreeze).not.toBeNull();
+    expect(secondFreeze?.ok).toBe(true);
+    expect(secondFreeze?.status).toBe(201);
+    expect(secondFreeze?.data?.created).toBe(false);
+    expect(secondFreeze?.data?.candidateSnapshotId).toBe(
+      firstFreeze?.data?.candidateSnapshotId
+    );
+
+    const detailAfterFreeze =
+      resolveBrowserRegressionApiResult<ProjectDerivativeDetailResponse>({
+        authToken: reviewerToken,
+        method: "GET",
+        path: `/projects/project-fixture-alpha/derivatives/${derivativeId}`
+      });
+    expect(detailAfterFreeze).not.toBeNull();
+    expect(detailAfterFreeze?.ok).toBe(true);
+    expect(detailAfterFreeze?.data?.derivative.candidateSnapshotId).toBe(
+      "candidate-derivative-fixture-002"
+    );
+
+    const researcherFreeze =
+      resolveBrowserRegressionApiResult<ProjectDerivativeCandidateSnapshotCreateResponse>(
+        {
+          authToken: researcherToken,
+          method: "POST",
+          path: `/projects/project-fixture-alpha/derivatives/${derivativeId}/candidate-snapshots`
+        }
+      );
+    expect(researcherFreeze).not.toBeNull();
+    expect(researcherFreeze?.ok).toBe(false);
+    expect(researcherFreeze?.status).toBe(403);
+  });
+
+  it("rejects candidate freeze for superseded derivative snapshots", () => {
+    process.env[MODE_FLAG] = "1";
+    const reviewerToken = getBrowserFixtureSessionToken("reviewer");
+
+    const freezeSuperseded =
+      resolveBrowserRegressionApiResult<ProjectDerivativeCandidateSnapshotCreateResponse>(
+        {
+          authToken: reviewerToken,
+          method: "POST",
+          path: "/projects/project-fixture-alpha/derivatives/dersnap-fixture-001/candidate-snapshots"
+        }
+      );
+    expect(freezeSuperseded).not.toBeNull();
+    expect(freezeSuperseded?.ok).toBe(false);
+    expect(freezeSuperseded?.status).toBe(409);
   });
 
   it("returns deterministic workspace path payload when opening a search hit", () => {

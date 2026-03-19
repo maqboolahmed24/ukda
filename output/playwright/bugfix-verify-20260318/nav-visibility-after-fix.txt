@@ -1,0 +1,18 @@
+--- 1366x900
+{
+  "navWidth": 798,
+  "navScrollWidth": 796,
+  "hiddenOrClippedCount": 0
+}
+--- 1440x900
+{
+  "navWidth": 872,
+  "navScrollWidth": 870,
+  "hiddenOrClippedCount": 0
+}
+--- 1920x1080
+{
+  "navWidth": 1352,
+  "navScrollWidth": 1350,
+  "hiddenOrClippedCount": 0
+}

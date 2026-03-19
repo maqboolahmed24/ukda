@@ -7,6 +7,7 @@ Prompt 03 extends the original skeleton with a minimal Helm chart and delivery w
 - Containerization notes remain under [`/infra/docker`](./docker).
 - Environment overlays remain under [`/infra/environments`](./environments).
 - Helm deployment skeleton lives under [`/infra/helm/ukde`](./helm/ukde).
+- Non-production synthetic seed packs live under [`/infra/seeds/nonprod`](./seeds/nonprod).
 - Model stack bootstrap files live under [`/infra/models`](./models).
 - Runtime definitions must preserve no-egress, internal-only model execution, and single-export-gateway posture.
 

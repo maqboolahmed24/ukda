@@ -1,3 +1,5 @@
+from datetime import UTC, datetime, timedelta
+
 from app.core.config import get_settings
 from app.telemetry.logging import sanitize_telemetry_payload
 from app.telemetry.service import TelemetryService
@@ -81,3 +83,110 @@ def test_timeline_filtering_and_pagination() -> None:
     assert isinstance(all_next, int)
     assert len(all_events_page_2) == 1
     assert all_next_2 is None
+
+
+def test_synthetic_threshold_breaches_flow_into_alert_state() -> None:
+    service = TelemetryService(settings=get_settings())
+    now = datetime.now(UTC)
+
+    for index in range(8):
+        service.record_job_claimed(enqueued_at=now - timedelta(minutes=15))
+        service.record_job_completed(completed_at=now - timedelta(seconds=index))
+    service.record_queue_depth(
+        queue_depth=500,
+        source="jobs-store",
+        detail="Synthetic queue depth breach.",
+    )
+
+    service.record_model_request(
+        deployment_unit="vlm-primary",
+        model_key="model-a",
+        duration_ms=7_000,
+        success=False,
+        fallback_invoked=True,
+        request_id="req-1",
+        trace_id="trace-1",
+    )
+    service.record_model_request(
+        deployment_unit="vlm-primary",
+        model_key="model-a",
+        duration_ms=6_000,
+        success=True,
+        fallback_invoked=True,
+        request_id="req-2",
+        trace_id="trace-2",
+    )
+    service.record_export_review_latency(
+        latency_ms=float(get_settings().export_request_sla_hours * 60 * 60 * 1000) * 2.0,
+        request_id="req-export",
+        trace_id="trace-export",
+    )
+    service.record_storage_operation(
+        operation="READ",
+        duration_ms=120,
+        success=False,
+        request_id="req-storage-read",
+        trace_id="trace-storage-read",
+        detail="synthetic-read-fail",
+    )
+    service.record_storage_operation(
+        operation="WRITE",
+        duration_ms=95,
+        success=False,
+        request_id="req-storage-write",
+        trace_id="trace-storage-write",
+        detail="synthetic-write-fail",
+    )
+
+    snapshot = service.snapshot()
+    slos = {item.key: item for item in service.evaluate_slos(snapshot)}
+
+    assert slos["queue_depth"].status == "BREACHING"
+    assert slos["queue_latency_p95"].status == "BREACHING"
+    assert slos["model_request_latency_p95"].status == "BREACHING"
+    assert slos["model_error_rate"].status == "BREACHING"
+    assert slos["model_fallback_invocation_rate"].status == "BREACHING"
+    assert slos["export_review_latency_p95"].status == "BREACHING"
+    assert slos["storage_error_rate"].status == "BREACHING"
+
+    open_alerts, _ = service.list_alerts(state="OPEN", cursor=0, page_size=200)
+    open_alert_keys = {item.key for item in open_alerts}
+    assert "alert_queue_depth" in open_alert_keys
+    assert "alert_queue_latency_p95" in open_alert_keys
+    assert "alert_model_request_latency_p95" in open_alert_keys
+    assert "alert_model_error_rate" in open_alert_keys
+    assert "alert_model_fallback_invocation_rate" in open_alert_keys
+    assert "alert_export_review_latency_p95" in open_alert_keys
+    assert "alert_storage_error_rate" in open_alert_keys
+
+
+def test_alert_state_transitions_to_ok_when_metrics_recover() -> None:
+    service = TelemetryService(settings=get_settings())
+    service.record_request(
+        route_template="/healthz",
+        method="GET",
+        status_code=500,
+        duration_ms=1_500,
+        request_id="req-breach",
+        trace_id="trace-breach",
+        project_id=None,
+    )
+    breach_alerts, _ = service.list_alerts(state="OPEN", cursor=0, page_size=200)
+    assert any(alert.key == "alert_request_error_rate" for alert in breach_alerts)
+
+    service.reset_for_test()
+    for index in range(10):
+        service.record_request(
+            route_template="/healthz",
+            method="GET",
+            status_code=200,
+            duration_ms=100 + index,
+            request_id=f"req-ok-{index}",
+            trace_id=f"trace-ok-{index}",
+            project_id=None,
+        )
+    recovered_alerts, _ = service.list_alerts(state="OK", cursor=0, page_size=200)
+    recovered_alert_keys = {alert.key for alert in recovered_alerts}
+
+    assert "alert_request_error_rate" in recovered_alert_keys
+    assert "alert_request_p95_latency" in recovered_alert_keys

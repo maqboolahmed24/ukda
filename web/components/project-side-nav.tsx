@@ -21,6 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "documents", label: "Documents", requiresMembership: true },
   { href: "search", label: "Search", requiresMembership: true },
   { href: "entities", label: "Entities", requiresMembership: true },
+  { href: "derivatives", label: "Derivatives", requiresMembership: true },
   { href: "jobs", label: "Jobs", requiresMembership: true },
   { href: "indexes", label: "Indexes", requiresMembership: true },
   {

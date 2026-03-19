@@ -1,0 +1,14 @@
+$ .venv/bin/python -m pytest api/tests/test_security_findings_service.py api/tests/test_security_routes.py api/tests/test_model_stack.py
+
+============================= test session starts ==============================
+platform darwin -- Python 3.14.0, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/test/Code/UKDA/api
+configfile: pyproject.toml
+plugins: anyio-4.12.1
+collected 20 items
+
+api/tests/test_security_findings_service.py ....                         [ 20%]
+api/tests/test_security_routes.py .........                              [ 65%]
+api/tests/test_model_stack.py .......                                    [100%]
+
+============================== 20 passed in 2.27s ==============================

@@ -1,0 +1,4 @@
+$ .venv/bin/python -m pytest -q api/tests/test_auth.py api/tests/test_projects_service.py
+
+.............                                                            [100%]
+13 passed in 2.26s

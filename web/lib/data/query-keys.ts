@@ -156,6 +156,23 @@ interface ProjectEntityFilter {
   q?: string;
 }
 
+interface ProjectDerivativeFilter {
+  scope?: "active" | "historical";
+}
+
+interface AdminIndexQualityQueryAuditsFilter {
+  cursor?: number;
+  limit?: number;
+  projectId: string;
+}
+
+interface AdminCapacityTestsFilter extends CursorPageFilter {}
+interface AdminRecoveryDrillsFilter extends CursorPageFilter {}
+interface AdminSecurityRiskAcceptancesFilter {
+  findingId?: string;
+  status?: "ACTIVE" | "EXPIRED" | "REVOKED";
+}
+
 function normalizeText(value?: string): string | null {
   if (!value) {
     return null;
@@ -169,6 +186,158 @@ function normalizeNumber(value?: number): number | null {
 }
 
 export const queryKeys = {
+  admin: {
+    capacityTestDetail: (testRunId: string) =>
+      [
+        "admin",
+        "capacity",
+        "detail",
+        { testRunId: normalizeText(testRunId) }
+      ] as const,
+    capacityTestResults: (testRunId: string) =>
+      [
+        "admin",
+        "capacity",
+        "results",
+        { testRunId: normalizeText(testRunId) }
+      ] as const,
+    capacityTests: (filters: AdminCapacityTestsFilter) =>
+      [
+        "admin",
+        "capacity",
+        "tests",
+        {
+          cursor: normalizeNumber(filters.cursor),
+          pageSize: normalizeNumber(filters.pageSize)
+        }
+      ] as const,
+    incidents: () => ["admin", "incidents", "list"] as const,
+    incidentDetail: (incidentId: string) =>
+      [
+        "admin",
+        "incidents",
+        "detail",
+        { incidentId: normalizeText(incidentId) }
+      ] as const,
+    incidentStatus: () => ["admin", "incidents", "status"] as const,
+    incidentTimeline: (incidentId: string) =>
+      [
+        "admin",
+        "incidents",
+        "timeline",
+        { incidentId: normalizeText(incidentId) }
+      ] as const,
+    runbooks: () => ["admin", "runbooks", "list"] as const,
+    runbookDetail: (runbookId: string) =>
+      [
+        "admin",
+        "runbooks",
+        "detail",
+        { runbookId: normalizeText(runbookId) }
+      ] as const,
+    runbookContent: (runbookId: string) =>
+      [
+        "admin",
+        "runbooks",
+        "content",
+        { runbookId: normalizeText(runbookId) }
+      ] as const,
+    recoveryDrillDetail: (drillId: string) =>
+      [
+        "admin",
+        "recovery",
+        "detail",
+        { drillId: normalizeText(drillId) }
+      ] as const,
+    recoveryDrillEvidence: (drillId: string) =>
+      [
+        "admin",
+        "recovery",
+        "evidence",
+        { drillId: normalizeText(drillId) }
+      ] as const,
+    recoveryDrillStatus: (drillId: string) =>
+      [
+        "admin",
+        "recovery",
+        "status",
+        { drillId: normalizeText(drillId) }
+      ] as const,
+    recoveryDrills: (filters: AdminRecoveryDrillsFilter) =>
+      [
+        "admin",
+        "recovery",
+        "drills",
+        {
+          cursor: normalizeNumber(filters.cursor),
+          pageSize: normalizeNumber(filters.pageSize)
+        }
+      ] as const,
+    recoveryStatus: () => ["admin", "recovery", "status-summary"] as const,
+    securityFindingDetail: (findingId: string) =>
+      [
+        "admin",
+        "security",
+        "finding-detail",
+        { findingId: normalizeText(findingId) }
+      ] as const,
+    securityFindings: () => ["admin", "security", "findings"] as const,
+    securityRiskAcceptanceDetail: (riskAcceptanceId: string) =>
+      [
+        "admin",
+        "security",
+        "risk-acceptance-detail",
+        { riskAcceptanceId: normalizeText(riskAcceptanceId) }
+      ] as const,
+    securityRiskAcceptanceEvents: (riskAcceptanceId: string) =>
+      [
+        "admin",
+        "security",
+        "risk-acceptance-events",
+        { riskAcceptanceId: normalizeText(riskAcceptanceId) }
+      ] as const,
+    securityRiskAcceptances: (filters: AdminSecurityRiskAcceptancesFilter) =>
+      [
+        "admin",
+        "security",
+        "risk-acceptances",
+        {
+          findingId: normalizeText(filters.findingId),
+          status: normalizeText(filters.status)
+        }
+      ] as const,
+    indexQualityDetail: (
+      indexKind: "SEARCH" | "ENTITY" | "DERIVATIVE",
+      indexId: string
+    ) =>
+      [
+        "admin",
+        "index-quality",
+        "detail",
+        {
+          indexId: normalizeText(indexId),
+          indexKind: normalizeText(indexKind)
+        }
+      ] as const,
+    indexQualityQueryAudits: (filters: AdminIndexQualityQueryAuditsFilter) =>
+      [
+        "admin",
+        "index-quality",
+        "query-audits",
+        {
+          cursor: normalizeNumber(filters.cursor),
+          limit: normalizeNumber(filters.limit),
+          projectId: normalizeText(filters.projectId)
+        }
+      ] as const,
+    indexQualitySummary: (projectId: string) =>
+      [
+        "admin",
+        "index-quality",
+        "summary",
+        { projectId: normalizeText(projectId) }
+      ] as const
+  },
   auth: {
     providers: () => ["auth", "providers"] as const,
     session: () => ["auth", "session"] as const
@@ -1548,6 +1717,7 @@ export const queryKeys = {
         }
       ] as const,
     exportStatus: () => ["operations", "export-status"] as const,
+    readiness: () => ["operations", "readiness"] as const,
     overview: () => ["operations", "overview"] as const,
     slos: () => ["operations", "slos"] as const,
     timelines: (
@@ -1635,6 +1805,22 @@ export const queryKeys = {
           limit: normalizeNumber(filters.limit)
         }
       ] as const,
+    derivatives: (projectId: string, filters: ProjectDerivativeFilter) =>
+      [
+        "projects",
+        projectId,
+        "derivatives",
+        "list",
+        {
+          scope: normalizeText(filters.scope)
+        }
+      ] as const,
+    derivativeDetail: (projectId: string, derivativeId: string) =>
+      ["projects", projectId, "derivatives", "detail", derivativeId] as const,
+    derivativeStatus: (projectId: string, derivativeId: string) =>
+      ["projects", projectId, "derivatives", "status", derivativeId] as const,
+    derivativePreview: (projectId: string, derivativeId: string) =>
+      ["projects", projectId, "derivatives", "preview", derivativeId] as const,
     indexesActive: (projectId: string) =>
       ["projects", projectId, "indexes", "active"] as const,
     indexesList: (

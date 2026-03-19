@@ -23,8 +23,20 @@ Platform governance routes currently implemented:
 - `/admin/audit`
 - `/admin/audit/:eventId`
 - `/admin/security`
+- `/admin/security/findings`
+- `/admin/security/findings/:findingId`
+- `/admin/security/risk-acceptances`
+- `/admin/security/risk-acceptances/:riskAcceptanceId`
+- `/admin/security/risk-acceptances/:riskAcceptanceId/events`
 - `/admin/operations`
+- `/admin/operations/readiness`
 - `/admin/operations/export-status`
+- `/admin/runbooks`
+- `/admin/runbooks/:runbookId`
+- `/admin/incidents`
+- `/admin/incidents/status`
+- `/admin/incidents/:incidentId`
+- `/admin/incidents/:incidentId/timeline`
 - `/admin/operations/slos`
 - `/admin/operations/alerts`
 - `/admin/operations/timelines`
@@ -62,6 +74,7 @@ Admin pages should use:
 - `PageHeader` with route intent and role/read-only context
 - dense filter/list/detail patterns for review workflows
 - URL-driven filters/cursors on list routes (`/admin/audit`, `/admin/operations/alerts`, `/admin/operations/timelines`)
+- evidence-first summaries on `/admin/operations/readiness` with explicit blocking details
 - explicit "not yet implemented" states for future signals instead of synthetic data
 
 ## Platform vs Project Boundary

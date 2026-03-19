@@ -1,0 +1,74 @@
+{
+  "url": "http://127.0.0.1:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/runs/redaction-run-fixture-002",
+  "title": "UKDE",
+  "viewport": {
+    "width": 1366,
+    "height": 900
+  },
+  "bodyOverflowX": 0,
+  "bodyOverflowY": 0,
+  "mainClass": "homeLayout homeLayout--privacy-run-detail",
+  "mainOverflowX": 0,
+  "mainOverflowY": 1637,
+  "topOverflowElements": [
+    {
+      "selector": "ul.authenticatedShellContextList",
+      "overflowX": 880,
+      "overflowY": 0,
+      "width": 778,
+      "height": 32
+    },
+    {
+      "selector": "nav.projectContextBar.ukde-panel",
+      "overflowX": 871,
+      "overflowY": 0,
+      "width": 798,
+      "height": 49
+    },
+    {
+      "selector": "div.projectContentHost",
+      "overflowX": 0,
+      "overflowY": 1637,
+      "width": 792,
+      "height": 517
+    },
+    {
+      "selector": "main.homeLayout.homeLayout--privacy-run-detail",
+      "overflowX": 0,
+      "overflowY": 1637,
+      "width": 792,
+      "height": 517
+    },
+    {
+      "selector": "div#ukde-shell-work-region.authenticatedShellWorkRegion",
+      "overflowX": 0,
+      "overflowY": 1636,
+      "width": 798,
+      "height": 674
+    },
+    {
+      "selector": "section.projectWorkspaceMain",
+      "overflowX": 0,
+      "overflowY": 1636,
+      "width": 792,
+      "height": 674
+    },
+    {
+      "selector": "h1",
+      "overflowX": 0,
+      "overflowY": 2,
+      "width": 622,
+      "height": 30
+    },
+    {
+      "selector": "p.authenticatedShellTitle",
+      "overflowX": 0,
+      "overflowY": 1,
+      "width": 1316,
+      "height": 24
+    }
+  ],
+  "clippedTextCandidates": [],
+  "totalButtons": 9,
+  "totalLinks": 33
+}

@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/projects/[projectId]/model-assignments/create/route": "app/(authenticated)/projects/[projectId]/model-assignments/create/route.js"
+}

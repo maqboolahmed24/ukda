@@ -1,0 +1,90 @@
+
+> ukde@ test:browser /Users/test/Code/UKDA
+> playwright test --project=chromium web/tests/browser/preprocessing-regression.spec.ts --grep 'preprocessing route visual baselines for overview, runs, quality, compare, and state variants'
+
+[2m[WebServer] [22m(node:61659) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:61660) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:61666) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:62016) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:62016) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:62028) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+[2m[WebServer] [22mRead more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+  ✘  1 [chromium] › web/tests/browser/preprocessing-regression.spec.ts:23:5 › preprocessing route visual baselines for overview, runs, quality, compare, and state variants @visual @preprocess (6.4s)
+
+
+  1) [chromium] › web/tests/browser/preprocessing-regression.spec.ts:23:5 › preprocessing route visual baselines for overview, runs, quality, compare, and state variants @visual @preprocess 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveScreenshot[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: locator('main.homeLayout')
+      Expected an image 768px by 516px, received 769px by 517px. 12050 pixels (ratio 0.04 of all image pixels) are different.
+
+      Snapshot: preprocessing-overview-pages.png
+
+    Call log:
+    [2m  - Expect "toHaveScreenshot(preprocessing-overview-pages.png)" with timeout 10000ms[22m
+    [2m    - verifying given screenshot expectation[22m
+    [2m  - waiting for locator('main.homeLayout')[22m
+    [2m    - locator resolved to <main class="homeLayout homeLayout--preprocessing">…</main>[22m
+    [2m  - taking element screenshot[22m
+    [2m    - disabled all CSS animations[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+    [2m  - attempting scroll into view action[22m
+    [2m    - waiting for element to be stable[22m
+    [2m  - Expected an image 768px by 516px, received 769px by 517px. 12050 pixels (ratio 0.04 of all image pixels) are different.[22m
+    [2m  - waiting 100ms before taking screenshot[22m
+    [2m  - waiting for locator('main.homeLayout')[22m
+    [2m    - locator resolved to <main class="homeLayout homeLayout--preprocessing">…</main>[22m
+    [2m  - taking element screenshot[22m
+    [2m    - disabled all CSS animations[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+    [2m  - attempting scroll into view action[22m
+    [2m    - waiting for element to be stable[22m
+    [2m  - captured a stable screenshot[22m
+    [2m  - Expected an image 768px by 516px, received 769px by 517px. 12050 pixels (ratio 0.04 of all image pixels) are different.[22m
+
+
+      36 |     "/preprocessing"
+      37 |   );
+    > 38 |   await expect(page.locator("main.homeLayout")).toHaveScreenshot(
+         |                                                 ^
+      39 |     "preprocessing-overview-pages.png"
+      40 |   );
+      41 |
+        at /Users/test/Code/UKDA/web/tests/browser/preprocessing-regression.spec.ts:38:49
+
+    attachment #1: preprocessing-overview-pages (image/png) ────────────────────────────────────────
+    Expected: web/tests/browser/preprocessing-regression.spec.ts-snapshots/preprocessing-overview-pages-chromium-darwin.png
+    Received: test-results/preprocessing-regression-p-d670f--variants-visual-preprocess-chromium/preprocessing-overview-pages-actual.png
+    Diff:     test-results/preprocessing-regression-p-d670f--variants-visual-preprocess-chromium/preprocessing-overview-pages-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/preprocessing-regression-p-d670f--variants-visual-preprocess-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/preprocessing-regression-p-d670f--variants-visual-preprocess-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/preprocessing-regression-p-d670f--variants-visual-preprocess-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/preprocessing-regression-p-d670f--variants-visual-preprocess-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › web/tests/browser/preprocessing-regression.spec.ts:23:5 › preprocessing route visual baselines for overview, runs, quality, compare, and state variants @visual @preprocess 
+ ELIFECYCLE  Command failed with exit code 1.

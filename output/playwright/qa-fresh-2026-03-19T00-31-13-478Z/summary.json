@@ -1,0 +1,8 @@
+{
+  "totalChecks": 48,
+  "navFailures": 24,
+  "withConsoleErrors": 2,
+  "clippedCases": 24,
+  "horizontalOverflowCases": 0,
+  "outDir": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z"
+}

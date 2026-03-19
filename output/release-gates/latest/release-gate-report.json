@@ -1,0 +1,86 @@
+{
+  "blockers": [],
+  "blockingFailureCount": 0,
+  "checkCount": 6,
+  "checks": [
+    {
+      "blockingPolicy": "BLOCKING",
+      "detail": "Promotion transition staging->prod is allowed.",
+      "evidence": [],
+      "id": "transition-policy",
+      "status": "PASS",
+      "title": "Promotion path policy"
+    },
+    {
+      "blockingPolicy": "BLOCKING",
+      "detail": "Profile values-prod.yaml is explicit and free of inline secret markers.",
+      "evidence": [
+        {
+          "label": "Profile file",
+          "path": "infra/helm/ukde/values-prod.yaml"
+        }
+      ],
+      "id": "deployment-profile",
+      "status": "PASS",
+      "title": "Environment deployment profile"
+    },
+    {
+      "blockingPolicy": "BLOCKING",
+      "detail": "Readiness report is PASS with zero blocking failures.",
+      "evidence": [
+        {
+          "label": "Readiness report",
+          "path": "output/readiness/latest/readiness-report.json"
+        }
+      ],
+      "id": "readiness-evidence",
+      "status": "PASS",
+      "title": "Cross-phase readiness evidence"
+    },
+    {
+      "blockingPolicy": "BLOCKING",
+      "detail": "Smoke report is PASS with zero failures.",
+      "evidence": [
+        {
+          "label": "Smoke report",
+          "path": "output/smoke/latest/release-smoke-report.json"
+        }
+      ],
+      "id": "smoke-suite",
+      "status": "PASS",
+      "title": "Release smoke-suite evidence"
+    },
+    {
+      "blockingPolicy": "WARNING",
+      "detail": "Target is prod; non-production seed refresh is intentionally skipped.",
+      "evidence": [],
+      "id": "nonprod-seed",
+      "status": "SKIP",
+      "title": "Non-production seed-data policy"
+    },
+    {
+      "blockingPolicy": "BLOCKING",
+      "detail": "Rollback runbook references are present.",
+      "evidence": [
+        {
+          "label": "Runbook",
+          "path": "docs/runbooks/deployment-runbook.md"
+        },
+        {
+          "label": "Runbook",
+          "path": "docs/runbooks/backup-restore-runbook.md"
+        }
+      ],
+      "id": "rollback-runbooks",
+      "status": "PASS",
+      "title": "Rollback runbook references"
+    }
+  ],
+  "detail": "Release gate checks passed.",
+  "generatedAt": "2026-03-18T23:48:10.219995+00:00",
+  "mode": "promote",
+  "overallStatus": "PASS",
+  "sourceEnvironment": "staging",
+  "targetEnvironment": "prod",
+  "warningFailureCount": 0
+}

@@ -9,12 +9,17 @@ import { requirePlatformRole } from "../../../../../lib/auth/session";
 import { listOperationsTimelines } from "../../../../../lib/operations";
 import {
   adminAuditPath,
+  adminCapacityTestsPath,
   adminOperationsAlertsPath,
   adminOperationsExportStatusPath,
   adminOperationsPath,
   adminOperationsSlosPath,
   adminOperationsTimelinesPath,
   adminPath,
+  adminRecoveryDrillDetailPath,
+  adminRecoveryDrillEvidencePath,
+  adminRecoveryDrillsPath,
+  adminRecoveryStatusPath,
   adminSecurityPath,
   withQuery
 } from "../../../../../lib/routes";
@@ -28,13 +33,89 @@ const TIMELINE_SCOPE_OPTIONS: Array<OperationsTimelineScope | "all"> = [
   "api",
   "auth",
   "audit",
+  "model",
   "readiness",
   "operations",
+  "storage",
   "worker",
   "telemetry"
 ];
 
 export const dynamic = "force-dynamic";
+
+function asTrimmedString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function resolveRecoveryEvent(event: {
+  message: string;
+  detailsJson: Record<string, unknown>;
+}) {
+  const details = event.detailsJson;
+  const drillId =
+    asTrimmedString(details.drill_id) ??
+    asTrimmedString(details.drillId) ??
+    asTrimmedString(details.recovery_drill_id);
+  const status = asTrimmedString(details.status) ?? "UNKNOWN";
+  const startedAt = asTrimmedString(details.started_at) ?? asTrimmedString(details.startedAt);
+  const finishedAt = asTrimmedString(details.finished_at) ?? asTrimmedString(details.finishedAt);
+  const summary =
+    asTrimmedString(details.summary) ??
+    asTrimmedString(details.summary_text) ??
+    asTrimmedString(details.summaryText) ??
+    event.message;
+  const evidenceStorageKey =
+    asTrimmedString(details.evidence_storage_key) ??
+    asTrimmedString(details.evidenceStorageKey);
+  const evidenceStorageSha256 =
+    asTrimmedString(details.evidence_storage_sha256) ??
+    asTrimmedString(details.evidenceStorageSha256);
+  const evidenceSummaryJson =
+    (typeof details.evidence_summary_json === "object" &&
+    details.evidence_summary_json !== null
+      ? details.evidence_summary_json
+      : null) ??
+    (typeof details.evidenceSummaryJson === "object" &&
+    details.evidenceSummaryJson !== null
+      ? details.evidenceSummaryJson
+      : null);
+
+  const isRecoveryMessage = event.message.toLowerCase().includes("recovery");
+  if (!drillId && !isRecoveryMessage) {
+    return null;
+  }
+
+  return {
+    drillId,
+    status,
+    startedAt,
+    finishedAt,
+    summary,
+    evidenceStorageKey,
+    evidenceStorageSha256,
+    evidenceSummaryJson
+  };
+}
+
+function statusTone(status: string): "success" | "warning" | "danger" | "neutral" | "info" {
+  if (status === "SUCCEEDED") {
+    return "success";
+  }
+  if (status === "FAILED") {
+    return "danger";
+  }
+  if (status === "CANCELED") {
+    return "neutral";
+  }
+  if (status === "RUNNING") {
+    return "info";
+  }
+  return "warning";
+}
 
 export default async function AdminOperationsTimelinesPage({
   searchParams
@@ -59,21 +140,34 @@ export default async function AdminOperationsTimelinesPage({
 
   const items =
     timelineResult.ok && timelineResult.data ? timelineResult.data.items : [];
+  const recoveryEvents = items
+    .map((event) => ({
+      event,
+      recovery: resolveRecoveryEvent(event)
+    }))
+    .filter(
+      (entry): entry is { event: (typeof items)[number]; recovery: NonNullable<ReturnType<typeof resolveRecoveryEvent>> } =>
+        entry.recovery !== null
+    );
   const nextCursor =
     timelineResult.ok && timelineResult.data
       ? timelineResult.data.nextCursor
       : null;
   const secondaryActions = roleMode.isAdmin
-    ? [
-        { href: adminOperationsPath, label: "Overview" },
-        { href: adminOperationsSlosPath, label: "SLOs" },
-        { href: adminOperationsAlertsPath, label: "Alerts" },
-        { href: adminOperationsExportStatusPath, label: "Export status" }
-      ]
-    : [
-        { href: adminPath, label: "Back to admin" },
-        { href: adminOperationsExportStatusPath, label: "Export status" },
-        { href: adminSecurityPath, label: "Security status" },
+      ? [
+          { href: adminCapacityTestsPath, label: "Capacity tests" },
+          { href: adminRecoveryStatusPath, label: "Recovery status" },
+          { href: adminRecoveryDrillsPath, label: "Recovery drills" },
+          { href: adminOperationsPath, label: "Overview" },
+          { href: adminOperationsSlosPath, label: "SLOs" },
+          { href: adminOperationsAlertsPath, label: "Alerts" },
+          { href: adminOperationsExportStatusPath, label: "Export status" }
+        ]
+      : [
+          { href: adminCapacityTestsPath, label: "Capacity tests" },
+          { href: adminPath, label: "Back to admin" },
+          { href: adminOperationsExportStatusPath, label: "Export status" },
+          { href: adminSecurityPath, label: "Security status" },
         { href: adminAuditPath, label: "Audit viewer" }
       ];
 
@@ -167,6 +261,66 @@ export default async function AdminOperationsTimelinesPage({
           </div>
         ) : null}
       </section>
+
+      {recoveryEvents.length > 0 ? (
+        <section className="sectionCard ukde-panel">
+          <h2>Recovery drill timeline evidence</h2>
+          <div className="ukde-stack-sm">
+            {recoveryEvents.map(({ event, recovery }) => (
+              <article className="statCard ukde-panel ukde-surface-raised" key={`recovery-${event.id}`}>
+                <div className="auditIntegrityRow">
+                  <h3>{recovery.drillId ?? `timeline-${event.id}`}</h3>
+                  <StatusChip tone={statusTone(recovery.status)}>{recovery.status}</StatusChip>
+                </div>
+                <p className="ukde-muted">{recovery.summary}</p>
+                <ul className="projectMetaList">
+                  <li>
+                    <span>Started</span>
+                    <strong>{recovery.startedAt ? new Date(recovery.startedAt).toISOString() : "n/a"}</strong>
+                  </li>
+                  <li>
+                    <span>Finished</span>
+                    <strong>{recovery.finishedAt ? new Date(recovery.finishedAt).toISOString() : "n/a"}</strong>
+                  </li>
+                  <li>
+                    <span>Timeline event</span>
+                    <strong>{event.id}</strong>
+                  </li>
+                </ul>
+                {roleMode.isAdmin && recovery.drillId ? (
+                  <div className="buttonRow">
+                    <Link
+                      className="secondaryButton"
+                      href={adminRecoveryDrillDetailPath(recovery.drillId)}
+                    >
+                      Open drill
+                    </Link>
+                    <Link
+                      className="secondaryButton"
+                      href={adminRecoveryDrillEvidencePath(recovery.drillId)}
+                    >
+                      Open evidence
+                    </Link>
+                  </div>
+                ) : null}
+                {roleMode.isAdmin && recovery.evidenceStorageKey ? (
+                  <p className="ukde-muted">
+                    Evidence key: {recovery.evidenceStorageKey}
+                    {recovery.evidenceStorageSha256
+                      ? ` (sha256 ${recovery.evidenceStorageSha256})`
+                      : ""}
+                  </p>
+                ) : null}
+                {roleMode.isAdmin && recovery.evidenceSummaryJson ? (
+                  <pre className="ukde-json-panel">
+                    {JSON.stringify(recovery.evidenceSummaryJson, null, 2)}
+                  </pre>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }

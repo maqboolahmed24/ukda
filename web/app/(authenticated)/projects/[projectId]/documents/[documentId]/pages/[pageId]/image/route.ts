@@ -7,7 +7,10 @@ import {
   isBrowserRegressionFixtureMode,
   resolveBrowserRegressionApiResult
 } from "../../../../../../../../../lib/data/browser-regression-fixtures";
-import { buildApiTraceHeaders, logServerDiagnostic } from "../../../../../../../../../lib/telemetry";
+import {
+  buildApiTraceHeaders,
+  logServerDiagnostic
+} from "../../../../../../../../../lib/telemetry";
 
 const IMAGE_VARIANTS = new Set([
   "full",
@@ -66,8 +69,7 @@ function resolveSecureHeaders(options: {
   vary?: string | null;
 }) {
   const headers: Record<string, string> = {
-    "Cache-Control":
-      options.cacheControl ?? PAGE_IMAGE_DEFAULT_CACHE_CONTROL,
+    "Cache-Control": options.cacheControl ?? PAGE_IMAGE_DEFAULT_CACHE_CONTROL,
     "Cross-Origin-Resource-Policy": "same-origin",
     Vary: options.vary ?? PAGE_IMAGE_DEFAULT_VARY,
     "X-Content-Type-Options": "nosniff"
@@ -84,7 +86,10 @@ function resolveSecureHeaders(options: {
 async function resolveErrorDetail(response: Response): Promise<string> {
   try {
     const payload = (await response.json()) as { detail?: string };
-    if (typeof payload.detail === "string" && payload.detail.trim().length > 0) {
+    if (
+      typeof payload.detail === "string" &&
+      payload.detail.trim().length > 0
+    ) {
       return payload.detail;
     }
   } catch {}
@@ -132,8 +137,7 @@ export async function GET(
       return NextResponse.json(
         {
           detail:
-            fixturePageResult?.detail ??
-            "Document page image request failed."
+            fixturePageResult?.detail ?? "Document page image request failed."
         },
         { status: fixturePageResult?.status ?? 503 }
       );
@@ -152,7 +156,9 @@ export async function GET(
       );
     }
 
-    const fixtureEtag = formatEtag(`fixture-${documentId}-${pageId}-${variant}`);
+    const fixtureEtag = formatEtag(
+      `fixture-${documentId}-${pageId}-${variant}`
+    );
     const fixtureHeaders = resolveSecureHeaders({
       cacheControl: PAGE_IMAGE_DEFAULT_CACHE_CONTROL,
       contentType: variant === "thumb" ? "image/jpeg" : "image/png",

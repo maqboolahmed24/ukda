@@ -10,33 +10,52 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.audit.dependencies import get_audit_request_context
 from app.audit.models import AuditRequestContext
 from app.audit.service import AuditService, get_audit_service
-from app.auth.dependencies import require_authenticated_user
+from app.auth.dependencies import require_authenticated_user, require_platform_roles
 from app.auth.models import SessionPrincipal
 from app.indexes.models import (
     ActiveProjectIndexesView,
     ControlledEntityRecord,
+    DerivativeIndexRowRecord,
+    DerivativeSnapshotRecord,
     IndexKind,
     IndexRecord,
     ProjectIndexProjectionRecord,
     SearchDocumentRecord,
+    SearchQueryAuditRecord,
 )
 from app.indexes.service import (
+    DerivativeCandidateFreezeResult,
     EntityOccurrenceLink,
+    IndexFreshnessSnapshot,
     IndexAccessDeniedError,
     IndexConflictError,
+    IndexQualityDetail,
+    IndexQualitySummaryItem,
     IndexNotFoundError,
     IndexService,
     IndexValidationError,
+    ProjectDerivativeDetailResult,
+    ProjectDerivativeListResult,
+    ProjectDerivativePreviewResult,
     ProjectEntityDetailResult,
     ProjectEntityListResult,
     ProjectEntityOccurrencesResult,
+    ProjectIndexQualitySummary,
     ProjectSearchResult,
+    ProjectSearchQueryAuditResult,
+    SearchActivationGateBlocker,
+    SearchActivationGateEvaluation,
+    SearchCoverageSummary,
     get_index_service,
 )
 from app.indexes.store import IndexStoreUnavailableError
 
 router = APIRouter(
     prefix="/projects/{project_id}",
+    dependencies=[Depends(require_authenticated_user)],
+)
+admin_router = APIRouter(
+    prefix="/admin/index-quality",
     dependencies=[Depends(require_authenticated_user)],
 )
 
@@ -275,6 +294,285 @@ class EntityOccurrencesResponse(BaseModel):
     next_cursor: int | None = Field(default=None, serialization_alias="nextCursor")
 
 
+class DerivativeSnapshotResponse(BaseModel):
+    id: str
+    project_id: str = Field(serialization_alias="projectId")
+    derivative_index_id: str = Field(serialization_alias="derivativeIndexId")
+    derivative_kind: str = Field(serialization_alias="derivativeKind")
+    source_snapshot_json: dict[str, object] = Field(
+        serialization_alias="sourceSnapshotJson"
+    )
+    policy_version_ref: str = Field(serialization_alias="policyVersionRef")
+    status: IndexStatusLiteral
+    supersedes_derivative_snapshot_id: str | None = Field(
+        default=None,
+        serialization_alias="supersedesDerivativeSnapshotId",
+    )
+    superseded_by_derivative_snapshot_id: str | None = Field(
+        default=None,
+        serialization_alias="supersededByDerivativeSnapshotId",
+    )
+    storage_key: str | None = Field(default=None, serialization_alias="storageKey")
+    snapshot_sha256: str | None = Field(default=None, serialization_alias="snapshotSha256")
+    candidate_snapshot_id: str | None = Field(
+        default=None,
+        serialization_alias="candidateSnapshotId",
+    )
+    created_by: str = Field(serialization_alias="createdBy")
+    created_at: datetime = Field(serialization_alias="createdAt")
+    started_at: datetime | None = Field(default=None, serialization_alias="startedAt")
+    finished_at: datetime | None = Field(default=None, serialization_alias="finishedAt")
+    failure_reason: str | None = Field(default=None, serialization_alias="failureReason")
+    is_active_generation: bool = Field(serialization_alias="isActiveGeneration")
+
+
+class DerivativeListResponse(BaseModel):
+    scope: Literal["active", "historical"]
+    active_derivative_index_id: str | None = Field(
+        default=None,
+        serialization_alias="activeDerivativeIndexId",
+    )
+    items: list[DerivativeSnapshotResponse]
+
+
+class DerivativeDetailResponse(BaseModel):
+    derivative: DerivativeSnapshotResponse
+
+
+class DerivativeStatusResponse(BaseModel):
+    derivative_id: str = Field(serialization_alias="derivativeId")
+    derivative_index_id: str = Field(serialization_alias="derivativeIndexId")
+    status: IndexStatusLiteral
+    started_at: datetime | None = Field(default=None, serialization_alias="startedAt")
+    finished_at: datetime | None = Field(default=None, serialization_alias="finishedAt")
+    failure_reason: str | None = Field(default=None, serialization_alias="failureReason")
+    candidate_snapshot_id: str | None = Field(
+        default=None,
+        serialization_alias="candidateSnapshotId",
+    )
+
+
+class DerivativePreviewRowResponse(BaseModel):
+    id: str
+    derivative_index_id: str = Field(serialization_alias="derivativeIndexId")
+    derivative_snapshot_id: str = Field(serialization_alias="derivativeSnapshotId")
+    derivative_kind: str = Field(serialization_alias="derivativeKind")
+    source_snapshot_json: dict[str, object] = Field(
+        serialization_alias="sourceSnapshotJson"
+    )
+    display_payload_json: dict[str, object] = Field(
+        serialization_alias="displayPayloadJson"
+    )
+    suppressed_fields_json: dict[str, object] = Field(
+        serialization_alias="suppressedFieldsJson"
+    )
+    created_at: datetime = Field(serialization_alias="createdAt")
+
+
+class DerivativePreviewResponse(BaseModel):
+    derivative_index_id: str = Field(serialization_alias="derivativeIndexId")
+    derivative_snapshot_id: str = Field(serialization_alias="derivativeSnapshotId")
+    derivative_kind: str = Field(serialization_alias="derivativeKind")
+    status: IndexStatusLiteral
+    rows: list[DerivativePreviewRowResponse]
+    preview_count: int = Field(serialization_alias="previewCount")
+
+
+class DerivativeCandidateSnapshotResponse(BaseModel):
+    id: str
+    candidate_kind: str = Field(serialization_alias="candidateKind")
+    source_phase: str = Field(serialization_alias="sourcePhase")
+    source_artifact_kind: str = Field(serialization_alias="sourceArtifactKind")
+    source_artifact_id: str = Field(serialization_alias="sourceArtifactId")
+    created_at: datetime = Field(serialization_alias="createdAt")
+
+
+class DerivativeCandidateSnapshotCreateResponse(BaseModel):
+    derivative_id: str = Field(serialization_alias="derivativeId")
+    derivative_index_id: str = Field(serialization_alias="derivativeIndexId")
+    candidate_snapshot_id: str = Field(serialization_alias="candidateSnapshotId")
+    created: bool
+    candidate: DerivativeCandidateSnapshotResponse
+
+
+IndexFreshnessStatusLiteral = Literal["current", "stale", "missing", "blocked"]
+SearchActivationBlockerCodeLiteral = Literal[
+    "RUN_NOT_SUCCEEDED",
+    "SEARCH_ELIGIBLE_INPUTS_MISSING",
+    "SEARCH_LINE_ONLY_EXCLUDED_INVALID",
+    "SEARCH_LINE_ONLY_FALLBACK_MARKER_MISSING",
+    "SEARCH_LINE_ONLY_FALLBACK_REASON_MISSING",
+    "TOKEN_ANCHOR_VALIDITY_MISSING",
+    "TOKEN_ANCHOR_VALIDITY_FAILED",
+    "TOKEN_GEOMETRY_COVERAGE_MISSING",
+    "TOKEN_GEOMETRY_COVERAGE_FAILED",
+]
+
+
+class SearchCoverageSummaryResponse(BaseModel):
+    eligible_input_count: int | None = Field(
+        default=None,
+        serialization_alias="eligibleInputCount",
+    )
+    token_anchor_valid_input_count: int | None = Field(
+        default=None,
+        serialization_alias="tokenAnchorValidInputCount",
+    )
+    token_geometry_covered_input_count: int | None = Field(
+        default=None,
+        serialization_alias="tokenGeometryCoveredInputCount",
+    )
+    historical_line_only_excluded_count: int = Field(
+        serialization_alias="historicalLineOnlyExcludedCount"
+    )
+    historical_line_only_fallback_allowed: bool = Field(
+        serialization_alias="historicalLineOnlyFallbackAllowed"
+    )
+    historical_line_only_fallback_reason: str | None = Field(
+        default=None,
+        serialization_alias="historicalLineOnlyFallbackReason",
+    )
+
+
+class SearchActivationGateBlockerResponse(BaseModel):
+    code: SearchActivationBlockerCodeLiteral
+    message: str
+    metadata: dict[str, object]
+
+
+class SearchActivationGateEvaluationResponse(BaseModel):
+    passed: bool
+    blockers: list[SearchActivationGateBlockerResponse]
+
+
+class IndexFreshnessSnapshotResponse(BaseModel):
+    status: IndexFreshnessStatusLiteral
+    active_index_id: str | None = Field(default=None, serialization_alias="activeIndexId")
+    active_version: int | None = Field(default=None, serialization_alias="activeVersion")
+    active_status: IndexStatusLiteral | None = Field(
+        default=None,
+        serialization_alias="activeStatus",
+    )
+    latest_succeeded_index_id: str | None = Field(
+        default=None,
+        serialization_alias="latestSucceededIndexId",
+    )
+    latest_succeeded_version: int | None = Field(
+        default=None,
+        serialization_alias="latestSucceededVersion",
+    )
+    latest_succeeded_finished_at: datetime | None = Field(
+        default=None,
+        serialization_alias="latestSucceededFinishedAt",
+    )
+    stale_generation_gap: int | None = Field(
+        default=None,
+        serialization_alias="staleGenerationGap",
+    )
+    reason: str | None = None
+    blocked_codes: list[str] = Field(serialization_alias="blockedCodes")
+
+
+class IndexQualitySummaryItemResponse(BaseModel):
+    kind: IndexKindLiteral
+    freshness: IndexFreshnessSnapshotResponse
+    search_coverage: SearchCoverageSummaryResponse | None = Field(
+        default=None,
+        serialization_alias="searchCoverage",
+    )
+    search_activation_blocker_count: int = Field(
+        serialization_alias="searchActivationBlockerCount"
+    )
+
+
+class IndexQualitySummaryResponse(BaseModel):
+    project_id: str = Field(serialization_alias="projectId")
+    projection_updated_at: datetime | None = Field(
+        default=None,
+        serialization_alias="projectionUpdatedAt",
+    )
+    items: list[IndexQualitySummaryItemResponse]
+
+
+class IndexQualityDetailResponse(BaseModel):
+    project_id: str = Field(serialization_alias="projectId")
+    kind: IndexKindLiteral
+    index: IndexResponse
+    freshness: IndexFreshnessSnapshotResponse
+    active_index_id: str | None = Field(default=None, serialization_alias="activeIndexId")
+    is_active_generation: bool = Field(serialization_alias="isActiveGeneration")
+    is_latest_succeeded_generation: bool = Field(
+        serialization_alias="isLatestSucceededGeneration"
+    )
+    rollback_eligible: bool = Field(serialization_alias="rollbackEligible")
+    search_coverage: SearchCoverageSummaryResponse | None = Field(
+        default=None,
+        serialization_alias="searchCoverage",
+    )
+    search_activation_evaluation: SearchActivationGateEvaluationResponse | None = Field(
+        default=None,
+        serialization_alias="searchActivationEvaluation",
+    )
+
+
+class SearchQueryAuditRecordResponse(BaseModel):
+    id: str
+    project_id: str = Field(serialization_alias="projectId")
+    actor_user_id: str = Field(serialization_alias="actorUserId")
+    search_index_id: str = Field(serialization_alias="searchIndexId")
+    query_sha256: str = Field(serialization_alias="querySha256")
+    query_text_key: str = Field(serialization_alias="queryTextKey")
+    filters_json: dict[str, object] = Field(serialization_alias="filtersJson")
+    result_count: int = Field(serialization_alias="resultCount")
+    created_at: datetime = Field(serialization_alias="createdAt")
+
+
+class SearchQueryAuditListResponse(BaseModel):
+    project_id: str = Field(serialization_alias="projectId")
+    items: list[SearchQueryAuditRecordResponse]
+    next_cursor: int | None = Field(default=None, serialization_alias="nextCursor")
+
+
+def _as_derivative_snapshot_response(
+    row: DerivativeSnapshotRecord,
+    *,
+    is_active_generation: bool,
+) -> DerivativeSnapshotResponse:
+    return DerivativeSnapshotResponse(
+        id=row.id,
+        project_id=row.project_id,
+        derivative_index_id=row.derivative_index_id,
+        derivative_kind=row.derivative_kind,
+        source_snapshot_json=row.source_snapshot_json,
+        policy_version_ref=row.policy_version_ref,
+        status=row.status,
+        supersedes_derivative_snapshot_id=row.supersedes_derivative_snapshot_id,
+        superseded_by_derivative_snapshot_id=row.superseded_by_derivative_snapshot_id,
+        storage_key=row.storage_key,
+        snapshot_sha256=row.snapshot_sha256,
+        candidate_snapshot_id=row.candidate_snapshot_id,
+        created_by=row.created_by,
+        created_at=row.created_at,
+        started_at=row.started_at,
+        finished_at=row.finished_at,
+        failure_reason=row.failure_reason,
+        is_active_generation=is_active_generation,
+    )
+
+
+def _as_derivative_row_response(row: DerivativeIndexRowRecord) -> DerivativePreviewRowResponse:
+    return DerivativePreviewRowResponse(
+        id=row.id,
+        derivative_index_id=row.derivative_index_id,
+        derivative_snapshot_id=row.derivative_snapshot_id,
+        derivative_kind=row.derivative_kind,
+        source_snapshot_json=row.source_snapshot_json,
+        display_payload_json=row.display_payload_json,
+        suppressed_fields_json=row.suppressed_fields_json,
+        created_at=row.created_at,
+    )
+
+
 def _as_index_response(row: IndexRecord) -> IndexResponse:
     return IndexResponse(
         id=row.id,
@@ -446,6 +744,132 @@ def _as_entity_occurrence_response(
         token_geometry_json=row.token_geometry_json,
         workspace_path=_workspace_path_from_occurrence(project_id, row),
     )
+
+
+def _as_search_coverage_response(
+    coverage: SearchCoverageSummary | None,
+) -> SearchCoverageSummaryResponse | None:
+    if coverage is None:
+        return None
+    return SearchCoverageSummaryResponse(
+        eligible_input_count=coverage.eligible_input_count,
+        token_anchor_valid_input_count=coverage.token_anchor_valid_input_count,
+        token_geometry_covered_input_count=coverage.token_geometry_covered_input_count,
+        historical_line_only_excluded_count=coverage.historical_line_only_excluded_count,
+        historical_line_only_fallback_allowed=coverage.historical_line_only_fallback_allowed,
+        historical_line_only_fallback_reason=coverage.historical_line_only_fallback_reason,
+    )
+
+
+def _as_search_activation_blocker_response(
+    blocker: SearchActivationGateBlocker,
+) -> SearchActivationGateBlockerResponse:
+    return SearchActivationGateBlockerResponse(
+        code=blocker.code,
+        message=blocker.message,
+        metadata=blocker.metadata,
+    )
+
+
+def _as_search_activation_evaluation_response(
+    evaluation: SearchActivationGateEvaluation | None,
+) -> SearchActivationGateEvaluationResponse | None:
+    if evaluation is None:
+        return None
+    return SearchActivationGateEvaluationResponse(
+        passed=evaluation.passed,
+        blockers=[
+            _as_search_activation_blocker_response(blocker)
+            for blocker in evaluation.blockers
+        ],
+    )
+
+
+def _as_freshness_response(
+    freshness: IndexFreshnessSnapshot,
+) -> IndexFreshnessSnapshotResponse:
+    return IndexFreshnessSnapshotResponse(
+        status=freshness.status,
+        active_index_id=freshness.active_index_id,
+        active_version=freshness.active_version,
+        active_status=freshness.active_status,
+        latest_succeeded_index_id=freshness.latest_succeeded_index_id,
+        latest_succeeded_version=freshness.latest_succeeded_version,
+        latest_succeeded_finished_at=freshness.latest_succeeded_finished_at,
+        stale_generation_gap=freshness.stale_generation_gap,
+        reason=freshness.reason,
+        blocked_codes=list(freshness.blocked_codes),
+    )
+
+
+def _as_index_quality_summary_item_response(
+    item: IndexQualitySummaryItem,
+) -> IndexQualitySummaryItemResponse:
+    return IndexQualitySummaryItemResponse(
+        kind=item.kind,
+        freshness=_as_freshness_response(item.freshness),
+        search_coverage=_as_search_coverage_response(item.search_coverage),
+        search_activation_blocker_count=item.search_activation_blocker_count,
+    )
+
+
+def _as_index_quality_summary_response(
+    summary: ProjectIndexQualitySummary,
+) -> IndexQualitySummaryResponse:
+    return IndexQualitySummaryResponse(
+        project_id=summary.project_id,
+        projection_updated_at=summary.projection_updated_at,
+        items=[
+            _as_index_quality_summary_item_response(item)
+            for item in summary.items
+        ],
+    )
+
+
+def _as_index_quality_detail_response(
+    detail: IndexQualityDetail,
+) -> IndexQualityDetailResponse:
+    return IndexQualityDetailResponse(
+        project_id=detail.project_id,
+        kind=detail.kind,
+        index=_as_index_response(detail.index),
+        freshness=_as_freshness_response(detail.freshness),
+        active_index_id=detail.active_index_id,
+        is_active_generation=detail.is_active_generation,
+        is_latest_succeeded_generation=detail.is_latest_succeeded_generation,
+        rollback_eligible=detail.rollback_eligible,
+        search_coverage=_as_search_coverage_response(detail.search_coverage),
+        search_activation_evaluation=_as_search_activation_evaluation_response(
+            detail.search_activation_evaluation
+        ),
+    )
+
+
+def _as_search_query_audit_record_response(
+    row: SearchQueryAuditRecord,
+) -> SearchQueryAuditRecordResponse:
+    return SearchQueryAuditRecordResponse(
+        id=row.id,
+        project_id=row.project_id,
+        actor_user_id=row.actor_user_id,
+        search_index_id=row.search_index_id,
+        query_sha256=row.query_sha256,
+        query_text_key=row.query_text_key,
+        filters_json=row.filters_json,
+        result_count=row.result_count,
+        created_at=row.created_at,
+    )
+
+
+def _parse_index_kind(value: str) -> IndexKind:
+    normalized = value.strip().upper()
+    if normalized == "SEARCH":
+        return "SEARCH"
+    if normalized == "ENTITY":
+        return "ENTITY"
+    if normalized == "DERIVATIVE":
+        return "DERIVATIVE"
+    raise IndexValidationError("indexKind must be one of SEARCH, ENTITY, DERIVATIVE.")
 
 
 def _read_roles() -> list[str]:
@@ -766,6 +1190,37 @@ def _activate_index(
             required_roles=["ADMIN"],
         )
 
+    if kind == "SEARCH":
+        audit_service.record_event_best_effort(
+            event_type="SEARCH_INDEX_ACTIVATED",
+            actor_user_id=current_user.user_id,
+            project_id=project_id,
+            object_type="search_index",
+            object_id=index.id,
+            metadata={
+                "route": request_context.route_template,
+                "index_id": index.id,
+                "status": index.status,
+                "version": index.version,
+            },
+            request_context=request_context,
+        )
+    elif kind == "DERIVATIVE":
+        audit_service.record_event_best_effort(
+            event_type="DERIVATIVE_INDEX_ACTIVATED",
+            actor_user_id=current_user.user_id,
+            project_id=project_id,
+            object_type="derivative_index",
+            object_id=index.id,
+            metadata={
+                "route": request_context.route_template,
+                "index_id": index.id,
+                "status": index.status,
+                "version": index.version,
+            },
+            request_context=request_context,
+        )
+
     return IndexActivateResponse(
         index=_as_index_response(index),
         projection=_as_projection_response(projection),
@@ -840,6 +1295,7 @@ def search_project_transcripts(
             page_number=page_number,
             cursor=cursor,
             limit=limit,
+            route=request_context.route_template,
         )
     except Exception as error:  # pragma: no cover
         _raise_http(
@@ -1044,6 +1500,266 @@ def list_project_entity_occurrences(
             for occurrence in result.items
         ],
         next_cursor=result.next_cursor,
+    )
+
+
+@router.get("/derivatives", response_model=DerivativeListResponse)
+def list_project_derivatives(
+    project_id: str,
+    scope: Literal["active", "historical"] = Query(default="active", alias="scope"),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    index_service: IndexService = Depends(get_index_service),
+) -> DerivativeListResponse:
+    try:
+        result: ProjectDerivativeListResult = index_service.list_project_derivatives(
+            current_user=current_user,
+            project_id=project_id,
+            scope=scope,
+        )
+    except Exception as error:  # pragma: no cover
+        _raise_http(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            request_context=request_context,
+            audit_service=audit_service,
+            required_roles=_read_roles(),
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="DERIVATIVE_LIST_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        metadata={
+            "route": request_context.route_template,
+            "scope": result.scope,
+            "active_derivative_index_id": result.active_derivative_index_id or "",
+            "returned_count": len(result.items),
+        },
+        request_context=request_context,
+    )
+    return DerivativeListResponse(
+        scope=result.scope,
+        active_derivative_index_id=result.active_derivative_index_id,
+        items=[
+            _as_derivative_snapshot_response(
+                item.snapshot,
+                is_active_generation=item.is_active_generation,
+            )
+            for item in result.items
+        ],
+    )
+
+
+@router.get("/derivatives/{derivative_id}", response_model=DerivativeDetailResponse)
+def get_project_derivative_detail(
+    project_id: str,
+    derivative_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    index_service: IndexService = Depends(get_index_service),
+) -> DerivativeDetailResponse:
+    try:
+        result: ProjectDerivativeDetailResult = index_service.get_project_derivative_detail(
+            current_user=current_user,
+            project_id=project_id,
+            derivative_id=derivative_id,
+        )
+    except Exception as error:  # pragma: no cover
+        _raise_http(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            request_context=request_context,
+            audit_service=audit_service,
+            required_roles=_read_roles(),
+        )
+    snapshot = result.snapshot
+    audit_service.record_event_best_effort(
+        event_type="DERIVATIVE_DETAIL_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="derivative_snapshot",
+        object_id=snapshot.id,
+        metadata={
+            "route": request_context.route_template,
+            "derivative_id": snapshot.id,
+            "derivative_index_id": snapshot.derivative_index_id,
+            "status": snapshot.status,
+        },
+        request_context=request_context,
+    )
+    return DerivativeDetailResponse(
+        derivative=_as_derivative_snapshot_response(
+            snapshot,
+            is_active_generation=False,
+        )
+    )
+
+
+@router.get("/derivatives/{derivative_id}/status", response_model=DerivativeStatusResponse)
+def get_project_derivative_status(
+    project_id: str,
+    derivative_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    index_service: IndexService = Depends(get_index_service),
+) -> DerivativeStatusResponse:
+    try:
+        result: ProjectDerivativeDetailResult = index_service.get_project_derivative_status(
+            current_user=current_user,
+            project_id=project_id,
+            derivative_id=derivative_id,
+        )
+    except Exception as error:  # pragma: no cover
+        _raise_http(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            request_context=request_context,
+            audit_service=audit_service,
+            required_roles=_read_roles(),
+        )
+    snapshot = result.snapshot
+    audit_service.record_event_best_effort(
+        event_type="DERIVATIVE_STATUS_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="derivative_snapshot",
+        object_id=snapshot.id,
+        metadata={
+            "route": request_context.route_template,
+            "derivative_id": snapshot.id,
+            "derivative_index_id": snapshot.derivative_index_id,
+            "status": snapshot.status,
+        },
+        request_context=request_context,
+    )
+    return DerivativeStatusResponse(
+        derivative_id=snapshot.id,
+        derivative_index_id=snapshot.derivative_index_id,
+        status=snapshot.status,
+        started_at=snapshot.started_at,
+        finished_at=snapshot.finished_at,
+        failure_reason=snapshot.failure_reason,
+        candidate_snapshot_id=snapshot.candidate_snapshot_id,
+    )
+
+
+@router.get("/derivatives/{derivative_id}/preview", response_model=DerivativePreviewResponse)
+def preview_project_derivative(
+    project_id: str,
+    derivative_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    index_service: IndexService = Depends(get_index_service),
+) -> DerivativePreviewResponse:
+    try:
+        result: ProjectDerivativePreviewResult = index_service.preview_project_derivative(
+            current_user=current_user,
+            project_id=project_id,
+            derivative_id=derivative_id,
+        )
+    except Exception as error:  # pragma: no cover
+        _raise_http(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            request_context=request_context,
+            audit_service=audit_service,
+            required_roles=_read_roles(),
+        )
+    snapshot = result.snapshot
+    rows = result.rows
+    audit_service.record_event_best_effort(
+        event_type="DERIVATIVE_PREVIEW_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="derivative_snapshot",
+        object_id=snapshot.id,
+        metadata={
+            "route": request_context.route_template,
+            "derivative_id": snapshot.id,
+            "derivative_index_id": snapshot.derivative_index_id,
+            "row_count": len(rows),
+            "status": snapshot.status,
+        },
+        request_context=request_context,
+    )
+    return DerivativePreviewResponse(
+        derivative_index_id=snapshot.derivative_index_id,
+        derivative_snapshot_id=snapshot.id,
+        derivative_kind=snapshot.derivative_kind,
+        status=snapshot.status,
+        rows=[_as_derivative_row_response(row) for row in rows],
+        preview_count=len(rows),
+    )
+
+
+@router.post(
+    "/derivatives/{derivative_id}/candidate-snapshots",
+    response_model=DerivativeCandidateSnapshotCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def freeze_project_derivative_candidate_snapshot(
+    project_id: str,
+    derivative_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    index_service: IndexService = Depends(get_index_service),
+) -> DerivativeCandidateSnapshotCreateResponse:
+    try:
+        result: DerivativeCandidateFreezeResult = (
+            index_service.freeze_derivative_candidate_snapshot(
+                current_user=current_user,
+                project_id=project_id,
+                derivative_id=derivative_id,
+            )
+        )
+    except Exception as error:  # pragma: no cover
+        _raise_http(
+            error=error,
+            current_user=current_user,
+            project_id=project_id,
+            request_context=request_context,
+            audit_service=audit_service,
+            required_roles=["PROJECT_LEAD", "REVIEWER", "ADMIN"],
+        )
+
+    audit_service.record_event_best_effort(
+        event_type="DERIVATIVE_CANDIDATE_SNAPSHOT_CREATED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        object_type="derivative_snapshot",
+        object_id=result.snapshot.id,
+        metadata={
+            "route": request_context.route_template,
+            "derivative_id": result.snapshot.id,
+            "derivative_index_id": result.snapshot.derivative_index_id,
+            "candidate_snapshot_id": result.candidate.id,
+            "created": result.created,
+        },
+        request_context=request_context,
+    )
+    return DerivativeCandidateSnapshotCreateResponse(
+        derivative_id=result.snapshot.id,
+        derivative_index_id=result.snapshot.derivative_index_id,
+        candidate_snapshot_id=result.candidate.id,
+        created=result.created,
+        candidate=DerivativeCandidateSnapshotResponse(
+            id=result.candidate.id,
+            candidate_kind=result.candidate.candidate_kind,
+            source_phase=result.candidate.source_phase,
+            source_artifact_kind=result.candidate.source_artifact_kind,
+            source_artifact_id=result.candidate.source_artifact_id,
+            created_at=result.candidate.created_at,
+        ),
     )
 
 
@@ -1466,3 +2182,163 @@ def activate_project_derivative_index(
         audit_service=audit_service,
         index_service=index_service,
     )
+
+
+def _raise_admin_http(error: Exception) -> None:
+    if isinstance(error, IndexAccessDeniedError):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(error)) from error
+    if isinstance(error, IndexNotFoundError):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    if isinstance(error, IndexConflictError):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    if isinstance(error, IndexValidationError):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(error),
+        ) from error
+    if isinstance(error, IndexStoreUnavailableError):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Index store is unavailable.",
+        ) from error
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Unexpected index quality failure.",
+    ) from error
+
+
+@admin_router.get(
+    "",
+    response_model=IndexQualitySummaryResponse,
+    dependencies=[Depends(require_platform_roles("ADMIN", "AUDITOR"))],
+)
+def get_admin_index_quality_summary(
+    project_id: str = Query(alias="projectId"),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    index_service: IndexService = Depends(get_index_service),
+) -> IndexQualitySummaryResponse:
+    try:
+        summary = index_service.get_index_quality_summary(
+            current_user=current_user,
+            project_id=project_id,
+        )
+    except Exception as error:  # pragma: no cover
+        _raise_admin_http(error)
+
+    blocked_count = len(
+        [item for item in summary.items if item.freshness.status == "blocked"]
+    )
+    stale_count = len([item for item in summary.items if item.freshness.status == "stale"])
+    audit_service.record_event_best_effort(
+        event_type="INDEX_QUALITY_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        metadata={
+            "route": request_context.route_template,
+            "project_id": project_id,
+            "item_count": len(summary.items),
+            "blocked_count": blocked_count,
+            "stale_count": stale_count,
+        },
+        request_context=request_context,
+    )
+    return _as_index_quality_summary_response(summary)
+
+
+@admin_router.get(
+    "/query-audits",
+    response_model=SearchQueryAuditListResponse,
+    dependencies=[Depends(require_platform_roles("ADMIN", "AUDITOR"))],
+)
+def list_admin_search_query_audits(
+    project_id: str = Query(alias="projectId"),
+    cursor: int = Query(default=0, ge=0, alias="cursor"),
+    limit: int = Query(default=50, ge=1, le=100, alias="limit"),
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    index_service: IndexService = Depends(get_index_service),
+) -> SearchQueryAuditListResponse:
+    try:
+        result: ProjectSearchQueryAuditResult = index_service.list_search_query_audits(
+            current_user=current_user,
+            project_id=project_id,
+            cursor=cursor,
+            limit=limit,
+        )
+    except Exception as error:  # pragma: no cover
+        _raise_admin_http(error)
+
+    audit_service.record_event_best_effort(
+        event_type="INDEX_QUALITY_QUERY_AUDITS_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=project_id,
+        metadata={
+            "route": request_context.route_template,
+            "project_id": project_id,
+            "cursor": cursor,
+            "limit": limit,
+            "returned_count": len(result.items),
+        },
+        request_context=request_context,
+    )
+    return SearchQueryAuditListResponse(
+        project_id=result.project_id,
+        items=[
+            _as_search_query_audit_record_response(item)
+            for item in result.items
+        ],
+        next_cursor=result.next_cursor,
+    )
+
+
+@admin_router.get(
+    "/{index_kind}/{index_id}",
+    response_model=IndexQualityDetailResponse,
+    dependencies=[Depends(require_platform_roles("ADMIN", "AUDITOR"))],
+)
+def get_admin_index_quality_detail(
+    index_kind: str,
+    index_id: str,
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    audit_service: AuditService = Depends(get_audit_service),
+    index_service: IndexService = Depends(get_index_service),
+) -> IndexQualityDetailResponse:
+    try:
+        kind = _parse_index_kind(index_kind)
+        detail = index_service.get_index_quality_detail(
+            current_user=current_user,
+            kind=kind,
+            index_id=index_id,
+        )
+    except Exception as error:  # pragma: no cover
+        _raise_admin_http(error)
+
+    blocker_count = (
+        len(detail.search_activation_evaluation.blockers)
+        if detail.search_activation_evaluation is not None
+        else 0
+    )
+    audit_service.record_event_best_effort(
+        event_type="INDEX_QUALITY_DETAIL_VIEWED",
+        actor_user_id=current_user.user_id,
+        project_id=detail.project_id,
+        object_type="index_quality_detail",
+        object_id=detail.index.id,
+        metadata={
+            "route": request_context.route_template,
+            "project_id": detail.project_id,
+            "index_id": detail.index.id,
+            "index_kind": detail.kind,
+            "freshness_status": detail.freshness.status,
+            "is_active_generation": detail.is_active_generation,
+            "is_latest_succeeded_generation": detail.is_latest_succeeded_generation,
+            "rollback_eligible": detail.rollback_eligible,
+            "search_activation_blocker_count": blocker_count,
+        },
+        request_context=request_context,
+    )
+    return _as_index_quality_detail_response(detail)

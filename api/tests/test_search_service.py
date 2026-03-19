@@ -127,6 +127,7 @@ class FakeSearchStore:
                 created_at=now,
             ),
         ]
+        self.query_audits: list[dict[str, object]] = []
 
     def get_projection(self, *, project_id: str) -> ProjectIndexProjectionRecord | None:
         if project_id != "project-1":
@@ -176,6 +177,40 @@ class FakeSearchStore:
                 if row.search_index_id == search_index_id and row.id == search_document_id
             ),
             None,
+        )
+
+    def store_search_query_text(self, *, project_id: str, query_text: str) -> str:
+        key = f"query:{project_id}:{len(self.query_audits) + 1}"
+        self.query_audits.append(
+            {
+                "project_id": project_id,
+                "query_text": query_text,
+                "query_text_key": key,
+            }
+        )
+        return key
+
+    def append_search_query_audit(
+        self,
+        *,
+        project_id: str,
+        actor_user_id: str,
+        search_index_id: str,
+        query_sha256: str,
+        query_text_key: str,
+        filters_json: dict[str, object],
+        result_count: int,
+    ) -> None:
+        self.query_audits.append(
+            {
+                "project_id": project_id,
+                "actor_user_id": actor_user_id,
+                "search_index_id": search_index_id,
+                "query_sha256": query_sha256,
+                "query_text_key": query_text_key,
+                "filters_json": filters_json,
+                "result_count": result_count,
+            }
         )
 
 

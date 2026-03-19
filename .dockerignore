@@ -9,8 +9,6 @@ node_modules
 **/__pycache__
 **/*.pyc
 **/*.egg-info
-api
-workers
 docs
 infra
 phases

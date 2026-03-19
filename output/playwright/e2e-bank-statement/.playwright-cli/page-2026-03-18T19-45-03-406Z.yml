@@ -1,0 +1,146 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e14]:
+    - link "Skip to work region" [ref=e15] [cursor=pointer]:
+      - /url: "#ukde-shell-work-region"
+    - banner [ref=e16]:
+      - generic [ref=e17]:
+        - paragraph [ref=e18]: Queue Drain E2E Mar 18
+        - paragraph [ref=e19]: Project workspace
+      - generic [ref=e20]:
+        - group "Global command controls" [ref=e21]:
+          - button "Project switcher" [ref=e22] [cursor=pointer]
+          - button "Command bar" [ref=e23] [cursor=pointer]:
+            - generic [ref=e24]: Command bar
+            - generic [ref=e25]: ⌘/Ctrl + K
+        - 'button "Theme preference: System (Light). Click to switch to Dark." [ref=e27] [cursor=pointer]':
+          - img [ref=e29]
+        - link "Help" [ref=e31] [cursor=pointer]:
+          - /url: /health
+        - generic [ref=e32]:
+          - generic [ref=e33]: Env Development
+          - generic [ref=e34]: Tier Controlled
+          - generic [ref=e35]: Compact
+        - group [ref=e36]:
+          - generic "User menu" [ref=e37] [cursor=pointer]: Dev Admin
+    - generic [ref=e38]:
+      - complementary [ref=e39]:
+        - paragraph [ref=e40]: Navigation
+        - navigation "Primary navigation" [ref=e41]:
+          - list [ref=e42]:
+            - listitem [ref=e43]:
+              - link [ref=e44] [cursor=pointer]:
+                - /url: /projects
+                - generic [ref=e45]: P
+            - listitem [ref=e46]:
+              - link [ref=e47] [cursor=pointer]:
+                - /url: /activity
+                - generic [ref=e48]: M
+            - listitem [ref=e49]:
+              - link [ref=e50] [cursor=pointer]:
+                - /url: /approved-models
+                - generic [ref=e51]: A
+            - listitem [ref=e52]:
+              - link [ref=e53] [cursor=pointer]:
+                - /url: /admin
+                - generic [ref=e54]: A
+      - generic [ref=e55]:
+        - navigation "Project context" [ref=e56]:
+          - list [ref=e57]:
+            - listitem [ref=e58]:
+              - link "Overview" [ref=e59] [cursor=pointer]:
+                - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/overview
+            - listitem [ref=e60]:
+              - link "Documents" [ref=e61] [cursor=pointer]:
+                - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/documents
+            - listitem [ref=e62]:
+              - link "Model assignments" [ref=e63] [cursor=pointer]:
+                - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/model-assignments
+            - listitem [ref=e64]:
+              - link "Search" [ref=e65] [cursor=pointer]:
+                - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/search
+            - listitem [ref=e66]:
+              - link "Entities" [ref=e67] [cursor=pointer]:
+                - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/entities
+            - listitem [ref=e68]:
+              - link "Indexes" [ref=e69] [cursor=pointer]:
+                - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/indexes
+            - listitem [ref=e70]:
+              - link "Policies" [ref=e71] [cursor=pointer]:
+                - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/policies
+            - listitem [ref=e72]:
+              - link "Pseudonym registry" [ref=e73] [cursor=pointer]:
+                - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/pseudonym-registry
+            - listitem [ref=e74]:
+              - link "Jobs" [ref=e75] [cursor=pointer]:
+                - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/jobs
+            - listitem [ref=e76]:
+              - link "Export candidates" [ref=e77] [cursor=pointer]:
+                - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/export-candidates
+            - listitem [ref=e78]:
+              - link "Export requests" [ref=e79] [cursor=pointer]:
+                - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/export-requests
+            - listitem [ref=e80]:
+              - link "Export review" [ref=e81] [cursor=pointer]:
+                - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/export-review
+            - listitem [ref=e82]:
+              - link "Activity" [ref=e83] [cursor=pointer]:
+                - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/activity
+            - listitem [ref=e84]:
+              - link "Settings" [ref=e85] [cursor=pointer]:
+                - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/settings
+        - generic [ref=e87]:
+          - generic [ref=e88]:
+            - generic [ref=e89]:
+              - paragraph [ref=e90]: Projects / Queue Drain E2E Mar 18
+              - heading "Import" [level=1] [ref=e91]
+              - paragraph [ref=e92]: Dedicated route for controlled ingest and scan validation workflows.
+              - navigation "Breadcrumb" [ref=e94]:
+                - list [ref=e95]:
+                  - listitem [ref=e96]:
+                    - link "Projects" [ref=e97] [cursor=pointer]:
+                      - /url: /projects
+                    - text: /
+                  - listitem [ref=e98]:
+                    - link "Queue Drain E2E Mar 18" [ref=e99] [cursor=pointer]:
+                      - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/overview
+                    - text: /
+                  - listitem [ref=e100]:
+                    - link "Documents" [ref=e101] [cursor=pointer]:
+                      - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/documents
+                    - text: /
+                  - listitem [ref=e102]:
+                    - generic [ref=e103]: Import
+            - link "Back to documents" [ref=e105] [cursor=pointer]:
+              - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/documents
+          - main [ref=e107]:
+            - generic [ref=e108]:
+              - paragraph [ref=e109]: Documents / Import
+              - heading "Controlled upload pipeline" [level=2] [ref=e110]
+              - paragraph [ref=e111]: Upload is validated server-side, stored in controlled raw storage, scanned, and then handed to document processing.
+            - generic [ref=e112]:
+              - heading "Workflow steps" [level=3] [ref=e113]
+              - list "Import steps" [ref=e114]:
+                - listitem [ref=e115]: 1. Select files
+                - listitem [ref=e116]: 2. Confirm metadata and destination project
+                - listitem [ref=e117]: 3. Upload and status
+            - generic [ref=e127]:
+              - 'heading "Step 2: Confirm upload metadata" [level=3] [ref=e128]'
+              - list [ref=e129]:
+                - listitem [ref=e130]:
+                  - generic [ref=e131]: Project
+                  - strong [ref=e132]: 95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491
+                - listitem [ref=e133]:
+                  - generic [ref=e134]: Filename
+                  - strong [ref=e135]: UK_Bank_statement_20-Jan-26.pdf
+                - listitem [ref=e136]:
+                  - generic [ref=e137]: Size
+                  - strong [ref=e138]: 344.5 KB
+                - listitem [ref=e139]:
+                  - generic [ref=e140]: Client type
+                  - strong [ref=e141]: application/pdf
+              - generic [ref=e142]:
+                - button "Back" [ref=e143] [cursor=pointer]
+                - link "Cancel" [ref=e144] [cursor=pointer]:
+                  - /url: /projects/95e7ffe1-7dd6-447e-a5bb-0cb6f69b8491/documents
+                - button "Upload" [ref=e145] [cursor=pointer]
+  - alert [ref=e13]

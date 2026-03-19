@@ -42,6 +42,41 @@ def _resolve_job_service() -> Any | None:
         return None
 
 
+def _run_risk_acceptance_expiry_pass() -> tuple[int, str | None]:
+    try:
+        from app.audit.service import get_audit_service  # type: ignore
+        from app.security.findings.service import get_security_findings_service  # type: ignore
+    except Exception:
+        return (0, None)
+    try:
+        security_service = get_security_findings_service()
+        expired = security_service.evaluate_due_acceptances_system()
+    except Exception as error:
+        return (0, error.__class__.__name__)
+
+    if not expired:
+        return (0, None)
+
+    try:
+        audit_service = get_audit_service()
+    except Exception:
+        return (len(expired), "audit_unavailable")
+
+    for record in expired:
+        audit_service.record_event_best_effort(
+            event_type="RISK_ACCEPTANCE_EXPIRED",
+            actor_user_id="system-risk-expiry-evaluator",
+            metadata={
+                "route": "worker://risk-acceptance-expiry-evaluator",
+                "risk_acceptance_id": record.id,
+                "status": record.status,
+                "expires_at": record.expires_at.isoformat() if record.expires_at else None,
+            },
+            request_id="worker-risk-acceptance-expiry",
+        )
+    return (len(expired), None)
+
+
 def _queue_depth_status(resolved: WorkerConfig) -> tuple[int | None, str, str]:
     job_service = _resolve_job_service()
     if job_service is None:
@@ -84,6 +119,12 @@ def status_payload(config: WorkerConfig | None = None) -> dict[str, object]:
 
 def run_once(config: WorkerConfig | None = None) -> WorkerRunResult:
     resolved = config or WorkerConfig.from_env()
+    expired_count, expiry_error = _run_risk_acceptance_expiry_pass()
+    expiry_detail = (
+        f"Expired {expired_count} risk acceptance(s)."
+        if expiry_error is None
+        else f"Risk-acceptance expiry evaluator failed ({expiry_error})."
+    )
     job_service = _resolve_job_service()
     now = datetime.now(UTC).isoformat()
     if job_service is None:
@@ -93,7 +134,10 @@ def run_once(config: WorkerConfig | None = None) -> WorkerRunResult:
             action="unavailable",
             job_id=None,
             status=None,
-            detail="Jobs service is unavailable; run within the full UKDE workspace environment.",
+            detail=(
+                "Jobs service is unavailable; run within the full UKDE workspace "
+                f"environment. {expiry_detail}"
+            ),
             occurred_at=now,
         )
 
@@ -109,7 +153,7 @@ def run_once(config: WorkerConfig | None = None) -> WorkerRunResult:
             action="error",
             job_id=None,
             status=None,
-            detail=f"Worker execution failed: {error.__class__.__name__}",
+            detail=f"Worker execution failed: {error.__class__.__name__}. {expiry_detail}",
             occurred_at=now,
         )
 
@@ -120,7 +164,7 @@ def run_once(config: WorkerConfig | None = None) -> WorkerRunResult:
             action="idle",
             job_id=None,
             status=None,
-            detail="No queued jobs were available.",
+            detail=f"No queued jobs were available. {expiry_detail}",
             occurred_at=now,
         )
 
@@ -130,7 +174,7 @@ def run_once(config: WorkerConfig | None = None) -> WorkerRunResult:
         action="processed",
         job_id=result.id,
         status=result.status,
-        detail=f"Processed {result.type} attempt {result.attempt_number}.",
+        detail=f"Processed {result.type} attempt {result.attempt_number}. {expiry_detail}",
         occurred_at=now,
     )
 

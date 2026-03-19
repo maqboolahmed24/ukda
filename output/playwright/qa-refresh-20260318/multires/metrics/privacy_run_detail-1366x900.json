@@ -1,0 +1,53 @@
+{
+  "url": "http://127.0.0.1:3100/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/runs/redaction-run-fixture-002",
+  "title": "UKDE",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "bodyOverflowX": 0,
+  "bodyOverflowY": 0,
+  "mainClass": "homeLayout homeLayout--privacy-run-detail",
+  "mainOverflowX": 0,
+  "mainOverflowY": 1964,
+  "pageOverflowY": 0,
+  "topOverflowElements": [
+    {
+      "selector": "div.projectContentHost",
+      "overflowX": 0,
+      "overflowY": 1964,
+      "width": 706,
+      "height": 256
+    },
+    {
+      "selector": "main.homeLayout.homeLayout--privacy-run-detail",
+      "overflowX": 0,
+      "overflowY": 1964,
+      "width": 706,
+      "height": 256
+    },
+    {
+      "selector": "div#ukde-shell-work-region.authenticatedShellWorkRegion",
+      "overflowX": 0,
+      "overflowY": 1963,
+      "width": 712,
+      "height": 429
+    },
+    {
+      "selector": "section.projectWorkspaceMain",
+      "overflowX": 0,
+      "overflowY": 1963,
+      "width": 706,
+      "height": 429
+    },
+    {
+      "selector": "h1",
+      "overflowX": 0,
+      "overflowY": 1,
+      "width": 536,
+      "height": 30
+    }
+  ],
+  "totalButtons": 9,
+  "totalLinks": 33
+}

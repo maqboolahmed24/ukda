@@ -1,0 +1,1950 @@
+{
+  "results": [
+    {
+      "viewport": {
+        "label": "desktop-1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": {
+        "id": "projects",
+        "path": "/projects"
+      },
+      "target": "http://localhost:3111/projects",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects",
+        "readyState": "complete",
+        "viewportWidth": 1920,
+        "viewportHeight": 1080,
+        "docScrollWidth": 1920,
+        "docScrollHeight": 1080,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 1,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 230,
+          "y": 85,
+          "width": 1403,
+          "height": 598
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/projects-desktop-1920x1080.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": {
+        "id": "overview",
+        "path": "/projects/project-fixture-alpha/overview"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/overview",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/overview",
+        "readyState": "complete",
+        "viewportWidth": 1920,
+        "viewportHeight": 1080,
+        "docScrollWidth": 1920,
+        "docScrollHeight": 1080,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 1,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          }
+        ],
+        "main": null
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/overview-desktop-1920x1080.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": {
+        "id": "search",
+        "path": "/projects/project-fixture-alpha/search?q=adams"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/search?q=adams",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/search?q=adams",
+        "readyState": "complete",
+        "viewportWidth": 1920,
+        "viewportHeight": 1080,
+        "docScrollWidth": 1920,
+        "docScrollHeight": 1080,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 1,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 230,
+          "y": 283,
+          "width": 1403,
+          "height": 730
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/search-desktop-1920x1080.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": {
+        "id": "viewer_ready",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1",
+        "readyState": "interactive",
+        "viewportWidth": 1920,
+        "viewportHeight": 1080,
+        "docScrollWidth": 1920,
+        "docScrollHeight": 1080,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 1,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 230,
+          "y": 283,
+          "width": 1403,
+          "height": 776
+        }
+      },
+      "consoleErrors": [
+        "A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\n%s%s https://react.dev/link/hydration-mismatch \n\n  ...\n    <HTTPAccessFallbackErrorBoundary pathname=\"/projects/...\" notFound={<SegmentViewNode>} forbidden={undefined} ...>\n      <RedirectBoundary>\n        <RedirectErrorBoundary router={{...}}>\n          <InnerLayoutRouter url=\"/projects/...\" tree={[...]} params={{}} cacheNode={{...}} segmentPath={[...]} ...>\n            <SegmentViewNode type=\"layout\" pagePath=\"(authentic...\">\n              <SegmentTrieNode>\n              <AuthenticatedLayout>\n                <AuthenticatedShell csrfToken=\"fixture-cs...\" projects={[...]} session={{...}}>\n                  <div className=\"authentica...\" data-shell-state=\"Expanded\">\n                    <a>\n                    <header className=\"authentica...\">\n                      <div>\n                      <div className=\"authentica...\">\n                        <GlobalCommandBar>\n                        <ThemePreferenceControl>\n                        <LinkComponent>\n                        <div>\n                        <details className=\"workspaceMenu\">\n                          <summary>\n                          <div className=\"workspaceM...\">\n                            <span>\n                            <span>\n                            <LinkComponent>\n                            <form action=\"/auth/logout\" method=\"post\">\n                              <input\n                                name=\"csrf_token\"\n                                type=\"hidden\"\n                                value=\"fixture-csrf-token\"\n-                               style={{caret-color:\"transparent\"}}\n                              >\n                              ...\n                    ...\n          ...\n",
+        "A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\n%s%s https://react.dev/link/hydration-mismatch \n\n  ...\n    <LoadingBoundary name=\"viewer/\" loading={[...]}>\n      <Suspense name=\"viewer/\" fallback={<Fragment>}>\n        <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>\n          <RedirectBoundary>\n            <RedirectErrorBoundary router={{...}}>\n              <InnerLayoutRouter url=\"/projects/...\" tree={[...]} params={{...}} cacheNode={{rsc:<Fragment>, ...}} ...>\n                <SegmentViewNode type=\"page\" pagePath=\"(authentic...\">\n                  <SegmentTrieNode>\n                  <ProjectDocumentViewerPage>\n                    <main className=\"homeLayout\">\n                      <ProjectDocumentViewerShell activePreprocessRunId=\"pre-run-fi...\" currentPage={1} ...>\n                        <section className=\"documentVi...\">\n                          <div className=\"documentVi...\">\n                            <Toolbar>\n                            <div>\n                            <form className=\"documentVi...\" onSubmit={function onSubmit}>\n                              <label>\n                              <input\n                                className=\"ukde-field\"\n                                id=\"viewer-page-jump\"\n                                inputMode=\"numeric\"\n                                max={2}\n                                min={1}\n                                onChange={function onChange}\n                                type=\"number\"\n                                value=\"1\"\n-                               style={{caret-color:\"transparent\"}}\n                              >\n                              ...\n                            ...\n                          ...\n                        ...\n                ...\n              ...\n"
+      ],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/viewer_ready-desktop-1920x1080.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": {
+        "id": "preprocess_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002",
+        "readyState": "complete",
+        "viewportWidth": 1920,
+        "viewportHeight": 1080,
+        "docScrollWidth": 1920,
+        "docScrollHeight": 1080,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 1,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 230,
+          "y": 283,
+          "width": 1403,
+          "height": 748
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/preprocess_compare-desktop-1920x1080.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": {
+        "id": "layout_workspace",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002",
+        "readyState": "complete",
+        "viewportWidth": 1920,
+        "viewportHeight": 1080,
+        "docScrollWidth": 1920,
+        "docScrollHeight": 1080,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 1,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 230,
+          "y": 283,
+          "width": 1403,
+          "height": 776
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/layout_workspace-desktop-1920x1080.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": {
+        "id": "privacy_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002",
+        "readyState": "complete",
+        "viewportWidth": 1920,
+        "viewportHeight": 1080,
+        "docScrollWidth": 1920,
+        "docScrollHeight": 1080,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 1,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 487,
+          "y": 283,
+          "width": 888,
+          "height": 776
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/privacy_compare-desktop-1920x1080.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1920x1080",
+        "width": 1920,
+        "height": 1080
+      },
+      "route": {
+        "id": "design_system",
+        "path": "/admin/design-system"
+      },
+      "target": "http://localhost:3111/admin/design-system",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/admin/design-system",
+        "readyState": "complete",
+        "viewportWidth": 1920,
+        "viewportHeight": 1080,
+        "docScrollWidth": 1920,
+        "docScrollHeight": 1080,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 1,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 564,
+          "y": 85,
+          "width": 1066,
+          "height": 6351
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/design_system-desktop-1920x1080.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1536x864",
+        "width": 1536,
+        "height": 864
+      },
+      "route": {
+        "id": "projects",
+        "path": "/projects"
+      },
+      "target": "http://localhost:3111/projects",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects",
+        "readyState": "complete",
+        "viewportWidth": 1536,
+        "viewportHeight": 864,
+        "docScrollWidth": 1536,
+        "docScrollHeight": 864,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 1,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 230,
+          "y": 85,
+          "width": 1019,
+          "height": 598
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/projects-desktop-1536x864.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1536x864",
+        "width": 1536,
+        "height": 864
+      },
+      "route": {
+        "id": "overview",
+        "path": "/projects/project-fixture-alpha/overview"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/overview",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/overview",
+        "readyState": "complete",
+        "viewportWidth": 1536,
+        "viewportHeight": 864,
+        "docScrollWidth": 1536,
+        "docScrollHeight": 864,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 4,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          },
+          {
+            "text": "Export review",
+            "href": "/projects/project-fixture-alpha/export-review",
+            "top": 93.375,
+            "left": 1477.578125,
+            "right": 1589.203125,
+            "width": 111.625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Activity",
+            "href": "/projects/project-fixture-alpha/activity",
+            "top": 93.375,
+            "left": 1594.234375,
+            "right": 1665.015625,
+            "width": 70.78125,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Settings",
+            "href": "/projects/project-fixture-alpha/settings",
+            "top": 93.375,
+            "left": 1670.046875,
+            "right": 1746.296875,
+            "width": 76.25,
+            "height": 28.796875,
+            "visible": true
+          }
+        ],
+        "main": null
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/overview-desktop-1536x864.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1536x864",
+        "width": 1536,
+        "height": 864
+      },
+      "route": {
+        "id": "search",
+        "path": "/projects/project-fixture-alpha/search?q=adams"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/search?q=adams",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/search?q=adams",
+        "readyState": "complete",
+        "viewportWidth": 1536,
+        "viewportHeight": 864,
+        "docScrollWidth": 1536,
+        "docScrollHeight": 864,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 4,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          },
+          {
+            "text": "Export review",
+            "href": "/projects/project-fixture-alpha/export-review",
+            "top": 93.375,
+            "left": 1477.578125,
+            "right": 1589.203125,
+            "width": 111.625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Activity",
+            "href": "/projects/project-fixture-alpha/activity",
+            "top": 93.375,
+            "left": 1594.234375,
+            "right": 1665.015625,
+            "width": 70.78125,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Settings",
+            "href": "/projects/project-fixture-alpha/settings",
+            "top": 93.375,
+            "left": 1670.046875,
+            "right": 1746.296875,
+            "width": 76.25,
+            "height": 28.796875,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 230,
+          "y": 283,
+          "width": 1019,
+          "height": 560
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/search-desktop-1536x864.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1536x864",
+        "width": 1536,
+        "height": 864
+      },
+      "route": {
+        "id": "viewer_ready",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1",
+        "readyState": "complete",
+        "viewportWidth": 1536,
+        "viewportHeight": 864,
+        "docScrollWidth": 1536,
+        "docScrollHeight": 864,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 4,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          },
+          {
+            "text": "Export review",
+            "href": "/projects/project-fixture-alpha/export-review",
+            "top": 93.375,
+            "left": 1477.578125,
+            "right": 1589.203125,
+            "width": 111.625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Activity",
+            "href": "/projects/project-fixture-alpha/activity",
+            "top": 93.375,
+            "left": 1594.234375,
+            "right": 1665.015625,
+            "width": 70.78125,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Settings",
+            "href": "/projects/project-fixture-alpha/settings",
+            "top": 93.375,
+            "left": 1670.046875,
+            "right": 1746.296875,
+            "width": 76.25,
+            "height": 28.796875,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 230,
+          "y": 283,
+          "width": 1019,
+          "height": 560
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/viewer_ready-desktop-1536x864.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1536x864",
+        "width": 1536,
+        "height": 864
+      },
+      "route": {
+        "id": "preprocess_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002",
+        "readyState": "complete",
+        "viewportWidth": 1536,
+        "viewportHeight": 864,
+        "docScrollWidth": 1536,
+        "docScrollHeight": 864,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 4,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          },
+          {
+            "text": "Export review",
+            "href": "/projects/project-fixture-alpha/export-review",
+            "top": 93.375,
+            "left": 1477.578125,
+            "right": 1589.203125,
+            "width": 111.625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Activity",
+            "href": "/projects/project-fixture-alpha/activity",
+            "top": 93.375,
+            "left": 1594.234375,
+            "right": 1665.015625,
+            "width": 70.78125,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Settings",
+            "href": "/projects/project-fixture-alpha/settings",
+            "top": 93.375,
+            "left": 1670.046875,
+            "right": 1746.296875,
+            "width": 76.25,
+            "height": 28.796875,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 230,
+          "y": 283,
+          "width": 1019,
+          "height": 560
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/preprocess_compare-desktop-1536x864.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1536x864",
+        "width": 1536,
+        "height": 864
+      },
+      "route": {
+        "id": "layout_workspace",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002",
+        "readyState": "complete",
+        "viewportWidth": 1536,
+        "viewportHeight": 864,
+        "docScrollWidth": 1536,
+        "docScrollHeight": 864,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 4,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          },
+          {
+            "text": "Export review",
+            "href": "/projects/project-fixture-alpha/export-review",
+            "top": 93.375,
+            "left": 1477.578125,
+            "right": 1589.203125,
+            "width": 111.625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Activity",
+            "href": "/projects/project-fixture-alpha/activity",
+            "top": 93.375,
+            "left": 1594.234375,
+            "right": 1665.015625,
+            "width": 70.78125,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Settings",
+            "href": "/projects/project-fixture-alpha/settings",
+            "top": 93.375,
+            "left": 1670.046875,
+            "right": 1746.296875,
+            "width": 76.25,
+            "height": 28.796875,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 230,
+          "y": 283,
+          "width": 1019,
+          "height": 560
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/layout_workspace-desktop-1536x864.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1536x864",
+        "width": 1536,
+        "height": 864
+      },
+      "route": {
+        "id": "privacy_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002",
+        "readyState": "complete",
+        "viewportWidth": 1536,
+        "viewportHeight": 864,
+        "docScrollWidth": 1536,
+        "docScrollHeight": 864,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 4,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          },
+          {
+            "text": "Export review",
+            "href": "/projects/project-fixture-alpha/export-review",
+            "top": 93.375,
+            "left": 1477.578125,
+            "right": 1589.203125,
+            "width": 111.625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Activity",
+            "href": "/projects/project-fixture-alpha/activity",
+            "top": 93.375,
+            "left": 1594.234375,
+            "right": 1665.015625,
+            "width": 70.78125,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Settings",
+            "href": "/projects/project-fixture-alpha/settings",
+            "top": 93.375,
+            "left": 1670.046875,
+            "right": 1746.296875,
+            "width": 76.25,
+            "height": 28.796875,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 295,
+          "y": 283,
+          "width": 888,
+          "height": 560
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/privacy_compare-desktop-1536x864.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1536x864",
+        "width": 1536,
+        "height": 864
+      },
+      "route": {
+        "id": "design_system",
+        "path": "/admin/design-system"
+      },
+      "target": "http://localhost:3111/admin/design-system",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/admin/design-system",
+        "readyState": "complete",
+        "viewportWidth": 1536,
+        "viewportHeight": 864,
+        "docScrollWidth": 1536,
+        "docScrollHeight": 864,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 1,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 564,
+          "y": 85,
+          "width": 682,
+          "height": 6747
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/design_system-desktop-1536x864.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": {
+        "id": "projects",
+        "path": "/projects"
+      },
+      "target": "http://localhost:3111/projects",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects",
+        "readyState": "complete",
+        "viewportWidth": 1440,
+        "viewportHeight": 900,
+        "docScrollWidth": 1440,
+        "docScrollHeight": 900,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 1,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 230,
+          "y": 85,
+          "width": 923,
+          "height": 615
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/projects-desktop-1440x900.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": {
+        "id": "overview",
+        "path": "/projects/project-fixture-alpha/overview"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/overview",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/overview",
+        "readyState": "complete",
+        "viewportWidth": 1440,
+        "viewportHeight": 900,
+        "docScrollWidth": 1440,
+        "docScrollHeight": 900,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 5,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          },
+          {
+            "text": "Export requests",
+            "href": "/projects/project-fixture-alpha/export-requests",
+            "top": 93.375,
+            "left": 1346.390625,
+            "right": 1472.546875,
+            "width": 126.15625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Export review",
+            "href": "/projects/project-fixture-alpha/export-review",
+            "top": 93.375,
+            "left": 1477.578125,
+            "right": 1589.203125,
+            "width": 111.625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Activity",
+            "href": "/projects/project-fixture-alpha/activity",
+            "top": 93.375,
+            "left": 1594.234375,
+            "right": 1665.015625,
+            "width": 70.78125,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Settings",
+            "href": "/projects/project-fixture-alpha/settings",
+            "top": 93.375,
+            "left": 1670.046875,
+            "right": 1746.296875,
+            "width": 76.25,
+            "height": 28.796875,
+            "visible": true
+          }
+        ],
+        "main": null
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/overview-desktop-1440x900.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": {
+        "id": "search",
+        "path": "/projects/project-fixture-alpha/search?q=adams"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/search?q=adams",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/search?q=adams",
+        "readyState": "complete",
+        "viewportWidth": 1440,
+        "viewportHeight": 900,
+        "docScrollWidth": 1440,
+        "docScrollHeight": 900,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 5,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          },
+          {
+            "text": "Export requests",
+            "href": "/projects/project-fixture-alpha/export-requests",
+            "top": 93.375,
+            "left": 1346.390625,
+            "right": 1472.546875,
+            "width": 126.15625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Export review",
+            "href": "/projects/project-fixture-alpha/export-review",
+            "top": 93.375,
+            "left": 1477.578125,
+            "right": 1589.203125,
+            "width": 111.625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Activity",
+            "href": "/projects/project-fixture-alpha/activity",
+            "top": 93.375,
+            "left": 1594.234375,
+            "right": 1665.015625,
+            "width": 70.78125,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Settings",
+            "href": "/projects/project-fixture-alpha/settings",
+            "top": 93.375,
+            "left": 1670.046875,
+            "right": 1746.296875,
+            "width": 76.25,
+            "height": 28.796875,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 230,
+          "y": 283,
+          "width": 923,
+          "height": 596
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/search-desktop-1440x900.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": {
+        "id": "viewer_ready",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1",
+        "readyState": "interactive",
+        "viewportWidth": 1440,
+        "viewportHeight": 900,
+        "docScrollWidth": 1440,
+        "docScrollHeight": 900,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 5,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          },
+          {
+            "text": "Export requests",
+            "href": "/projects/project-fixture-alpha/export-requests",
+            "top": 93.375,
+            "left": 1346.390625,
+            "right": 1472.546875,
+            "width": 126.15625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Export review",
+            "href": "/projects/project-fixture-alpha/export-review",
+            "top": 93.375,
+            "left": 1477.578125,
+            "right": 1589.203125,
+            "width": 111.625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Activity",
+            "href": "/projects/project-fixture-alpha/activity",
+            "top": 93.375,
+            "left": 1594.234375,
+            "right": 1665.015625,
+            "width": 70.78125,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Settings",
+            "href": "/projects/project-fixture-alpha/settings",
+            "top": 93.375,
+            "left": 1670.046875,
+            "right": 1746.296875,
+            "width": 76.25,
+            "height": 28.796875,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 230,
+          "y": 283,
+          "width": 923,
+          "height": 596
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/viewer_ready-desktop-1440x900.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": {
+        "id": "preprocess_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002",
+        "readyState": "complete",
+        "viewportWidth": 1440,
+        "viewportHeight": 900,
+        "docScrollWidth": 1440,
+        "docScrollHeight": 900,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 5,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          },
+          {
+            "text": "Export requests",
+            "href": "/projects/project-fixture-alpha/export-requests",
+            "top": 93.375,
+            "left": 1346.390625,
+            "right": 1472.546875,
+            "width": 126.15625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Export review",
+            "href": "/projects/project-fixture-alpha/export-review",
+            "top": 93.375,
+            "left": 1477.578125,
+            "right": 1589.203125,
+            "width": 111.625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Activity",
+            "href": "/projects/project-fixture-alpha/activity",
+            "top": 93.375,
+            "left": 1594.234375,
+            "right": 1665.015625,
+            "width": 70.78125,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Settings",
+            "href": "/projects/project-fixture-alpha/settings",
+            "top": 93.375,
+            "left": 1670.046875,
+            "right": 1746.296875,
+            "width": 76.25,
+            "height": 28.796875,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 230,
+          "y": 283,
+          "width": 923,
+          "height": 596
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/preprocess_compare-desktop-1440x900.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": {
+        "id": "layout_workspace",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002",
+        "readyState": "complete",
+        "viewportWidth": 1440,
+        "viewportHeight": 900,
+        "docScrollWidth": 1440,
+        "docScrollHeight": 900,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 5,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          },
+          {
+            "text": "Export requests",
+            "href": "/projects/project-fixture-alpha/export-requests",
+            "top": 93.375,
+            "left": 1346.390625,
+            "right": 1472.546875,
+            "width": 126.15625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Export review",
+            "href": "/projects/project-fixture-alpha/export-review",
+            "top": 93.375,
+            "left": 1477.578125,
+            "right": 1589.203125,
+            "width": 111.625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Activity",
+            "href": "/projects/project-fixture-alpha/activity",
+            "top": 93.375,
+            "left": 1594.234375,
+            "right": 1665.015625,
+            "width": 70.78125,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Settings",
+            "href": "/projects/project-fixture-alpha/settings",
+            "top": 93.375,
+            "left": 1670.046875,
+            "right": 1746.296875,
+            "width": 76.25,
+            "height": 28.796875,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 230,
+          "y": 300,
+          "width": 923,
+          "height": 579
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/layout_workspace-desktop-1440x900.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": {
+        "id": "privacy_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002",
+        "readyState": "complete",
+        "viewportWidth": 1440,
+        "viewportHeight": 900,
+        "docScrollWidth": 1440,
+        "docScrollHeight": 900,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 5,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          },
+          {
+            "text": "Export requests",
+            "href": "/projects/project-fixture-alpha/export-requests",
+            "top": 93.375,
+            "left": 1346.390625,
+            "right": 1472.546875,
+            "width": 126.15625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Export review",
+            "href": "/projects/project-fixture-alpha/export-review",
+            "top": 93.375,
+            "left": 1477.578125,
+            "right": 1589.203125,
+            "width": 111.625,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Activity",
+            "href": "/projects/project-fixture-alpha/activity",
+            "top": 93.375,
+            "left": 1594.234375,
+            "right": 1665.015625,
+            "width": 70.78125,
+            "height": 28.796875,
+            "visible": true
+          },
+          {
+            "text": "Settings",
+            "href": "/projects/project-fixture-alpha/settings",
+            "top": 93.375,
+            "left": 1670.046875,
+            "right": 1746.296875,
+            "width": 76.25,
+            "height": 28.796875,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 247,
+          "y": 283,
+          "width": 888,
+          "height": 596
+        }
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/privacy_compare-desktop-1440x900.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1440x900",
+        "width": 1440,
+        "height": 900
+      },
+      "route": {
+        "id": "design_system",
+        "path": "/admin/design-system"
+      },
+      "target": "http://localhost:3111/admin/design-system",
+      "status": "ok",
+      "navError": null,
+      "metrics": {
+        "url": "http://localhost:3111/admin/design-system",
+        "readyState": "complete",
+        "viewportWidth": 1440,
+        "viewportHeight": 900,
+        "docScrollWidth": 1440,
+        "docScrollHeight": 900,
+        "horizontalOverflow": 0,
+        "verticalOverflow": 0,
+        "topNavClippedCount": 1,
+        "topNavClippedLinks": [
+          {
+            "text": "Skip to work region",
+            "href": "#ukde-shell-work-region",
+            "top": 10.796875,
+            "left": -999,
+            "right": -846.890625,
+            "width": 152.109375,
+            "height": 31.9375,
+            "visible": true
+          }
+        ],
+        "main": {
+          "x": 564,
+          "y": 85,
+          "width": 586,
+          "height": 7094
+        }
+      },
+      "consoleErrors": [
+        "Failed to load resource: net::ERR_INCOMPLETE_CHUNKED_ENCODING"
+      ],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/design_system-desktop-1440x900.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": {
+        "id": "projects",
+        "path": "/projects"
+      },
+      "target": "http://localhost:3111/projects",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/projects-desktop-1366x768.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": {
+        "id": "overview",
+        "path": "/projects/project-fixture-alpha/overview"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/overview",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/overview\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/overview\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/overview-desktop-1366x768.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": {
+        "id": "search",
+        "path": "/projects/project-fixture-alpha/search?q=adams"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/search?q=adams",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/search?q=adams\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/search?q=adams\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/search-desktop-1366x768.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": {
+        "id": "viewer_ready",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/viewer_ready-desktop-1366x768.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": {
+        "id": "preprocess_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/preprocess_compare-desktop-1366x768.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": {
+        "id": "layout_workspace",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/layout_workspace-desktop-1366x768.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": {
+        "id": "privacy_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/privacy_compare-desktop-1366x768.png"
+    },
+    {
+      "viewport": {
+        "label": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "route": {
+        "id": "design_system",
+        "path": "/admin/design-system"
+      },
+      "target": "http://localhost:3111/admin/design-system",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/admin/design-system\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/admin/design-system\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/design_system-desktop-1366x768.png"
+    },
+    {
+      "viewport": {
+        "label": "tablet-1024x1366",
+        "width": 1024,
+        "height": 1366
+      },
+      "route": {
+        "id": "projects",
+        "path": "/projects"
+      },
+      "target": "http://localhost:3111/projects",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/projects-tablet-1024x1366.png"
+    },
+    {
+      "viewport": {
+        "label": "tablet-1024x1366",
+        "width": 1024,
+        "height": 1366
+      },
+      "route": {
+        "id": "overview",
+        "path": "/projects/project-fixture-alpha/overview"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/overview",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/overview\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/overview\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/overview-tablet-1024x1366.png"
+    },
+    {
+      "viewport": {
+        "label": "tablet-1024x1366",
+        "width": 1024,
+        "height": 1366
+      },
+      "route": {
+        "id": "search",
+        "path": "/projects/project-fixture-alpha/search?q=adams"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/search?q=adams",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/search?q=adams\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/search?q=adams\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/search-tablet-1024x1366.png"
+    },
+    {
+      "viewport": {
+        "label": "tablet-1024x1366",
+        "width": 1024,
+        "height": 1366
+      },
+      "route": {
+        "id": "viewer_ready",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/viewer_ready-tablet-1024x1366.png"
+    },
+    {
+      "viewport": {
+        "label": "tablet-1024x1366",
+        "width": 1024,
+        "height": 1366
+      },
+      "route": {
+        "id": "preprocess_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/preprocess_compare-tablet-1024x1366.png"
+    },
+    {
+      "viewport": {
+        "label": "tablet-1024x1366",
+        "width": 1024,
+        "height": 1366
+      },
+      "route": {
+        "id": "layout_workspace",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/layout_workspace-tablet-1024x1366.png"
+    },
+    {
+      "viewport": {
+        "label": "tablet-1024x1366",
+        "width": 1024,
+        "height": 1366
+      },
+      "route": {
+        "id": "privacy_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/privacy_compare-tablet-1024x1366.png"
+    },
+    {
+      "viewport": {
+        "label": "tablet-1024x1366",
+        "width": 1024,
+        "height": 1366
+      },
+      "route": {
+        "id": "design_system",
+        "path": "/admin/design-system"
+      },
+      "target": "http://localhost:3111/admin/design-system",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/admin/design-system\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/admin/design-system\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/design_system-tablet-1024x1366.png"
+    },
+    {
+      "viewport": {
+        "label": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": {
+        "id": "projects",
+        "path": "/projects"
+      },
+      "target": "http://localhost:3111/projects",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/projects-mobile-390x844.png"
+    },
+    {
+      "viewport": {
+        "label": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": {
+        "id": "overview",
+        "path": "/projects/project-fixture-alpha/overview"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/overview",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/overview\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/overview\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/overview-mobile-390x844.png"
+    },
+    {
+      "viewport": {
+        "label": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": {
+        "id": "search",
+        "path": "/projects/project-fixture-alpha/search?q=adams"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/search?q=adams",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/search?q=adams\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/search?q=adams\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/search-mobile-390x844.png"
+    },
+    {
+      "viewport": {
+        "label": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": {
+        "id": "viewer_ready",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/viewer_ready-mobile-390x844.png"
+    },
+    {
+      "viewport": {
+        "label": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": {
+        "id": "preprocess_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/preprocess_compare-mobile-390x844.png"
+    },
+    {
+      "viewport": {
+        "label": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": {
+        "id": "layout_workspace",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/layout_workspace-mobile-390x844.png"
+    },
+    {
+      "viewport": {
+        "label": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": {
+        "id": "privacy_compare",
+        "path": "/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002"
+      },
+      "target": "http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/privacy_compare-mobile-390x844.png"
+    },
+    {
+      "viewport": {
+        "label": "mobile-390x844",
+        "width": 390,
+        "height": 844
+      },
+      "route": {
+        "id": "design_system",
+        "path": "/admin/design-system"
+      },
+      "target": "http://localhost:3111/admin/design-system",
+      "status": "navigation_failed",
+      "navError": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3111/admin/design-system\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3111/admin/design-system\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "metrics": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-2026-03-19T00-31-13-478Z/screens/design_system-mobile-390x844.png"
+    }
+  ]
+}

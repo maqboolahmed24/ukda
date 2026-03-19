@@ -1,6 +1,7 @@
 import {
   adminAuditPath,
   adminPath,
+  projectAnchorPath,
   projectDocumentIngestStatusPath,
   projectDocumentLayoutPath,
   projectDocumentLayoutRunPath,
@@ -13,7 +14,11 @@ import {
   projectDocumentTranscriptionRunPath,
   projectDocumentTranscriptionWorkspacePath,
   projectDocumentViewerPath,
+  projectDerivativePath,
   projectDerivativeIndexPath,
+  projectDerivativePreviewPath,
+  projectDerivativesPath,
+  projectDerivativeStatusPath,
   projectDocumentsPath,
   projectEntityIndexPath,
   projectIndexesPath,
@@ -41,6 +46,7 @@ export type MutationRuleId =
   | "indexes.rebuild"
   | "indexes.cancel"
   | "indexes.activate"
+  | "derivatives.freeze"
   | "jobs.enqueue"
   | "jobs.retry"
   | "jobs.cancel";
@@ -133,6 +139,12 @@ export const mutationRules: Record<MutationRuleId, MutationRule> = {
   "indexes.activate": {
     description:
       "Index activation only updates explicit project index projections and requires authoritative backend confirmation.",
+    optimism: "none",
+    routeScope: "project"
+  },
+  "derivatives.freeze": {
+    description:
+      "Derivative candidate freeze mints immutable Phase 8 candidate snapshots and must revalidate derivative and export candidate surfaces from server truth.",
     optimism: "none",
     routeScope: "project"
   },
@@ -341,6 +353,31 @@ export function resolveMutationRevalidationPaths(
       }
       return [...shared, projectDerivativeIndexPath(context.projectId, context.indexId)];
     }
+    case "derivatives.freeze":
+      return context.projectId && context.indexId
+        ? [
+            projectDerivativesPath(context.projectId),
+            projectDerivativePath(context.projectId, context.indexId),
+            projectDerivativeStatusPath(context.projectId, context.indexId),
+            projectDerivativePreviewPath(context.projectId, context.indexId),
+            `${projectDerivativePath(context.projectId, context.indexId)}?status=frozen`,
+            `${projectDerivativePath(context.projectId, context.indexId)}?status=freeze-existing`,
+            `${projectDerivativePath(context.projectId, context.indexId)}?status=freeze-failed`,
+            `${projectDerivativePreviewPath(context.projectId, context.indexId)}?status=frozen`,
+            `${projectDerivativePreviewPath(context.projectId, context.indexId)}?status=freeze-existing`,
+            `${projectDerivativePreviewPath(context.projectId, context.indexId)}?status=freeze-failed`,
+            `${projectDerivativesPath(context.projectId)}?scope=active`,
+            `${projectDerivativesPath(context.projectId)}?scope=historical`,
+            `${projectAnchorPath(context.projectId)}/export-candidates`
+          ]
+        : context.projectId
+          ? [
+              projectDerivativesPath(context.projectId),
+              `${projectDerivativesPath(context.projectId)}?scope=active`,
+              `${projectDerivativesPath(context.projectId)}?scope=historical`,
+              `${projectAnchorPath(context.projectId)}/export-candidates`
+            ]
+          : [];
     case "jobs.retry":
     case "jobs.cancel":
       return context.projectId && context.jobId

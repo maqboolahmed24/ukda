@@ -3,35 +3,163 @@ name: Deploy Environments
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: Target environment
+      mode:
+        description: Promotion mode
         required: true
+        default: promote
+        type: choice
+        options:
+          - promote
+          - rollback
+      source_environment:
+        description: Source environment (required for promote)
+        required: false
+        default: dev
         type: choice
         options:
           - dev
           - staging
+      target_environment:
+        description: Target environment
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
           - prod
       image_tag:
-        description: Internal image tag to deploy
-        required: true
+        description: Internal image tag for promote mode
+        required: false
+        default: ""
         type: string
+      rollback_revision:
+        description: Helm revision to rollback to (required for rollback mode)
+        required: false
+        default: ""
+        type: string
+      run_post_deploy_health_smoke:
+        description: Run endpoint health smoke after deploy/rollback
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: read
   deployments: write
 
 concurrency:
-  group: deploy-${{ inputs.environment }}
+  group: deploy-${{ inputs.mode }}-${{ inputs.target_environment }}
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  promotion-gates:
     if: ${{ vars.INTERNAL_REGISTRY != '' && vars.INTERNAL_IMAGE_NAMESPACE != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24.10.0"
+          cache: pnpm
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements/python-ci.lock
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          make install-python
+
+      - name: Run cross-phase readiness audit
+        run: make readiness-audit PYTHON=python
+
+      - name: Verify promote inputs
+        run: |
+          if [[ "${MODE}" == "promote" && -z "${IMAGE_TAG}" ]]; then
+            echo "image_tag is required for promote mode." >&2
+            exit 1
+          fi
+        env:
+          MODE: ${{ inputs.mode }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+
+      - name: Run release smoke suite
+        run: make smoke-release PYTHON=python TARGET_ENV=${{ inputs.target_environment }}
+
+      - name: Validate non-production seed pack
+        if: ${{ inputs.target_environment != 'prod' }}
+        run: |
+          python scripts/refresh_nonprod_seed_data.py \
+            --environment "${{ inputs.target_environment }}" \
+            --strict
+
+      - name: Evaluate release promotion/rollback gates
+        run: |
+          python scripts/run_release_gate.py \
+            --mode "${{ inputs.mode }}" \
+            --source-env "${{ inputs.source_environment }}" \
+            --target-env "${{ inputs.target_environment }}" \
+            --strict
+
+      - name: Write promotion intent record
+        run: |
+          mkdir -p output/release-gates/latest
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+
+          record = {
+              "generatedAt": datetime.now(timezone.utc).isoformat(),
+              "mode": os.environ["MODE"],
+              "sourceEnvironment": os.environ["SOURCE_ENV"] or None,
+              "targetEnvironment": os.environ["TARGET_ENV"],
+              "imageTag": os.environ["IMAGE_TAG"],
+              "gitSha": os.environ["GITHUB_SHA"],
+              "workflowRunId": os.environ["GITHUB_RUN_ID"],
+          }
+          with open("output/release-gates/latest/promotion-intent.json", "w", encoding="utf-8") as handle:
+              json.dump(record, handle, indent=2, sort_keys=True)
+          PY
+        env:
+          MODE: ${{ inputs.mode }}
+          SOURCE_ENV: ${{ inputs.source_environment }}
+          TARGET_ENV: ${{ inputs.target_environment }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+
+      - name: Upload release gate artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-gate-artifact
+          path: |
+            output/release-gates/latest
+            output/readiness/latest
+            output/smoke/latest
+            output/seeds/latest
+          if-no-files-found: error
+
+  promote:
+    needs:
+      - promotion-gates
+    if: ${{ inputs.mode == 'promote' }}
     runs-on:
       - self-hosted
       - linux
       - internal
-    environment: ${{ inputs.environment }}
+    environment: ${{ inputs.target_environment }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
@@ -41,15 +169,153 @@ jobs:
           helm version
           kubectl version --client=true
 
-      - name: Deploy environment
+      - name: Resolve previous deployed revision
+        id: prestate
         run: |
-          helm upgrade --install "ukde-${{ inputs.environment }}" infra/helm/ukde \
-            --namespace "ukde-${{ inputs.environment }}" \
+          python - <<'PY'
+          import json
+          import os
+          import subprocess
+
+          target = os.environ["TARGET_ENV"]
+          release = f"ukde-{target}"
+          namespace = release
+          previous_revision = ""
+          try:
+              payload = subprocess.check_output(
+                  ["helm", "history", release, "--namespace", namespace, "-o", "json"],
+                  text=True,
+              )
+              rows = json.loads(payload)
+          except Exception:
+              rows = []
+          if isinstance(rows, list):
+              deployed = [row for row in rows if str(row.get("status", "")).lower() == "deployed"]
+              if deployed:
+                  previous_revision = str(deployed[-1].get("revision", "")).strip()
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"previous_revision={previous_revision}\n")
+          PY
+        env:
+          TARGET_ENV: ${{ inputs.target_environment }}
+
+      - name: Promote environment
+        run: |
+          helm upgrade --install "ukde-${{ inputs.target_environment }}" infra/helm/ukde \
+            --namespace "ukde-${{ inputs.target_environment }}" \
             --create-namespace \
             -f infra/helm/ukde/values.yaml \
-            -f "infra/helm/ukde/values-${{ inputs.environment }}.yaml" \
+            -f "infra/helm/ukde/values-${{ inputs.target_environment }}.yaml" \
             --set global.imageTag="${{ inputs.image_tag }}" \
             --set global.internalRegistry="${{ vars.INTERNAL_REGISTRY }}" \
             --set services.web.image.repository="${{ vars.INTERNAL_IMAGE_NAMESPACE }}/web" \
             --set services.api.image.repository="${{ vars.INTERNAL_IMAGE_NAMESPACE }}/api" \
             --set services.workers.image.repository="${{ vars.INTERNAL_IMAGE_NAMESPACE }}/workers"
+
+      - name: Post-deploy endpoint smoke
+        if: ${{ inputs.run_post_deploy_health_smoke && vars.SMOKE_WEB_URL != '' && vars.SMOKE_API_URL != '' }}
+        run: ./scripts/health-smoke.sh "${SMOKE_WEB_URL}" "${SMOKE_API_URL}"
+        env:
+          SMOKE_WEB_URL: ${{ vars.SMOKE_WEB_URL }}
+          SMOKE_API_URL: ${{ vars.SMOKE_API_URL }}
+
+      - name: Write promotion deployment record
+        run: |
+          mkdir -p output/release-gates/latest
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+
+          record = {
+              "generatedAt": datetime.now(timezone.utc).isoformat(),
+              "mode": "promote",
+              "sourceEnvironment": os.environ["SOURCE_ENV"],
+              "targetEnvironment": os.environ["TARGET_ENV"],
+              "imageTag": os.environ["IMAGE_TAG"],
+              "previousRevision": os.environ.get("PREV_REV") or None,
+              "workflowRunId": os.environ["GITHUB_RUN_ID"],
+          }
+          with open("output/release-gates/latest/deployment-record.json", "w", encoding="utf-8") as handle:
+              json.dump(record, handle, indent=2, sort_keys=True)
+          PY
+        env:
+          SOURCE_ENV: ${{ inputs.source_environment }}
+          TARGET_ENV: ${{ inputs.target_environment }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          PREV_REV: ${{ steps.prestate.outputs.previous_revision }}
+
+      - name: Upload deployment record
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-deployment-record
+          path: output/release-gates/latest/deployment-record.json
+          if-no-files-found: error
+
+  rollback:
+    needs:
+      - promotion-gates
+    if: ${{ inputs.mode == 'rollback' }}
+    runs-on:
+      - self-hosted
+      - linux
+      - internal
+    environment: ${{ inputs.target_environment }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Verify rollback input
+        run: |
+          if [[ -z "${ROLLBACK_REVISION}" ]]; then
+            echo "rollback_revision is required for rollback mode." >&2
+            exit 1
+          fi
+        env:
+          ROLLBACK_REVISION: ${{ inputs.rollback_revision }}
+
+      - name: Verify internal deploy tooling
+        run: |
+          helm version
+          kubectl version --client=true
+
+      - name: Rollback environment
+        run: |
+          helm rollback "ukde-${{ inputs.target_environment }}" "${{ inputs.rollback_revision }}" \
+            --namespace "ukde-${{ inputs.target_environment }}"
+
+      - name: Post-rollback endpoint smoke
+        if: ${{ inputs.run_post_deploy_health_smoke && vars.SMOKE_WEB_URL != '' && vars.SMOKE_API_URL != '' }}
+        run: ./scripts/health-smoke.sh "${SMOKE_WEB_URL}" "${SMOKE_API_URL}"
+        env:
+          SMOKE_WEB_URL: ${{ vars.SMOKE_WEB_URL }}
+          SMOKE_API_URL: ${{ vars.SMOKE_API_URL }}
+
+      - name: Write rollback record
+        run: |
+          mkdir -p output/release-gates/latest
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+
+          record = {
+              "generatedAt": datetime.now(timezone.utc).isoformat(),
+              "mode": "rollback",
+              "targetEnvironment": os.environ["TARGET_ENV"],
+              "rollbackRevision": os.environ["ROLLBACK_REVISION"],
+              "workflowRunId": os.environ["GITHUB_RUN_ID"],
+          }
+          with open("output/release-gates/latest/rollback-record.json", "w", encoding="utf-8") as handle:
+              json.dump(record, handle, indent=2, sort_keys=True)
+          PY
+        env:
+          TARGET_ENV: ${{ inputs.target_environment }}
+          ROLLBACK_REVISION: ${{ inputs.rollback_revision }}
+
+      - name: Upload rollback record
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-rollback-record
+          path: output/release-gates/latest/rollback-record.json
+          if-no-files-found: error

@@ -1,0 +1,35 @@
+{
+  "node": {
+    "60a985b9b1c3543f1d0a0b767656f99a370c757f6c": {
+      "workers": {
+        "app/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/workspace/page": {
+          "moduleId": 90987,
+          "async": false,
+          "exportedName": "$$RSC_SERVER_ACTION_1",
+          "filename": "web/app/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/workspace/page.tsx"
+        }
+      },
+      "layer": {
+        "app/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/workspace/page": "rsc"
+      },
+      "exportedName": "$$RSC_SERVER_ACTION_1",
+      "filename": "web/app/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/workspace/page.tsx"
+    },
+    "60eeaec088086f09c701da0a36f51aed1680bd67d8": {
+      "workers": {
+        "app/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/workspace/page": {
+          "moduleId": 90987,
+          "async": false,
+          "exportedName": "$$RSC_SERVER_ACTION_0",
+          "filename": "web/app/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/workspace/page.tsx"
+        }
+      },
+      "layer": {
+        "app/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/workspace/page": "rsc"
+      },
+      "exportedName": "$$RSC_SERVER_ACTION_0",
+      "filename": "web/app/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/workspace/page.tsx"
+    }
+  },
+  "edge": {}
+}

@@ -107,7 +107,7 @@ export function IndexStatusPoller({
         <InlineState
           kind="degraded"
           title="Status polling degraded"
-          description={error}
+          description={`${error}. Generation execution may continue server-side; this does not mean data loss or a terminal failure.`}
         />
       ) : null}
     </section>

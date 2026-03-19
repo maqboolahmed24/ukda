@@ -4,17 +4,31 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
+from datetime import datetime
 from functools import lru_cache
+from typing import Literal
 from uuid import uuid4
 
 from app.audit.service import AuditService, get_audit_service
 from app.auth.models import SessionPrincipal
 from app.core.config import Settings, get_settings
+from app.exports.models import ExportCandidateSnapshotRecord
+from app.exports.store import (
+    ExportStore,
+    ExportStoreConflictError,
+    ExportStoreNotFoundError,
+    ExportStoreUnavailableError,
+)
 from app.indexes.models import (
     ActiveProjectIndexesView,
     ControlledEntityRecord,
+    CreateDerivativeIndexRowInput,
     CreateControlledEntityInput,
     CreateEntityOccurrenceInput,
+    DerivativeIndexRowRecord,
+    DerivativeScope,
+    DerivativeSnapshotListItem,
+    DerivativeSnapshotRecord,
     EntityOccurrenceRecord,
     EntityType,
     IndexKind,
@@ -22,6 +36,7 @@ from app.indexes.models import (
     OccurrenceSpanBasisKind,
     ProjectIndexProjectionRecord,
     SearchDocumentRecord,
+    SearchQueryAuditRecord,
 )
 from app.indexes.store import IndexStore, IndexStoreUnavailableError
 from app.projects.models import ProjectRole, ProjectSummary
@@ -50,6 +65,107 @@ _DATE_PATTERN = re.compile(
     r"\b(?:\d{1,2}\s+[A-Z][a-z]{2,8}\s+\d{4}|"
     r"[A-Z][a-z]{2,8}\s+\d{1,2},\s*\d{4}|"
     r"\d{4}-\d{2}-\d{2})\b"
+)
+_DERIVATIVE_FREEZE_ROLES: set[ProjectRole] = {"PROJECT_LEAD", "REVIEWER"}
+_INDEX_QUALITY_READ_ROLES: set[str] = {"ADMIN", "AUDITOR"}
+_SUPPRESSED_IDENTIFIER_KEYS: set[str] = {
+    "address",
+    "date_of_birth",
+    "dob",
+    "document_id",
+    "email",
+    "first_name",
+    "full_name",
+    "given_name",
+    "identifier",
+    "id_number",
+    "last_name",
+    "line_id",
+    "name",
+    "national_insurance_number",
+    "nhs_number",
+    "ni_number",
+    "page_id",
+    "passport_number",
+    "person_name",
+    "phone",
+    "post_code",
+    "postcode",
+    "raw_identifier",
+    "run_id",
+    "source_identifier",
+    "surname",
+    "token_id",
+    "user_id",
+}
+_SUPPRESSED_IDENTIFIER_CANONICAL_KEYS: set[str] = {
+    re.sub(r"[^a-z0-9]+", "", value.lower()) for value in _SUPPRESSED_IDENTIFIER_KEYS
+}
+_DEFAULT_ANTIJOIN_QUASI_FIELDS: tuple[str, ...] = (
+    "category",
+    "period",
+    "geography",
+    "region",
+    "year",
+    "month",
+)
+_SEARCH_ELIGIBLE_INPUT_KEYS: tuple[str, ...] = (
+    "eligibleInputCount",
+    "eligible_input_count",
+    "eligibleTranscriptBasisCount",
+    "eligible_transcript_basis_count",
+    "eligibleTokenAnchorInputCount",
+    "eligible_token_anchor_input_count",
+)
+_SEARCH_TOKEN_ANCHOR_VALID_KEYS: tuple[str, ...] = (
+    "tokenAnchorValidInputCount",
+    "token_anchor_valid_input_count",
+    "validTokenAnchorInputCount",
+    "valid_token_anchor_input_count",
+    "tokenAnchorCurrentCount",
+    "token_anchor_current_count",
+)
+_SEARCH_TOKEN_ANCHOR_INVALID_KEYS: tuple[str, ...] = (
+    "tokenAnchorInvalidInputCount",
+    "token_anchor_invalid_input_count",
+    "invalidTokenAnchorInputCount",
+    "invalid_token_anchor_input_count",
+)
+_SEARCH_GEOMETRY_COVERED_KEYS: tuple[str, ...] = (
+    "tokenGeometryCoveredInputCount",
+    "token_geometry_covered_input_count",
+    "geometryCoveredInputCount",
+    "geometry_covered_input_count",
+    "geometryCoveragePassCount",
+    "geometry_coverage_pass_count",
+    "coveredInputCount",
+    "covered_input_count",
+)
+_SEARCH_GEOMETRY_MISSING_KEYS: tuple[str, ...] = (
+    "tokenGeometryMissingInputCount",
+    "token_geometry_missing_input_count",
+    "geometryMissingInputCount",
+    "geometry_missing_input_count",
+)
+_SEARCH_LINE_ONLY_EXCLUDED_KEYS: tuple[str, ...] = (
+    "historicalLineOnlyExcludedCount",
+    "historical_line_only_excluded_count",
+    "lineOnlyExcludedCount",
+    "line_only_excluded_count",
+    "excludedHistoricalLineOnlyCount",
+    "excluded_historical_line_only_count",
+)
+_SEARCH_LINE_ONLY_FALLBACK_ALLOWED_KEYS: tuple[str, ...] = (
+    "historicalLineOnlyFallbackAllowed",
+    "historical_line_only_fallback_allowed",
+    "lineOnlyFallbackAllowed",
+    "line_only_fallback_allowed",
+)
+_SEARCH_LINE_ONLY_FALLBACK_REASON_KEYS: tuple[str, ...] = (
+    "historicalLineOnlyFallbackReason",
+    "historical_line_only_fallback_reason",
+    "lineOnlyFallbackReason",
+    "line_only_fallback_reason",
 )
 
 
@@ -93,6 +209,93 @@ class IndexCancelResult:
 class ProjectSearchResult:
     search_index_id: str
     items: list[SearchDocumentRecord]
+    next_cursor: int | None
+
+
+IndexFreshnessStatus = Literal["current", "stale", "missing", "blocked"]
+SearchActivationBlockerCode = Literal[
+    "RUN_NOT_SUCCEEDED",
+    "SEARCH_ELIGIBLE_INPUTS_MISSING",
+    "SEARCH_LINE_ONLY_EXCLUDED_INVALID",
+    "SEARCH_LINE_ONLY_FALLBACK_MARKER_MISSING",
+    "SEARCH_LINE_ONLY_FALLBACK_REASON_MISSING",
+    "TOKEN_ANCHOR_VALIDITY_MISSING",
+    "TOKEN_ANCHOR_VALIDITY_FAILED",
+    "TOKEN_GEOMETRY_COVERAGE_MISSING",
+    "TOKEN_GEOMETRY_COVERAGE_FAILED",
+]
+
+
+@dataclass(frozen=True)
+class SearchActivationGateBlocker:
+    code: SearchActivationBlockerCode
+    message: str
+    metadata: dict[str, object]
+
+
+@dataclass(frozen=True)
+class SearchActivationGateEvaluation:
+    passed: bool
+    blockers: list[SearchActivationGateBlocker]
+
+
+@dataclass(frozen=True)
+class SearchCoverageSummary:
+    eligible_input_count: int | None
+    token_anchor_valid_input_count: int | None
+    token_geometry_covered_input_count: int | None
+    historical_line_only_excluded_count: int
+    historical_line_only_fallback_allowed: bool
+    historical_line_only_fallback_reason: str | None
+
+
+@dataclass(frozen=True)
+class IndexFreshnessSnapshot:
+    status: IndexFreshnessStatus
+    active_index_id: str | None
+    active_version: int | None
+    active_status: str | None
+    latest_succeeded_index_id: str | None
+    latest_succeeded_version: int | None
+    latest_succeeded_finished_at: datetime | None
+    stale_generation_gap: int | None
+    reason: str | None
+    blocked_codes: list[str]
+
+
+@dataclass(frozen=True)
+class IndexQualitySummaryItem:
+    kind: IndexKind
+    freshness: IndexFreshnessSnapshot
+    search_coverage: SearchCoverageSummary | None
+    search_activation_blocker_count: int
+
+
+@dataclass(frozen=True)
+class ProjectIndexQualitySummary:
+    project_id: str
+    projection_updated_at: datetime | None
+    items: list[IndexQualitySummaryItem]
+
+
+@dataclass(frozen=True)
+class IndexQualityDetail:
+    project_id: str
+    kind: IndexKind
+    index: IndexRecord
+    freshness: IndexFreshnessSnapshot
+    active_index_id: str | None
+    is_active_generation: bool
+    is_latest_succeeded_generation: bool
+    rollback_eligible: bool
+    search_coverage: SearchCoverageSummary | None
+    search_activation_evaluation: SearchActivationGateEvaluation | None
+
+
+@dataclass(frozen=True)
+class ProjectSearchQueryAuditResult:
+    project_id: str
+    items: list[SearchQueryAuditRecord]
     next_cursor: int | None
 
 
@@ -150,6 +353,46 @@ class ProjectEntityOccurrencesResult:
     entity: ControlledEntityRecord
     items: list[EntityOccurrenceLink]
     next_cursor: int | None
+
+
+@dataclass(frozen=True)
+class DerivativeMaterializedRow:
+    derivative_kind: str
+    source_snapshot_json: dict[str, object]
+    display_payload_json: dict[str, object]
+
+
+@dataclass(frozen=True)
+class DerivativeMaterializationResult:
+    snapshot: DerivativeSnapshotRecord
+    rows_written: int
+    blocked: bool
+    blocked_reason: str | None
+
+
+@dataclass(frozen=True)
+class ProjectDerivativeListResult:
+    scope: DerivativeScope
+    active_derivative_index_id: str | None
+    items: list[DerivativeSnapshotListItem]
+
+
+@dataclass(frozen=True)
+class ProjectDerivativeDetailResult:
+    snapshot: DerivativeSnapshotRecord
+
+
+@dataclass(frozen=True)
+class ProjectDerivativePreviewResult:
+    snapshot: DerivativeSnapshotRecord
+    rows: list[DerivativeIndexRowRecord]
+
+
+@dataclass(frozen=True)
+class DerivativeCandidateFreezeResult:
+    snapshot: DerivativeSnapshotRecord
+    candidate: ExportCandidateSnapshotRecord
+    created: bool
 
 
 def _canonical_json(value: object) -> str:
@@ -220,11 +463,13 @@ class IndexService:
         store: IndexStore | None = None,
         project_store: ProjectStore | None = None,
         audit_service: AuditService | None = None,
+        export_store: ExportStore | None = None,
     ) -> None:
         self._settings = settings
         self._store = store or IndexStore(settings)
         self._project_store = project_store or ProjectStore(settings)
         self._audit_service = audit_service or get_audit_service()
+        self._export_store = export_store or ExportStore(settings)
 
     @staticmethod
     def _is_admin(current_user: SessionPrincipal) -> bool:
@@ -284,6 +529,27 @@ class IndexService:
         )
 
     @staticmethod
+    def _require_derivative_candidate_freeze_access(
+        context: _ProjectIndexAccessContext,
+    ) -> None:
+        if context.is_admin:
+            return
+        if context.project_role in _DERIVATIVE_FREEZE_ROLES:
+            return
+        raise IndexAccessDeniedError(
+            "Derivative candidate freeze requires PROJECT_LEAD, REVIEWER, or ADMIN."
+        )
+
+    @staticmethod
+    def _require_index_quality_read_access(current_user: SessionPrincipal) -> None:
+        current_roles = set(current_user.platform_roles)
+        if any(role in _INDEX_QUALITY_READ_ROLES for role in current_roles):
+            return
+        raise IndexAccessDeniedError(
+            "Index quality reads require ADMIN or AUDITOR platform role."
+        )
+
+    @staticmethod
     def compute_source_snapshot_sha256(source_snapshot_json: dict[str, object]) -> str:
         return hashlib.sha256(_canonical_json(source_snapshot_json).encode("utf-8")).hexdigest()
 
@@ -302,6 +568,31 @@ class IndexService:
             "build_parameters": build_parameters_json,
         }
         return hashlib.sha256(_canonical_json(dedupe_payload).encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _normalize_query_for_hash(query_text: str) -> str:
+        return " ".join(query_text.strip().split()).lower()
+
+    @classmethod
+    def _query_sha256(cls, query_text: str) -> str:
+        normalized = cls._normalize_query_for_hash(query_text)
+        return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _search_filters_json(
+        *,
+        document_id: str | None,
+        run_id: str | None,
+        page_number: int | None,
+    ) -> dict[str, object]:
+        filters: dict[str, object] = {}
+        if isinstance(document_id, str) and document_id.strip():
+            filters["documentId"] = document_id.strip()
+        if isinstance(run_id, str) and run_id.strip():
+            filters["runId"] = run_id.strip()
+        if isinstance(page_number, int):
+            filters["pageNumber"] = page_number
+        return filters
 
     @staticmethod
     def canonicalize_entity_value(entity_type: EntityType, display_value: str) -> str:
@@ -433,6 +724,7 @@ class IndexService:
         page_number: int | None,
         cursor: int,
         limit: int,
+        route: str | None = None,
     ) -> ProjectSearchResult:
         context = self._resolve_project_access(current_user=current_user, project_id=project_id)
         self._require_read_access(context)
@@ -460,6 +752,41 @@ class IndexService:
             page_number=page_number,
             cursor=cursor,
             limit=limit,
+        )
+        query_sha256 = self._query_sha256(normalized_query)
+        query_text_key = self._store.store_search_query_text(
+            project_id=project_id,
+            query_text=normalized_query,
+        )
+        filters_json = self._search_filters_json(
+            document_id=document_id,
+            run_id=run_id,
+            page_number=page_number,
+        )
+        self._store.append_search_query_audit(
+            project_id=project_id,
+            actor_user_id=current_user.user_id,
+            search_index_id=projection.active_search_index_id,
+            query_sha256=query_sha256,
+            query_text_key=query_text_key,
+            filters_json=filters_json,
+            result_count=len(page.items),
+        )
+        self._audit_service.record_event_best_effort(
+            event_type="SEARCH_QUERY_EXECUTED",
+            actor_user_id=current_user.user_id,
+            project_id=project_id,
+            object_type="search_index",
+            object_id=projection.active_search_index_id,
+            metadata={
+                "route": route or "/projects/{project_id}/search",
+                "search_index_id": projection.active_search_index_id,
+                "query_sha256": query_sha256,
+                "query_text_key": query_text_key,
+                "filters_json": filters_json,
+                "result_count": len(page.items),
+            },
+            request_id=current_trace_id() or f"search-query:{projection.active_search_index_id}",
         )
         return ProjectSearchResult(
             search_index_id=projection.active_search_index_id,
@@ -901,6 +1228,60 @@ class IndexService:
                 "Entity index activation blocked: eligible-input coverage gates failed."
             )
 
+    def _validate_derivative_index_activation(self, *, row: IndexRecord) -> None:
+        snapshots = self._store.list_derivative_snapshots_for_index(
+            project_id=row.project_id,
+            derivative_index_id=row.id,
+        )
+        all_rows = self._store.list_all_derivative_rows_for_index(derivative_index_id=row.id)
+        successful_snapshot_count = 0
+        for snapshot in snapshots:
+            if snapshot.status != "SUCCEEDED":
+                raise IndexConflictError(
+                    "Derivative index activation blocked: snapshot completeness gates failed."
+                )
+            if not snapshot.storage_key or not snapshot.storage_key.strip():
+                raise IndexConflictError(
+                    "Derivative index activation blocked: snapshot completeness gates failed."
+                )
+            if not snapshot.snapshot_sha256 or not snapshot.snapshot_sha256.strip():
+                raise IndexConflictError(
+                    "Derivative index activation blocked: snapshot completeness gates failed."
+                )
+            rows = self._store.list_all_derivative_rows_for_snapshot(
+                derivative_index_id=row.id,
+                derivative_snapshot_id=snapshot.id,
+            )
+            if len(rows) == 0:
+                raise IndexConflictError(
+                    "Derivative index activation blocked: snapshot completeness gates failed."
+                )
+            successful_snapshot_count += 1
+
+            identifier_issues = self._find_derivative_identifier_leaks(rows=rows)
+            if identifier_issues:
+                raise IndexConflictError(
+                    "Derivative index activation blocked: suppression-policy checks failed."
+                )
+            anti_join_issues = self._find_derivative_antijoin_issues(
+                payloads=[row.display_payload_json for row in rows],
+                source_snapshot=snapshot.source_snapshot_json,
+            )
+            if anti_join_issues:
+                raise IndexConflictError(
+                    "Derivative index activation blocked: anti-join disclosure checks failed."
+                )
+
+        coverage_passed = self._passes_derivative_snapshot_completeness_gate(
+            source_snapshot=row.source_snapshot_json,
+            successful_snapshot_count=successful_snapshot_count,
+            row_count=len(all_rows),
+        )
+        if not coverage_passed:
+            raise IndexConflictError(
+                "Derivative index activation blocked: snapshot completeness gates failed."
+            )
+
     def _find_entity_canonicalization_issues(
         self,
         entities: list[ControlledEntityRecord],
@@ -1000,6 +1381,251 @@ class IndexService:
                     return int(trimmed)
         return None
 
+    @staticmethod
+    def _read_snapshot_bool(
+        snapshot: dict[str, object],
+        keys: tuple[str, ...] | list[str],
+    ) -> bool | None:
+        for key in keys:
+            value = snapshot.get(key)
+            if isinstance(value, bool):
+                return value
+            if isinstance(value, int):
+                if value in {0, 1}:
+                    return bool(value)
+                continue
+            if isinstance(value, str):
+                normalized = value.strip().lower()
+                if normalized in {"true", "1", "yes"}:
+                    return True
+                if normalized in {"false", "0", "no"}:
+                    return False
+        return None
+
+    @staticmethod
+    def _read_snapshot_text(
+        snapshot: dict[str, object],
+        keys: tuple[str, ...] | list[str],
+    ) -> str | None:
+        for key in keys:
+            value = snapshot.get(key)
+            if isinstance(value, str):
+                normalized = " ".join(value.strip().split())
+                if normalized:
+                    return normalized
+        return None
+
+    def _build_search_coverage_summary(
+        self,
+        *,
+        source_snapshot: dict[str, object],
+    ) -> SearchCoverageSummary:
+        eligible_input_count = self._read_snapshot_int(
+            source_snapshot,
+            list(_SEARCH_ELIGIBLE_INPUT_KEYS),
+        )
+        token_anchor_valid_input_count = self._read_snapshot_int(
+            source_snapshot,
+            list(_SEARCH_TOKEN_ANCHOR_VALID_KEYS),
+        )
+        token_anchor_invalid_input_count = self._read_snapshot_int(
+            source_snapshot,
+            list(_SEARCH_TOKEN_ANCHOR_INVALID_KEYS),
+        )
+        token_geometry_covered_input_count = self._read_snapshot_int(
+            source_snapshot,
+            list(_SEARCH_GEOMETRY_COVERED_KEYS),
+        )
+        token_geometry_missing_input_count = self._read_snapshot_int(
+            source_snapshot,
+            list(_SEARCH_GEOMETRY_MISSING_KEYS),
+        )
+        historical_line_only_excluded_count = (
+            self._read_snapshot_int(
+                source_snapshot,
+                list(_SEARCH_LINE_ONLY_EXCLUDED_KEYS),
+            )
+            or 0
+        )
+        historical_line_only_fallback_allowed = bool(
+            self._read_snapshot_bool(
+                source_snapshot,
+                _SEARCH_LINE_ONLY_FALLBACK_ALLOWED_KEYS,
+            )
+        )
+        historical_line_only_fallback_reason = self._read_snapshot_text(
+            source_snapshot,
+            _SEARCH_LINE_ONLY_FALLBACK_REASON_KEYS,
+        )
+
+        if (
+            eligible_input_count is None
+            and token_anchor_valid_input_count is not None
+            and token_anchor_invalid_input_count is not None
+        ):
+            eligible_input_count = (
+                token_anchor_valid_input_count + max(token_anchor_invalid_input_count, 0)
+            )
+        if (
+            eligible_input_count is None
+            and token_geometry_covered_input_count is not None
+            and token_geometry_missing_input_count is not None
+        ):
+            eligible_input_count = (
+                token_geometry_covered_input_count
+                + max(token_geometry_missing_input_count, 0)
+            )
+        if eligible_input_count is None and historical_line_only_excluded_count > 0:
+            eligible_input_count = historical_line_only_excluded_count
+
+        return SearchCoverageSummary(
+            eligible_input_count=eligible_input_count,
+            token_anchor_valid_input_count=token_anchor_valid_input_count,
+            token_geometry_covered_input_count=token_geometry_covered_input_count,
+            historical_line_only_excluded_count=historical_line_only_excluded_count,
+            historical_line_only_fallback_allowed=historical_line_only_fallback_allowed,
+            historical_line_only_fallback_reason=historical_line_only_fallback_reason,
+        )
+
+    def evaluate_search_activation_gate(
+        self,
+        *,
+        row: IndexRecord,
+    ) -> SearchActivationGateEvaluation:
+        blockers: list[SearchActivationGateBlocker] = []
+
+        if row.status != "SUCCEEDED":
+            blockers.append(
+                SearchActivationGateBlocker(
+                    code="RUN_NOT_SUCCEEDED",
+                    message="Only SUCCEEDED search index generations can be activated.",
+                    metadata={"status": row.status},
+                )
+            )
+
+        coverage = self._build_search_coverage_summary(
+            source_snapshot=row.source_snapshot_json
+        )
+        eligible = coverage.eligible_input_count
+        excluded = max(0, coverage.historical_line_only_excluded_count)
+        if eligible is None:
+            blockers.append(
+                SearchActivationGateBlocker(
+                    code="SEARCH_ELIGIBLE_INPUTS_MISSING",
+                    message=(
+                        "Activation requires explicit eligible-input counters for search "
+                        "token-anchor and geometry gates."
+                    ),
+                    metadata={"source_snapshot_keys": sorted(row.source_snapshot_json.keys())},
+                )
+            )
+            return SearchActivationGateEvaluation(passed=False, blockers=blockers)
+
+        if eligible < 0 or excluded > eligible:
+            blockers.append(
+                SearchActivationGateBlocker(
+                    code="SEARCH_LINE_ONLY_EXCLUDED_INVALID",
+                    message=(
+                        "Historical line-only exclusion counters must be non-negative and "
+                        "cannot exceed eligible inputs."
+                    ),
+                    metadata={
+                        "eligible_input_count": eligible,
+                        "historical_line_only_excluded_count": excluded,
+                    },
+                )
+            )
+            return SearchActivationGateEvaluation(passed=False, blockers=blockers)
+
+        requires_token_coverage = max(0, eligible - excluded)
+        if excluded > 0:
+            if not coverage.historical_line_only_fallback_allowed:
+                blockers.append(
+                    SearchActivationGateBlocker(
+                        code="SEARCH_LINE_ONLY_FALLBACK_MARKER_MISSING",
+                        message=(
+                            "Historical line-only exclusions require explicit fallback "
+                            "markers in the source snapshot."
+                        ),
+                        metadata={"historical_line_only_excluded_count": excluded},
+                    )
+                )
+            if coverage.historical_line_only_fallback_reason is None:
+                blockers.append(
+                    SearchActivationGateBlocker(
+                        code="SEARCH_LINE_ONLY_FALLBACK_REASON_MISSING",
+                        message=(
+                            "Historical line-only exclusions require an explicit fallback "
+                            "reason marker."
+                        ),
+                        metadata={"historical_line_only_excluded_count": excluded},
+                    )
+                )
+
+        if requires_token_coverage > 0:
+            token_anchor_valid = coverage.token_anchor_valid_input_count
+            token_geometry_covered = coverage.token_geometry_covered_input_count
+            if token_anchor_valid is None:
+                blockers.append(
+                    SearchActivationGateBlocker(
+                        code="TOKEN_ANCHOR_VALIDITY_MISSING",
+                        message=(
+                            "Activation requires token-anchor validity counters for all "
+                            "eligible transcript inputs."
+                        ),
+                        metadata={"required_covered_input_count": requires_token_coverage},
+                    )
+                )
+            elif token_anchor_valid < requires_token_coverage:
+                blockers.append(
+                    SearchActivationGateBlocker(
+                        code="TOKEN_ANCHOR_VALIDITY_FAILED",
+                        message=(
+                            "Token-anchor validity coverage is below the required eligible "
+                            "input floor."
+                        ),
+                        metadata={
+                            "required_covered_input_count": requires_token_coverage,
+                            "token_anchor_valid_input_count": token_anchor_valid,
+                        },
+                    )
+                )
+            if token_geometry_covered is None:
+                blockers.append(
+                    SearchActivationGateBlocker(
+                        code="TOKEN_GEOMETRY_COVERAGE_MISSING",
+                        message=(
+                            "Activation requires token-geometry coverage counters for all "
+                            "eligible transcript inputs."
+                        ),
+                        metadata={"required_covered_input_count": requires_token_coverage},
+                    )
+                )
+            elif token_geometry_covered < requires_token_coverage:
+                blockers.append(
+                    SearchActivationGateBlocker(
+                        code="TOKEN_GEOMETRY_COVERAGE_FAILED",
+                        message=(
+                            "Token-geometry coverage is below the required eligible-input floor."
+                        ),
+                        metadata={
+                            "required_covered_input_count": requires_token_coverage,
+                            "token_geometry_covered_input_count": token_geometry_covered,
+                        },
+                    )
+                )
+
+        return SearchActivationGateEvaluation(
+            passed=len(blockers) == 0,
+            blockers=blockers,
+        )
+
+    @staticmethod
+    def _format_activation_blockers(blockers: list[SearchActivationGateBlocker]) -> str:
+        if len(blockers) == 0:
+            return ""
+        return ", ".join(blocker.code for blocker in blockers)
+
     def _passes_entity_coverage_gate(
         self,
         *,
@@ -1035,6 +1661,637 @@ class IndexService:
         if covered is not None:
             return covered >= eligible
         return occurrence_count > 0
+
+    def _active_derivative_index_id_or_raise(self, *, project_id: str) -> str:
+        projection = self._store.get_projection(project_id=project_id)
+        if projection is None or projection.active_derivative_index_id is None:
+            raise IndexConflictError("No active derivative index is available for this project.")
+        return projection.active_derivative_index_id
+
+    @staticmethod
+    def _normalize_derivative_scope(scope: str | None) -> DerivativeScope:
+        normalized = (scope or "active").strip().lower()
+        if normalized not in {"active", "historical"}:
+            raise IndexValidationError("scope must be one of: active, historical.")
+        return normalized  # type: ignore[return-value]
+
+    @staticmethod
+    def _normalize_field_token(value: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "", value.lower())
+
+    def _value_for_field(
+        self,
+        *,
+        payload: dict[str, object],
+        field_name: str,
+    ) -> object | None:
+        if field_name in payload:
+            return payload.get(field_name)
+        target = self._normalize_field_token(field_name)
+        for key, value in payload.items():
+            if not isinstance(key, str):
+                continue
+            if self._normalize_field_token(key) == target:
+                return value
+        return None
+
+    def _collect_identifier_field_paths(
+        self,
+        value: object,
+        *,
+        prefix: str = "",
+    ) -> set[str]:
+        leaks: set[str] = set()
+        if isinstance(value, dict):
+            for raw_key, raw_child in value.items():
+                if not isinstance(raw_key, str):
+                    continue
+                field_path = f"{prefix}.{raw_key}" if prefix else raw_key
+                key_token = self._normalize_field_token(raw_key)
+                if key_token in _SUPPRESSED_IDENTIFIER_CANONICAL_KEYS:
+                    leaks.add(field_path)
+                    continue
+                leaks.update(
+                    self._collect_identifier_field_paths(
+                        raw_child,
+                        prefix=field_path,
+                    )
+                )
+        elif isinstance(value, list):
+            for idx, item in enumerate(value):
+                field_path = f"{prefix}[{idx}]" if prefix else f"[{idx}]"
+                leaks.update(
+                    self._collect_identifier_field_paths(
+                        item,
+                        prefix=field_path,
+                    )
+                )
+        return leaks
+
+    def _suppress_derivative_payload(
+        self,
+        payload: dict[str, object],
+    ) -> tuple[dict[str, object], dict[str, object]]:
+        suppressed_fields: dict[str, str] = {}
+
+        def scrub(value: object, *, prefix: str = "") -> object:
+            if isinstance(value, dict):
+                cleaned: dict[str, object] = {}
+                for raw_key, raw_child in value.items():
+                    if not isinstance(raw_key, str):
+                        continue
+                    field_path = f"{prefix}.{raw_key}" if prefix else raw_key
+                    key_token = self._normalize_field_token(raw_key)
+                    if key_token in _SUPPRESSED_IDENTIFIER_CANONICAL_KEYS:
+                        suppressed_fields[field_path] = "IDENTIFIER_SUPPRESSED"
+                        continue
+                    cleaned[raw_key] = scrub(raw_child, prefix=field_path)
+                return cleaned
+            if isinstance(value, list):
+                return [scrub(item, prefix=f"{prefix}[{index}]") for index, item in enumerate(value)]
+            return value
+
+        cleaned_payload = scrub(payload)
+        if not isinstance(cleaned_payload, dict):
+            cleaned_payload = {}
+        suppressed_json: dict[str, object] = {
+            "fields": suppressed_fields,
+            "suppressedCount": len(suppressed_fields),
+        }
+        return cleaned_payload, suppressed_json
+
+    def _extract_antijoin_quasi_fields(
+        self,
+        *,
+        source_snapshot: dict[str, object],
+        payloads: list[dict[str, object]],
+    ) -> list[str]:
+        for key in (
+            "antiJoinQuasiIdentifierFields",
+            "anti_join_quasi_identifier_fields",
+            "quasiIdentifierFields",
+            "quasi_identifier_fields",
+        ):
+            raw = source_snapshot.get(key)
+            if not isinstance(raw, list):
+                continue
+            fields = [
+                value.strip()
+                for value in raw
+                if isinstance(value, str) and value.strip()
+            ]
+            if fields:
+                return fields
+
+        if not payloads:
+            return []
+        sample = payloads[0]
+        inferred: list[str] = []
+        for candidate in _DEFAULT_ANTIJOIN_QUASI_FIELDS:
+            value = self._value_for_field(payload=sample, field_name=candidate)
+            if value is not None:
+                inferred.append(candidate)
+        return inferred
+
+    def _extract_antijoin_threshold(self, *, source_snapshot: dict[str, object]) -> int:
+        threshold = self._read_snapshot_int(
+            source_snapshot,
+            [
+                "antiJoinMinimumGroupSize",
+                "anti_join_min_group_size",
+                "kAnonymityFloor",
+                "k_anonymity_floor",
+            ],
+        )
+        if threshold is None:
+            return 2
+        return max(2, threshold)
+
+    def _find_derivative_antijoin_issues(
+        self,
+        *,
+        payloads: list[dict[str, object]],
+        source_snapshot: dict[str, object],
+    ) -> list[str]:
+        if not payloads:
+            return []
+        quasi_fields = self._extract_antijoin_quasi_fields(
+            source_snapshot=source_snapshot,
+            payloads=payloads,
+        )
+        if not quasi_fields:
+            return []
+        threshold = self._extract_antijoin_threshold(source_snapshot=source_snapshot)
+        groups: dict[tuple[str, ...], int] = {}
+        for payload in payloads:
+            group_key: list[str] = []
+            for field in quasi_fields:
+                value = self._value_for_field(payload=payload, field_name=field)
+                if value is None:
+                    group_key.append("<missing>")
+                elif isinstance(value, str):
+                    normalized = value.strip().lower()
+                    group_key.append(normalized if normalized else "<blank>")
+                else:
+                    group_key.append(str(value))
+            tuple_key = tuple(group_key)
+            groups[tuple_key] = groups.get(tuple_key, 0) + 1
+
+        issues: list[str] = []
+        for group_key, count in groups.items():
+            if count >= threshold:
+                continue
+            descriptor = ", ".join(
+                f"{field}={value}" for field, value in zip(quasi_fields, group_key)
+            )
+            issues.append(descriptor)
+        return issues
+
+    def _find_derivative_identifier_leaks(
+        self,
+        *,
+        rows: list[DerivativeIndexRowRecord],
+    ) -> list[str]:
+        issues: list[str] = []
+        for row in rows:
+            leaks = self._collect_identifier_field_paths(row.display_payload_json)
+            if leaks:
+                issues.append(row.id)
+                continue
+            fields_node = row.suppressed_fields_json.get("fields")
+            if not isinstance(fields_node, dict):
+                issues.append(row.id)
+        return issues
+
+    def _passes_derivative_snapshot_completeness_gate(
+        self,
+        *,
+        source_snapshot: dict[str, object],
+        successful_snapshot_count: int,
+        row_count: int,
+    ) -> bool:
+        eligible = self._read_snapshot_int(
+            source_snapshot,
+            [
+                "eligibleInputCount",
+                "eligible_input_count",
+                "eligibleDerivativeInputCount",
+                "eligible_derivative_input_count",
+            ],
+        )
+        covered = self._read_snapshot_int(
+            source_snapshot,
+            [
+                "coveredInputCount",
+                "covered_input_count",
+                "coveredDerivativeInputCount",
+                "covered_derivative_input_count",
+                "coveredDerivativeSnapshotCount",
+                "covered_derivative_snapshot_count",
+            ],
+        )
+        if eligible is None:
+            if successful_snapshot_count == 0:
+                return row_count == 0
+            return row_count > 0
+        if eligible <= 0:
+            return True
+        if covered is not None:
+            return covered >= eligible and successful_snapshot_count > 0 and row_count > 0
+        return successful_snapshot_count > 0 and row_count > 0
+
+    def materialize_derivative_snapshot(
+        self,
+        *,
+        actor_user_id: str,
+        project_id: str,
+        derivative_index_id: str,
+        derivative_kind: str,
+        source_snapshot_json: dict[str, object],
+        policy_version_ref: str,
+        rows: list[DerivativeMaterializedRow],
+        supersedes_derivative_snapshot_id: str | None = None,
+    ) -> DerivativeMaterializationResult:
+        index = self._store.get_index(
+            project_id=project_id,
+            kind="DERIVATIVE",
+            index_id=derivative_index_id,
+        )
+        if index is None:
+            raise IndexNotFoundError("Derivative index generation not found.")
+
+        normalized_kind = derivative_kind.strip()
+        if not normalized_kind:
+            raise IndexValidationError("derivativeKind must be a non-empty string.")
+        normalized_policy = policy_version_ref.strip()
+        if not normalized_policy:
+            raise IndexValidationError("policyVersionRef must be a non-empty string.")
+        normalized_source_snapshot = _normalize_json_object(
+            "sourceSnapshotJson",
+            source_snapshot_json,
+        )
+
+        normalized_rows = sorted(
+            rows,
+            key=lambda item: _canonical_json(
+                {
+                    "derivative_kind": item.derivative_kind,
+                    "source_snapshot_json": item.source_snapshot_json,
+                    "display_payload_json": item.display_payload_json,
+                }
+            ),
+        )
+        row_inputs: list[CreateDerivativeIndexRowInput] = []
+        payloads_for_checks: list[dict[str, object]] = []
+        for item in normalized_rows:
+            row_source_snapshot = _normalize_json_object(
+                "rowSourceSnapshotJson",
+                item.source_snapshot_json,
+            )
+            row_display_payload = _normalize_json_object(
+                "displayPayloadJson",
+                item.display_payload_json,
+            )
+            cleaned_payload, suppressed_fields_json = self._suppress_derivative_payload(
+                row_display_payload
+            )
+            row_inputs.append(
+                CreateDerivativeIndexRowInput(
+                    derivative_kind=item.derivative_kind.strip() or normalized_kind,
+                    source_snapshot_json=row_source_snapshot,
+                    display_payload_json=cleaned_payload,
+                    suppressed_fields_json=suppressed_fields_json,
+                )
+            )
+            payloads_for_checks.append(cleaned_payload)
+
+        anti_join_issues = self._find_derivative_antijoin_issues(
+            payloads=payloads_for_checks,
+            source_snapshot=normalized_source_snapshot,
+        )
+
+        blocked = len(anti_join_issues) > 0
+        blocked_reason = (
+            "Anti-join disclosure checks failed for one or more quasi-identifier groups."
+            if blocked
+            else None
+        )
+        snapshot_id = f"dersnap-{uuid4()}"
+        started_at = self._store.utcnow()
+        finished_at = started_at
+        snapshot_material = {
+            "derivativeSnapshotId": snapshot_id,
+            "derivativeIndexId": derivative_index_id,
+            "derivativeKind": normalized_kind,
+            "policyVersionRef": normalized_policy,
+            "sourceSnapshotJson": normalized_source_snapshot,
+            "rows": [
+                {
+                    "derivativeKind": row.derivative_kind,
+                    "sourceSnapshotJson": row.source_snapshot_json,
+                    "displayPayloadJson": row.display_payload_json,
+                    "suppressedFieldsJson": row.suppressed_fields_json,
+                }
+                for row in row_inputs
+            ],
+        }
+        snapshot_sha256 = (
+            hashlib.sha256(_canonical_json(snapshot_material).encode("utf-8")).hexdigest()
+            if not blocked
+            else None
+        )
+        storage_key = (
+            f"indexes/derivatives/{project_id}/{derivative_index_id}/{snapshot_id}.json"
+            if snapshot_sha256 is not None
+            else None
+        )
+        snapshot = self._store.create_derivative_snapshot(
+            project_id=project_id,
+            derivative_index_id=derivative_index_id,
+            snapshot_id=snapshot_id,
+            derivative_kind=normalized_kind,
+            source_snapshot_json=normalized_source_snapshot,
+            policy_version_ref=normalized_policy,
+            status="FAILED" if blocked else "SUCCEEDED",
+            supersedes_derivative_snapshot_id=supersedes_derivative_snapshot_id,
+            storage_key=storage_key,
+            snapshot_sha256=snapshot_sha256,
+            candidate_snapshot_id=None,
+            created_by=actor_user_id,
+            started_at=started_at,
+            finished_at=finished_at,
+            failure_reason=blocked_reason,
+        )
+        rows_written = self._store.append_derivative_index_rows(
+            project_id=project_id,
+            derivative_index_id=derivative_index_id,
+            derivative_snapshot_id=snapshot.id,
+            items=row_inputs,
+        )
+        return DerivativeMaterializationResult(
+            snapshot=snapshot,
+            rows_written=rows_written,
+            blocked=blocked,
+            blocked_reason=blocked_reason,
+        )
+
+    def list_project_derivatives(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        scope: str | None,
+    ) -> ProjectDerivativeListResult:
+        context = self._resolve_project_access(current_user=current_user, project_id=project_id)
+        self._require_read_access(context)
+        normalized_scope = self._normalize_derivative_scope(scope)
+        projection = self._store.get_projection(project_id=project_id)
+        active_derivative_index_id = (
+            projection.active_derivative_index_id if projection else None
+        )
+
+        if normalized_scope == "active" and active_derivative_index_id is None:
+            raise IndexConflictError("No active derivative index is available for this project.")
+
+        items: dict[str, DerivativeSnapshotListItem] = {}
+        if active_derivative_index_id is not None:
+            active_rows = self._store.list_derivative_snapshots_for_index(
+                project_id=project_id,
+                derivative_index_id=active_derivative_index_id,
+            )
+            for row in active_rows:
+                items[row.id] = DerivativeSnapshotListItem(
+                    snapshot=row,
+                    is_active_generation=True,
+                )
+
+        if normalized_scope == "historical":
+            historical_rows = self._store.list_unsuperseded_successful_derivative_snapshots(
+                project_id=project_id
+            )
+            for row in historical_rows:
+                if row.id in items:
+                    continue
+                items[row.id] = DerivativeSnapshotListItem(
+                    snapshot=row,
+                    is_active_generation=row.derivative_index_id == active_derivative_index_id,
+                )
+
+        sorted_items = sorted(
+            items.values(),
+            key=lambda item: (item.snapshot.created_at, item.snapshot.id),
+            reverse=True,
+        )
+        return ProjectDerivativeListResult(
+            scope=normalized_scope,
+            active_derivative_index_id=active_derivative_index_id,
+            items=sorted_items,
+        )
+
+    def get_project_derivative_detail(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        derivative_id: str,
+    ) -> ProjectDerivativeDetailResult:
+        context = self._resolve_project_access(current_user=current_user, project_id=project_id)
+        self._require_read_access(context)
+        snapshot = self._store.get_derivative_snapshot(
+            project_id=project_id,
+            derivative_snapshot_id=derivative_id,
+        )
+        if snapshot is None:
+            raise IndexNotFoundError("Derivative snapshot was not found.")
+        return ProjectDerivativeDetailResult(snapshot=snapshot)
+
+    def get_project_derivative_status(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        derivative_id: str,
+    ) -> ProjectDerivativeDetailResult:
+        return self.get_project_derivative_detail(
+            current_user=current_user,
+            project_id=project_id,
+            derivative_id=derivative_id,
+        )
+
+    def preview_project_derivative(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        derivative_id: str,
+    ) -> ProjectDerivativePreviewResult:
+        context = self._resolve_project_access(current_user=current_user, project_id=project_id)
+        self._require_read_access(context)
+        snapshot = self._store.get_derivative_snapshot(
+            project_id=project_id,
+            derivative_snapshot_id=derivative_id,
+        )
+        if snapshot is None:
+            raise IndexNotFoundError("Derivative snapshot was not found.")
+        rows = self._store.list_all_derivative_rows_for_snapshot(
+            derivative_index_id=snapshot.derivative_index_id,
+            derivative_snapshot_id=snapshot.id,
+        )
+        return ProjectDerivativePreviewResult(snapshot=snapshot, rows=rows)
+
+    def _validate_derivative_snapshot_for_candidate_freeze(
+        self,
+        *,
+        snapshot: DerivativeSnapshotRecord,
+        rows: list[DerivativeIndexRowRecord],
+    ) -> None:
+        if snapshot.status != "SUCCEEDED":
+            raise IndexConflictError(
+                "Candidate freeze is allowed only for SUCCEEDED derivative snapshots."
+            )
+        if not snapshot.storage_key or not snapshot.storage_key.strip():
+            raise IndexConflictError(
+                "Candidate freeze is blocked until storage_key is populated."
+            )
+        if not snapshot.snapshot_sha256 or not snapshot.snapshot_sha256.strip():
+            raise IndexConflictError(
+                "Candidate freeze is blocked until snapshot_sha256 is populated."
+            )
+        if snapshot.superseded_by_derivative_snapshot_id is not None:
+            raise IndexConflictError("Superseded derivative snapshots cannot be frozen.")
+        if len(rows) == 0:
+            raise IndexConflictError(
+                "Candidate freeze is blocked until derivative preview rows are materialized."
+            )
+        identifier_issues = self._find_derivative_identifier_leaks(rows=rows)
+        if identifier_issues:
+            raise IndexConflictError(
+                "Candidate freeze blocked: no raw identifier fields may remain in derivative previews."
+            )
+        anti_join_issues = self._find_derivative_antijoin_issues(
+            payloads=[row.display_payload_json for row in rows],
+            source_snapshot=snapshot.source_snapshot_json,
+        )
+        if anti_join_issues:
+            raise IndexConflictError(
+                "Candidate freeze blocked: anti-join disclosure checks failed."
+            )
+
+    def freeze_derivative_candidate_snapshot(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        derivative_id: str,
+    ) -> DerivativeCandidateFreezeResult:
+        context = self._resolve_project_access(current_user=current_user, project_id=project_id)
+        self._require_derivative_candidate_freeze_access(context)
+
+        snapshot = self._store.get_derivative_snapshot(
+            project_id=project_id,
+            derivative_snapshot_id=derivative_id,
+        )
+        if snapshot is None:
+            raise IndexNotFoundError("Derivative snapshot was not found.")
+        index = self._store.get_index(
+            project_id=project_id,
+            kind="DERIVATIVE",
+            index_id=snapshot.derivative_index_id,
+        )
+        if index is None:
+            raise IndexConflictError(
+                "Derivative snapshot does not belong to an available derivative index generation."
+            )
+
+        if snapshot.candidate_snapshot_id:
+            try:
+                existing = self._export_store.get_candidate(
+                    project_id=project_id,
+                    candidate_id=snapshot.candidate_snapshot_id,
+                )
+            except ExportStoreNotFoundError as error:
+                raise IndexConflictError(
+                    "Derivative snapshot references a missing candidate snapshot."
+                ) from error
+            except (ExportStoreConflictError, ExportStoreUnavailableError) as error:
+                raise IndexStoreUnavailableError(
+                    "Export candidate snapshot lookup failed."
+                ) from error
+            return DerivativeCandidateFreezeResult(
+                snapshot=snapshot,
+                candidate=existing,
+                created=False,
+            )
+
+        rows = self._store.list_all_derivative_rows_for_snapshot(
+            derivative_index_id=snapshot.derivative_index_id,
+            derivative_snapshot_id=snapshot.id,
+        )
+        self._validate_derivative_snapshot_for_candidate_freeze(
+            snapshot=snapshot,
+            rows=rows,
+        )
+
+        suppressed_fields: set[str] = set()
+        for row in rows:
+            fields_node = row.suppressed_fields_json.get("fields")
+            if not isinstance(fields_node, dict):
+                continue
+            for field_name in fields_node.keys():
+                if isinstance(field_name, str) and field_name.strip():
+                    suppressed_fields.add(field_name.strip())
+
+        try:
+            candidate, created = self._export_store.create_or_get_derivative_candidate_snapshot(
+                project_id=project_id,
+                derivative_snapshot_id=snapshot.id,
+                derivative_index_id=snapshot.derivative_index_id,
+                derivative_kind=snapshot.derivative_kind,
+                source_snapshot_json=snapshot.source_snapshot_json,
+                policy_version_ref=snapshot.policy_version_ref,
+                storage_key=snapshot.storage_key or "",
+                snapshot_sha256=snapshot.snapshot_sha256 or "",
+                suppressed_field_names=tuple(sorted(suppressed_fields)),
+                row_count=len(rows),
+                created_by=current_user.user_id,
+            )
+        except ExportStoreConflictError as error:
+            raise IndexConflictError(str(error)) from error
+        except ExportStoreUnavailableError as error:
+            raise IndexStoreUnavailableError(
+                "Export candidate snapshot store is unavailable."
+            ) from error
+
+        linked_snapshot = self._store.set_derivative_snapshot_candidate_snapshot_id(
+            project_id=project_id,
+            derivative_snapshot_id=snapshot.id,
+            candidate_snapshot_id=candidate.id,
+        )
+        if linked_snapshot is None:
+            raise IndexNotFoundError("Derivative snapshot was not found.")
+
+        resolved_candidate_id = linked_snapshot.candidate_snapshot_id or candidate.id
+        if resolved_candidate_id != candidate.id:
+            try:
+                candidate = self._export_store.get_candidate(
+                    project_id=project_id,
+                    candidate_id=resolved_candidate_id,
+                )
+            except ExportStoreNotFoundError as error:
+                raise IndexConflictError(
+                    "Derivative snapshot references a missing candidate snapshot."
+                ) from error
+            except (ExportStoreConflictError, ExportStoreUnavailableError) as error:
+                raise IndexStoreUnavailableError(
+                    "Export candidate snapshot lookup failed."
+                ) from error
+            created = False
+
+        return DerivativeCandidateFreezeResult(
+            snapshot=linked_snapshot,
+            candidate=candidate,
+            created=created,
+        )
 
     def rebuild_index(
         self,
@@ -1161,10 +2418,21 @@ class IndexService:
         row = self._store.get_index(project_id=project_id, kind=kind, index_id=index_id)
         if row is None:
             raise IndexNotFoundError("Index generation not found.")
-        if row.status != "SUCCEEDED":
+        if kind == "SEARCH":
+            evaluation = self.evaluate_search_activation_gate(row=row)
+            if not evaluation.passed:
+                blocker_codes = self._format_activation_blockers(evaluation.blockers)
+                raise IndexConflictError(
+                    "Search index activation blocked: recall-first token-anchor and "
+                    f"geometry coverage gates failed ({blocker_codes})."
+                )
+        elif row.status != "SUCCEEDED":
             raise IndexConflictError("Only SUCCEEDED index generations can be activated.")
+
         if kind == "ENTITY":
             self._validate_entity_index_activation(row=row)
+        elif kind == "DERIVATIVE":
+            self._validate_derivative_index_activation(row=row)
 
         current_projection = self._store.get_projection(project_id=project_id)
         active_search_index_id = (
@@ -1198,6 +2466,276 @@ class IndexService:
         if activated is None:
             raise IndexNotFoundError("Index generation not found.")
         return activated, projection
+
+    @staticmethod
+    def _active_index_id_for_kind(
+        *,
+        projection: ProjectIndexProjectionRecord | None,
+        kind: IndexKind,
+    ) -> str | None:
+        if projection is None:
+            return None
+        if kind == "SEARCH":
+            return projection.active_search_index_id
+        if kind == "ENTITY":
+            return projection.active_entity_index_id
+        return projection.active_derivative_index_id
+
+    @staticmethod
+    def _latest_succeeded_index(rows: list[IndexRecord]) -> IndexRecord | None:
+        for row in rows:
+            if row.status == "SUCCEEDED":
+                return row
+        return None
+
+    @staticmethod
+    def _latest_index(rows: list[IndexRecord]) -> IndexRecord | None:
+        if len(rows) == 0:
+            return None
+        return rows[0]
+
+    def _resolve_freshness_snapshot(
+        self,
+        *,
+        kind: IndexKind,
+        rows: list[IndexRecord],
+        projection: ProjectIndexProjectionRecord | None,
+    ) -> IndexFreshnessSnapshot:
+        active_index_id = self._active_index_id_for_kind(projection=projection, kind=kind)
+        active_row = next((row for row in rows if row.id == active_index_id), None)
+        latest_succeeded = self._latest_succeeded_index(rows)
+        latest_row = self._latest_index(rows)
+        blocked_codes: list[str] = []
+        reason: str | None = None
+
+        if active_index_id is None:
+            if latest_succeeded is None:
+                if latest_row is None:
+                    status: IndexFreshnessStatus = "missing"
+                    reason = "No index generations are present."
+                else:
+                    status = "blocked"
+                    reason = "No SUCCEEDED generation is available to activate."
+                    blocked_codes.append("NO_SUCCEEDED_GENERATION")
+            elif kind == "SEARCH":
+                evaluation = self.evaluate_search_activation_gate(row=latest_succeeded)
+                if not evaluation.passed:
+                    status = "blocked"
+                    reason = (
+                        "Latest SUCCEEDED search generation cannot be activated until "
+                        "recall-first gates pass."
+                    )
+                    blocked_codes.extend([blocker.code for blocker in evaluation.blockers])
+                else:
+                    status = "missing"
+                    reason = "No active index projection pointer is set."
+            else:
+                status = "missing"
+                reason = "No active index projection pointer is set."
+        elif active_row is None:
+            status = "blocked"
+            reason = "Active projection references a missing index generation."
+            blocked_codes.append("ACTIVE_INDEX_MISSING")
+        elif latest_succeeded is None:
+            status = "blocked"
+            reason = "No SUCCEEDED generation is available."
+            blocked_codes.append("NO_SUCCEEDED_GENERATION")
+        else:
+            if kind == "SEARCH":
+                active_evaluation = self.evaluate_search_activation_gate(row=active_row)
+                if not active_evaluation.passed:
+                    status = "blocked"
+                    reason = (
+                        "Active search generation no longer satisfies recall-first "
+                        "activation gates."
+                    )
+                    blocked_codes.extend(
+                        [blocker.code for blocker in active_evaluation.blockers]
+                    )
+                elif active_row.id == latest_succeeded.id:
+                    status = "current"
+                else:
+                    status = "stale"
+                    reason = "A newer SUCCEEDED generation exists but is not active."
+            elif active_row.id == latest_succeeded.id:
+                status = "current"
+            else:
+                status = "stale"
+                reason = "A newer SUCCEEDED generation exists but is not active."
+
+        stale_generation_gap: int | None = None
+        if (
+            status == "stale"
+            and latest_succeeded is not None
+            and active_row is not None
+            and latest_succeeded.version >= active_row.version
+        ):
+            stale_generation_gap = latest_succeeded.version - active_row.version
+
+        return IndexFreshnessSnapshot(
+            status=status,
+            active_index_id=active_index_id,
+            active_version=active_row.version if active_row is not None else None,
+            active_status=active_row.status if active_row is not None else None,
+            latest_succeeded_index_id=(
+                latest_succeeded.id if latest_succeeded is not None else None
+            ),
+            latest_succeeded_version=(
+                latest_succeeded.version if latest_succeeded is not None else None
+            ),
+            latest_succeeded_finished_at=(
+                latest_succeeded.finished_at if latest_succeeded is not None else None
+            ),
+            stale_generation_gap=stale_generation_gap,
+            reason=reason,
+            blocked_codes=blocked_codes,
+        )
+
+    def _require_existing_project(self, *, project_id: str) -> None:
+        try:
+            project = self._project_store.get_project_summary(project_id=project_id)
+        except ProjectStoreUnavailableError as error:
+            raise IndexStoreUnavailableError("Project access lookup failed.") from error
+        if project is None:
+            raise IndexNotFoundError("Project not found.")
+
+    def get_index_quality_summary(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+    ) -> ProjectIndexQualitySummary:
+        self._require_index_quality_read_access(current_user)
+        self._require_existing_project(project_id=project_id)
+        projection = self._store.get_projection(project_id=project_id)
+
+        items: list[IndexQualitySummaryItem] = []
+        for kind in ("SEARCH", "ENTITY", "DERIVATIVE"):
+            rows = self._store.list_indexes(project_id=project_id, kind=kind)
+            freshness = self._resolve_freshness_snapshot(
+                kind=kind,
+                rows=rows,
+                projection=projection,
+            )
+            active_row = (
+                next(
+                    (
+                        row
+                        for row in rows
+                        if row.id == self._active_index_id_for_kind(
+                            projection=projection,
+                            kind=kind,
+                        )
+                    ),
+                    None,
+                )
+                if kind == "SEARCH"
+                else None
+            )
+            latest_succeeded = (
+                self._latest_succeeded_index(rows) if kind == "SEARCH" else None
+            )
+            search_reference_row = active_row or latest_succeeded
+            if search_reference_row is not None:
+                search_coverage = self._build_search_coverage_summary(
+                    source_snapshot=search_reference_row.source_snapshot_json
+                )
+                blocker_count = len(
+                    self.evaluate_search_activation_gate(row=search_reference_row).blockers
+                )
+            else:
+                search_coverage = None
+                blocker_count = 0
+
+            items.append(
+                IndexQualitySummaryItem(
+                    kind=kind,
+                    freshness=freshness,
+                    search_coverage=search_coverage,
+                    search_activation_blocker_count=blocker_count,
+                )
+            )
+
+        return ProjectIndexQualitySummary(
+            project_id=project_id,
+            projection_updated_at=projection.updated_at if projection else None,
+            items=items,
+        )
+
+    def get_index_quality_detail(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        kind: IndexKind,
+        index_id: str,
+    ) -> IndexQualityDetail:
+        self._require_index_quality_read_access(current_user)
+        row = self._store.get_index_by_id(kind=kind, index_id=index_id)
+        if row is None:
+            raise IndexNotFoundError("Index generation not found.")
+        self._require_existing_project(project_id=row.project_id)
+
+        projection = self._store.get_projection(project_id=row.project_id)
+        rows = self._store.list_indexes(project_id=row.project_id, kind=kind)
+        freshness = self._resolve_freshness_snapshot(
+            kind=kind,
+            rows=rows,
+            projection=projection,
+        )
+        active_index_id = self._active_index_id_for_kind(projection=projection, kind=kind)
+        latest_succeeded = self._latest_succeeded_index(rows)
+        is_active_generation = active_index_id == row.id
+        is_latest_succeeded_generation = (
+            latest_succeeded is not None and latest_succeeded.id == row.id
+        )
+        rollback_eligible = kind == "SEARCH" and row.status == "SUCCEEDED" and not is_active_generation
+        search_coverage = (
+            self._build_search_coverage_summary(source_snapshot=row.source_snapshot_json)
+            if kind == "SEARCH"
+            else None
+        )
+        search_activation_evaluation = (
+            self.evaluate_search_activation_gate(row=row) if kind == "SEARCH" else None
+        )
+
+        return IndexQualityDetail(
+            project_id=row.project_id,
+            kind=kind,
+            index=row,
+            freshness=freshness,
+            active_index_id=active_index_id,
+            is_active_generation=is_active_generation,
+            is_latest_succeeded_generation=is_latest_succeeded_generation,
+            rollback_eligible=rollback_eligible,
+            search_coverage=search_coverage,
+            search_activation_evaluation=search_activation_evaluation,
+        )
+
+    def list_search_query_audits(
+        self,
+        *,
+        current_user: SessionPrincipal,
+        project_id: str,
+        cursor: int,
+        limit: int,
+    ) -> ProjectSearchQueryAuditResult:
+        self._require_index_quality_read_access(current_user)
+        self._require_existing_project(project_id=project_id)
+        if cursor < 0:
+            raise IndexValidationError("cursor must be greater than or equal to 0.")
+        if limit < 1 or limit > 100:
+            raise IndexValidationError("limit must be between 1 and 100.")
+
+        page = self._store.list_search_query_audits(
+            project_id=project_id,
+            cursor=cursor,
+            limit=limit,
+        )
+        return ProjectSearchQueryAuditResult(
+            project_id=project_id,
+            items=page.items,
+            next_cursor=page.next_cursor,
+        )
 
     def mark_index_started(
         self,

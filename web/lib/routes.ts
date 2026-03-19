@@ -63,12 +63,94 @@ export const activityPath = "/activity";
 export const adminPath = "/admin";
 export const adminAuditPath = "/admin/audit";
 export const adminSecurityPath = "/admin/security";
+export const adminSecurityFindingsPath = "/admin/security/findings";
+export const adminSecurityRiskAcceptancesPath = "/admin/security/risk-acceptances";
 export const adminOperationsPath = "/admin/operations";
+export const adminOperationsReadinessPath = "/admin/operations/readiness";
 export const adminOperationsExportStatusPath = "/admin/operations/export-status";
 export const adminOperationsSlosPath = "/admin/operations/slos";
 export const adminOperationsAlertsPath = "/admin/operations/alerts";
 export const adminOperationsTimelinesPath = "/admin/operations/timelines";
+export const adminRunbooksPath = "/admin/runbooks";
+export const adminIncidentsPath = "/admin/incidents";
+export const adminIncidentStatusPath = "/admin/incidents/status";
+export const adminCapacityTestsPath = "/admin/capacity/tests";
+export const adminRecoveryStatusPath = "/admin/recovery/status";
+export const adminRecoveryDrillsPath = "/admin/recovery/drills";
+export const adminIndexQualityPath = "/admin/index-quality";
+export const adminIndexQualityQueryAuditsBasePath =
+  "/admin/index-quality/query-audits";
 export const adminDesignSystemPath = "/admin/design-system";
+
+export function adminCapacityTestDetailPath(testRunId: string): string {
+  return `${adminCapacityTestsPath}/${encodePathSegment(testRunId)}`;
+}
+
+export function adminRunbookDetailPath(runbookId: string): string {
+  return `${adminRunbooksPath}/${encodePathSegment(runbookId)}`;
+}
+
+export function adminIncidentDetailPath(incidentId: string): string {
+  return `${adminIncidentsPath}/${encodePathSegment(incidentId)}`;
+}
+
+export function adminIncidentTimelinePath(incidentId: string): string {
+  return `${adminIncidentDetailPath(incidentId)}/timeline`;
+}
+
+export function adminRecoveryDrillDetailPath(drillId: string): string {
+  return `${adminRecoveryDrillsPath}/${encodePathSegment(drillId)}`;
+}
+
+export function adminRecoveryDrillEvidencePath(drillId: string): string {
+  return `${adminRecoveryDrillDetailPath(drillId)}/evidence`;
+}
+
+export function adminSecurityFindingDetailPath(findingId: string): string {
+  return `${adminSecurityFindingsPath}/${encodePathSegment(findingId)}`;
+}
+
+export function adminSecurityRiskAcceptanceDetailPath(
+  riskAcceptanceId: string
+): string {
+  return `${adminSecurityRiskAcceptancesPath}/${encodePathSegment(riskAcceptanceId)}`;
+}
+
+export function adminSecurityRiskAcceptanceEventsPath(
+  riskAcceptanceId: string
+): string {
+  return `${adminSecurityRiskAcceptanceDetailPath(riskAcceptanceId)}/events`;
+}
+
+export function adminIndexQualitySummaryPath(projectId?: string | null): string {
+  return withQuery(adminIndexQualityPath, {
+    projectId: projectId && projectId.trim().length > 0 ? projectId.trim() : undefined
+  });
+}
+
+export function adminIndexQualityDetailPath(
+  indexKind: string,
+  indexId: string
+): string {
+  return `${adminIndexQualityPath}/${encodePathSegment(indexKind)}/${encodePathSegment(indexId)}`;
+}
+
+export function adminIndexQualityQueryAuditsPath(
+  projectId: string,
+  options?: { cursor?: number | null; limit?: number | null }
+): string {
+  return withQuery(adminIndexQualityQueryAuditsBasePath, {
+    projectId: projectId.trim(),
+    cursor:
+      typeof options?.cursor === "number" && Number.isFinite(options.cursor)
+        ? Math.max(0, Math.round(options.cursor))
+        : undefined,
+    limit:
+      typeof options?.limit === "number" && Number.isFinite(options.limit)
+        ? Math.max(1, Math.round(options.limit))
+        : undefined
+  });
+}
 
 export function projectAnchorPath(projectId: string): string {
   return `/projects/${encodePathSegment(projectId)}`;
@@ -603,6 +685,38 @@ export function projectEntitiesPath(projectId: string): string {
 
 export function projectEntityPath(projectId: string, entityId: string): string {
   return `${projectEntitiesPath(projectId)}/${encodePathSegment(entityId)}`;
+}
+
+export function projectDerivativesPath(projectId: string): string {
+  return `${projectAnchorPath(projectId)}/derivatives`;
+}
+
+export function projectDerivativePath(
+  projectId: string,
+  derivativeId: string
+): string {
+  return `${projectDerivativesPath(projectId)}/${encodePathSegment(derivativeId)}`;
+}
+
+export function projectDerivativeStatusPath(
+  projectId: string,
+  derivativeId: string
+): string {
+  return `${projectDerivativePath(projectId, derivativeId)}/status`;
+}
+
+export function projectDerivativePreviewPath(
+  projectId: string,
+  derivativeId: string
+): string {
+  return `${projectDerivativePath(projectId, derivativeId)}/preview`;
+}
+
+export function projectDerivativeCandidateSnapshotsPath(
+  projectId: string,
+  derivativeId: string
+): string {
+  return `${projectDerivativePath(projectId, derivativeId)}/candidate-snapshots`;
 }
 
 export function projectSearchIndexPath(projectId: string, indexId: string): string {

@@ -113,7 +113,7 @@ export function JobStatusPoller({
         <InlineState
           kind="degraded"
           title="Status polling degraded"
-          description={error}
+          description={`${error}. Active work may still be progressing server-side. This is not a terminal failure state.`}
         />
       ) : null}
     </section>

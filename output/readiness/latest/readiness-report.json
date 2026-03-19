@@ -1,0 +1,237 @@
+{
+  "blockers": [],
+  "blockingFailureCount": 0,
+  "categories": [
+    {
+      "auditorVisible": true,
+      "blockingFailureCount": 0,
+      "blockingPolicy": "BLOCKING",
+      "checks": [
+        {
+          "blockingPolicy": "BLOCKING",
+          "command": "pnpm -s vitest run web/components/authenticated-shell.a11y.test.tsx web/components/route-states.a11y.test.tsx",
+          "detail": "Check passed.",
+          "durationSeconds": 1.878,
+          "evidence": [
+            {
+              "label": "Execution log",
+              "path": "output/readiness/latest/logs/accessibility__critical-route-a11y-vitest.log",
+              "sha256": "a7156980fd55e9a07802baef27e3b07a04379713bb45d928b492fed674bcd48d"
+            }
+          ],
+          "exitCode": 0,
+          "id": "critical-route-a11y-vitest",
+          "status": "PASS",
+          "title": "Component and route accessibility diagnostics"
+        }
+      ],
+      "id": "accessibility",
+      "status": "PASS",
+      "summary": "Accessibility-focused route and shell checks remain green.",
+      "title": "Accessibility and keyboard-first critical routes"
+    },
+    {
+      "auditorVisible": true,
+      "blockingFailureCount": 0,
+      "blockingPolicy": "BLOCKING",
+      "checks": [
+        {
+          "blockingPolicy": "BLOCKING",
+          "command": "make test-governance-integrity PYTHON=.venv/bin/python",
+          "detail": "Check passed.",
+          "durationSeconds": 3.342,
+          "evidence": [
+            {
+              "label": "Execution log",
+              "path": "output/readiness/latest/logs/governance_integrity__governance-integrity-regression.log",
+              "sha256": "00cd75a2da71a45aac43b458ac07555bedad17327a254ead0fccc63ec8646b09"
+            }
+          ],
+          "exitCode": 0,
+          "id": "governance-integrity-regression",
+          "status": "PASS",
+          "title": "Governance integrity regression pack"
+        }
+      ],
+      "id": "governance_integrity",
+      "status": "PASS",
+      "summary": "Manifest and ledger reconciliation remains deterministic and append-only.",
+      "title": "Governance artefact integrity"
+    },
+    {
+      "auditorVisible": true,
+      "blockingFailureCount": 0,
+      "blockingPolicy": "BLOCKING",
+      "checks": [
+        {
+          "blockingPolicy": "BLOCKING",
+          "command": "make test-privacy-regression PYTHON=.venv/bin/python",
+          "detail": "Check passed.",
+          "durationSeconds": 4.053,
+          "evidence": [
+            {
+              "label": "Execution log",
+              "path": "output/readiness/latest/logs/privacy_safety__privacy-regression-pack.log",
+              "sha256": "6a3b263184357a79ce9f7939c911a2ee747fd979ed42e79348adef83fbc1aa0d"
+            }
+          ],
+          "exitCode": 0,
+          "id": "privacy-regression-pack",
+          "status": "PASS",
+          "title": "Privacy disclosure and review-safety regression pack"
+        }
+      ],
+      "id": "privacy_safety",
+      "status": "PASS",
+      "summary": "Disclosure-focused privacy checks and reviewer safety gates remain enforced.",
+      "title": "Privacy leak and review safety"
+    },
+    {
+      "auditorVisible": true,
+      "blockingFailureCount": 0,
+      "blockingPolicy": "BLOCKING",
+      "checks": [
+        {
+          "blockingPolicy": "BLOCKING",
+          "command": ".venv/bin/python -m pytest api/tests/test_bundle_verification.py api/tests/test_export_provenance.py api/tests/test_exports_replay.py",
+          "detail": "Check passed.",
+          "durationSeconds": 0.306,
+          "evidence": [
+            {
+              "label": "Execution log",
+              "path": "output/readiness/latest/logs/provenance_verification__provenance-verification-suite.log",
+              "sha256": "175fdd083d584bd2ed256a039e2e9eff726e4ec016156befbe654fc6a16f5343"
+            }
+          ],
+          "exitCode": 0,
+          "id": "provenance-verification-suite",
+          "status": "PASS",
+          "title": "Provenance and bundle verification tests"
+        }
+      ],
+      "id": "provenance_verification",
+      "status": "PASS",
+      "summary": "Bundle verification, provenance replay, and proof paths remain reproducible.",
+      "title": "Provenance proof and bundle verification"
+    },
+    {
+      "auditorVisible": true,
+      "blockingFailureCount": 0,
+      "blockingPolicy": "BLOCKING",
+      "checks": [
+        {
+          "blockingPolicy": "BLOCKING",
+          "command": "make test-export-hardening PYTHON=.venv/bin/python",
+          "detail": "Check passed.",
+          "durationSeconds": 3.357,
+          "evidence": [
+            {
+              "label": "Execution log",
+              "path": "output/readiness/latest/logs/egress_controls__egress-hardening-regression.log",
+              "sha256": "79a1aa2e29b5ac37fdebdcc9efa7fe4e931eaeb6906d23788fc91e7ab0846dae"
+            }
+          ],
+          "exitCode": 0,
+          "id": "egress-hardening-regression",
+          "status": "PASS",
+          "title": "Export hardening and egress-denial regression pack"
+        }
+      ],
+      "id": "egress_controls",
+      "status": "PASS",
+      "summary": "Export-gateway-only egress and denial tests remain enforced.",
+      "title": "No-bypass egress controls"
+    },
+    {
+      "auditorVisible": true,
+      "blockingFailureCount": 0,
+      "blockingPolicy": "BLOCKING",
+      "checks": [
+        {
+          "blockingPolicy": "BLOCKING",
+          "command": ".venv/bin/python -m pytest api/tests/test_search_routes.py api/tests/test_search_service.py api/tests/test_indexes_routes.py api/tests/test_indexes_service.py",
+          "detail": "Check passed.",
+          "durationSeconds": 3.284,
+          "evidence": [
+            {
+              "label": "Execution log",
+              "path": "output/readiness/latest/logs/discovery_safety__search-index-derivative-regression.log",
+              "sha256": "f2a1617a6df362862a2cc6b7785591de1a4b3e5c8a5724686bc1ec6470232fc7"
+            }
+          ],
+          "exitCode": 0,
+          "id": "search-index-derivative-regression",
+          "status": "PASS",
+          "title": "Search and index safety regression tests"
+        }
+      ],
+      "id": "discovery_safety",
+      "status": "PASS",
+      "summary": "Search/index quality and derivative-safety controls remain active.",
+      "title": "Discovery and derivative safety checks"
+    },
+    {
+      "auditorVisible": false,
+      "blockingFailureCount": 0,
+      "blockingPolicy": "BLOCKING",
+      "checks": [
+        {
+          "blockingPolicy": "BLOCKING",
+          "command": ".venv/bin/python -m pytest api/tests/test_security_findings_service.py api/tests/test_security_routes.py api/tests/test_model_stack.py",
+          "detail": "Check passed.",
+          "durationSeconds": 3.671,
+          "evidence": [
+            {
+              "label": "Execution log",
+              "path": "output/readiness/latest/logs/security_hardening__security-findings-boundary-suite.log",
+              "sha256": "cea15d3ce8a14c4ff7a8370301f383e3e45b2a57c965abe8bd589c6e205a7fb0"
+            }
+          ],
+          "exitCode": 0,
+          "id": "security-findings-boundary-suite",
+          "status": "PASS",
+          "title": "Security findings and model-boundary regression tests"
+        }
+      ],
+      "id": "security_hardening",
+      "status": "PASS",
+      "summary": "Security finding lifecycle and model-boundary isolation checks remain enforced.",
+      "title": "Security findings and model-boundary hardening"
+    },
+    {
+      "auditorVisible": false,
+      "blockingFailureCount": 0,
+      "blockingPolicy": "WARNING",
+      "checks": [
+        {
+          "blockingPolicy": "WARNING",
+          "command": ".venv/bin/python -m pytest api/tests/test_capacity_routes.py api/tests/test_capacity_service.py api/tests/test_recovery_routes.py api/tests/test_recovery_service.py",
+          "detail": "Check passed.",
+          "durationSeconds": 4.469,
+          "evidence": [
+            {
+              "label": "Execution log",
+              "path": "output/readiness/latest/logs/resilience_capacity__capacity-recovery-suite.log",
+              "sha256": "72885e60f0deea125acefc40cfdb7ac75895348a476e653e141155d58bfec7a8"
+            }
+          ],
+          "exitCode": 0,
+          "id": "capacity-recovery-suite",
+          "status": "PASS",
+          "title": "Capacity and recovery regression tests"
+        }
+      ],
+      "id": "resilience_capacity",
+      "status": "PASS",
+      "summary": "Capacity and recovery route/service contracts remain operationally consistent.",
+      "title": "Capacity and recovery evidence integrity"
+    }
+  ],
+  "categoryCount": 8,
+  "detail": "Cross-phase readiness blocking checks passed.",
+  "generatedAt": "2026-03-18T23:45:01.688177+00:00",
+  "matrixPath": "infra/readiness/cross-phase-readiness-matrix.json",
+  "matrixVersion": "phase-11-cross-phase-readiness-v1",
+  "overallStatus": "PASS",
+  "warningFailureCount": 0
+}

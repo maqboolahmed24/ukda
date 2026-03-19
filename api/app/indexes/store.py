@@ -10,9 +10,13 @@ from app.core.config import Settings
 from app.indexes.models import (
     ControlledEntityPage,
     ControlledEntityRecord,
+    CreateDerivativeIndexRowInput,
     CreateSearchDocumentInput,
     CreateControlledEntityInput,
     CreateEntityOccurrenceInput,
+    DerivativeIndexRowPage,
+    DerivativeIndexRowRecord,
+    DerivativeSnapshotRecord,
     EntityOccurrencePage,
     EntityOccurrenceRecord,
     IndexKind,
@@ -20,6 +24,8 @@ from app.indexes.models import (
     ProjectIndexProjectionRecord,
     SearchDocumentPage,
     SearchDocumentRecord,
+    SearchQueryAuditPage,
+    SearchQueryAuditRecord,
 )
 from app.projects.store import ProjectStore
 
@@ -158,6 +164,70 @@ INDEX_SCHEMA_STATEMENTS = (
       ON search_documents(search_index_id, page_number, id)
     """,
     """
+    CREATE INDEX IF NOT EXISTS idx_search_documents_index_doc_run_page
+      ON search_documents(search_index_id, document_id, run_id, page_number, id)
+    """,
+    """
+    DO $$
+    BEGIN
+      BEGIN
+        CREATE EXTENSION IF NOT EXISTS pg_trgm;
+      EXCEPTION
+        WHEN insufficient_privilege THEN
+          NULL;
+      END;
+    END
+    $$;
+    """,
+    """
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1
+        FROM pg_extension
+        WHERE extname = 'pg_trgm'
+      ) THEN
+        EXECUTE
+          'CREATE INDEX IF NOT EXISTS idx_search_documents_text_trgm '
+          || 'ON search_documents USING GIN (search_text gin_trgm_ops)';
+      END IF;
+    END
+    $$;
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS search_query_texts (
+      key TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      query_text TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_search_query_texts_project_created
+      ON search_query_texts(project_id, created_at DESC, key DESC)
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS search_query_audits (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      actor_user_id TEXT NOT NULL REFERENCES users(id),
+      search_index_id TEXT NOT NULL REFERENCES search_indexes(id) ON DELETE CASCADE,
+      query_sha256 TEXT NOT NULL,
+      query_text_key TEXT NOT NULL REFERENCES search_query_texts(key),
+      filters_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+      result_count INTEGER NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_search_query_audits_project_created
+      ON search_query_audits(project_id, created_at DESC, id DESC)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_search_query_audits_project_sha_created
+      ON search_query_audits(project_id, query_sha256, created_at DESC, id DESC)
+    """,
+    """
     CREATE TABLE IF NOT EXISTS controlled_entities (
       id TEXT PRIMARY KEY,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -206,6 +276,37 @@ INDEX_SCHEMA_STATEMENTS = (
       ON entity_occurrences(entity_index_id, entity_id, page_number, id)
     """,
     """
+    CREATE TABLE IF NOT EXISTS derivative_snapshots (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      derivative_index_id TEXT NOT NULL REFERENCES derivative_indexes(id) ON DELETE CASCADE,
+      derivative_kind TEXT NOT NULL,
+      source_snapshot_json JSONB NOT NULL,
+      policy_version_ref TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (
+        status IN ('QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELED')
+      ),
+      supersedes_derivative_snapshot_id TEXT REFERENCES derivative_snapshots(id),
+      superseded_by_derivative_snapshot_id TEXT REFERENCES derivative_snapshots(id),
+      storage_key TEXT,
+      snapshot_sha256 TEXT,
+      candidate_snapshot_id TEXT,
+      created_by TEXT NOT NULL REFERENCES users(id),
+      created_at TIMESTAMPTZ NOT NULL,
+      started_at TIMESTAMPTZ,
+      finished_at TIMESTAMPTZ,
+      failure_reason TEXT
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_derivative_snapshots_index_created
+      ON derivative_snapshots(derivative_index_id, created_at DESC, id DESC)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_derivative_snapshots_project_scope
+      ON derivative_snapshots(project_id, status, superseded_by_derivative_snapshot_id, created_at DESC, id DESC)
+    """,
+    """
     CREATE TABLE IF NOT EXISTS derivative_index_rows (
       id TEXT PRIMARY KEY,
       derivative_index_id TEXT NOT NULL REFERENCES derivative_indexes(id) ON DELETE CASCADE,
@@ -220,6 +321,10 @@ INDEX_SCHEMA_STATEMENTS = (
     """
     CREATE INDEX IF NOT EXISTS idx_derivative_index_rows_index_created
       ON derivative_index_rows(derivative_index_id, created_at DESC, id DESC)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_derivative_index_rows_snapshot_created
+      ON derivative_index_rows(derivative_snapshot_id, derivative_index_id, created_at DESC, id DESC)
     """,
     """
     CREATE TABLE IF NOT EXISTS project_index_projections (
@@ -376,6 +481,22 @@ class IndexStore:
         )
 
     @staticmethod
+    def _as_search_query_audit(row: dict[str, object]) -> SearchQueryAuditRecord:
+        filters_json = row.get("filters_json")
+        result_count = row.get("result_count")
+        return SearchQueryAuditRecord(
+            id=str(row["id"]),
+            project_id=str(row["project_id"]),
+            actor_user_id=str(row["actor_user_id"]),
+            search_index_id=str(row["search_index_id"]),
+            query_sha256=str(row["query_sha256"]),
+            query_text_key=str(row["query_text_key"]),
+            filters_json=dict(filters_json) if isinstance(filters_json, dict) else {},
+            result_count=int(result_count) if isinstance(result_count, int) else 0,
+            created_at=row["created_at"],  # type: ignore[arg-type]
+        )
+
+    @staticmethod
     def _as_controlled_entity(row: dict[str, object]) -> ControlledEntityRecord:
         confidence_summary_json = row.get("confidence_summary_json")
         occurrence_count = row.get("occurrence_count")
@@ -433,6 +554,85 @@ class IndexStore:
                 dict(token_geometry_json)
                 if isinstance(token_geometry_json, dict)
                 else None
+            ),
+            created_at=row["created_at"],  # type: ignore[arg-type]
+        )
+
+    @staticmethod
+    def _as_derivative_snapshot(row: dict[str, object]) -> DerivativeSnapshotRecord:
+        source_snapshot_json = row.get("source_snapshot_json")
+        return DerivativeSnapshotRecord(
+            id=str(row["id"]),
+            project_id=str(row["project_id"]),
+            derivative_index_id=str(row["derivative_index_id"]),
+            derivative_kind=str(row["derivative_kind"]),
+            source_snapshot_json=(
+                dict(source_snapshot_json)
+                if isinstance(source_snapshot_json, dict)
+                else {}
+            ),
+            policy_version_ref=str(row["policy_version_ref"]),
+            status=str(row["status"]),  # type: ignore[arg-type]
+            supersedes_derivative_snapshot_id=(
+                str(row["supersedes_derivative_snapshot_id"])
+                if isinstance(row.get("supersedes_derivative_snapshot_id"), str)
+                else None
+            ),
+            superseded_by_derivative_snapshot_id=(
+                str(row["superseded_by_derivative_snapshot_id"])
+                if isinstance(row.get("superseded_by_derivative_snapshot_id"), str)
+                else None
+            ),
+            storage_key=(
+                str(row["storage_key"])
+                if isinstance(row.get("storage_key"), str)
+                else None
+            ),
+            snapshot_sha256=(
+                str(row["snapshot_sha256"])
+                if isinstance(row.get("snapshot_sha256"), str)
+                else None
+            ),
+            candidate_snapshot_id=(
+                str(row["candidate_snapshot_id"])
+                if isinstance(row.get("candidate_snapshot_id"), str)
+                else None
+            ),
+            created_by=str(row["created_by"]),
+            created_at=row["created_at"],  # type: ignore[arg-type]
+            started_at=row.get("started_at"),  # type: ignore[arg-type]
+            finished_at=row.get("finished_at"),  # type: ignore[arg-type]
+            failure_reason=(
+                str(row["failure_reason"])
+                if isinstance(row.get("failure_reason"), str)
+                else None
+            ),
+        )
+
+    @staticmethod
+    def _as_derivative_row(row: dict[str, object]) -> DerivativeIndexRowRecord:
+        source_snapshot_json = row.get("source_snapshot_json")
+        display_payload_json = row.get("display_payload_json")
+        suppressed_fields_json = row.get("suppressed_fields_json")
+        return DerivativeIndexRowRecord(
+            id=str(row["id"]),
+            derivative_index_id=str(row["derivative_index_id"]),
+            derivative_snapshot_id=str(row["derivative_snapshot_id"]),
+            derivative_kind=str(row["derivative_kind"]),
+            source_snapshot_json=(
+                dict(source_snapshot_json)
+                if isinstance(source_snapshot_json, dict)
+                else {}
+            ),
+            display_payload_json=(
+                dict(display_payload_json)
+                if isinstance(display_payload_json, dict)
+                else {}
+            ),
+            suppressed_fields_json=(
+                dict(suppressed_fields_json)
+                if isinstance(suppressed_fields_json, dict)
+                else {}
             ),
             created_at=row["created_at"],  # type: ignore[arg-type]
         )
@@ -549,6 +749,52 @@ class IndexStore:
                             "index_id": index_id,
                         },
                     )
+                    row = cursor.fetchone()
+        except psycopg.Error as error:
+            raise IndexStoreUnavailableError("Index lookup failed.") from error
+
+        if row is None:
+            return None
+        return self._as_index(kind, row)
+
+    def get_index_by_id(
+        self,
+        *,
+        kind: IndexKind,
+        index_id: str,
+    ) -> IndexRecord | None:
+        self.ensure_schema()
+        table = self._table_for(kind)
+        sql = f"""
+            SELECT
+              id,
+              project_id,
+              version,
+              source_snapshot_json,
+              source_snapshot_sha256,
+              build_parameters_json,
+              rebuild_dedupe_key,
+              status,
+              supersedes_index_id,
+              superseded_by_index_id,
+              failure_reason,
+              created_by,
+              created_at,
+              started_at,
+              finished_at,
+              cancel_requested_by,
+              cancel_requested_at,
+              canceled_by,
+              canceled_at,
+              activated_by,
+              activated_at
+            FROM {table}
+            WHERE id = %(index_id)s
+        """
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(sql, {"index_id": index_id})
                     row = cursor.fetchone()
         except psycopg.Error as error:
             raise IndexStoreUnavailableError("Index lookup failed.") from error
@@ -1590,6 +1836,550 @@ class IndexStore:
             raise IndexStoreUnavailableError("Entity occurrence append failed.") from error
         return len(items)
 
+    def create_derivative_snapshot(
+        self,
+        *,
+        project_id: str,
+        derivative_index_id: str,
+        snapshot_id: str,
+        derivative_kind: str,
+        source_snapshot_json: dict[str, object],
+        policy_version_ref: str,
+        status: str,
+        created_by: str,
+        supersedes_derivative_snapshot_id: str | None = None,
+        storage_key: str | None = None,
+        snapshot_sha256: str | None = None,
+        candidate_snapshot_id: str | None = None,
+        started_at: datetime | None = None,
+        finished_at: datetime | None = None,
+        failure_reason: str | None = None,
+        created_at: datetime | None = None,
+    ) -> DerivativeSnapshotRecord:
+        self.ensure_schema()
+        index = self.get_index(
+            project_id=project_id,
+            kind="DERIVATIVE",
+            index_id=derivative_index_id,
+        )
+        if index is None:
+            raise IndexStoreUnavailableError("Derivative index generation does not exist.")
+        snapshot_created_at = created_at or self.utcnow()
+        normalized_kind = derivative_kind.strip()
+        if not normalized_kind:
+            raise IndexStoreUnavailableError("derivative_kind is required.")
+        normalized_policy_ref = policy_version_ref.strip()
+        if not normalized_policy_ref:
+            raise IndexStoreUnavailableError("policy_version_ref is required.")
+
+        row: dict[str, object] | None = None
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    if supersedes_derivative_snapshot_id is not None:
+                        cursor.execute(
+                            """
+                            SELECT id
+                            FROM derivative_snapshots
+                            WHERE project_id = %(project_id)s
+                              AND id = %(supersedes_derivative_snapshot_id)s
+                            """,
+                            {
+                                "project_id": project_id,
+                                "supersedes_derivative_snapshot_id": (
+                                    supersedes_derivative_snapshot_id
+                                ),
+                            },
+                        )
+                        superseded_row = cursor.fetchone()
+                        if superseded_row is None:
+                            raise IndexStoreUnavailableError(
+                                "supersedes_derivative_snapshot_id does not exist in project scope."
+                            )
+
+                    cursor.execute(
+                        """
+                        INSERT INTO derivative_snapshots (
+                          id,
+                          project_id,
+                          derivative_index_id,
+                          derivative_kind,
+                          source_snapshot_json,
+                          policy_version_ref,
+                          status,
+                          supersedes_derivative_snapshot_id,
+                          superseded_by_derivative_snapshot_id,
+                          storage_key,
+                          snapshot_sha256,
+                          candidate_snapshot_id,
+                          created_by,
+                          created_at,
+                          started_at,
+                          finished_at,
+                          failure_reason
+                        )
+                        VALUES (
+                          %(id)s,
+                          %(project_id)s,
+                          %(derivative_index_id)s,
+                          %(derivative_kind)s,
+                          %(source_snapshot_json)s,
+                          %(policy_version_ref)s,
+                          %(status)s,
+                          %(supersedes_derivative_snapshot_id)s,
+                          NULL,
+                          %(storage_key)s,
+                          %(snapshot_sha256)s,
+                          %(candidate_snapshot_id)s,
+                          %(created_by)s,
+                          %(created_at)s,
+                          %(started_at)s,
+                          %(finished_at)s,
+                          %(failure_reason)s
+                        )
+                        RETURNING
+                          id,
+                          project_id,
+                          derivative_index_id,
+                          derivative_kind,
+                          source_snapshot_json,
+                          policy_version_ref,
+                          status,
+                          supersedes_derivative_snapshot_id,
+                          superseded_by_derivative_snapshot_id,
+                          storage_key,
+                          snapshot_sha256,
+                          candidate_snapshot_id,
+                          created_by,
+                          created_at,
+                          started_at,
+                          finished_at,
+                          failure_reason
+                        """,
+                        {
+                            "id": snapshot_id,
+                            "project_id": project_id,
+                            "derivative_index_id": derivative_index_id,
+                            "derivative_kind": normalized_kind,
+                            "source_snapshot_json": source_snapshot_json,
+                            "policy_version_ref": normalized_policy_ref,
+                            "status": status,
+                            "supersedes_derivative_snapshot_id": (
+                                supersedes_derivative_snapshot_id
+                            ),
+                            "storage_key": storage_key,
+                            "snapshot_sha256": snapshot_sha256,
+                            "candidate_snapshot_id": candidate_snapshot_id,
+                            "created_by": created_by,
+                            "created_at": snapshot_created_at,
+                            "started_at": started_at,
+                            "finished_at": finished_at,
+                            "failure_reason": failure_reason,
+                        },
+                    )
+                    row = cursor.fetchone()
+
+                    if supersedes_derivative_snapshot_id is not None:
+                        cursor.execute(
+                            """
+                            UPDATE derivative_snapshots
+                            SET superseded_by_derivative_snapshot_id = %(snapshot_id)s
+                            WHERE project_id = %(project_id)s
+                              AND id = %(supersedes_derivative_snapshot_id)s
+                              AND superseded_by_derivative_snapshot_id IS NULL
+                            """,
+                            {
+                                "project_id": project_id,
+                                "snapshot_id": snapshot_id,
+                                "supersedes_derivative_snapshot_id": (
+                                    supersedes_derivative_snapshot_id
+                                ),
+                            },
+                        )
+                connection.commit()
+        except psycopg.Error as error:
+            raise IndexStoreUnavailableError("Derivative snapshot creation failed.") from error
+
+        if row is None:
+            raise IndexStoreUnavailableError("Derivative snapshot creation returned no row.")
+        return self._as_derivative_snapshot(row)
+
+    def get_derivative_snapshot(
+        self,
+        *,
+        project_id: str,
+        derivative_snapshot_id: str,
+    ) -> DerivativeSnapshotRecord | None:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          id,
+                          project_id,
+                          derivative_index_id,
+                          derivative_kind,
+                          source_snapshot_json,
+                          policy_version_ref,
+                          status,
+                          supersedes_derivative_snapshot_id,
+                          superseded_by_derivative_snapshot_id,
+                          storage_key,
+                          snapshot_sha256,
+                          candidate_snapshot_id,
+                          created_by,
+                          created_at,
+                          started_at,
+                          finished_at,
+                          failure_reason
+                        FROM derivative_snapshots
+                        WHERE project_id = %(project_id)s
+                          AND id = %(derivative_snapshot_id)s
+                        """,
+                        {
+                            "project_id": project_id,
+                            "derivative_snapshot_id": derivative_snapshot_id,
+                        },
+                    )
+                    row = cursor.fetchone()
+        except psycopg.Error as error:
+            raise IndexStoreUnavailableError("Derivative snapshot lookup failed.") from error
+        if row is None:
+            return None
+        return self._as_derivative_snapshot(row)
+
+    def list_derivative_snapshots_for_index(
+        self,
+        *,
+        project_id: str,
+        derivative_index_id: str,
+    ) -> list[DerivativeSnapshotRecord]:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          id,
+                          project_id,
+                          derivative_index_id,
+                          derivative_kind,
+                          source_snapshot_json,
+                          policy_version_ref,
+                          status,
+                          supersedes_derivative_snapshot_id,
+                          superseded_by_derivative_snapshot_id,
+                          storage_key,
+                          snapshot_sha256,
+                          candidate_snapshot_id,
+                          created_by,
+                          created_at,
+                          started_at,
+                          finished_at,
+                          failure_reason
+                        FROM derivative_snapshots
+                        WHERE project_id = %(project_id)s
+                          AND derivative_index_id = %(derivative_index_id)s
+                        ORDER BY created_at DESC, id DESC
+                        """,
+                        {
+                            "project_id": project_id,
+                            "derivative_index_id": derivative_index_id,
+                        },
+                    )
+                    rows = cursor.fetchall()
+        except psycopg.Error as error:
+            raise IndexStoreUnavailableError("Derivative snapshot listing failed.") from error
+        return [self._as_derivative_snapshot(row) for row in rows]
+
+    def list_unsuperseded_successful_derivative_snapshots(
+        self,
+        *,
+        project_id: str,
+    ) -> list[DerivativeSnapshotRecord]:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          id,
+                          project_id,
+                          derivative_index_id,
+                          derivative_kind,
+                          source_snapshot_json,
+                          policy_version_ref,
+                          status,
+                          supersedes_derivative_snapshot_id,
+                          superseded_by_derivative_snapshot_id,
+                          storage_key,
+                          snapshot_sha256,
+                          candidate_snapshot_id,
+                          created_by,
+                          created_at,
+                          started_at,
+                          finished_at,
+                          failure_reason
+                        FROM derivative_snapshots
+                        WHERE project_id = %(project_id)s
+                          AND status = 'SUCCEEDED'
+                          AND superseded_by_derivative_snapshot_id IS NULL
+                        ORDER BY created_at DESC, id DESC
+                        """,
+                        {"project_id": project_id},
+                    )
+                    rows = cursor.fetchall()
+        except psycopg.Error as error:
+            raise IndexStoreUnavailableError(
+                "Historical derivative snapshot listing failed."
+            ) from error
+        return [self._as_derivative_snapshot(row) for row in rows]
+
+    def set_derivative_snapshot_candidate_snapshot_id(
+        self,
+        *,
+        project_id: str,
+        derivative_snapshot_id: str,
+        candidate_snapshot_id: str,
+    ) -> DerivativeSnapshotRecord | None:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        UPDATE derivative_snapshots
+                        SET candidate_snapshot_id = COALESCE(
+                          candidate_snapshot_id,
+                          %(candidate_snapshot_id)s
+                        )
+                        WHERE project_id = %(project_id)s
+                          AND id = %(derivative_snapshot_id)s
+                        RETURNING
+                          id,
+                          project_id,
+                          derivative_index_id,
+                          derivative_kind,
+                          source_snapshot_json,
+                          policy_version_ref,
+                          status,
+                          supersedes_derivative_snapshot_id,
+                          superseded_by_derivative_snapshot_id,
+                          storage_key,
+                          snapshot_sha256,
+                          candidate_snapshot_id,
+                          created_by,
+                          created_at,
+                          started_at,
+                          finished_at,
+                          failure_reason
+                        """,
+                        {
+                            "project_id": project_id,
+                            "derivative_snapshot_id": derivative_snapshot_id,
+                            "candidate_snapshot_id": candidate_snapshot_id,
+                        },
+                    )
+                    row = cursor.fetchone()
+                connection.commit()
+        except psycopg.Error as error:
+            raise IndexStoreUnavailableError(
+                "Derivative snapshot candidate linkage failed."
+            ) from error
+        if row is None:
+            return None
+        return self._as_derivative_snapshot(row)
+
+    def append_derivative_index_rows(
+        self,
+        *,
+        project_id: str,
+        derivative_index_id: str,
+        derivative_snapshot_id: str,
+        items: list[CreateDerivativeIndexRowInput],
+    ) -> int:
+        self.ensure_schema()
+        if len(items) == 0:
+            return 0
+        index = self.get_index(
+            project_id=project_id,
+            kind="DERIVATIVE",
+            index_id=derivative_index_id,
+        )
+        if index is None:
+            raise IndexStoreUnavailableError("Derivative index generation does not exist.")
+        snapshot = self.get_derivative_snapshot(
+            project_id=project_id,
+            derivative_snapshot_id=derivative_snapshot_id,
+        )
+        if snapshot is None or snapshot.derivative_index_id != derivative_index_id:
+            raise IndexStoreUnavailableError(
+                "Derivative snapshot does not exist for the requested derivative index generation."
+            )
+        created_at = self.utcnow()
+        sql = """
+            INSERT INTO derivative_index_rows (
+              id,
+              derivative_index_id,
+              derivative_snapshot_id,
+              derivative_kind,
+              source_snapshot_json,
+              display_payload_json,
+              suppressed_fields_json,
+              created_at
+            )
+            VALUES (
+              %(id)s,
+              %(derivative_index_id)s,
+              %(derivative_snapshot_id)s,
+              %(derivative_kind)s,
+              %(source_snapshot_json)s,
+              %(display_payload_json)s,
+              %(suppressed_fields_json)s,
+              %(created_at)s
+            )
+        """
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    for item in items:
+                        cursor.execute(
+                            sql,
+                            {
+                                "id": f"derrow-{uuid4()}",
+                                "derivative_index_id": derivative_index_id,
+                                "derivative_snapshot_id": derivative_snapshot_id,
+                                "derivative_kind": item.derivative_kind,
+                                "source_snapshot_json": item.source_snapshot_json,
+                                "display_payload_json": item.display_payload_json,
+                                "suppressed_fields_json": item.suppressed_fields_json,
+                                "created_at": created_at,
+                            },
+                        )
+                connection.commit()
+        except psycopg.Error as error:
+            raise IndexStoreUnavailableError("Derivative index row append failed.") from error
+        return len(items)
+
+    def list_derivative_rows_for_snapshot(
+        self,
+        *,
+        derivative_index_id: str,
+        derivative_snapshot_id: str,
+        cursor: int,
+        limit: int,
+    ) -> DerivativeIndexRowPage:
+        self.ensure_schema()
+        window_limit = limit + 1
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor_obj:
+                    cursor_obj.execute(
+                        """
+                        SELECT
+                          id,
+                          derivative_index_id,
+                          derivative_snapshot_id,
+                          derivative_kind,
+                          source_snapshot_json,
+                          display_payload_json,
+                          suppressed_fields_json,
+                          created_at
+                        FROM derivative_index_rows
+                        WHERE derivative_index_id = %(derivative_index_id)s
+                          AND derivative_snapshot_id = %(derivative_snapshot_id)s
+                        ORDER BY created_at ASC, id ASC
+                        OFFSET %(cursor)s
+                        LIMIT %(window_limit)s
+                        """,
+                        {
+                            "derivative_index_id": derivative_index_id,
+                            "derivative_snapshot_id": derivative_snapshot_id,
+                            "cursor": cursor,
+                            "window_limit": window_limit,
+                        },
+                    )
+                    rows = cursor_obj.fetchall()
+        except psycopg.Error as error:
+            raise IndexStoreUnavailableError("Derivative preview query failed.") from error
+
+        has_more = len(rows) > limit
+        materialized = rows[:limit]
+        items = [self._as_derivative_row(row) for row in materialized]
+        next_cursor = (cursor + limit) if has_more else None
+        return DerivativeIndexRowPage(items=items, next_cursor=next_cursor)
+
+    def list_all_derivative_rows_for_snapshot(
+        self,
+        *,
+        derivative_index_id: str,
+        derivative_snapshot_id: str,
+    ) -> list[DerivativeIndexRowRecord]:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          id,
+                          derivative_index_id,
+                          derivative_snapshot_id,
+                          derivative_kind,
+                          source_snapshot_json,
+                          display_payload_json,
+                          suppressed_fields_json,
+                          created_at
+                        FROM derivative_index_rows
+                        WHERE derivative_index_id = %(derivative_index_id)s
+                          AND derivative_snapshot_id = %(derivative_snapshot_id)s
+                        ORDER BY created_at ASC, id ASC
+                        """,
+                        {
+                            "derivative_index_id": derivative_index_id,
+                            "derivative_snapshot_id": derivative_snapshot_id,
+                        },
+                    )
+                    rows = cursor.fetchall()
+        except psycopg.Error as error:
+            raise IndexStoreUnavailableError("Derivative preview listing failed.") from error
+        return [self._as_derivative_row(row) for row in rows]
+
+    def list_all_derivative_rows_for_index(
+        self,
+        *,
+        derivative_index_id: str,
+    ) -> list[DerivativeIndexRowRecord]:
+        self.ensure_schema()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        SELECT
+                          id,
+                          derivative_index_id,
+                          derivative_snapshot_id,
+                          derivative_kind,
+                          source_snapshot_json,
+                          display_payload_json,
+                          suppressed_fields_json,
+                          created_at
+                        FROM derivative_index_rows
+                        WHERE derivative_index_id = %(derivative_index_id)s
+                        ORDER BY created_at ASC, id ASC
+                        """,
+                        {"derivative_index_id": derivative_index_id},
+                    )
+                    rows = cursor.fetchall()
+        except psycopg.Error as error:
+            raise IndexStoreUnavailableError("Derivative row listing failed.") from error
+        return [self._as_derivative_row(row) for row in rows]
+
     def list_controlled_entities_for_index(
         self,
         *,
@@ -1955,3 +2745,167 @@ class IndexStore:
         items = [self._as_search_document(row) for row in materialized]
         next_cursor = (cursor + limit) if has_more else None
         return SearchDocumentPage(items=items, next_cursor=next_cursor)
+
+    def store_search_query_text(
+        self,
+        *,
+        project_id: str,
+        query_text: str,
+        key: str | None = None,
+    ) -> str:
+        self.ensure_schema()
+        text = query_text
+        if len(text) == 0:
+            raise IndexStoreUnavailableError("query_text must be non-empty.")
+        query_text_key = key or f"searchquerytext-{uuid4()}"
+        created_at = self.utcnow()
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        INSERT INTO search_query_texts (
+                          key,
+                          project_id,
+                          query_text,
+                          created_at
+                        )
+                        VALUES (
+                          %(key)s,
+                          %(project_id)s,
+                          %(query_text)s,
+                          %(created_at)s
+                        )
+                        """,
+                        {
+                            "key": query_text_key,
+                            "project_id": project_id,
+                            "query_text": text,
+                            "created_at": created_at,
+                        },
+                    )
+                connection.commit()
+        except psycopg.Error as error:
+            raise IndexStoreUnavailableError("Search query text storage failed.") from error
+        return query_text_key
+
+    def append_search_query_audit(
+        self,
+        *,
+        project_id: str,
+        actor_user_id: str,
+        search_index_id: str,
+        query_sha256: str,
+        query_text_key: str,
+        filters_json: dict[str, object],
+        result_count: int,
+        audit_id: str | None = None,
+    ) -> SearchQueryAuditRecord:
+        self.ensure_schema()
+        created_at = self.utcnow()
+        resolved_audit_id = audit_id or f"searchqueryaudit-{uuid4()}"
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor:
+                    cursor.execute(
+                        """
+                        INSERT INTO search_query_audits (
+                          id,
+                          project_id,
+                          actor_user_id,
+                          search_index_id,
+                          query_sha256,
+                          query_text_key,
+                          filters_json,
+                          result_count,
+                          created_at
+                        )
+                        VALUES (
+                          %(id)s,
+                          %(project_id)s,
+                          %(actor_user_id)s,
+                          %(search_index_id)s,
+                          %(query_sha256)s,
+                          %(query_text_key)s,
+                          %(filters_json)s,
+                          %(result_count)s,
+                          %(created_at)s
+                        )
+                        RETURNING
+                          id,
+                          project_id,
+                          actor_user_id,
+                          search_index_id,
+                          query_sha256,
+                          query_text_key,
+                          filters_json,
+                          result_count,
+                          created_at
+                        """,
+                        {
+                            "id": resolved_audit_id,
+                            "project_id": project_id,
+                            "actor_user_id": actor_user_id,
+                            "search_index_id": search_index_id,
+                            "query_sha256": query_sha256,
+                            "query_text_key": query_text_key,
+                            "filters_json": filters_json,
+                            "result_count": max(0, result_count),
+                            "created_at": created_at,
+                        },
+                    )
+                    row = cursor.fetchone()
+                    if row is None:
+                        raise IndexStoreUnavailableError(
+                            "Search query audit insert returned no row."
+                        )
+                connection.commit()
+        except psycopg.Error as error:
+            raise IndexStoreUnavailableError("Search query audit append failed.") from error
+        return self._as_search_query_audit(row)
+
+    def list_search_query_audits(
+        self,
+        *,
+        project_id: str,
+        cursor: int,
+        limit: int,
+    ) -> SearchQueryAuditPage:
+        self.ensure_schema()
+        window_limit = limit + 1
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor_obj:
+                    cursor_obj.execute(
+                        """
+                        SELECT
+                          id,
+                          project_id,
+                          actor_user_id,
+                          search_index_id,
+                          query_sha256,
+                          query_text_key,
+                          filters_json,
+                          result_count,
+                          created_at
+                        FROM search_query_audits
+                        WHERE project_id = %(project_id)s
+                        ORDER BY created_at DESC, id DESC
+                        OFFSET %(cursor)s
+                        LIMIT %(window_limit)s
+                        """,
+                        {
+                            "project_id": project_id,
+                            "cursor": cursor,
+                            "window_limit": window_limit,
+                        },
+                    )
+                    rows = cursor_obj.fetchall()
+        except psycopg.Error as error:
+            raise IndexStoreUnavailableError("Search query audit listing failed.") from error
+
+        has_more = len(rows) > limit
+        materialized = rows[:limit]
+        items = [self._as_search_query_audit(row) for row in materialized]
+        next_cursor = (cursor + limit) if has_more else None
+        return SearchQueryAuditPage(items=items, next_cursor=next_cursor)

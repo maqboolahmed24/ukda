@@ -1,0 +1,35 @@
+{
+  "node": {
+    "401fe4c67b9f349aee75aedcb0dc7fa17bfc89c35e": {
+      "workers": {
+        "app/(authenticated)/projects/[projectId]/documents/[documentId]/transcription/compare/page": {
+          "moduleId": 42688,
+          "async": false,
+          "exportedName": "$$RSC_SERVER_ACTION_1",
+          "filename": "web/app/(authenticated)/projects/[projectId]/documents/[documentId]/transcription/compare/page.tsx"
+        }
+      },
+      "layer": {
+        "app/(authenticated)/projects/[projectId]/documents/[documentId]/transcription/compare/page": "rsc"
+      },
+      "exportedName": "$$RSC_SERVER_ACTION_1",
+      "filename": "web/app/(authenticated)/projects/[projectId]/documents/[documentId]/transcription/compare/page.tsx"
+    },
+    "600b90c79fac32f711b184b43603cb9ffa25c64cb8": {
+      "workers": {
+        "app/(authenticated)/projects/[projectId]/documents/[documentId]/transcription/compare/page": {
+          "moduleId": 42688,
+          "async": false,
+          "exportedName": "$$RSC_SERVER_ACTION_0",
+          "filename": "web/app/(authenticated)/projects/[projectId]/documents/[documentId]/transcription/compare/page.tsx"
+        }
+      },
+      "layer": {
+        "app/(authenticated)/projects/[projectId]/documents/[documentId]/transcription/compare/page": "rsc"
+      },
+      "exportedName": "$$RSC_SERVER_ACTION_0",
+      "filename": "web/app/(authenticated)/projects/[projectId]/documents/[documentId]/transcription/compare/page.tsx"
+    }
+  },
+  "edge": {}
+}

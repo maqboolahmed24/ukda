@@ -1,0 +1,26 @@
+[
+  {
+    "viewport": "1366x900",
+    "navWidth": 1122,
+    "navHeight": 85,
+    "navScrollWidth": 1122,
+    "navScrollHeight": 85,
+    "hiddenOrClippedCount": 0
+  },
+  {
+    "viewport": "1440x900",
+    "navWidth": 1122,
+    "navHeight": 85,
+    "navScrollWidth": 1122,
+    "navScrollHeight": 85,
+    "hiddenOrClippedCount": 0
+  },
+  {
+    "viewport": "1920x1080",
+    "navWidth": 1122,
+    "navHeight": 85,
+    "navScrollWidth": 1122,
+    "navScrollHeight": 85,
+    "hiddenOrClippedCount": 0
+  }
+]

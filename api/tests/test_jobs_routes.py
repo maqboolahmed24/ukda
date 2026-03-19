@@ -39,6 +39,24 @@ class FakeTelemetryService:
     def record_queue_depth(self, **kwargs):  # type: ignore[no-untyped-def]
         return None
 
+    def record_job_claimed(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
+    def record_job_completed(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
+    def record_gpu_utilization(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
+    def record_storage_operation(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
+    def record_model_request(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
+    def record_export_review_latency(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
     def record_timeline(self, **kwargs):  # type: ignore[no-untyped-def]
         return None
 
@@ -616,3 +634,122 @@ def test_cancel_queued_job_prevents_execution(job_service_fixture) -> None:
     claimed = job_service.claim_next_job_for_worker(worker_id="worker-3", lease_seconds=30)
     assert claimed is None
     assert client.get(f"/projects/project-1/jobs/{job_id}/status").json()["status"] == "CANCELED"
+
+
+def test_document_pipeline_retry_depth_configuration(job_service_fixture) -> None:
+    job_service, _, _ = job_service_fixture
+
+    extraction_job, extraction_created, _ = job_service.enqueue_document_processing_job(
+        project_id="project-1",
+        document_id="doc-extract-1",
+        job_type="EXTRACT_PAGES",
+        created_by="user-lead",
+    )
+    assert extraction_created is True
+    assert extraction_job.max_attempts == 3
+
+    thumbnail_job, thumbnail_created, _ = job_service.enqueue_document_processing_job(
+        project_id="project-1",
+        document_id="doc-thumb-1",
+        job_type="RENDER_THUMBNAILS",
+        created_by="user-lead",
+    )
+    assert thumbnail_created is True
+    assert thumbnail_job.max_attempts == 3
+
+    preprocess_document_job, preprocess_document_created, _ = (
+        job_service.enqueue_preprocess_document_job(
+            project_id="project-1",
+            document_id="doc-preprocess-1",
+            run_id="preprocess-run-1",
+            created_by="user-lead",
+        )
+    )
+    assert preprocess_document_created is True
+    assert preprocess_document_job.max_attempts == 3
+
+    preprocess_page_job, preprocess_page_created, _ = job_service._enqueue_preprocess_page_job(
+        project_id="project-1",
+        document_id="doc-preprocess-1",
+        run_id="preprocess-run-1",
+        page_id="page-1",
+        page_index=0,
+        created_by="user-lead",
+    )
+    assert preprocess_page_created is True
+    assert preprocess_page_job.max_attempts == 2
+
+    preprocess_finalize_job, preprocess_finalize_created, _ = (
+        job_service._enqueue_preprocess_finalize_job(
+            project_id="project-1",
+            document_id="doc-preprocess-1",
+            run_id="preprocess-run-1",
+            created_by="user-lead",
+        )
+    )
+    assert preprocess_finalize_created is True
+    assert preprocess_finalize_job.max_attempts == 3
+
+    layout_document_job, layout_document_created, _ = job_service.enqueue_layout_document_job(
+        project_id="project-1",
+        document_id="doc-layout-1",
+        run_id="layout-run-1",
+        created_by="user-lead",
+    )
+    assert layout_document_created is True
+    assert layout_document_job.max_attempts == 3
+
+    layout_page_job, layout_page_created, _ = job_service._enqueue_layout_page_job(
+        project_id="project-1",
+        document_id="doc-layout-1",
+        run_id="layout-run-1",
+        page_id="layout-page-1",
+        page_index=0,
+        created_by="user-lead",
+    )
+    assert layout_page_created is True
+    assert layout_page_job.max_attempts == 2
+
+    layout_finalize_job, layout_finalize_created, _ = job_service._enqueue_layout_finalize_job(
+        project_id="project-1",
+        document_id="doc-layout-1",
+        run_id="layout-run-1",
+        created_by="user-lead",
+    )
+    assert layout_finalize_created is True
+    assert layout_finalize_job.max_attempts == 3
+
+    transcription_document_job, transcription_document_created, _ = (
+        job_service.enqueue_transcription_document_job(
+            project_id="project-1",
+            document_id="doc-transcription-1",
+            run_id="transcription-run-1",
+            created_by="user-lead",
+        )
+    )
+    assert transcription_document_created is True
+    assert transcription_document_job.max_attempts == 3
+
+    transcription_page_job, transcription_page_created, _ = (
+        job_service._enqueue_transcription_page_job(
+            project_id="project-1",
+            document_id="doc-transcription-1",
+            run_id="transcription-run-1",
+            page_id="transcription-page-1",
+            page_index=0,
+            created_by="user-lead",
+        )
+    )
+    assert transcription_page_created is True
+    assert transcription_page_job.max_attempts == 2
+
+    transcription_finalize_job, transcription_finalize_created, _ = (
+        job_service._enqueue_transcription_finalize_job(
+            project_id="project-1",
+            document_id="doc-transcription-1",
+            run_id="transcription-run-1",
+            created_by="user-lead",
+        )
+    )
+    assert transcription_finalize_created is True
+    assert transcription_finalize_job.max_attempts == 3

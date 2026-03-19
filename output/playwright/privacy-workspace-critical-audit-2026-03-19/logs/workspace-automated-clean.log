@@ -1,0 +1,8 @@
+
+Running 3 tests using 1 worker
+
+  ✓  1 [chromium] › web/tests/browser/privacy-workspace-regression.spec.ts:58:5 › privacy workspace visual baselines for default, selected finding, dialog, and controlled mode @privacy @visual (6.4s)
+  ✓  2 [chromium] › web/tests/browser/privacy-workspace-regression.spec.ts:94:5 › privacy workspace next-unresolved navigation is deterministic and deep-link-safe @privacy @keyboard (1.6s)
+  ✓  3 [chromium] › web/tests/browser/privacy-workspace-regression.spec.ts:119:5 › privacy workspace finding/page decisions, stale-etag conflict handling, and approval gating @privacy @a11y @keyboard @reflow (4.3s)
+
+  3 passed (30.1s)

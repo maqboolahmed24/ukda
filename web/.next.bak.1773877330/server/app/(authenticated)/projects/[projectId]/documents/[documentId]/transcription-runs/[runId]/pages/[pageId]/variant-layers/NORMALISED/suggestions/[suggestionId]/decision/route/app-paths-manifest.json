@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/projects/[projectId]/documents/[documentId]/transcription-runs/[runId]/pages/[pageId]/variant-layers/NORMALISED/suggestions/[suggestionId]/decision/route": "app/(authenticated)/projects/[projectId]/documents/[documentId]/transcription-runs/[runId]/pages/[pageId]/variant-layers/NORMALISED/suggestions/[suggestionId]/decision/route.js"
+}

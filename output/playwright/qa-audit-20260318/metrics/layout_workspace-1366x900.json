@@ -1,0 +1,74 @@
+{
+  "url": "http://127.0.0.1:3100/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002",
+  "title": "UKDE",
+  "viewport": {
+    "width": 1366,
+    "height": 900
+  },
+  "bodyOverflowX": 0,
+  "bodyOverflowY": 0,
+  "mainClass": "homeLayout layoutWorkspacePage",
+  "mainOverflowX": 0,
+  "mainOverflowY": 545,
+  "topOverflowElements": [
+    {
+      "selector": "div.layoutWorkspaceCanvasScroller",
+      "overflowX": 1024,
+      "overflowY": 1271,
+      "width": 199,
+      "height": 552
+    },
+    {
+      "selector": "ul.authenticatedShellContextList",
+      "overflowX": 880,
+      "overflowY": 0,
+      "width": 778,
+      "height": 32
+    },
+    {
+      "selector": "nav.projectContextBar.ukde-panel",
+      "overflowX": 871,
+      "overflowY": 0,
+      "width": 798,
+      "height": 49
+    },
+    {
+      "selector": "div#ukde-shell-work-region.authenticatedShellWorkRegion",
+      "overflowX": 0,
+      "overflowY": 546,
+      "width": 798,
+      "height": 674
+    },
+    {
+      "selector": "section.projectWorkspaceMain",
+      "overflowX": 0,
+      "overflowY": 546,
+      "width": 792,
+      "height": 674
+    },
+    {
+      "selector": "div.projectContentHost",
+      "overflowX": 0,
+      "overflowY": 545,
+      "width": 792,
+      "height": 476
+    },
+    {
+      "selector": "main.homeLayout.layoutWorkspacePage",
+      "overflowX": 0,
+      "overflowY": 545,
+      "width": 792,
+      "height": 476
+    },
+    {
+      "selector": "aside.documentViewerInspector",
+      "overflowX": 0,
+      "overflowY": 520,
+      "width": 268,
+      "height": 578
+    }
+  ],
+  "clippedTextCandidates": [],
+  "totalButtons": 35,
+  "totalLinks": 30
+}

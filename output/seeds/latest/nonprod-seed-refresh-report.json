@@ -1,0 +1,14 @@
+{
+  "applied": false,
+  "classification": "SYNTHETIC_ONLY",
+  "detail": "Seed pack validated successfully (no database changes applied).",
+  "environment": "staging",
+  "generatedAt": "2026-03-18T23:46:37.880554+00:00",
+  "managedProjectPrefix": "seed-nonprod-",
+  "mode": "validate",
+  "overallStatus": "PASS",
+  "packSha256": "8fe30dd3cda3385179e9a89f959770c96dacbe1b0d1c53b7a1b9e8d663598c15",
+  "packVersion": "nonprod-seed-pack-v1",
+  "seedProjectCount": 2,
+  "seedUserCount": 5
+}

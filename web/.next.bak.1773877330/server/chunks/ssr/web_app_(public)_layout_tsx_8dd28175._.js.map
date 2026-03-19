@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../../../web/app/%28public%29/layout.tsx"],"sourcesContent":["export default function PublicLayout({\n  children\n}: Readonly<{\n  children: React.ReactNode;\n}>) {\n  return <>{children}</>;\n}\n"],"names":[],"mappings":"wDAAe,SAAS,EAAa,UACnC,CAAQ,CAGR,EACA,MAAO,CAAA,EAAA,EAAA,GAAA,EAAA,EAAA,QAAA,CAAA,UAAG,GACZ"}

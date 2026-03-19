@@ -31,6 +31,12 @@ test("layout workspace visual baselines for overlay and inspector states @visual
   }
   await seedAuthenticatedSession(context, baseURL);
   await gotoLayoutWorkspace(page, { page: 1, runId: RUN_ID });
+  await expect(page.locator(".layoutWorkspace")).toHaveAttribute(
+    "data-image-state",
+    "loaded"
+  );
+  await expect(page.locator(".layoutWorkspaceCanvasOverlayState")).toHaveCount(0);
+  await expect(page.getByText("Page image unavailable")).toHaveCount(0);
 
   await expect(page.locator(".layoutWorkspace")).toHaveScreenshot(
     "layout-workspace-overlay-on.png"
@@ -149,6 +155,55 @@ test("layout workspace keyboard toolbar and inspector-canvas selection sync @a11
     (layoutMetrics?.viewportHeight ?? 0) + 2
   );
   expect(layoutMetrics?.filmstripOverflow ?? 0).toBeGreaterThanOrEqual(0);
+
+  await page.setViewportSize({ width: 860, height: 900 });
+  const compactToolbarMetrics = await page.evaluate(() => {
+    const workRegion = document.querySelector<HTMLElement>(".authenticatedShellWorkRegion");
+    const toolbarRow = document.querySelector<HTMLElement>(".layoutWorkspaceToolbarRow");
+    const runCluster = document.querySelector<HTMLElement>(".layoutWorkspaceToolbarCluster--run");
+    const modeCluster = document.querySelector<HTMLElement>(".layoutWorkspaceToolbarCluster--mode");
+    const overlaysCluster = document.querySelector<HTMLElement>(
+      ".layoutWorkspaceToolbarCluster--overlays"
+    );
+    if (!workRegion || !toolbarRow || !runCluster || !modeCluster || !overlaysCluster) {
+      return null;
+    }
+    const workRegionRect = workRegion.getBoundingClientRect();
+    const isVisibleWithinWorkRegion = (element: HTMLElement): boolean => {
+      const rect = element.getBoundingClientRect();
+      return rect.top >= workRegionRect.top - 1 && rect.bottom <= workRegionRect.bottom + 1;
+    };
+    return {
+      priorityClustersVisible:
+        isVisibleWithinWorkRegion(runCluster) &&
+        isVisibleWithinWorkRegion(modeCluster) &&
+        isVisibleWithinWorkRegion(overlaysCluster),
+      toolbarHeight: toolbarRow.getBoundingClientRect().height
+    };
+  });
+  expect(compactToolbarMetrics).not.toBeNull();
+  expect(compactToolbarMetrics?.priorityClustersVisible).toBe(true);
+  expect(compactToolbarMetrics?.toolbarHeight ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(300);
+
+  const compactMetrics = await page.evaluate(() => {
+    const layoutPage = document.querySelector<HTMLElement>("main.layoutWorkspacePage");
+    const workRegion = document.querySelector<HTMLElement>(".authenticatedShellWorkRegion");
+    const workspace = layoutPage?.querySelector<HTMLElement>(".layoutWorkspace");
+    if (!layoutPage || !workRegion || !workspace) {
+      return null;
+    }
+    const workRegionRect = workRegion.getBoundingClientRect();
+    const workspaceRect = workspace.getBoundingClientRect();
+    return {
+      layoutOverflow: layoutPage.scrollHeight - layoutPage.clientHeight,
+      workspaceTopOffset: workspaceRect.top - workRegionRect.top,
+      workspaceTopVisible: workspaceRect.top <= workRegionRect.bottom
+    };
+  });
+  expect(compactMetrics).not.toBeNull();
+  expect(compactMetrics?.layoutOverflow ?? 0).toBeLessThanOrEqual(420);
+  expect(compactMetrics?.workspaceTopOffset ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(620);
+  expect(compactMetrics?.workspaceTopVisible).toBe(true);
 
   await expectNoAxeViolations(page, {
     includeSelectors: [".documentViewerToolbar", ".layoutWorkspace"]

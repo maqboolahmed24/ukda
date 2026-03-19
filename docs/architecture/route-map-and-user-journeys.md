@@ -103,8 +103,20 @@ Current implemented baseline route ownership is defined in:
 | --------------------------------- | --------------------------------------------------------- | ----------------------------------------- |
 | `/admin`                          | Platform governance home                                  | Admin and read-only auditor               |
 | `/admin/security`                 | Security posture summary and deny-egress diagnostics      | Admin and read-only auditor               |
+| `/admin/security/findings`        | Security findings and pen-test checklist posture          | Admin and read-only auditor               |
+| `/admin/security/findings/:findingId` | Security finding detail and linked risk acceptances   | Admin and read-only auditor               |
+| `/admin/security/risk-acceptances` | Risk-acceptance projections with finding/status filters | Admin and read-only auditor               |
+| `/admin/security/risk-acceptances/:riskAcceptanceId` | Risk-acceptance detail and lifecycle actions | Admin and read-only auditor (`ADMIN` mutates) |
+| `/admin/security/risk-acceptances/:riskAcceptanceId/events` | Append-only acceptance event stream | Admin and read-only auditor |
 | `/admin/operations`               | Operations overview and telemetry posture                 | Admin-only                                |
+| `/admin/operations/readiness`     | Cross-phase readiness matrix with blocking evidence       | Admin and read-only auditor (safe slice) |
 | `/admin/operations/export-status` | Export gateway posture and queue-readiness summary        | Admin and read-only auditor               |
+| `/admin/runbooks`                 | Canonical launch/rollback runbook list                    | Admin-only                                |
+| `/admin/runbooks/:runbookId`      | Runbook detail and rendered runbook content               | Admin-only                                |
+| `/admin/incidents`                | Launch and early-life incident list                       | Admin and read-only auditor               |
+| `/admin/incidents/status`         | Incident no-go trigger and rehearsal summary              | Admin and read-only auditor               |
+| `/admin/incidents/:incidentId`    | Incident command detail and status context                | Admin and read-only auditor               |
+| `/admin/incidents/:incidentId/timeline` | Incident timeline chronology                        | Admin and read-only auditor               |
 | `/admin/operations/slos`          | SLO baselines and threshold state                         | Admin-only                                |
 | `/admin/operations/alerts`        | Alert scaffold with filterable state                      | Admin-only                                |
 | `/admin/operations/timelines`     | Read-only operational timelines and trace correlation     | Admin and read-only auditor               |

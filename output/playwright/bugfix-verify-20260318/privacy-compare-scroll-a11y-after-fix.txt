@@ -1,0 +1,7 @@
+{
+  "tabIndexAttr": "0",
+  "overflowX": "auto",
+  "scrollWidth": 2093,
+  "clientWidth": 724,
+  "focusable": true
+}

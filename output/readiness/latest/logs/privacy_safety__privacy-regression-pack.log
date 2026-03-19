@@ -1,0 +1,20 @@
+$ make test-privacy-regression PYTHON=.venv/bin/python
+
+.venv/bin/python -m pytest \
+		api/tests/test_privacy_regression_pack.py \
+		api/tests/test_redaction_detection.py \
+		api/tests/test_redaction_preview.py \
+		api/tests/test_documents_redaction_routes.py
+============================= test session starts ==============================
+platform darwin -- Python 3.14.0, pytest-9.0.2, pluggy-1.6.0
+rootdir: /Users/test/Code/UKDA/api
+configfile: pyproject.toml
+plugins: anyio-4.12.1
+collected 35 items
+
+api/tests/test_privacy_regression_pack.py ..                             [  5%]
+api/tests/test_redaction_detection.py ..........                         [ 34%]
+api/tests/test_redaction_preview.py .......                              [ 54%]
+api/tests/test_documents_redaction_routes.py ................            [100%]
+
+============================== 35 passed in 2.56s ==============================

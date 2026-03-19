@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/projects/[projectId]/indexes/activate/route": "app/(authenticated)/projects/[projectId]/indexes/activate/route.js"
+}

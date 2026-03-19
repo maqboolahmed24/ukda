@@ -52,6 +52,7 @@ export default async function ProjectDocumentPreprocessingPage({
   params: Promise<{ projectId: string; documentId: string }>;
   searchParams: Promise<{ tab?: string }>;
 }>) {
+  const pageLayoutClassName = "homeLayout homeLayout--preprocessing";
   const { projectId, documentId } = await params;
   const query = await searchParams;
   const tab = resolveTab(query.tab);
@@ -74,7 +75,7 @@ export default async function ProjectDocumentPreprocessingPage({
       redirect(projectsPath);
     }
     return (
-      <main className="homeLayout">
+      <main className={pageLayoutClassName}>
         <SectionState
           className="sectionCard ukde-panel"
           kind="error"
@@ -137,14 +138,14 @@ export default async function ProjectDocumentPreprocessingPage({
       : null;
 
   return (
-    <main className="homeLayout">
+    <main className={pageLayoutClassName}>
       <section className="sectionCard ukde-panel">
         <p className="ukde-eyebrow">Preprocessing</p>
         <h2>{document.originalFilename}</h2>
         <p className="ukde-muted">
           Canonical route for preprocessing runs, quality diagnostics, and compare entrypoints.
         </p>
-        <div className="buttonRow">
+        <div className="buttonRow preprocessingOverviewNav">
           <Link
             className="secondaryButton"
             aria-current={tab === "pages" ? "page" : undefined}

@@ -3,6 +3,113 @@ import { describe, expect, it } from "vitest";
 import { queryKeys, serializeQueryKey } from "./query-keys";
 
 describe("query key factory", () => {
+  it("scopes admin capacity keys by pagination and run identity", () => {
+    const firstPage = queryKeys.admin.capacityTests({ cursor: 0, pageSize: 25 });
+    const nextPage = queryKeys.admin.capacityTests({ cursor: 25, pageSize: 25 });
+    const detailA = queryKeys.admin.capacityTestDetail("capacity-a");
+    const detailB = queryKeys.admin.capacityTestDetail("capacity-b");
+    const resultsA = queryKeys.admin.capacityTestResults("capacity-a");
+
+    expect(serializeQueryKey(firstPage)).not.toBe(serializeQueryKey(nextPage));
+    expect(serializeQueryKey(detailA)).not.toBe(serializeQueryKey(detailB));
+    expect(serializeQueryKey(detailA)).not.toBe(serializeQueryKey(resultsA));
+  });
+
+  it("scopes admin recovery keys by status/list/drill identity", () => {
+    const status = queryKeys.admin.recoveryStatus();
+    const listFirst = queryKeys.admin.recoveryDrills({ cursor: 0, pageSize: 25 });
+    const listNext = queryKeys.admin.recoveryDrills({ cursor: 25, pageSize: 25 });
+    const detailA = queryKeys.admin.recoveryDrillDetail("drill-a");
+    const detailB = queryKeys.admin.recoveryDrillDetail("drill-b");
+    const statusA = queryKeys.admin.recoveryDrillStatus("drill-a");
+    const evidenceA = queryKeys.admin.recoveryDrillEvidence("drill-a");
+
+    expect(serializeQueryKey(status)).not.toBe(serializeQueryKey(listFirst));
+    expect(serializeQueryKey(listFirst)).not.toBe(serializeQueryKey(listNext));
+    expect(serializeQueryKey(detailA)).not.toBe(serializeQueryKey(detailB));
+    expect(serializeQueryKey(detailA)).not.toBe(serializeQueryKey(statusA));
+    expect(serializeQueryKey(detailA)).not.toBe(serializeQueryKey(evidenceA));
+  });
+
+  it("scopes admin runbook and incident keys by identity and surface", () => {
+    const runbookList = queryKeys.admin.runbooks();
+    const runbookDetailA = queryKeys.admin.runbookDetail("runbook-a");
+    const runbookDetailB = queryKeys.admin.runbookDetail("runbook-b");
+    const runbookContentA = queryKeys.admin.runbookContent("runbook-a");
+    const incidentList = queryKeys.admin.incidents();
+    const incidentStatus = queryKeys.admin.incidentStatus();
+    const incidentDetailA = queryKeys.admin.incidentDetail("incident-a");
+    const incidentDetailB = queryKeys.admin.incidentDetail("incident-b");
+    const incidentTimelineA = queryKeys.admin.incidentTimeline("incident-a");
+
+    expect(serializeQueryKey(runbookList)).not.toBe(
+      serializeQueryKey(runbookDetailA)
+    );
+    expect(serializeQueryKey(runbookDetailA)).not.toBe(
+      serializeQueryKey(runbookDetailB)
+    );
+    expect(serializeQueryKey(runbookDetailA)).not.toBe(
+      serializeQueryKey(runbookContentA)
+    );
+    expect(serializeQueryKey(incidentList)).not.toBe(
+      serializeQueryKey(incidentStatus)
+    );
+    expect(serializeQueryKey(incidentDetailA)).not.toBe(
+      serializeQueryKey(incidentDetailB)
+    );
+    expect(serializeQueryKey(incidentDetailA)).not.toBe(
+      serializeQueryKey(incidentTimelineA)
+    );
+  });
+
+  it("scopes admin security keys by findings and risk-acceptance identity", () => {
+    const findings = queryKeys.admin.securityFindings();
+    const findingA = queryKeys.admin.securityFindingDetail("finding-a");
+    const findingB = queryKeys.admin.securityFindingDetail("finding-b");
+    const acceptancesAll = queryKeys.admin.securityRiskAcceptances({});
+    const acceptancesFiltered = queryKeys.admin.securityRiskAcceptances({
+      findingId: "finding-a",
+      status: "ACTIVE"
+    });
+    const acceptanceDetail = queryKeys.admin.securityRiskAcceptanceDetail("risk-a");
+    const acceptanceEvents = queryKeys.admin.securityRiskAcceptanceEvents("risk-a");
+
+    expect(serializeQueryKey(findings)).not.toBe(serializeQueryKey(findingA));
+    expect(serializeQueryKey(findingA)).not.toBe(serializeQueryKey(findingB));
+    expect(serializeQueryKey(acceptancesAll)).not.toBe(
+      serializeQueryKey(acceptancesFiltered)
+    );
+    expect(serializeQueryKey(acceptanceDetail)).not.toBe(
+      serializeQueryKey(acceptanceEvents)
+    );
+  });
+
+  it("scopes admin index-quality keys by project, index identity, and pagination", () => {
+    const summaryA = queryKeys.admin.indexQualitySummary("project-1");
+    const summaryB = queryKeys.admin.indexQualitySummary("project-2");
+    const detailSearch = queryKeys.admin.indexQualityDetail("SEARCH", "search-1");
+    const detailEntity = queryKeys.admin.indexQualityDetail("ENTITY", "entity-1");
+    const auditsFirst = queryKeys.admin.indexQualityQueryAudits({
+      projectId: "project-1",
+      cursor: 0,
+      limit: 50
+    });
+    const auditsNext = queryKeys.admin.indexQualityQueryAudits({
+      projectId: "project-1",
+      cursor: 50,
+      limit: 50
+    });
+
+    expect(serializeQueryKey(summaryA)).not.toBe(serializeQueryKey(summaryB));
+    expect(serializeQueryKey(summaryA)).not.toBe(serializeQueryKey(detailSearch));
+    expect(serializeQueryKey(detailSearch)).not.toBe(
+      serializeQueryKey(detailEntity)
+    );
+    expect(serializeQueryKey(auditsFirst)).not.toBe(
+      serializeQueryKey(auditsNext)
+    );
+  });
+
   it("normalizes optional filters into stable keys", () => {
     const first = queryKeys.audit.list({
       actorUserId: "  ",
@@ -44,6 +151,17 @@ describe("query key factory", () => {
     });
 
     expect(serializeQueryKey(all)).not.toBe(serializeQueryKey(auditOnly));
+  });
+
+  it("keeps operations readiness keys distinct from overview/export status", () => {
+    const readiness = queryKeys.operations.readiness();
+    const overview = queryKeys.operations.overview();
+    const exportStatus = queryKeys.operations.exportStatus();
+
+    expect(serializeQueryKey(readiness)).not.toBe(serializeQueryKey(overview));
+    expect(serializeQueryKey(readiness)).not.toBe(
+      serializeQueryKey(exportStatus)
+    );
   });
 
   it("keeps document list keys stable and timeline keys distinct", () => {
@@ -235,6 +353,27 @@ describe("query key factory", () => {
     expect(serializeQueryKey(first)).toBe(serializeQueryKey(second));
     expect(serializeQueryKey(first)).not.toBe(serializeQueryKey(nextPage));
     expect(serializeQueryKey(detail)).not.toBe(serializeQueryKey(occurrences));
+  });
+
+  it("keeps derivative list/detail/status/preview keys scoped and stable", () => {
+    const active = queryKeys.projects.derivatives("project-1", {
+      scope: "active"
+    });
+    const activeDuplicate = queryKeys.projects.derivatives("project-1", {
+      scope: "active"
+    });
+    const historical = queryKeys.projects.derivatives("project-1", {
+      scope: "historical"
+    });
+    const detail = queryKeys.projects.derivativeDetail("project-1", "dersnap-1");
+    const status = queryKeys.projects.derivativeStatus("project-1", "dersnap-1");
+    const preview = queryKeys.projects.derivativePreview("project-1", "dersnap-1");
+
+    expect(active).toEqual(activeDuplicate);
+    expect(serializeQueryKey(active)).toBe(serializeQueryKey(activeDuplicate));
+    expect(serializeQueryKey(active)).not.toBe(serializeQueryKey(historical));
+    expect(serializeQueryKey(detail)).not.toBe(serializeQueryKey(status));
+    expect(serializeQueryKey(status)).not.toBe(serializeQueryKey(preview));
   });
 
   it("scopes export candidate/request keys by identity and filters", () => {

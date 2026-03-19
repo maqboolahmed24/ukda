@@ -176,10 +176,10 @@ def list_preprocess_profile_definitions() -> list[PreprocessProfileDefinition]:
                 params_hash=hash_params_canonical(params_json),
                 is_advanced=bool(metadata["is_advanced"]),
                 is_gated=bool(metadata["is_gated"]),
-                supersedes_profile_id=profile_id if _PROFILE_REVISION > 1 else None,
-                supersedes_profile_revision=(
-                    _PROFILE_REVISION - 1 if _PROFILE_REVISION > 1 else None
-                ),
+                # Fresh environments do not seed prior revisions, so avoid dangling
+                # self-referential lineage pointers that violate FK constraints.
+                supersedes_profile_id=None,
+                supersedes_profile_revision=None,
             )
         )
     return definitions

@@ -1,0 +1,17 @@
+[
+  {
+    "viewport": "1366x900",
+    "route": "admin_design_system",
+    "errors": 0
+  },
+  {
+    "viewport": "1440x900",
+    "route": "admin_design_system",
+    "errors": 0
+  },
+  {
+    "viewport": "1920x1080",
+    "route": "admin_design_system",
+    "errors": 0
+  }
+]

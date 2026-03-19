@@ -1,0 +1,22 @@
+{
+  "id": "go-live-rehearsal-2026-03-18",
+  "status": "COMPLETED",
+  "completedAt": "2026-03-18T21:58:00+00:00",
+  "scope": "INGEST_TO_EXPORT_REVIEW",
+  "ownerUserId": "user-release-manager",
+  "summary": "Executed end-to-end rehearsal from ingest through export review with zero blocking failures.",
+  "evidence": [
+    {
+      "label": "Release smoke report",
+      "path": "output/smoke/latest/release-smoke-report.json"
+    },
+    {
+      "label": "Readiness report",
+      "path": "output/readiness/latest/readiness-report.json"
+    },
+    {
+      "label": "Release gate report",
+      "path": "output/release-gates/latest/release-gate-report.json"
+    }
+  ]
+}

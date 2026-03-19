@@ -1,0 +1,74 @@
+{
+  "url": "http://127.0.0.1:3100/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1",
+  "title": "UKDE",
+  "viewport": {
+    "width": 1366,
+    "height": 900
+  },
+  "bodyOverflowX": 0,
+  "bodyOverflowY": 0,
+  "mainClass": "homeLayout",
+  "mainOverflowX": 0,
+  "mainOverflowY": 452,
+  "topOverflowElements": [
+    {
+      "selector": "figure.documentViewerImageFrame",
+      "overflowX": 996,
+      "overflowY": 645,
+      "width": 204,
+      "height": 555
+    },
+    {
+      "selector": "ul.authenticatedShellContextList",
+      "overflowX": 880,
+      "overflowY": 0,
+      "width": 778,
+      "height": 32
+    },
+    {
+      "selector": "nav.projectContextBar.ukde-panel",
+      "overflowX": 871,
+      "overflowY": 0,
+      "width": 798,
+      "height": 49
+    },
+    {
+      "selector": "img.documentViewerFilmstripThumb",
+      "overflowX": 2,
+      "overflowY": 2,
+      "width": 60,
+      "height": 84
+    },
+    {
+      "selector": "img.documentViewerFilmstripThumb",
+      "overflowX": 2,
+      "overflowY": 2,
+      "width": 60,
+      "height": 84
+    },
+    {
+      "selector": "div#ukde-shell-work-region.authenticatedShellWorkRegion",
+      "overflowX": 0,
+      "overflowY": 452,
+      "width": 798,
+      "height": 674
+    },
+    {
+      "selector": "section.projectWorkspaceMain",
+      "overflowX": 0,
+      "overflowY": 452,
+      "width": 792,
+      "height": 674
+    },
+    {
+      "selector": "div.projectContentHost",
+      "overflowX": 0,
+      "overflowY": 452,
+      "width": 792,
+      "height": 517
+    }
+  ],
+  "clippedTextCandidates": [],
+  "totalButtons": 17,
+  "totalLinks": 32
+}

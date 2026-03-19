@@ -1,0 +1,125 @@
+{
+  "version": "phase-11-cross-phase-readiness-v1",
+  "categories": [
+    {
+      "id": "accessibility",
+      "title": "Accessibility and keyboard-first critical routes",
+      "summary": "Accessibility-focused route and shell checks remain green.",
+      "blockingPolicy": "BLOCKING",
+      "auditorVisible": true,
+      "checks": [
+        {
+          "id": "critical-route-a11y-vitest",
+          "title": "Component and route accessibility diagnostics",
+          "command": "pnpm -s vitest run web/components/authenticated-shell.a11y.test.tsx web/components/route-states.a11y.test.tsx",
+          "blockingPolicy": "BLOCKING"
+        }
+      ]
+    },
+    {
+      "id": "governance_integrity",
+      "title": "Governance artefact integrity",
+      "summary": "Manifest and ledger reconciliation remains deterministic and append-only.",
+      "blockingPolicy": "BLOCKING",
+      "auditorVisible": true,
+      "checks": [
+        {
+          "id": "governance-integrity-regression",
+          "title": "Governance integrity regression pack",
+          "command": "make test-governance-integrity PYTHON=${PYTHON_BIN}",
+          "blockingPolicy": "BLOCKING"
+        }
+      ]
+    },
+    {
+      "id": "privacy_safety",
+      "title": "Privacy leak and review safety",
+      "summary": "Disclosure-focused privacy checks and reviewer safety gates remain enforced.",
+      "blockingPolicy": "BLOCKING",
+      "auditorVisible": true,
+      "checks": [
+        {
+          "id": "privacy-regression-pack",
+          "title": "Privacy disclosure and review-safety regression pack",
+          "command": "make test-privacy-regression PYTHON=${PYTHON_BIN}",
+          "blockingPolicy": "BLOCKING"
+        }
+      ]
+    },
+    {
+      "id": "provenance_verification",
+      "title": "Provenance proof and bundle verification",
+      "summary": "Bundle verification, provenance replay, and proof paths remain reproducible.",
+      "blockingPolicy": "BLOCKING",
+      "auditorVisible": true,
+      "checks": [
+        {
+          "id": "provenance-verification-suite",
+          "title": "Provenance and bundle verification tests",
+          "command": "${PYTHON_BIN} -m pytest api/tests/test_bundle_verification.py api/tests/test_export_provenance.py api/tests/test_exports_replay.py",
+          "blockingPolicy": "BLOCKING"
+        }
+      ]
+    },
+    {
+      "id": "egress_controls",
+      "title": "No-bypass egress controls",
+      "summary": "Export-gateway-only egress and denial tests remain enforced.",
+      "blockingPolicy": "BLOCKING",
+      "auditorVisible": true,
+      "checks": [
+        {
+          "id": "egress-hardening-regression",
+          "title": "Export hardening and egress-denial regression pack",
+          "command": "make test-export-hardening PYTHON=${PYTHON_BIN}",
+          "blockingPolicy": "BLOCKING"
+        }
+      ]
+    },
+    {
+      "id": "discovery_safety",
+      "title": "Discovery and derivative safety checks",
+      "summary": "Search/index quality and derivative-safety controls remain active.",
+      "blockingPolicy": "BLOCKING",
+      "auditorVisible": true,
+      "checks": [
+        {
+          "id": "search-index-derivative-regression",
+          "title": "Search and index safety regression tests",
+          "command": "${PYTHON_BIN} -m pytest api/tests/test_search_routes.py api/tests/test_search_service.py api/tests/test_indexes_routes.py api/tests/test_indexes_service.py",
+          "blockingPolicy": "BLOCKING"
+        }
+      ]
+    },
+    {
+      "id": "security_hardening",
+      "title": "Security findings and model-boundary hardening",
+      "summary": "Security finding lifecycle and model-boundary isolation checks remain enforced.",
+      "blockingPolicy": "BLOCKING",
+      "auditorVisible": false,
+      "checks": [
+        {
+          "id": "security-findings-boundary-suite",
+          "title": "Security findings and model-boundary regression tests",
+          "command": "${PYTHON_BIN} -m pytest api/tests/test_security_findings_service.py api/tests/test_security_routes.py api/tests/test_model_stack.py",
+          "blockingPolicy": "BLOCKING"
+        }
+      ]
+    },
+    {
+      "id": "resilience_capacity",
+      "title": "Capacity and recovery evidence integrity",
+      "summary": "Capacity and recovery route/service contracts remain operationally consistent.",
+      "blockingPolicy": "WARNING",
+      "auditorVisible": false,
+      "checks": [
+        {
+          "id": "capacity-recovery-suite",
+          "title": "Capacity and recovery regression tests",
+          "command": "${PYTHON_BIN} -m pytest api/tests/test_capacity_routes.py api/tests/test_capacity_service.py api/tests/test_recovery_routes.py api/tests/test_recovery_service.py",
+          "blockingPolicy": "WARNING"
+        }
+      ]
+    }
+  ]
+}

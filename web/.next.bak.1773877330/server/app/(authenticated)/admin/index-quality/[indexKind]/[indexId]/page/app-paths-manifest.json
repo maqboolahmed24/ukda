@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/admin/index-quality/[indexKind]/[indexId]/page": "app/(authenticated)/admin/index-quality/[indexKind]/[indexId]/page.js"
+}

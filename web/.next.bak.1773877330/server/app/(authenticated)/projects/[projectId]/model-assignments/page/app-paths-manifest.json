@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/projects/[projectId]/model-assignments/page": "app/(authenticated)/projects/[projectId]/model-assignments/page.js"
+}

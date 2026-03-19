@@ -1,0 +1,73 @@
+[
+  {
+    "route": "projects",
+    "status": "ok",
+    "err": null,
+    "metric": {
+      "url": "http://localhost:3112/projects",
+      "scrollWidth": 1366,
+      "innerWidth": 1366,
+      "overflow": 0
+    },
+    "shot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-1366-2026-03-19T00-32-47-178Z/projects-1366x768.png"
+  },
+  {
+    "route": "overview",
+    "status": "ok",
+    "err": null,
+    "metric": {
+      "url": "http://localhost:3112/projects/project-fixture-alpha/overview",
+      "scrollWidth": 1366,
+      "innerWidth": 1366,
+      "overflow": 0
+    },
+    "shot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-1366-2026-03-19T00-32-47-178Z/overview-1366x768.png"
+  },
+  {
+    "route": "search",
+    "status": "ok",
+    "err": null,
+    "metric": {
+      "url": "http://localhost:3112/projects/project-fixture-alpha/search?q=adams",
+      "scrollWidth": 1366,
+      "innerWidth": 1366,
+      "overflow": 0
+    },
+    "shot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-1366-2026-03-19T00-32-47-178Z/search-1366x768.png"
+  },
+  {
+    "route": "viewer",
+    "status": "navigation_failed",
+    "err": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3112/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3112/projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1\", waiting until \"domcontentloaded\"\u001b[22m\n",
+    "metric": null,
+    "shot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-1366-2026-03-19T00-32-47-178Z/viewer-1366x768.png"
+  },
+  {
+    "route": "preprocess_compare",
+    "status": "navigation_failed",
+    "err": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3112/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3112/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerMode=compare&viewerComparePair=gray_binary&viewerRunId=pre-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+    "metric": null,
+    "shot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-1366-2026-03-19T00-32-47-178Z/preprocess_compare-1366x768.png"
+  },
+  {
+    "route": "layout",
+    "status": "navigation_failed",
+    "err": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3112/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3112/projects/project-fixture-alpha/documents/doc-fixture-002/layout/workspace?page=1&runId=layout-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+    "metric": null,
+    "shot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-1366-2026-03-19T00-32-47-178Z/layout-1366x768.png"
+  },
+  {
+    "route": "privacy_compare",
+    "status": "navigation_failed",
+    "err": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3112/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3112/projects/project-fixture-alpha/documents/doc-fixture-002/privacy/compare?baseRunId=redaction-run-fixture-001&candidateRunId=redaction-run-fixture-002\", waiting until \"domcontentloaded\"\u001b[22m\n",
+    "metric": null,
+    "shot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-1366-2026-03-19T00-32-47-178Z/privacy_compare-1366x768.png"
+  },
+  {
+    "route": "design_system",
+    "status": "navigation_failed",
+    "err": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3112/admin/design-system\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3112/admin/design-system\", waiting until \"domcontentloaded\"\u001b[22m\n",
+    "metric": null,
+    "shot": "/Users/test/Code/UKDA/output/playwright/qa-fresh-1366-2026-03-19T00-32-47-178Z/design_system-1366x768.png"
+  }
+]

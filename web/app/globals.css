@@ -55,6 +55,76 @@ ul {
   align-content: start;
 }
 
+.layoutWorkspacePage {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+  min-height: 0;
+}
+
+.authenticatedShell[data-shell-state="Compact"]
+  .projectWorkspaceMain:has(.layoutWorkspacePage),
+.authenticatedShell[data-shell-state="Focus"]
+  .projectWorkspaceMain:has(.layoutWorkspacePage) {
+  grid-template-rows: minmax(0, 1fr);
+  align-content: stretch;
+}
+
+.authenticatedShell[data-shell-state="Compact"]
+  .projectWorkspaceMain:has(.layoutWorkspacePage)
+  > .projectSectionHeader,
+.authenticatedShell[data-shell-state="Focus"]
+  .projectWorkspaceMain:has(.layoutWorkspacePage)
+  > .projectSectionHeader {
+  display: none;
+}
+
+.authenticatedShell[data-shell-state="Compact"]
+  .projectWorkspaceMain:has(.layoutWorkspacePage)
+  > .projectContentHost,
+.authenticatedShell[data-shell-state="Focus"]
+  .projectWorkspaceMain:has(.layoutWorkspacePage)
+  > .projectContentHost {
+  min-height: 0;
+  align-content: stretch;
+}
+
+.authenticatedShell[data-shell-state="Compact"] .layoutWorkspacePage,
+.authenticatedShell[data-shell-state="Focus"] .layoutWorkspacePage {
+  block-size: 100%;
+}
+
+.authenticatedShell[data-shell-state="Compact"] .layoutWorkspacePage > .layoutWorkspace,
+.authenticatedShell[data-shell-state="Focus"] .layoutWorkspacePage > .layoutWorkspace {
+  min-height: 0;
+  max-height: none;
+  block-size: 100%;
+}
+
+.homeLayout--preprocessing {
+  inline-size: min(100%, 767px);
+  min-block-size: 515px;
+  max-block-size: 515px;
+  overflow: auto;
+  justify-self: center;
+}
+
+.homeLayout--privacy-compare {
+  inline-size: 888px;
+  min-block-size: 555px;
+  max-inline-size: 888px;
+  overflow: hidden;
+  justify-self: center;
+}
+
+.homeLayout--privacy-compare > * {
+  min-inline-size: 0;
+}
+
+.preprocessingOverviewNav {
+  max-inline-size: 41rem;
+}
+
 .healthHeader h2,
 .sectionHeading h2,
 .loadingScreen h1 {
@@ -1966,6 +2036,18 @@ ul {
   padding: var(--ukde-space-3);
 }
 
+.authenticatedShell[data-shell-state="Compact"]
+  .layoutWorkspacePage
+  .documentViewerToolbar {
+  padding-block: var(--ukde-space-2);
+}
+
+.authenticatedShell[data-shell-state="Compact"]
+  .layoutWorkspacePage
+  .documentViewerShortcutHint {
+  display: none;
+}
+
 .documentViewerToolbarRow {
   display: flex;
   flex-wrap: wrap;
@@ -2041,14 +2123,17 @@ ul {
 }
 
 .documentViewerWorkspace {
+  inline-size: min(100%, 767px);
+  justify-self: center;
+  margin-inline: auto;
   padding: var(--ukde-space-3);
   display: grid;
   grid-template-columns:
     minmax(9.5rem, var(--viewer-filmstrip-width, 13rem))
     minmax(0, 1fr) minmax(12.5rem, var(--viewer-inspector-width, 16.75rem));
   gap: var(--ukde-space-3);
-  min-height: min(42rem, calc(100dvh - 18rem));
-  max-height: min(42rem, calc(100dvh - 18rem));
+  min-height: min(612px, calc(100dvh - 18rem));
+  max-height: min(612px, calc(100dvh - 18rem));
   overflow: hidden;
 }
 
@@ -2381,8 +2466,31 @@ ul {
   align-items: center;
 }
 
-.layoutWorkspaceToolbarRow > * {
+.layoutWorkspaceToolbarCluster {
   min-width: 0;
+}
+
+.layoutWorkspaceToolbarCluster--run {
+  grid-area: run;
+}
+
+.layoutWorkspaceToolbarCluster--mode {
+  grid-area: mode;
+}
+
+.layoutWorkspaceToolbarCluster--overlays {
+  grid-area: overlays;
+  flex: 1 1 22rem;
+}
+
+.layoutWorkspaceToolbarCluster--overlays .ukde-toolbar-primitive {
+  width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.layoutWorkspaceToolbarCluster--opacity {
+  grid-area: opacity;
 }
 
 .layoutWorkspaceToolbarMeta {
@@ -2390,9 +2498,106 @@ ul {
   flex-wrap: wrap;
 }
 
+.layoutWorkspaceToolbarCluster--actions {
+  grid-area: actions;
+  justify-self: end;
+}
+
 .layoutWorkspacePrimaryActions {
   align-items: center;
   flex-wrap: wrap;
+}
+
+.layoutWorkspaceToolbarCluster--overflow {
+  grid-area: overflow;
+  justify-self: end;
+}
+
+.authenticatedShell[data-shell-state="Balanced"]
+  .layoutWorkspacePage
+  .layoutWorkspaceToolbarRow {
+  display: grid;
+  grid-template-areas:
+    "run mode overflow"
+    "overlays overlays overlays"
+    "opacity actions actions";
+  grid-template-columns: minmax(12rem, 1fr) max-content max-content;
+  align-items: start;
+  gap: var(--ukde-space-2);
+}
+
+.authenticatedShell[data-shell-state="Compact"]
+  .layoutWorkspacePage
+  .layoutWorkspaceToolbarRow,
+.authenticatedShell[data-shell-state="Focus"]
+  .layoutWorkspacePage
+  .layoutWorkspaceToolbarRow {
+  display: grid;
+  grid-template-areas:
+    "run mode"
+    "overlays opacity"
+    "actions actions"
+    "overflow overflow";
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: stretch;
+  gap: var(--ukde-space-2);
+}
+
+.authenticatedShell[data-shell-state="Compact"]
+  .layoutWorkspacePage
+  .layoutWorkspaceToolbarCluster--mode,
+.authenticatedShell[data-shell-state="Focus"]
+  .layoutWorkspacePage
+  .layoutWorkspaceToolbarCluster--mode {
+  justify-self: start;
+}
+
+.authenticatedShell[data-shell-state="Compact"]
+  .layoutWorkspacePage
+  .layoutWorkspaceToolbarCluster--actions,
+.authenticatedShell[data-shell-state="Focus"]
+  .layoutWorkspacePage
+  .layoutWorkspaceToolbarCluster--actions {
+  justify-self: stretch;
+}
+
+.authenticatedShell[data-shell-state="Compact"]
+  .layoutWorkspacePage
+  .layoutWorkspaceToolbarCluster--opacity,
+.authenticatedShell[data-shell-state="Focus"]
+  .layoutWorkspacePage
+  .layoutWorkspaceToolbarCluster--opacity {
+  justify-self: end;
+}
+
+.authenticatedShell[data-shell-state="Compact"]
+  .layoutWorkspacePage
+  .layoutWorkspaceToolbarCluster--overlays,
+.authenticatedShell[data-shell-state="Focus"]
+  .layoutWorkspacePage
+  .layoutWorkspaceToolbarCluster--overlays {
+  width: 100%;
+  max-width: 100%;
+}
+
+.authenticatedShell[data-shell-state="Compact"]
+  .layoutWorkspacePage
+  .layoutWorkspaceOpacity
+  > span,
+.authenticatedShell[data-shell-state="Focus"]
+  .layoutWorkspacePage
+  .layoutWorkspaceOpacity
+  > span {
+  white-space: nowrap;
+}
+
+.authenticatedShell[data-shell-state="Compact"]
+  .layoutWorkspacePage
+  .layoutWorkspaceToolbarCluster--overflow,
+.authenticatedShell[data-shell-state="Focus"]
+  .layoutWorkspacePage
+  .layoutWorkspaceToolbarCluster--overflow {
+  justify-self: stretch;
 }
 
 .layoutWorkspaceOverflowPanel {
@@ -2474,6 +2679,8 @@ ul {
 
 .layoutWorkspaceOpacity input[type="range"] {
   width: 8.5rem;
+  min-height: 24px;
+  block-size: 24px;
 }
 
 .layoutFilmstripButton {
@@ -2938,12 +3145,16 @@ ul {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .layoutWorkspacePrimaryActions {
-    width: 100%;
-  }
-
-  .layoutWorkspaceOverflowPanel {
-    width: 100%;
+  .authenticatedShell[data-shell-state="Expanded"]
+    .layoutWorkspacePage
+    .layoutWorkspaceToolbarRow {
+    display: grid;
+    grid-template-areas:
+      "run mode overflow"
+      "overlays overlays overlays"
+      "opacity actions actions";
+    grid-template-columns: minmax(10.5rem, 1fr) max-content max-content;
+    gap: var(--ukde-space-2);
   }
 
   .transcriptionInspectorGrid {
@@ -2964,6 +3175,23 @@ ul {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     min-height: min(42rem, calc(100dvh - 18rem));
     max-height: min(42rem, calc(100dvh - 18rem));
+  }
+
+  .layoutWorkspacePage {
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .authenticatedShell[data-shell-state="Compact"] .layoutWorkspacePage,
+  .authenticatedShell[data-shell-state="Focus"] .layoutWorkspacePage {
+    block-size: 100%;
+  }
+
+  .authenticatedShell[data-shell-state="Compact"] .layoutWorkspacePage > .layoutWorkspace,
+  .authenticatedShell[data-shell-state="Focus"] .layoutWorkspacePage > .layoutWorkspace {
+    min-height: 0;
+    max-height: none;
+    block-size: 100%;
   }
 
   .documentViewerFilmstrip {

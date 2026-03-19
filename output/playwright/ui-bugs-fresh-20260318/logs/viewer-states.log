@@ -1,0 +1,94 @@
+
+> ukde@ test:browser /Users/test/Code/UKDA
+> playwright test --project=chromium web/tests/browser/viewer-regression.spec.ts --grep 'viewer visual baselines for loading, ready, and error states'
+
+[2m[WebServer] [22m(node:59675) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59676) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59682) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:59768) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:59768) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59778) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59785) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m(node:59784) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+[2m[WebServer] [22mRead more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+  ✘  1 [chromium] › web/tests/browser/viewer-regression.spec.ts:56:5 › viewer visual baselines for loading, ready, and error states @visual (6.0s)
+
+
+  1) [chromium] › web/tests/browser/viewer-regression.spec.ts:56:5 › viewer visual baselines for loading, ready, and error states @visual 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveScreenshot[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: locator('.documentViewerWorkspace')
+      26080 pixels (ratio 0.06 of all image pixels) are different.
+
+      Snapshot: viewer-state-loading.png
+
+    Call log:
+    [2m  - Expect "toHaveScreenshot(viewer-state-loading.png)" with timeout 10000ms[22m
+    [2m    - verifying given screenshot expectation[22m
+    [2m  - waiting for locator('.documentViewerWorkspace')[22m
+    [2m    - locator resolved to <section aria-label="Viewer workspace" data-workspace-state="Expanded" class="documentViewerWorkspace ukde-panel">…</section>[22m
+    [2m  - taking element screenshot[22m
+    [2m    - disabled all CSS animations[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+    [2m  - attempting scroll into view action[22m
+    [2m    - waiting for element to be stable[22m
+    [2m  - 26080 pixels (ratio 0.06 of all image pixels) are different.[22m
+    [2m  - waiting 100ms before taking screenshot[22m
+    [2m  - waiting for locator('.documentViewerWorkspace')[22m
+    [2m    - locator resolved to <section aria-label="Viewer workspace" data-workspace-state="Expanded" class="documentViewerWorkspace ukde-panel">…</section>[22m
+    [2m  - taking element screenshot[22m
+    [2m    - disabled all CSS animations[22m
+    [2m  - waiting for fonts to load...[22m
+    [2m  - fonts loaded[22m
+    [2m  - attempting scroll into view action[22m
+    [2m    - waiting for element to be stable[22m
+    [2m  - captured a stable screenshot[22m
+    [2m  - 26080 pixels (ratio 0.06 of all image pixels) are different.[22m
+
+
+      65 |
+      66 |   await gotoViewer(page, LOADING_DOCUMENT_ID, 1);
+    > 67 |   await expect(page.locator(".documentViewerWorkspace")).toHaveScreenshot(
+         |                                                          ^
+      68 |     "viewer-state-loading.png"
+      69 |   );
+      70 |
+        at /Users/test/Code/UKDA/web/tests/browser/viewer-regression.spec.ts:67:58
+
+    attachment #1: viewer-state-loading (image/png) ────────────────────────────────────────────────
+    Expected: web/tests/browser/viewer-regression.spec.ts-snapshots/viewer-state-loading-chromium-darwin.png
+    Received: test-results/viewer-regression-viewer-v-caf79-ady-and-error-states-visual-chromium/viewer-state-loading-actual.png
+    Diff:     test-results/viewer-regression-viewer-v-caf79-ady-and-error-states-visual-chromium/viewer-state-loading-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/viewer-regression-viewer-v-caf79-ady-and-error-states-visual-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/viewer-regression-viewer-v-caf79-ady-and-error-states-visual-chromium/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/viewer-regression-viewer-v-caf79-ady-and-error-states-visual-chromium/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/viewer-regression-viewer-v-caf79-ady-and-error-states-visual-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › web/tests/browser/viewer-regression.spec.ts:56:5 › viewer visual baselines for loading, ready, and error states @visual 
+ ELIFECYCLE  Command failed with exit code 1.

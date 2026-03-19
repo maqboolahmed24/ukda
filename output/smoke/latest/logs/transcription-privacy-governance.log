@@ -1,0 +1,4 @@
+$ .venv/bin/python -m pytest -q api/tests/test_transcription_gold_set.py api/tests/test_documents_redaction_phase5_rules.py api/tests/test_governance_integrity.py
+
+.............                                                            [100%]
+13 passed in 0.37s

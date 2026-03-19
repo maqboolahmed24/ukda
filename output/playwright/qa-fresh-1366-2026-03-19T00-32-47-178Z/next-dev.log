@@ -1,0 +1,13 @@
+▲ Next.js 16.1.6 (webpack)
+- Local:         http://localhost:3112
+- Network:       http://10.245.86.243:3112
+
+✓ Starting...
+✓ Ready in 1634ms
+ GET /login 200 in 1522ms (compile: 1100ms, render: 422ms)
+ GET /projects 200 in 935ms (compile: 752ms, render: 183ms)
+ GET /projects/project-fixture-alpha/overview 200 in 1819ms (compile: 975ms, render: 844ms)
+○ Compiling /projects/[projectId]/search ...
+ GET /projects/project-fixture-alpha/search?q=adams 200 in 19.6s (compile: 16.8s, render: 2.9s)
+○ Compiling /projects/[projectId]/documents/[documentId]/viewer ...
+[?25h

@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/projects/[projectId]/documents/[documentId]/transcription/triage/pages/[pageId]/assignment/route": "app/(authenticated)/projects/[projectId]/documents/[documentId]/transcription/triage/pages/[pageId]/assignment/route.js"
+}

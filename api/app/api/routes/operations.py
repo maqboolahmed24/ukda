@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -15,11 +15,18 @@ from app.exports.service import (
     get_export_service,
 )
 from app.exports.store import ExportStoreUnavailableError
+from app.operations.readiness import (
+    ReadinessAuditService,
+    get_readiness_audit_service,
+)
 from app.telemetry.service import (
     AlertItem,
     ExporterStatus,
+    ModelDeploymentMetric,
+    ModelMetric,
     RouteMetric,
     SloItem,
+    StorageMetric,
     TelemetryService,
     TimelineEvent,
     get_telemetry_service,
@@ -29,7 +36,16 @@ router = APIRouter(prefix="/admin/operations")
 
 AlertStateQuery = Literal["OPEN", "OK", "UNAVAILABLE", "ALL"]
 TimelineScopeQuery = Literal[
-    "all", "api", "auth", "audit", "readiness", "operations", "worker", "telemetry"
+    "all",
+    "api",
+    "auth",
+    "audit",
+    "model",
+    "operations",
+    "readiness",
+    "storage",
+    "telemetry",
+    "worker",
 ]
 
 
@@ -38,6 +54,58 @@ class OperationsRouteMetricResponse(BaseModel):
     method: str
     request_count: int = Field(serialization_alias="requestCount")
     error_count: int = Field(serialization_alias="errorCount")
+    average_latency_ms: float | None = Field(
+        default=None,
+        serialization_alias="averageLatencyMs",
+    )
+    p95_latency_ms: float | None = Field(default=None, serialization_alias="p95LatencyMs")
+
+
+class OperationsStorageMetricResponse(BaseModel):
+    operation: Literal["READ", "WRITE"]
+    request_count: int = Field(serialization_alias="requestCount")
+    error_count: int = Field(serialization_alias="errorCount")
+    average_latency_ms: float | None = Field(
+        default=None,
+        serialization_alias="averageLatencyMs",
+    )
+    p95_latency_ms: float | None = Field(default=None, serialization_alias="p95LatencyMs")
+
+
+class OperationsModelDeploymentMetricResponse(BaseModel):
+    deployment_unit: str = Field(serialization_alias="deploymentUnit")
+    request_count: int = Field(serialization_alias="requestCount")
+    error_count: int = Field(serialization_alias="errorCount")
+    error_rate_percent: float = Field(serialization_alias="errorRatePercent")
+    fallback_invocation_count: int = Field(serialization_alias="fallbackInvocationCount")
+    fallback_invocation_rate_percent: float = Field(
+        serialization_alias="fallbackInvocationRatePercent"
+    )
+    average_latency_ms: float | None = Field(
+        default=None,
+        serialization_alias="averageLatencyMs",
+    )
+    p95_latency_ms: float | None = Field(default=None, serialization_alias="p95LatencyMs")
+    cold_start_p95_ms: float | None = Field(
+        default=None,
+        serialization_alias="coldStartP95Ms",
+    )
+    warm_start_p95_ms: float | None = Field(
+        default=None,
+        serialization_alias="warmStartP95Ms",
+    )
+
+
+class OperationsModelMetricResponse(BaseModel):
+    model_key: str = Field(serialization_alias="modelKey")
+    deployment_unit: str = Field(serialization_alias="deploymentUnit")
+    request_count: int = Field(serialization_alias="requestCount")
+    error_count: int = Field(serialization_alias="errorCount")
+    error_rate_percent: float = Field(serialization_alias="errorRatePercent")
+    fallback_invocation_count: int = Field(serialization_alias="fallbackInvocationCount")
+    fallback_invocation_rate_percent: float = Field(
+        serialization_alias="fallbackInvocationRatePercent"
+    )
     average_latency_ms: float | None = Field(
         default=None,
         serialization_alias="averageLatencyMs",
@@ -119,6 +187,63 @@ class OperationsOverviewResponse(BaseModel):
     request_error_count: int = Field(serialization_alias="requestErrorCount")
     error_rate_percent: float = Field(serialization_alias="errorRatePercent")
     p95_latency_ms: float | None = Field(default=None, serialization_alias="p95LatencyMs")
+    jobs_per_minute: float | None = Field(default=None, serialization_alias="jobsPerMinute")
+    jobs_completed_count: int = Field(serialization_alias="jobsCompletedCount")
+    queue_latency_avg_ms: float | None = Field(
+        default=None,
+        serialization_alias="queueLatencyAvgMs",
+    )
+    queue_latency_p95_ms: float | None = Field(
+        default=None,
+        serialization_alias="queueLatencyP95Ms",
+    )
+    gpu_utilization_avg_percent: float | None = Field(
+        default=None,
+        serialization_alias="gpuUtilizationAvgPercent",
+    )
+    gpu_utilization_max_percent: float | None = Field(
+        default=None,
+        serialization_alias="gpuUtilizationMaxPercent",
+    )
+    gpu_utilization_sample_count: int = Field(
+        serialization_alias="gpuUtilizationSampleCount"
+    )
+    gpu_utilization_source: str = Field(serialization_alias="gpuUtilizationSource")
+    gpu_utilization_detail: str = Field(serialization_alias="gpuUtilizationDetail")
+    model_request_count: int = Field(serialization_alias="modelRequestCount")
+    model_error_count: int = Field(serialization_alias="modelErrorCount")
+    model_error_rate_percent: float | None = Field(
+        default=None,
+        serialization_alias="modelErrorRatePercent",
+    )
+    model_fallback_invocation_count: int = Field(
+        serialization_alias="modelFallbackInvocationCount"
+    )
+    model_fallback_invocation_rate_percent: float | None = Field(
+        default=None,
+        serialization_alias="modelFallbackInvocationRatePercent",
+    )
+    model_request_p95_latency_ms: float | None = Field(
+        default=None,
+        serialization_alias="modelRequestP95LatencyMs",
+    )
+    export_review_latency_avg_ms: float | None = Field(
+        default=None,
+        serialization_alias="exportReviewLatencyAvgMs",
+    )
+    export_review_latency_p95_ms: float | None = Field(
+        default=None,
+        serialization_alias="exportReviewLatencyP95Ms",
+    )
+    export_review_latency_sample_count: int = Field(
+        serialization_alias="exportReviewLatencySampleCount"
+    )
+    storage_request_count: int = Field(serialization_alias="storageRequestCount")
+    storage_error_count: int = Field(serialization_alias="storageErrorCount")
+    storage_error_rate_percent: float | None = Field(
+        default=None,
+        serialization_alias="storageErrorRatePercent",
+    )
     readiness_db_checks: int = Field(serialization_alias="readinessDbChecks")
     readiness_db_failures: int = Field(serialization_alias="readinessDbFailures")
     readiness_db_last_latency_ms: float | None = Field(
@@ -138,6 +263,11 @@ class OperationsOverviewResponse(BaseModel):
     queue_depth_source: str = Field(serialization_alias="queueDepthSource")
     queue_depth_detail: str = Field(serialization_alias="queueDepthDetail")
     exporter: OperationsExporterStatusResponse
+    storage: list[OperationsStorageMetricResponse]
+    model_deployments: list[OperationsModelDeploymentMetricResponse] = Field(
+        serialization_alias="modelDeployments"
+    )
+    models: list[OperationsModelMetricResponse]
     top_routes: list[OperationsRouteMetricResponse] = Field(serialization_alias="topRoutes")
 
 
@@ -173,7 +303,17 @@ class OperationsAlertListResponse(BaseModel):
 class OperationsTimelineEventResponse(BaseModel):
     id: int
     occurred_at: datetime = Field(serialization_alias="occurredAt")
-    scope: Literal["api", "auth", "audit", "readiness", "operations", "worker", "telemetry"]
+    scope: Literal[
+        "api",
+        "auth",
+        "audit",
+        "model",
+        "operations",
+        "readiness",
+        "storage",
+        "worker",
+        "telemetry",
+    ]
     severity: Literal["INFO", "WARNING", "ERROR"]
     message: str
     request_id: str | None = Field(default=None, serialization_alias="requestId")
@@ -188,12 +328,105 @@ class OperationsTimelineListResponse(BaseModel):
     next_cursor: int | None = Field(default=None, serialization_alias="nextCursor")
 
 
+class OperationsReadinessEvidenceResponse(BaseModel):
+    label: str
+    path: str
+    sha256: str | None = None
+
+
+class OperationsReadinessCheckResponse(BaseModel):
+    id: str
+    title: str
+    status: Literal["PASS", "FAIL", "UNAVAILABLE"]
+    blocking_policy: Literal["BLOCKING", "WARNING"] = Field(
+        serialization_alias="blockingPolicy"
+    )
+    detail: str
+    duration_seconds: float = Field(serialization_alias="durationSeconds")
+    evidence: list[OperationsReadinessEvidenceResponse]
+    command: str | None = None
+    exit_code: int | None = Field(default=None, serialization_alias="exitCode")
+
+
+class OperationsReadinessCategoryResponse(BaseModel):
+    id: str
+    title: str
+    status: Literal["PASS", "FAIL", "UNAVAILABLE"]
+    blocking_policy: Literal["BLOCKING", "WARNING"] = Field(
+        serialization_alias="blockingPolicy"
+    )
+    summary: str
+    auditor_visible: bool = Field(serialization_alias="auditorVisible")
+    checks: list[OperationsReadinessCheckResponse]
+
+
+class OperationsReadinessBlockerResponse(BaseModel):
+    category_id: str = Field(serialization_alias="categoryId")
+    check_id: str = Field(serialization_alias="checkId")
+    detail: str
+    evidence_path: str | None = Field(default=None, serialization_alias="evidencePath")
+
+
+class OperationsReadinessResponse(BaseModel):
+    matrix_version: str = Field(serialization_alias="matrixVersion")
+    generated_at: datetime = Field(serialization_alias="generatedAt")
+    overall_status: Literal["PASS", "FAIL", "UNAVAILABLE"] = Field(
+        serialization_alias="overallStatus"
+    )
+    detail: str
+    blocking_failure_count: int = Field(serialization_alias="blockingFailureCount")
+    category_count: int = Field(serialization_alias="categoryCount")
+    categories: list[OperationsReadinessCategoryResponse]
+    blockers: list[OperationsReadinessBlockerResponse]
+
+
 def _as_route_metric(metric: RouteMetric) -> OperationsRouteMetricResponse:
     return OperationsRouteMetricResponse(
         route_template=metric.route_template,
         method=metric.method,
         request_count=metric.request_count,
         error_count=metric.error_count,
+        average_latency_ms=metric.average_latency_ms,
+        p95_latency_ms=metric.p95_latency_ms,
+    )
+
+
+def _as_storage_metric(metric: StorageMetric) -> OperationsStorageMetricResponse:
+    return OperationsStorageMetricResponse(
+        operation=metric.operation,
+        request_count=metric.request_count,
+        error_count=metric.error_count,
+        average_latency_ms=metric.average_latency_ms,
+        p95_latency_ms=metric.p95_latency_ms,
+    )
+
+
+def _as_model_deployment_metric(
+    metric: ModelDeploymentMetric,
+) -> OperationsModelDeploymentMetricResponse:
+    return OperationsModelDeploymentMetricResponse(
+        deployment_unit=metric.deployment_unit,
+        request_count=metric.request_count,
+        error_count=metric.error_count,
+        error_rate_percent=metric.error_rate_percent,
+        fallback_invocation_count=metric.fallback_invocation_count,
+        fallback_invocation_rate_percent=metric.fallback_invocation_rate_percent,
+        average_latency_ms=metric.average_latency_ms,
+        p95_latency_ms=metric.p95_latency_ms,
+        cold_start_p95_ms=metric.cold_start_p95_ms,
+        warm_start_p95_ms=metric.warm_start_p95_ms,
+    )
+
+
+def _as_model_metric(metric: ModelMetric) -> OperationsModelMetricResponse:
+    return OperationsModelMetricResponse(
+        model_key=metric.model_key,
+        deployment_unit=metric.deployment_unit,
+        request_count=metric.request_count,
+        error_count=metric.error_count,
+        error_rate_percent=metric.error_rate_percent,
+        fallback_invocation_count=metric.fallback_invocation_count,
+        fallback_invocation_rate_percent=metric.fallback_invocation_rate_percent,
         average_latency_ms=metric.average_latency_ms,
         p95_latency_ms=metric.p95_latency_ms,
     )
@@ -261,6 +494,193 @@ def _as_timeline(item: TimelineEvent) -> OperationsTimelineEventResponse:
     )
 
 
+def _as_readiness_response(
+    payload: dict[str, object],
+) -> OperationsReadinessResponse:
+    categories = payload.get("categories")
+    blockers = payload.get("blockers")
+    generated_raw = str(payload.get("generatedAt", "")).strip()
+    try:
+        generated_at = datetime.fromisoformat(generated_raw)
+    except ValueError:
+        generated_at = datetime.now(UTC)
+    return OperationsReadinessResponse(
+        matrix_version=str(payload.get("matrixVersion", "")).strip(),
+        generated_at=generated_at,
+        overall_status=str(payload.get("overallStatus")),  # type: ignore[arg-type]
+        detail=str(payload.get("detail", "")).strip(),
+        blocking_failure_count=int(payload.get("blockingFailureCount", 0)),
+        category_count=int(payload.get("categoryCount", 0)),
+        categories=[
+            OperationsReadinessCategoryResponse(
+                id=str(item.get("id", "")).strip(),
+                title=str(item.get("title", "")).strip(),
+                status=str(item.get("status")),  # type: ignore[arg-type]
+                blocking_policy=str(item.get("blockingPolicy")),  # type: ignore[arg-type]
+                summary=str(item.get("summary", "")).strip(),
+                auditor_visible=bool(item.get("auditorVisible", False)),
+                checks=[
+                    OperationsReadinessCheckResponse(
+                        id=str(check.get("id", "")).strip(),
+                        title=str(check.get("title", "")).strip(),
+                        status=str(check.get("status")),  # type: ignore[arg-type]
+                        blocking_policy=str(check.get("blockingPolicy")),  # type: ignore[arg-type]
+                        detail=str(check.get("detail", "")).strip(),
+                        duration_seconds=float(check.get("durationSeconds", 0) or 0),
+                        evidence=[
+                            OperationsReadinessEvidenceResponse(
+                                label=str(ev.get("label", "")).strip(),
+                                path=str(ev.get("path", "")).strip(),
+                                sha256=(
+                                    str(ev.get("sha256")).strip()
+                                    if ev.get("sha256") is not None
+                                    else None
+                                ),
+                            )
+                            for ev in check.get("evidence", [])  # type: ignore[union-attr]
+                            if isinstance(ev, dict)
+                        ],
+                        command=(
+                            str(check.get("command", "")).strip()
+                            if isinstance(check.get("command"), str)
+                            and str(check.get("command", "")).strip()
+                            else None
+                        ),
+                        exit_code=(
+                            int(check.get("exitCode"))
+                            if check.get("exitCode") is not None
+                            else None
+                        ),
+                    )
+                    for check in item.get("checks", [])  # type: ignore[union-attr]
+                    if isinstance(check, dict)
+                ],
+            )
+            for item in categories  # type: ignore[assignment]
+            if isinstance(item, dict)
+        ]
+        if isinstance(categories, list)
+        else [],
+        blockers=[
+            OperationsReadinessBlockerResponse(
+                category_id=str(item.get("categoryId", "")).strip(),
+                check_id=str(item.get("checkId", "")).strip(),
+                detail=str(item.get("detail", "")).strip(),
+                evidence_path=(
+                    str(item.get("evidencePath")).strip()
+                    if item.get("evidencePath") is not None
+                    else None
+                ),
+            )
+            for item in blockers  # type: ignore[assignment]
+            if isinstance(item, dict)
+        ]
+        if isinstance(blockers, list)
+        else [],
+    )
+
+
+_RECOVERY_TIMELINE_KEYS = {
+    "drill_id",
+    "drillId",
+    "recovery_drill_id",
+    "status",
+    "started_at",
+    "startedAt",
+    "finished_at",
+    "finishedAt",
+    "summary",
+    "summary_text",
+    "summaryText",
+    "evidence_summary_json",
+    "evidenceSummaryJson",
+    "evidence_summary",
+    "evidenceSummary",
+    "evidence_storage_key",
+    "evidenceStorageKey",
+    "evidence_storage_sha256",
+    "evidenceStorageSha256",
+    "evidence_sha256",
+    "evidenceSha256",
+    "evidence_key",
+    "evidenceKey",
+    "raw_failure_detail",
+    "rawFailureDetail",
+    "failure_reason",
+    "failureReason",
+}
+
+
+def _is_recovery_timeline_event(item: TimelineEvent) -> bool:
+    details = item.details_json
+    if any(key in details for key in _RECOVERY_TIMELINE_KEYS):
+        return True
+    lowered_message = item.message.lower()
+    return "recovery drill" in lowered_message or "recovery" in lowered_message
+
+
+def _truncate_summary(value: str, *, max_len: int = 180) -> str:
+    collapsed = " ".join(value.replace("\n", " ").replace("\r", " ").split())
+    return collapsed[:max_len]
+
+
+def _sanitize_recovery_timeline_for_auditor(item: TimelineEvent) -> TimelineEvent:
+    details = item.details_json
+    drill_id = details.get("drill_id")
+    if not isinstance(drill_id, str) or not drill_id.strip():
+        alt_drill_id = details.get("drillId")
+        if isinstance(alt_drill_id, str) and alt_drill_id.strip():
+            drill_id = alt_drill_id
+    if not isinstance(drill_id, str) or not drill_id.strip():
+        alt_drill_id = details.get("recovery_drill_id")
+        drill_id = alt_drill_id if isinstance(alt_drill_id, str) else ""
+    status_value = details.get("status")
+    started_at = details.get("started_at")
+    if not isinstance(started_at, str) or not started_at.strip():
+        started_at = details.get("startedAt")
+    finished_at = details.get("finished_at")
+    if not isinstance(finished_at, str) or not finished_at.strip():
+        finished_at = details.get("finishedAt")
+    summary_value = details.get("summary")
+    if not isinstance(summary_value, str) or not summary_value.strip():
+        summary_value = details.get("summary_text")
+    if not isinstance(summary_value, str) or not summary_value.strip():
+        summary_value = details.get("summaryText")
+    if not isinstance(summary_value, str) or not summary_value.strip():
+        summary_value = item.message
+
+    safe_details: dict[str, object] = {
+        "drill_id": str(drill_id).strip(),
+        "status": str(status_value).strip() if isinstance(status_value, str) else "UNKNOWN",
+        "started_at": str(started_at).strip() if isinstance(started_at, str) else None,
+        "finished_at": str(finished_at).strip() if isinstance(finished_at, str) else None,
+        "summary": _truncate_summary(summary_value),
+    }
+    if safe_details["started_at"] in {None, ""}:
+        safe_details["started_at"] = None
+    if safe_details["finished_at"] in {None, ""}:
+        safe_details["finished_at"] = None
+
+    return TimelineEvent(
+        id=item.id,
+        occurred_at=item.occurred_at,
+        scope=item.scope,
+        severity=item.severity,
+        message=_truncate_summary(str(safe_details["summary"])),
+        request_id=item.request_id,
+        trace_id=item.trace_id,
+        route_template=item.route_template,
+        status_code=item.status_code,
+        details_json=safe_details,
+    )
+
+
+def _sanitize_timeline_for_auditor(item: TimelineEvent) -> TimelineEvent:
+    if _is_recovery_timeline_event(item):
+        return _sanitize_recovery_timeline_for_auditor(item)
+    return item
+
+
 @router.get(
     "/overview",
     response_model=OperationsOverviewResponse,
@@ -286,6 +706,27 @@ def operations_overview(
         request_error_count=snapshot.request_error_count,
         error_rate_percent=snapshot.error_rate_percent,
         p95_latency_ms=snapshot.p95_latency_ms,
+        jobs_per_minute=snapshot.jobs_per_minute,
+        jobs_completed_count=snapshot.jobs_completed_count,
+        queue_latency_avg_ms=snapshot.queue_latency_avg_ms,
+        queue_latency_p95_ms=snapshot.queue_latency_p95_ms,
+        gpu_utilization_avg_percent=snapshot.gpu_utilization_avg_percent,
+        gpu_utilization_max_percent=snapshot.gpu_utilization_max_percent,
+        gpu_utilization_sample_count=snapshot.gpu_utilization_sample_count,
+        gpu_utilization_source=snapshot.gpu_utilization_source,
+        gpu_utilization_detail=snapshot.gpu_utilization_detail,
+        model_request_count=snapshot.model_request_count,
+        model_error_count=snapshot.model_error_count,
+        model_error_rate_percent=snapshot.model_error_rate_percent,
+        model_fallback_invocation_count=snapshot.model_fallback_invocation_count,
+        model_fallback_invocation_rate_percent=snapshot.model_fallback_invocation_rate_percent,
+        model_request_p95_latency_ms=snapshot.model_request_p95_latency_ms,
+        export_review_latency_avg_ms=snapshot.export_review_latency_avg_ms,
+        export_review_latency_p95_ms=snapshot.export_review_latency_p95_ms,
+        export_review_latency_sample_count=snapshot.export_review_latency_sample_count,
+        storage_request_count=snapshot.storage_request_count,
+        storage_error_count=snapshot.storage_error_count,
+        storage_error_rate_percent=snapshot.storage_error_rate_percent,
         readiness_db_checks=snapshot.readiness_db_checks,
         readiness_db_failures=snapshot.readiness_db_failures,
         readiness_db_last_latency_ms=snapshot.readiness_db_last_latency_ms,
@@ -299,6 +740,11 @@ def operations_overview(
         queue_depth_source=snapshot.queue_depth_source,
         queue_depth_detail=snapshot.queue_depth_detail,
         exporter=_as_exporter_status(snapshot.exporter_status),
+        storage=[_as_storage_metric(metric) for metric in snapshot.storage_metrics],
+        model_deployments=[
+            _as_model_deployment_metric(metric) for metric in snapshot.model_deployments
+        ],
+        models=[_as_model_metric(metric) for metric in snapshot.models],
         top_routes=[_as_route_metric(metric) for metric in snapshot.route_metrics],
     )
 
@@ -372,6 +818,36 @@ def operations_export_status(
             retention_terminal_other_days=snapshot.policy_retention_terminal_other_days,
         ),
     )
+
+
+@router.get(
+    "/readiness",
+    response_model=OperationsReadinessResponse,
+    dependencies=[Depends(require_platform_roles("ADMIN", "AUDITOR"))],
+)
+def operations_readiness(
+    current_user: SessionPrincipal = Depends(require_authenticated_user),
+    request_context: AuditRequestContext = Depends(get_audit_request_context),
+    readiness_audit_service: ReadinessAuditService = Depends(get_readiness_audit_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> OperationsReadinessResponse:
+    is_admin = "ADMIN" in set(current_user.platform_roles)
+    snapshot = readiness_audit_service.get_readiness_snapshot(
+        include_admin_details=is_admin
+    )
+    payload = snapshot.to_dict()
+    audit_service.record_event_best_effort(
+        event_type="OPERATIONS_READINESS_VIEWED",
+        actor_user_id=current_user.user_id,
+        metadata={
+            "route": request_context.route_template,
+            "overall_status": payload["overallStatus"],
+            "blocking_failure_count": payload["blockingFailureCount"],
+            "category_count": payload["categoryCount"],
+        },
+        request_context=request_context,
+    )
+    return _as_readiness_response(payload)
 
 
 @router.get(
@@ -450,6 +926,9 @@ def operations_timelines(
         cursor=cursor,
         page_size=page_size,
     )
+    is_admin = "ADMIN" in set(current_user.platform_roles)
+    if not is_admin:
+        events = [_sanitize_timeline_for_auditor(item) for item in events]
     audit_service.record_event_best_effort(
         event_type="OPERATIONS_TIMELINE_VIEWED",
         actor_user_id=current_user.user_id,

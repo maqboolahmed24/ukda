@@ -1,0 +1,20 @@
+{
+  "id": "incident-tabletop-2026-03-18",
+  "status": "COMPLETED",
+  "completedAt": "2026-03-18T22:42:00+00:00",
+  "scenario": "MODEL_DEGRADATION_AND_EXPORT_QUEUE_PRESSURE",
+  "incidentCommanderUserId": "user-oncall-primary",
+  "facilitatorUserId": "user-oncall-secondary",
+  "summary": "Validated launch-day escalation path, incident command handoff, and timeline discipline for model + export queue pressure.",
+  "outcomes": [
+    "Commander ownership and escalation chain confirmed",
+    "Read-only auditor timeline expectations confirmed",
+    "Rollback trigger points documented"
+  ],
+  "evidence": [
+    {
+      "label": "Operational handover runbook",
+      "path": "docs/runbooks/production-launch-handover-and-post-launch-guardrails.md"
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/projects/[projectId]/documents/[documentId]/retry-extraction/route": "app/(authenticated)/projects/[projectId]/documents/[documentId]/retry-extraction/route.js"
+}

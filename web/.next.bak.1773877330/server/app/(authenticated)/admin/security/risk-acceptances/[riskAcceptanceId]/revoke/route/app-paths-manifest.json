@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/admin/security/risk-acceptances/[riskAcceptanceId]/revoke/route": "app/(authenticated)/admin/security/risk-acceptances/[riskAcceptanceId]/revoke/route.js"
+}

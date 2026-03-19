@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/projects/[projectId]/settings/change-role/route": "app/(authenticated)/projects/[projectId]/settings/change-role/route.js"
+}

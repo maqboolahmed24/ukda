@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/projects/[projectId]/policies/[policyId]/retire/route": "app/(authenticated)/projects/[projectId]/policies/[policyId]/retire/route.js"
+}

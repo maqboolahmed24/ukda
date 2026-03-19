@@ -88,13 +88,14 @@ Invalid transitions are rejected.
 
 Implemented worker path:
 
+- `ukde-worker run`:
+  - polling loop with configurable interval and iteration cap
+  - required for continuous queue draining in runtime environments
 - `ukde-worker run-once`:
   - claim one queued job
   - apply heartbeat lease
-  - execute typed handler (`NOOP`, ingest, preprocessing, layout)
+  - execute typed handler (`NOOP`, ingest, preprocessing, layout, transcription)
   - finalize state
-- `ukde-worker run`:
-  - polling loop with configurable interval and iteration cap
 
 Stale-running recovery:
 
@@ -174,15 +175,15 @@ In another terminal:
 ```bash
 source .venv/bin/activate
 set -a && source .env && set +a
-ukde-worker run-once
+ukde-worker run
 ```
 
-Or loop:
+Diagnostic single-pass check:
 
 ```bash
 source .venv/bin/activate
 set -a && source .env && set +a
-ukde-worker run --max-iterations 50
+ukde-worker run-once
 ```
 
-Current implementation includes executable handlers for ingest extraction/thumbnail jobs, preprocessing orchestration/page/finalize jobs, and layout analysis orchestration/page/finalize jobs.
+Current implementation includes executable handlers for ingest extraction/thumbnail jobs, preprocessing orchestration/page/finalize jobs, layout analysis orchestration/page/finalize jobs, and transcription orchestration/page/finalize jobs.

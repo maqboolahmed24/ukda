@@ -1,0 +1,53 @@
+{
+  "url": "http://127.0.0.1:3100/projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing",
+  "title": "UKDE",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "bodyOverflowX": 0,
+  "bodyOverflowY": 0,
+  "mainClass": "homeLayout homeLayout--preprocessing",
+  "mainOverflowX": 0,
+  "mainOverflowY": 359,
+  "topOverflowElements": [
+    {
+      "selector": "ul.authenticatedShellContextList",
+      "overflowX": 806,
+      "overflowY": 0,
+      "width": 852,
+      "height": 32
+    },
+    {
+      "selector": "nav.projectContextBar.ukde-panel",
+      "overflowX": 797,
+      "overflowY": 0,
+      "width": 872,
+      "height": 49
+    },
+    {
+      "selector": "main.homeLayout.homeLayout--preprocessing",
+      "overflowX": 0,
+      "overflowY": 359,
+      "width": 767,
+      "height": 515
+    },
+    {
+      "selector": "h1",
+      "overflowX": 0,
+      "overflowY": 2,
+      "width": 539,
+      "height": 30
+    },
+    {
+      "selector": "p.authenticatedShellTitle",
+      "overflowX": 0,
+      "overflowY": 1,
+      "width": 448,
+      "height": 24
+    }
+  ],
+  "clippedTextCandidates": [],
+  "totalButtons": 5,
+  "totalLinks": 34
+}

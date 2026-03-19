@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/projects/[projectId]/settings/add-member/route": "app/(authenticated)/projects/[projectId]/settings/add-member/route.js"
+}

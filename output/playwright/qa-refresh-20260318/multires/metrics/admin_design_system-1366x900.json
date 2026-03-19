@@ -1,0 +1,74 @@
+{
+  "url": "http://127.0.0.1:3100/admin/design-system",
+  "title": "UKDE",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "bodyOverflowX": 0,
+  "bodyOverflowY": 0,
+  "mainClass": "homeLayout dsPage",
+  "mainOverflowX": 141,
+  "mainOverflowY": 0,
+  "pageOverflowY": 0,
+  "topOverflowElements": [
+    {
+      "selector": "div.adminConsoleContent",
+      "overflowX": 137,
+      "overflowY": 8942,
+      "width": 338,
+      "height": 554
+    },
+    {
+      "selector": "aside.adminConsoleRail.ukde-panel",
+      "overflowX": 0,
+      "overflowY": 591,
+      "width": 350,
+      "height": 552
+    },
+    {
+      "selector": "caption.ukde-visually-hidden",
+      "overflowX": 138,
+      "overflowY": 17,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "selector": "main.homeLayout.dsPage",
+      "overflowX": 141,
+      "overflowY": 0,
+      "width": 331,
+      "height": 9496
+    },
+    {
+      "selector": "div.pageHeaderIdentity",
+      "overflowX": 106,
+      "overflowY": 0,
+      "width": 0,
+      "height": 457
+    },
+    {
+      "selector": "article.sectionCard.ukde-panel.dsSection",
+      "overflowX": 82,
+      "overflowY": 0,
+      "width": 192,
+      "height": 893
+    },
+    {
+      "selector": "section.ukde-grid",
+      "overflowX": 69,
+      "overflowY": 0,
+      "width": 403,
+      "height": 895
+    },
+    {
+      "selector": "article.sectionCard.ukde-panel.dsSection",
+      "overflowX": 69,
+      "overflowY": 0,
+      "width": 192,
+      "height": 893
+    }
+  ],
+  "totalButtons": 28,
+  "totalLinks": 21
+}

@@ -41,6 +41,11 @@ describe("@ukde/contracts", () => {
     ).toBe(true);
     expect(
       bootstrapSurfaces.some(
+        (surface) => surface.route === "/admin/operations/readiness"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
         (surface) => surface.route === "/admin/operations/slos"
       )
     ).toBe(true);
@@ -52,6 +57,62 @@ describe("@ukde/contracts", () => {
     expect(
       bootstrapSurfaces.some(
         (surface) => surface.route === "/admin/operations/timelines"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some((surface) => surface.route === "/admin/runbooks")
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/admin/runbooks/:runbookId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some((surface) => surface.route === "/admin/incidents")
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/admin/incidents/status"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/admin/incidents/:incidentId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/admin/incidents/:incidentId/timeline"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/admin/capacity/tests"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/admin/capacity/tests/:testRunId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/admin/recovery/status"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/admin/recovery/drills"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/admin/recovery/drills/:drillId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/admin/recovery/drills/:drillId/evidence"
       )
     ).toBe(true);
     expect(
@@ -126,6 +187,31 @@ describe("@ukde/contracts", () => {
     expect(
       bootstrapSurfaces.some(
         (surface) => surface.route === "/projects/:projectId/entities/:entityId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/projects/:projectId/derivatives"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route === "/projects/:projectId/derivatives/:derivativeId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/derivatives/:derivativeId/status"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/projects/:projectId/derivatives/:derivativeId/preview"
       )
     ).toBe(true);
     expect(
@@ -313,6 +399,50 @@ describe("@ukde/contracts", () => {
     expect(
       bootstrapSurfaces.some((surface) => surface.route === "/admin/security")
     ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/admin/security/findings"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/admin/security/findings/:findingId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/admin/security/risk-acceptances"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route === "/admin/security/risk-acceptances/:riskAcceptanceId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route ===
+          "/admin/security/risk-acceptances/:riskAcceptanceId/events"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/admin/index-quality"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) =>
+          surface.route === "/admin/index-quality/:indexKind/:indexId"
+      )
+    ).toBe(true);
+    expect(
+      bootstrapSurfaces.some(
+        (surface) => surface.route === "/admin/index-quality/query-audits"
+      )
+    ).toBe(true);
   });
 
   it("routes smaller viewports into Focus state", () => {
@@ -374,8 +504,13 @@ describe("@ukde/contracts", () => {
       "PSEUDONYM_REGISTRY_EVENTS_VIEWED",
       "ENTITY_LIST_VIEWED",
       "ENTITY_DETAIL_VIEWED",
-      "ENTITY_OCCURRENCES_VIEWED"
+      "ENTITY_OCCURRENCES_VIEWED",
+      "SEARCH_QUERY_EXECUTED",
+      "SEARCH_INDEX_ACTIVATED",
+      "INDEX_QUALITY_VIEWED",
+      "INDEX_QUALITY_DETAIL_VIEWED",
+      "INDEX_QUALITY_QUERY_AUDITS_VIEWED"
     ];
-    expect(required.length).toBe(26);
+    expect(required.length).toBe(31);
   });
 });

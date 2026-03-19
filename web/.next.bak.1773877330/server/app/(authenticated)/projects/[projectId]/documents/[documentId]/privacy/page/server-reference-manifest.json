@@ -1,0 +1,20 @@
+{
+  "node": {
+    "40a82aad6d2cfb0191d3804ea7f7d92e602b87a278": {
+      "workers": {
+        "app/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/page": {
+          "moduleId": 2756,
+          "async": false,
+          "exportedName": "$$RSC_SERVER_ACTION_0",
+          "filename": "web/app/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/page.tsx"
+        }
+      },
+      "layer": {
+        "app/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/page": "rsc"
+      },
+      "exportedName": "$$RSC_SERVER_ACTION_0",
+      "filename": "web/app/(authenticated)/projects/[projectId]/documents/[documentId]/privacy/page.tsx"
+    }
+  },
+  "edge": {}
+}

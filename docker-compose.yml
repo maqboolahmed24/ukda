@@ -27,6 +27,7 @@ services:
     environment:
       APP_ENV: dev
       DATABASE_URL: postgresql://postgres:postgres@db:5432/postgres
+      STORAGE_CONTROLLED_ROOT: /var/ukde-storage
       WEB_ORIGINS: '["http://127.0.0.1:3000","http://localhost:3000"]'
       AUTH_SESSION_SECRET: ukde-dev-session-secret-change-me
       AUTH_SESSION_TTL_SECONDS: "3600"
@@ -47,6 +48,42 @@ services:
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     volumes:
       - ./:/workspace:ro
+      - ukde-controlled-storage:/var/ukde-storage
+
+  workers:
+    profiles: ["smoke"]
+    build:
+      context: .
+      dockerfile: workers/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_ENV: dev
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/postgres
+      STORAGE_CONTROLLED_ROOT: /var/ukde-storage
+      AUTH_SESSION_SECRET: ukde-dev-session-secret-change-me
+      AUTH_SESSION_TTL_SECONDS: "3600"
+      AUTH_COOKIE_NAME: ukde_session
+      AUTH_CSRF_COOKIE_NAME: ukde_csrf
+      AUTH_DEV_MODE_ENABLED: "true"
+      AUTH_DEV_SEED_USERS: '[{"key":"project-lead","oidc_sub":"dev-project-lead-001","email":"project-lead@local.ukde","display_name":"Dev Project Lead","platform_roles":[]},{"key":"researcher","oidc_sub":"dev-researcher-001","email":"researcher@local.ukde","display_name":"Dev Researcher","platform_roles":[]},{"key":"reviewer","oidc_sub":"dev-reviewer-001","email":"reviewer@local.ukde","display_name":"Dev Reviewer","platform_roles":[]},{"key":"admin","oidc_sub":"dev-admin-001","email":"admin@local.ukde","display_name":"Dev Admin","platform_roles":["ADMIN"]},{"key":"auditor","oidc_sub":"dev-auditor-001","email":"auditor@local.ukde","display_name":"Dev Auditor","platform_roles":["AUDITOR"]}]'
+      OPENAI_BASE_URL: http://127.0.0.1:8010/v1
+      OPENAI_API_KEY: internal-local-dev
+      MODEL_DEPLOYMENT_ROOT: /srv/ukdataextraction/models
+      MODEL_ARTIFACT_ROOT: /srv/ukdataextraction/models
+      MODEL_CATALOG_PATH: /workspace/infra/models/catalog.phase-0.1.json
+      MODEL_ALLOWLIST: '["TRANSCRIPTION_PRIMARY","ASSIST","PRIVACY_NER","PRIVACY_RULES","TRANSCRIPTION_FALLBACK","EMBEDDING_SEARCH"]'
+      MODEL_SERVICE_MAP_PATH: /workspace/infra/models/service-map.phase-0.1.json
+      MODEL_WARM_START: "true"
+      WORKER_QUEUE_NAME: ukde-jobs
+      WORKER_HEARTBEAT_SECONDS: "30"
+      WORKER_POLL_SECONDS: "2"
+      WORKER_MAX_ITERATIONS: "0"
+    command: ["ukde-worker", "run"]
+    volumes:
+      - ./:/workspace:ro
+      - ukde-controlled-storage:/var/ukde-storage
 
   web:
     profiles: ["smoke"]
@@ -68,3 +105,4 @@ services:
 
 volumes:
   ukde-postgres-data:
+  ukde-controlled-storage:

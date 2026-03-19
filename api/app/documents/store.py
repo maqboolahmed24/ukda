@@ -846,7 +846,7 @@ DOCUMENT_SCHEMA_STATEMENTS = (
       id TEXT PRIMARY KEY,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
-      input_transcription_run_id TEXT NOT NULL REFERENCES transcription_runs(id),
+      input_transcription_run_id TEXT NOT NULL,
       input_layout_run_id TEXT REFERENCES layout_runs(id),
       run_kind TEXT NOT NULL CHECK (
         run_kind IN ('BASELINE', 'POLICY_RERUN')
@@ -1068,7 +1068,7 @@ DOCUMENT_SCHEMA_STATEMENTS = (
       document_id TEXT PRIMARY KEY REFERENCES documents(id) ON DELETE CASCADE,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       active_redaction_run_id TEXT REFERENCES redaction_runs(id),
-      active_transcription_run_id TEXT REFERENCES transcription_runs(id),
+      active_transcription_run_id TEXT,
       active_layout_run_id TEXT REFERENCES layout_runs(id),
       active_policy_snapshot_id TEXT,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -1395,6 +1395,26 @@ DOCUMENT_SCHEMA_STATEMENTS = (
     """
     CREATE INDEX IF NOT EXISTS idx_transcription_runs_supersedes
       ON transcription_runs(supersedes_transcription_run_id)
+    """,
+    """
+    ALTER TABLE redaction_runs
+    DROP CONSTRAINT IF EXISTS redaction_runs_input_transcription_run_id_fkey
+    """,
+    """
+    ALTER TABLE redaction_runs
+    ADD CONSTRAINT redaction_runs_input_transcription_run_id_fkey
+      FOREIGN KEY (input_transcription_run_id)
+      REFERENCES transcription_runs(id)
+    """,
+    """
+    ALTER TABLE document_redaction_projections
+    DROP CONSTRAINT IF EXISTS document_redaction_projections_active_transcription_run_id_fkey
+    """,
+    """
+    ALTER TABLE document_redaction_projections
+    ADD CONSTRAINT document_redaction_projections_active_transcription_run_id_fkey
+      FOREIGN KEY (active_transcription_run_id)
+      REFERENCES transcription_runs(id)
     """,
     """
     CREATE TABLE IF NOT EXISTS page_transcription_results (

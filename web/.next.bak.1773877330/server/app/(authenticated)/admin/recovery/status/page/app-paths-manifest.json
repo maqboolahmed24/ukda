@@ -1,0 +1,3 @@
+{
+  "/(authenticated)/admin/recovery/status/page": "app/(authenticated)/admin/recovery/status/page.js"
+}

@@ -1,0 +1,4 @@
+$ .venv/bin/python -m pytest -q api/tests/test_outbound_policy.py api/tests/test_export_hardening_regression.py
+
+...                                                                      [100%]
+3 passed in 13.77s
