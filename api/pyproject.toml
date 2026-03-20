@@ -15,7 +15,7 @@ dependencies = [
   "python-multipart==0.0.20",
   "psycopg[binary]==3.2.13",
   "pydantic-settings==2.13.1",
-  "uvicorn==0.41.0"
+  "uvicorn==0.42.0"
 ]
 
 [project.optional-dependencies]
