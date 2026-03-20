@@ -89,17 +89,20 @@ set qwenLink to quoted form of "${QWEN_LINK}"
 set qwenTarget to quoted form of "${QWEN_TARGET}"
 
 set modelCmd to "cd " & rootDir & " && make dev-db-up && if [ ! -e " & qwenLink & " ]; then ln -s " & qwenTarget & " " & qwenLink & "; fi && cd little_gini/kraken && ./run-kraken.sh && cd ../internal-llm && ./run-internal-llm.sh && cd ../internal-embedding && ./run-internal-embedding.sh && cd ../internal-ner && ./run-internal-ner.sh && cd ../privacy-rules && ./run-privacy-rules.sh && cd ../internal-vlm && ./run-internal-vlm.sh"
-set apiCmd to "cd " & rootDir & " && source .venv/bin/activate && python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 --app-dir api --env-file .env"
-set webCmd to "cd " & rootDir & " && pnpm --filter @ukde/web dev"
+set apiCmd to "cd " & rootDir & " && source .venv/bin/activate && python -m dotenv -f .env run -- python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 --app-dir api"
+set webCmd to "cd " & rootDir & " && source .venv/bin/activate && python -m dotenv -f .env run -- pnpm --filter @ukde/web dev"
+set workerCmd to "cd " & rootDir & " && source .venv/bin/activate && python -m dotenv -f .env run -- ukde-worker run"
 
 tell application "Terminal"
   activate
   do script modelCmd
   do script apiCmd
   do script webCmd
+  do script workerCmd
 end tell
 APPLESCRIPT
 
 echo "Startup launched in Terminal tabs."
 echo "Web: http://localhost:3000"
 echo "API: http://127.0.0.1:8000/healthz"
+echo "Worker: ukde-worker run"

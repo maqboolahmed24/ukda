@@ -4,6 +4,7 @@ import type { DocumentStatus } from "@ukde/contracts";
 import { SectionState, StatusChip } from "@ukde/ui/primitives";
 
 import { DocumentExtractionRetryAction } from "../../../../../../../components/document-extraction-retry-action";
+import { DocumentPipelineLiveStatus } from "../../../../../../../components/document-pipeline-live-status";
 import { DocumentProcessingTimeline } from "../../../../../../../components/document-processing-timeline";
 import {
   getProjectDocument,
@@ -158,6 +159,8 @@ export default async function ProjectDocumentIngestStatusPage({
         </div>
         <p className="ukde-muted">{resolveStatusSummary(document.status)}</p>
       </section>
+
+      <DocumentPipelineLiveStatus documentId={document.id} projectId={projectId} />
 
       <section className="sectionCard ukde-panel">
         <h3>Recovery actions</h3>

@@ -265,6 +265,37 @@ test("single-fold and controlled reflow checks for shell routes @reflow", async 
   expect(compactMetrics?.workRegionOverflow ?? 0).toBeGreaterThanOrEqual(0);
 });
 
+test("context and admin drawers return focus to trigger in focus state @keyboard", async ({
+  baseURL,
+  context,
+  page
+}) => {
+  if (!baseURL) {
+    throw new Error("Missing Playwright baseURL.");
+  }
+  await seedAuthenticatedSession(context, baseURL);
+  await page.setViewportSize({ width: 760, height: 760 });
+
+  await page.goto(`/projects/${PROJECT_ID}/overview?shell=focus`);
+  await expect(page.locator(".authenticatedShell")).toHaveAttribute(
+    "data-shell-state",
+    "Focus"
+  );
+
+  const contextTrigger = page.getByRole("button", { name: "Context panel" });
+  await contextTrigger.click();
+  await expect(page.getByRole("heading", { name: "Shell context" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(contextTrigger).toBeFocused();
+
+  await page.goto("/admin/design-system?shell=focus");
+  const adminRailTrigger = page.getByRole("button", { name: "Open admin rail" });
+  await adminRailTrigger.click();
+  await expect(page.getByRole("heading", { name: "Admin console" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(adminRailTrigger).toBeFocused();
+});
+
 test("header chrome remains stable across authenticated route transitions @reflow", async ({
   baseURL,
   context,

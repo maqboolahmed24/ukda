@@ -71,16 +71,15 @@ make dev-db-up
 
 ```bash
 source .venv/bin/activate
-set -a && source .env && set +a
-cd api
-python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+python -m dotenv -f .env run -- \
+  python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 --app-dir api
 ```
 
 4. Start web shell in another terminal:
 
 ```bash
-set -a && source .env && set +a
-pnpm dev:web
+source .venv/bin/activate
+python -m dotenv -f .env run -- pnpm dev:web
 ```
 
 5. Open:

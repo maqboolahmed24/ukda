@@ -7,6 +7,7 @@ import type {
 } from "@ukde/contracts";
 import { SectionState, StatusChip } from "@ukde/ui/primitives";
 
+import { DocumentPipelineLiveStatus } from "../../../../../../../components/document-pipeline-live-status";
 import {
   getProjectDocument,
   getProjectDocumentGovernanceOverview,
@@ -231,6 +232,8 @@ export default async function ProjectDocumentGovernancePage({
           ) : null}
         </div>
       </section>
+
+      <DocumentPipelineLiveStatus documentId={document.id} projectId={projectId} />
 
       {tab === "overview" ? (
         <section className="sectionCard ukde-panel">

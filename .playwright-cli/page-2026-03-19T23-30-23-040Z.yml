@@ -1,0 +1,117 @@
+- generic [ref=e2]:
+  - link "Skip to work region" [ref=e3] [cursor=pointer]:
+    - /url: "#ukde-shell-work-region"
+  - banner [ref=e4]:
+    - paragraph [ref=e6]: Projects
+    - generic [ref=e7]:
+      - group "Global command controls" [ref=e8]:
+        - button "Project switcher" [ref=e9] [cursor=pointer]
+        - button "Command bar" [ref=e10] [cursor=pointer]:
+          - generic [ref=e11]: Command bar
+          - generic [ref=e12]: ⌘/Ctrl + K
+      - 'button "Theme preference: System (Dark). Click to switch to Dark." [ref=e14] [cursor=pointer]':
+        - img [ref=e16]
+      - link "Help" [ref=e18] [cursor=pointer]:
+        - /url: /health
+      - generic [ref=e19]:
+        - generic [ref=e20]: Env Development
+        - generic [ref=e21]: Tier CONTROLLED
+        - generic [ref=e22]: Expanded
+      - group [ref=e23]:
+        - generic "User menu" [ref=e24] [cursor=pointer]: Dev Admin
+  - generic [ref=e25]:
+    - complementary [ref=e26]:
+      - paragraph [ref=e27]: Navigation
+      - navigation "Primary navigation" [ref=e28]:
+        - list [ref=e29]:
+          - listitem [ref=e30]:
+            - link "Projects" [ref=e31] [cursor=pointer]:
+              - /url: /projects
+              - generic [ref=e32]: Projects
+          - listitem [ref=e33]:
+            - link "My activity" [ref=e34] [cursor=pointer]:
+              - /url: /activity
+              - generic [ref=e35]: My activity
+          - listitem [ref=e36]:
+            - link "Approved models" [ref=e37] [cursor=pointer]:
+              - /url: /approved-models
+              - generic [ref=e38]: Approved models
+          - listitem [ref=e39]:
+            - link "Admin" [ref=e40] [cursor=pointer]:
+              - /url: /admin
+              - generic [ref=e41]: Admin
+    - main [ref=e44]:
+      - generic [ref=e46]:
+        - paragraph [ref=e47]: Projects
+        - heading "Projects workspace" [level=1] [ref=e48]
+        - paragraph [ref=e49]: Purpose-bound project workspaces with role and access-tier boundaries.
+        - generic [ref=e51]: 3 memberships
+      - generic [ref=e52]:
+        - article "My project workspaces" [ref=e53]:
+          - generic [ref=e54]:
+            - paragraph [ref=e55]: Memberships
+            - heading "My project workspaces" [level=2] [ref=e56]
+          - list [ref=e57]:
+            - listitem [ref=e58]:
+              - link "ukda_test thsi si test project made after critical changes in teh repo Controlled Project lead" [ref=e59] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/overview
+                - generic [ref=e60]:
+                  - heading "ukda_test" [level=3] [ref=e61]
+                  - paragraph [ref=e62]: thsi si test project made after critical changes in teh repo
+                - generic [ref=e63]:
+                  - generic [ref=e64]: Controlled
+                  - generic [ref=e65]: Project lead
+            - listitem [ref=e66]:
+              - link "maqbool this is for testing and Controlled Project lead" [ref=e67] [cursor=pointer]:
+                - /url: /projects/a2792c4d-1474-4d23-90d7-fc8c56baeba9/overview
+                - generic [ref=e68]:
+                  - heading "maqbool" [level=3] [ref=e69]
+                  - paragraph [ref=e70]: this is for testing and
+                - generic [ref=e71]:
+                  - generic [ref=e72]: Controlled
+                  - generic [ref=e73]: Project lead
+            - listitem [ref=e74]:
+              - link "lolxd i love donuts Controlled Project lead" [ref=e75] [cursor=pointer]:
+                - /url: /projects/8532d739-aca6-41d9-ae59-39b148a85e30/overview
+                - generic [ref=e76]:
+                  - heading "lolxd" [level=3] [ref=e77]
+                  - paragraph [ref=e78]: i love donuts
+                - generic [ref=e79]:
+                  - generic [ref=e80]: Controlled
+                  - generic [ref=e81]: Project lead
+        - article "Purpose-bound project workspace" [ref=e82]:
+          - generic [ref=e83]:
+            - paragraph [ref=e84]: Create project
+            - heading "Purpose-bound project workspace" [level=2] [ref=e85]
+            - paragraph [ref=e86]: Every project requires a clear purpose and intended access tier. New projects inherit the seeded baseline privacy policy snapshot.
+          - generic [ref=e87]:
+            - generic [ref=e88]: Project name
+            - textbox "Project name" [ref=e89]:
+              - /placeholder: Victorian Parish Records
+            - generic [ref=e90]: Purpose
+            - textbox "Purpose" [ref=e91]:
+              - /placeholder: Describe the research purpose and why this dataset is being processed.
+            - generic [ref=e92]: Intended access tier
+            - combobox "Intended access tier" [ref=e93]:
+              - option "Controlled" [selected]
+              - option "Safeguarded"
+              - option "Open"
+            - button "Create project" [ref=e94] [cursor=pointer]
+    - complementary [ref=e95]:
+      - paragraph [ref=e96]: Adaptive state
+      - heading "Expanded" [level=2] [ref=e97]
+      - paragraph [ref=e98]: Rail, workspace, and inspector remain visible for dense review work.
+      - list [ref=e99]:
+        - listitem [ref=e100]:
+          - generic [ref=e101]: Task context
+          - strong [ref=e102]: standard
+        - listitem [ref=e103]:
+          - generic [ref=e104]: Focus override
+          - strong [ref=e105]: "off"
+        - listitem [ref=e106]:
+          - generic [ref=e107]: Role mode
+          - strong [ref=e108]: ADMIN
+      - paragraph [ref=e109]:
+        - text: "Keyboard path:"
+        - generic [ref=e110]: Tab
+        - text: through rail, context bar, then work region.

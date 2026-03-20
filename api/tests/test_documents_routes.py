@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from typing import BinaryIO, Literal
 
 import pytest
@@ -128,6 +129,12 @@ class SpyAuditService:
 class FakeJobService:
     def __init__(self) -> None:
         self.enqueued: list[dict[str, str]] = []
+        self._queued_rows: list[SimpleNamespace] = []
+        self._id_counter = 0
+
+    def _next_job_id(self) -> str:
+        self._id_counter += 1
+        return f"fake-job-{self._id_counter}"
 
     def enqueue_document_processing_job(
         self,
@@ -147,7 +154,52 @@ class FakeJobService:
                 "processing_run_id": processing_run_id or "",
             }
         )
-        return object(), True, "created"
+        row = SimpleNamespace(
+            id=self._next_job_id(),
+            project_id=project_id,
+            type=job_type,
+            status="QUEUED",
+            payload_json={"project_id": project_id, "document_id": document_id},
+        )
+        self._queued_rows.append(row)
+        return row, True, "created"
+
+    def claim_next_document_ingest_job_for_worker(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        worker_id: str,
+        lease_seconds: int,
+    ):
+        del worker_id
+        del lease_seconds
+        for row in self._queued_rows:
+            if (
+                row.project_id == project_id
+                and row.payload_json.get("document_id") == document_id
+                and row.status == "QUEUED"
+                and row.type in {"EXTRACT_PAGES", "RENDER_THUMBNAILS"}
+            ):
+                row.status = "RUNNING"
+                return row
+        return None
+
+    def process_claimed_job(self, *, worker_id: str, row):  # type: ignore[no-untyped-def]
+        del worker_id
+        if row.type == "EXTRACT_PAGES":
+            row.status = "SUCCEEDED"
+            thumbnail_row = SimpleNamespace(
+                id=self._next_job_id(),
+                project_id=row.project_id,
+                type="RENDER_THUMBNAILS",
+                status="QUEUED",
+                payload_json=dict(row.payload_json),
+            )
+            self._queued_rows.append(thumbnail_row)
+            return row
+        row.status = "SUCCEEDED"
+        return row
 
     def run_worker_once(self, *, worker_id: str, lease_seconds: int):  # type: ignore[no-untyped-def]
         del worker_id

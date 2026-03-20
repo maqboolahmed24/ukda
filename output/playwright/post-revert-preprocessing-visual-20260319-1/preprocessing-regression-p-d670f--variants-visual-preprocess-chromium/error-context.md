@@ -1,0 +1,276 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - link "Skip to work region" [ref=e3] [cursor=pointer]:
+      - /url: "#ukde-shell-work-region"
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - paragraph [ref=e6]: Victorian Parish Registers
+        - paragraph [ref=e7]: Project workspace
+      - generic [ref=e8]:
+        - group "Global command controls" [ref=e9]:
+          - button "Project switcher" [ref=e10] [cursor=pointer]
+          - button "Command bar" [ref=e11] [cursor=pointer]:
+            - generic [ref=e12]: Command bar
+            - generic [ref=e13]: ⌘/Ctrl + K
+        - 'button "Theme preference: System (Dark). Click to switch to Dark." [ref=e15] [cursor=pointer]':
+          - img [ref=e17]
+        - link "Help" [ref=e19] [cursor=pointer]:
+          - /url: /health
+        - generic [ref=e20]:
+          - generic [ref=e21]: Env Test
+          - generic [ref=e22]: Tier Controlled
+          - generic [ref=e23]: Expanded
+        - group [ref=e24]:
+          - generic "User menu" [ref=e25] [cursor=pointer]: Fixture Admin
+    - generic [ref=e26]:
+      - complementary [ref=e27]:
+        - paragraph [ref=e28]: Navigation
+        - navigation "Primary navigation" [ref=e29]:
+          - list [ref=e30]:
+            - listitem [ref=e31]:
+              - link "Projects" [ref=e32] [cursor=pointer]:
+                - /url: /projects
+                - generic [ref=e33]: Projects
+            - listitem [ref=e34]:
+              - link "My activity" [ref=e35] [cursor=pointer]:
+                - /url: /activity
+                - generic [ref=e36]: My activity
+            - listitem [ref=e37]:
+              - link "Approved models" [ref=e38] [cursor=pointer]:
+                - /url: /approved-models
+                - generic [ref=e39]: Approved models
+            - listitem [ref=e40]:
+              - link "Admin" [ref=e41] [cursor=pointer]:
+                - /url: /admin
+                - generic [ref=e42]: Admin
+      - generic [ref=e43]:
+        - navigation "Project context" [ref=e44]:
+          - list [ref=e45]:
+            - listitem [ref=e46]:
+              - link "Overview" [ref=e47] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/overview
+            - listitem [ref=e48]:
+              - link "Documents" [ref=e49] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/documents
+            - listitem [ref=e50]:
+              - link "Model assignments" [ref=e51] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/model-assignments
+            - listitem [ref=e52]:
+              - link "Search" [ref=e53] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/search
+            - listitem [ref=e54]:
+              - link "Entities" [ref=e55] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/entities
+            - listitem [ref=e56]:
+              - link "Derivatives" [ref=e57] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/derivatives
+            - listitem [ref=e58]:
+              - link "Indexes" [ref=e59] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/indexes
+            - listitem [ref=e60]:
+              - link "Policies" [ref=e61] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/policies
+            - listitem [ref=e62]:
+              - link "Pseudonym registry" [ref=e63] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/pseudonym-registry
+            - listitem [ref=e64]:
+              - link "Jobs" [ref=e65] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/jobs
+            - listitem [ref=e66]:
+              - link "Export candidates" [ref=e67] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/export-candidates
+            - listitem [ref=e68]:
+              - link "Export requests" [ref=e69] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/export-requests
+            - listitem [ref=e70]:
+              - link "Export review" [ref=e71] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/export-review
+            - listitem [ref=e72]:
+              - link "Activity" [ref=e73] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/activity
+            - listitem [ref=e74]:
+              - link "Settings" [ref=e75] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/settings
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - generic [ref=e79]:
+              - paragraph [ref=e80]: Projects / Victorian Parish Registers
+              - heading "Preprocessing quality" [level=1] [ref=e81]
+              - paragraph [ref=e82]: Quality triage for active or selected preprocessing runs with filterable page diagnostics.
+              - navigation "Breadcrumb" [ref=e84]:
+                - list [ref=e85]:
+                  - listitem [ref=e86]:
+                    - link "Projects" [ref=e87] [cursor=pointer]:
+                      - /url: /projects
+                    - text: /
+                  - listitem [ref=e88]:
+                    - link "Victorian Parish Registers" [ref=e89] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/overview
+                    - text: /
+                  - listitem [ref=e90]:
+                    - link "Documents" [ref=e91] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents
+                    - text: /
+                  - listitem [ref=e92]:
+                    - link "Document" [ref=e93] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents/doc-fixture-002
+                    - text: /
+                  - listitem [ref=e94]:
+                    - link "Preprocessing" [ref=e95] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing
+                    - text: /
+                  - listitem [ref=e96]:
+                    - generic [ref=e97]: Quality
+            - generic [ref=e98]:
+              - link "Open viewer" [ref=e99] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1
+              - link "Document detail" [ref=e100] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/documents/doc-fixture-002
+          - main [ref=e102]:
+            - generic [ref=e103]:
+              - paragraph [ref=e104]: Preprocessing quality
+              - heading "register-volume-04.pdf" [level=2] [ref=e105]
+              - paragraph [ref=e106]: Operator triage queue for weak pages, hotspot filtering, selective reruns, and compare handoff.
+              - generic [ref=e107]:
+                - link "Pages" [ref=e108] [cursor=pointer]:
+                  - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing
+                - link "Quality" [ref=e109] [cursor=pointer]:
+                  - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/quality?runId=pre-run-fixture-002
+                - link "Processing runs" [ref=e110] [cursor=pointer]:
+                  - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing?tab=runs
+                - link "Open viewer" [ref=e111] [cursor=pointer]:
+                  - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=1
+            - generic [ref=e112]:
+              - heading "Document quality triage" [level=3] [ref=e113]
+              - generic [ref=e114]:
+                - generic [ref=e115]:
+                  - text: Run
+                  - combobox "Run" [ref=e116]:
+                    - option "pre-run-fixture-002 · BALANCED · SUCCEEDED" [selected]
+                    - option "pre-run-fixture-001 · BALANCED · SUCCEEDED"
+                - generic [ref=e117]:
+                  - text: Warning type
+                  - combobox "Warning type" [ref=e118]:
+                    - option "Any warning" [selected]
+                    - option "LOW_DPI"
+                - generic [ref=e119]:
+                  - text: Skew min
+                  - spinbutton "Skew min" [ref=e120]
+                - generic [ref=e121]:
+                  - text: Skew max
+                  - spinbutton "Skew max" [ref=e122]
+                - generic [ref=e123]:
+                  - text: Blur threshold
+                  - spinbutton "Blur threshold" [ref=e124]
+                - generic [ref=e125]:
+                  - checkbox "Failed only" [ref=e126]
+                  - text: Failed only
+                - generic [ref=e127]:
+                  - text: Compare base
+                  - combobox "Compare base" [ref=e128]:
+                    - option "Auto select base" [selected]
+                    - option "pre-run-fixture-001 · BALANCED · SUCCEEDED"
+              - generic [ref=e129]:
+                - paragraph [ref=e130]: 2 pages in triage queue · 0 selected
+                - generic [ref=e131]:
+                  - button "Select filtered" [ref=e132] [cursor=pointer]
+                  - button "Clear selection" [disabled] [ref=e133]
+                  - link "Compare runs" [ref=e134] [cursor=pointer]:
+                    - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002
+                  - button "Re-run preprocessing" [ref=e135] [cursor=pointer]
+              - table "Document quality triage rows" [ref=e137]:
+                - caption [ref=e138]: Document quality triage rows
+                - rowgroup [ref=e139]:
+                  - row "Select all filtered pages Page Warnings Skew Blur score DPI Status Details" [ref=e140]:
+                    - columnheader "Select all filtered pages" [ref=e141]:
+                      - checkbox "Select all filtered pages" [ref=e142]
+                    - columnheader "Page" [ref=e143]
+                    - columnheader "Warnings" [ref=e144]
+                    - columnheader "Skew" [ref=e145]
+                    - columnheader "Blur score" [ref=e146]
+                    - columnheader "DPI" [ref=e147]
+                    - columnheader "Status" [ref=e148]
+                    - columnheader "Details" [ref=e149]
+                - rowgroup [ref=e150]:
+                  - row "Select page 2 2 LOW_DPI N/A N/A N/A PASS SUCCEEDED Inspect" [ref=e151] [cursor=pointer]:
+                    - cell "Select page 2" [ref=e152]:
+                      - checkbox "Select page 2" [ref=e153]
+                    - cell "2" [ref=e154]
+                    - cell "LOW_DPI" [ref=e155]
+                    - cell "N/A" [ref=e156]
+                    - cell "N/A" [ref=e157]
+                    - cell "N/A" [ref=e158]
+                    - cell "PASS SUCCEEDED" [ref=e159]:
+                      - generic [ref=e160]: PASS
+                      - generic [ref=e161]: SUCCEEDED
+                    - cell "Inspect" [ref=e162]:
+                      - button "Inspect" [ref=e163]
+                  - row "Select page 1 1 none N/A N/A N/A PASS SUCCEEDED Inspect" [ref=e164] [cursor=pointer]:
+                    - cell "Select page 1" [ref=e165]:
+                      - checkbox "Select page 1" [ref=e166]
+                    - cell "1" [ref=e167]
+                    - cell "none" [ref=e168]
+                    - cell "N/A" [ref=e169]
+                    - cell "N/A" [ref=e170]
+                    - cell "N/A" [ref=e171]
+                    - cell "PASS SUCCEEDED" [ref=e172]:
+                      - generic [ref=e173]: PASS
+                      - generic [ref=e174]: SUCCEEDED
+                    - cell "Inspect" [ref=e175]:
+                      - button "Inspect" [ref=e176]
+      - complementary [ref=e177]:
+        - paragraph [ref=e178]: Adaptive state
+        - heading "Expanded" [level=2] [ref=e179]
+        - paragraph [ref=e180]: Rail, workspace, and inspector remain visible for dense review work.
+        - list [ref=e181]:
+          - listitem [ref=e182]:
+            - generic [ref=e183]: Task context
+            - strong [ref=e184]: standard
+          - listitem [ref=e185]:
+            - generic [ref=e186]: Focus override
+            - strong [ref=e187]: "off"
+          - listitem [ref=e188]:
+            - generic [ref=e189]: Role mode
+            - strong [ref=e190]: ADMIN
+        - paragraph [ref=e191]:
+          - text: "Keyboard path:"
+          - generic [ref=e192]: Tab
+          - text: through rail, context bar, then work region.
+  - alert [ref=e193]
+  - dialog "Page 2 quality details" [ref=e195]:
+    - generic [ref=e196]:
+      - generic [ref=e197]:
+        - heading "Page 2 quality details" [level=2] [ref=e198]
+        - paragraph [ref=e199]: Before/after mini previews and per-page metrics for triage.
+      - button "Close drawer" [active] [ref=e200] [cursor=pointer]: Close
+    - generic [ref=e202]:
+      - generic [ref=e203]:
+        - figure "Before" [ref=e204]:
+          - generic [ref=e205]: Before
+          - img "Page 2 original preview" [ref=e206]
+        - figure "After" [ref=e207]:
+          - generic [ref=e208]: After
+          - img "Page 2 preprocessed preview" [ref=e209]
+      - list [ref=e210]:
+        - listitem [ref=e211]:
+          - generic [ref=e212]: Skew
+          - strong [ref=e213]: N/A
+        - listitem [ref=e214]:
+          - generic [ref=e215]: Blur score
+          - strong [ref=e216]: N/A
+        - listitem [ref=e217]:
+          - generic [ref=e218]: DPI estimate
+          - strong [ref=e219]: N/A
+        - listitem [ref=e220]:
+          - generic [ref=e221]: Warnings
+          - strong [ref=e222]: LOW_DPI
+        - listitem [ref=e223]:
+          - generic [ref=e224]: Status
+          - strong [ref=e225]:
+            - generic [ref=e226]: PASS
+      - link "Open in viewer" [ref=e228] [cursor=pointer]:
+        - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/viewer?mode=preprocessed&page=2&runId=pre-run-fixture-002
+```

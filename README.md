@@ -165,8 +165,8 @@ make install-python
 Start the frontend:
 
 ```bash
-set -a && source .env && set +a
-pnpm dev:web
+source .venv/bin/activate
+python -m dotenv -f .env run -- pnpm dev:web
 ```
 
 Start local Postgres:
@@ -179,30 +179,29 @@ Start the API in a second terminal:
 
 ```bash
 source .venv/bin/activate
-set -a && source .env && set +a
-cd api
-python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+python -m dotenv -f .env run -- \
+  python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 --app-dir api
 ```
 
 Inspect worker status:
 
 ```bash
 source .venv/bin/activate
-ukde-worker status
+python -m dotenv -f .env run -- ukde-worker status
 ```
 
 Run the persistent worker loop (required to continuously drain queue jobs):
 
 ```bash
 source .venv/bin/activate
-ukde-worker run
+python -m dotenv -f .env run -- ukde-worker run
 ```
 
 Run one worker pass for diagnostics:
 
 ```bash
 source .venv/bin/activate
-ukde-worker run-once
+python -m dotenv -f .env run -- ukde-worker run-once
 ```
 
 Run offline bundle verification from bundled proof material:

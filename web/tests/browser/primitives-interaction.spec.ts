@@ -207,7 +207,6 @@ test("command bar and project switcher keyboard flows @keyboard", async ({
     page.getByRole("heading", { name: "Project switcher" })
   ).toBeVisible();
   await commandInput.fill("estate");
-  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/projects\/project-fixture-beta\/jobs$/);
 });

@@ -7,10 +7,11 @@ const IS_CI = Boolean(process.env.CI);
 export default defineConfig({
   testDir: "./web/tests/browser",
   testMatch: ["**/*.spec.ts"],
-  fullyParallel: true,
+  // Browser fixtures mutate shared in-memory state; serial execution keeps runs deterministic.
+  fullyParallel: false,
   forbidOnly: IS_CI,
   retries: IS_CI ? 1 : 0,
-  workers: IS_CI ? 1 : undefined,
+  workers: 1,
   timeout: 90_000,
   expect: {
     timeout: 10_000,
@@ -40,7 +41,7 @@ export default defineConfig({
   webServer: {
     command: `pnpm --filter @ukde/web exec next dev --webpack --port ${PORT}`,
     url: `${BASE_URL}/login`,
-    reuseExistingServer: !IS_CI,
+    reuseExistingServer: false,
     timeout: 180_000,
     env: {
       APP_ENV: "test",

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { SectionState, StatusChip } from "@ukde/ui/primitives";
 
+import { DocumentPipelineLiveStatus } from "../../../../../../../components/document-pipeline-live-status";
 import { DocumentPreprocessRunActions } from "../../../../../../../components/document-preprocess-run-actions";
 import {
   getProjectDocument,
@@ -190,6 +191,8 @@ export default async function ProjectDocumentPreprocessingPage({
           ) : null}
         </div>
       </section>
+
+      <DocumentPipelineLiveStatus documentId={document.id} projectId={projectId} />
 
       <DocumentPreprocessRunActions
         canMutate={Boolean(canMutate)}

@@ -32,6 +32,24 @@ class FakeTelemetryService:
     def record_queue_depth(self, **kwargs):  # type: ignore[no-untyped-def]
         return None
 
+    def record_job_claimed(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
+    def record_job_completed(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
+    def record_gpu_utilization(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
+    def record_storage_operation(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
+    def record_model_request(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
+    def record_export_review_latency(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
     def record_timeline(self, **kwargs):  # type: ignore[no-untyped-def]
         return None
 

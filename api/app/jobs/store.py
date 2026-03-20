@@ -1199,6 +1199,166 @@ class JobStore:
         except psycopg.Error as error:
             raise JobStoreUnavailableError("Job claim failed.") from error
 
+    def claim_next_document_ingest_job(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        worker_id: str,
+        lease_seconds: int,
+    ) -> JobRecord | None:
+        self.ensure_schema()
+        safe_lease_seconds = max(5, min(lease_seconds, 600))
+        now = datetime.now(UTC)
+        lease_expires_at = now + timedelta(seconds=safe_lease_seconds)
+
+        try:
+            with self._connect() as connection:
+                with connection.cursor(row_factory=dict_row) as cursor_obj:
+                    self._recover_stale_running_jobs(cursor=cursor_obj, now=now)
+
+                    while True:
+                        cursor_obj.execute(
+                            """
+                            SELECT
+                              id,
+                              project_id,
+                              attempt_number,
+                              supersedes_job_id,
+                              superseded_by_job_id,
+                              type,
+                              dedupe_key,
+                              status,
+                              attempts,
+                              max_attempts,
+                              payload_json,
+                              created_by,
+                              created_at,
+                              started_at,
+                              finished_at,
+                              canceled_by,
+                              canceled_at,
+                              error_code,
+                              error_message,
+                              cancel_requested_by,
+                              cancel_requested_at,
+                              lease_owner_id,
+                              lease_expires_at,
+                              last_heartbeat_at
+                            FROM jobs
+                            WHERE project_id = %(project_id)s
+                              AND status = 'QUEUED'
+                              AND superseded_by_job_id IS NULL
+                              AND type IN ('EXTRACT_PAGES', 'RENDER_THUMBNAILS')
+                              AND payload_json ->> 'document_id' = %(document_id)s
+                            ORDER BY created_at ASC, id ASC
+                            LIMIT 1
+                            FOR UPDATE SKIP LOCKED
+                            """,
+                            {
+                                "project_id": project_id,
+                                "document_id": document_id,
+                            },
+                        )
+                        candidate_row = cursor_obj.fetchone()
+                        if candidate_row is None:
+                            connection.commit()
+                            return None
+
+                        candidate = self._as_job(candidate_row)
+                        cursor_obj.execute(
+                            """
+                            SELECT id
+                            FROM jobs
+                            WHERE project_id = %(project_id)s
+                              AND dedupe_key = %(dedupe_key)s
+                              AND superseded_by_job_id IS NULL
+                              AND status = 'SUCCEEDED'
+                              AND id <> %(job_id)s
+                            LIMIT 1
+                            FOR UPDATE
+                            """,
+                            {
+                                "project_id": candidate.project_id,
+                                "dedupe_key": candidate.dedupe_key,
+                                "job_id": candidate.id,
+                            },
+                        )
+                        succeeded_row = cursor_obj.fetchone()
+                        if succeeded_row is not None:
+                            cursor_obj.execute(
+                                """
+                                UPDATE jobs
+                                SET
+                                  status = 'CANCELED',
+                                  canceled_at = %(now)s,
+                                  finished_at = %(now)s,
+                                  error_code = 'DEDUPE_ALREADY_SUCCEEDED',
+                                  error_message = %(error_message)s
+                                WHERE id = %(job_id)s
+                                """,
+                                {
+                                    "now": now,
+                                    "error_message": self.sanitize_error_message(
+                                        (
+                                            "Job skipped because the logical work item "
+                                            "already succeeded."
+                                        )
+                                    ),
+                                    "job_id": candidate.id,
+                                },
+                            )
+                            self._append_job_event(
+                                cursor=cursor_obj,
+                                job_id=candidate.id,
+                                project_id=candidate.project_id,
+                                event_type="JOB_CANCELED",
+                                from_status="QUEUED",
+                                to_status="CANCELED",
+                                actor_user_id=None,
+                                details={"reason": "dedupe_already_succeeded"},
+                            )
+                            continue
+
+                        cursor_obj.execute(
+                            """
+                            UPDATE jobs
+                            SET
+                              status = 'RUNNING',
+                              attempts = attempts + 1,
+                              started_at = COALESCE(started_at, %(now)s),
+                              lease_owner_id = %(worker_id)s,
+                              lease_expires_at = %(lease_expires_at)s,
+                              last_heartbeat_at = %(now)s
+                            WHERE id = %(job_id)s
+                            """,
+                            {
+                                "now": now,
+                                "worker_id": worker_id,
+                                "lease_expires_at": lease_expires_at,
+                                "job_id": candidate.id,
+                            },
+                        )
+                        self._append_job_event(
+                            cursor=cursor_obj,
+                            job_id=candidate.id,
+                            project_id=candidate.project_id,
+                            event_type="JOB_STARTED",
+                            from_status="QUEUED",
+                            to_status="RUNNING",
+                            actor_user_id=None,
+                            details={"worker_id": worker_id},
+                        )
+                        claimed = self._read_job(
+                            cursor=cursor_obj,
+                            project_id=candidate.project_id,
+                            job_id=candidate.id,
+                        )
+                        connection.commit()
+                        return claimed
+        except psycopg.Error as error:
+            raise JobStoreUnavailableError("Document ingest job claim failed.") from error
+
     def heartbeat_job(
         self,
         *,

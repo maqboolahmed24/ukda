@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { SectionState, StatusChip } from "@ukde/ui/primitives";
 
+import { DocumentPipelineLiveStatus } from "../../../../../../../components/document-pipeline-live-status";
 import { DocumentTranscriptionRunActions } from "../../../../../../../components/document-transcription-run-actions";
 import { DocumentTranscriptionTriageSurface } from "../../../../../../../components/document-transcription-triage-surface";
 import {
@@ -258,6 +259,8 @@ export default async function ProjectDocumentTranscriptionPage({
           ) : null}
         </div>
       </section>
+
+      <DocumentPipelineLiveStatus documentId={document.id} projectId={projectId} />
 
       <DocumentTranscriptionRunActions
         canMutate={Boolean(canMutate)}

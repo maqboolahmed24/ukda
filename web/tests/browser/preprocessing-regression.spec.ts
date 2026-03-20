@@ -20,6 +20,14 @@ async function gotoPreprocessingRoute(
   await expect(page.locator("main.homeLayout")).toBeVisible();
 }
 
+async function waitForPipelineLiveStatus(page: Page): Promise<void> {
+  const liveStatusSection = page.locator(".documentPipelineLiveStatus");
+  await expect(liveStatusSection).toBeVisible();
+  await expect(
+    liveStatusSection.getByText(/Polling every \d+s using live operations policy\./)
+  ).toBeVisible();
+}
+
 test("preprocessing route visual baselines for overview, runs, quality, compare, and state variants @visual @preprocess", async ({
   baseURL,
   context,
@@ -35,6 +43,7 @@ test("preprocessing route visual baselines for overview, runs, quality, compare,
     READY_DOCUMENT_ID,
     "/preprocessing"
   );
+  await waitForPipelineLiveStatus(page);
   await expect(page.locator("main.homeLayout")).toHaveScreenshot(
     "preprocessing-overview-pages.png"
   );
@@ -68,6 +77,26 @@ test("preprocessing route visual baselines for overview, runs, quality, compare,
 
   await page.getByRole("button", { name: "Inspect" }).first().click();
   await expect(page.locator(".qualityDetailsDrawerBody")).toBeVisible();
+  await page.evaluate(async () => {
+    const previewImages = Array.from(
+      document.querySelectorAll<HTMLImageElement>(".qualityDetailsPreviewGrid img")
+    );
+    await Promise.all(
+      previewImages.map((image) => {
+        if (image.complete) {
+          return Promise.resolve();
+        }
+        return new Promise<void>((resolve) => {
+          image.addEventListener("load", () => resolve(), { once: true });
+          image.addEventListener("error", () => resolve(), { once: true });
+        });
+      })
+    );
+    const drawerBody = document.querySelector<HTMLElement>(".ukde-drawer-body");
+    if (drawerBody) {
+      drawerBody.scrollTop = 0;
+    }
+  });
   await expect(page.locator("main.homeLayout")).toHaveScreenshot(
     "preprocessing-quality-drawer-open.png"
   );

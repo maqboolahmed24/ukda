@@ -1,0 +1,141 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - link "Skip to work region" [ref=e3] [cursor=pointer]:
+      - /url: "#ukde-shell-work-region"
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - paragraph [ref=e6]: ukda_test
+        - paragraph [ref=e7]: Project workspace
+      - generic [ref=e8]:
+        - group "Global command controls" [ref=e9]:
+          - button "Project switcher" [ref=e10] [cursor=pointer]
+          - button "Command bar" [ref=e11] [cursor=pointer]:
+            - generic [ref=e12]: Command bar
+            - generic [ref=e13]: ⌘/Ctrl + K
+        - 'button "Theme preference: System (Light). Click to switch to Dark." [ref=e15] [cursor=pointer]':
+          - img [ref=e17]
+        - link "Help" [ref=e19] [cursor=pointer]:
+          - /url: /health
+        - generic [ref=e20]:
+          - generic [ref=e21]: Env Development
+          - generic [ref=e22]: Tier Controlled
+          - generic [ref=e23]: Compact
+        - group [ref=e24]:
+          - generic "User menu" [ref=e25] [cursor=pointer]: Dev Admin
+    - generic [ref=e26]:
+      - complementary [ref=e27]:
+        - paragraph [ref=e28]: Navigation
+        - navigation "Primary navigation" [ref=e29]:
+          - list [ref=e30]:
+            - listitem [ref=e31]:
+              - link [ref=e32] [cursor=pointer]:
+                - /url: /projects
+                - generic [ref=e33]: P
+            - listitem [ref=e34]:
+              - link [ref=e35] [cursor=pointer]:
+                - /url: /activity
+                - generic [ref=e36]: M
+            - listitem [ref=e37]:
+              - link [ref=e38] [cursor=pointer]:
+                - /url: /approved-models
+                - generic [ref=e39]: A
+            - listitem [ref=e40]:
+              - link [ref=e41] [cursor=pointer]:
+                - /url: /admin
+                - generic [ref=e42]: A
+      - generic [ref=e43]:
+        - navigation "Project context" [ref=e44]:
+          - list [ref=e45]:
+            - listitem [ref=e46]:
+              - link "Overview" [ref=e47] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/overview
+            - listitem [ref=e48]:
+              - link "Documents" [ref=e49] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents
+            - listitem [ref=e50]:
+              - link "Model assignments" [ref=e51] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/model-assignments
+            - listitem [ref=e52]:
+              - link "Search" [ref=e53] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/search
+            - listitem [ref=e54]:
+              - link "Entities" [ref=e55] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/entities
+            - listitem [ref=e56]:
+              - link "Derivatives" [ref=e57] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/derivatives
+            - listitem [ref=e58]:
+              - link "Indexes" [ref=e59] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/indexes
+            - listitem [ref=e60]:
+              - link "Policies" [ref=e61] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/policies
+            - listitem [ref=e62]:
+              - link "Pseudonym registry" [ref=e63] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/pseudonym-registry
+            - listitem [ref=e64]:
+              - link "Jobs" [ref=e65] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/jobs
+            - listitem [ref=e66]:
+              - link "Export candidates" [ref=e67] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/export-candidates
+            - listitem [ref=e68]:
+              - link "Export requests" [ref=e69] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/export-requests
+            - listitem [ref=e70]:
+              - link "Export review" [ref=e71] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/export-review
+            - listitem [ref=e72]:
+              - link "Activity" [ref=e73] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/activity
+            - listitem [ref=e74]:
+              - link "Settings" [ref=e75] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/settings
+        - generic [ref=e88]:
+          - generic [ref=e89]:
+            - generic [ref=e90]:
+              - paragraph [ref=e91]: Projects / ukda_test
+              - heading "Import" [level=1] [ref=e92]
+              - paragraph [ref=e93]: Dedicated route for controlled ingest and scan validation workflows.
+              - navigation "Breadcrumb" [ref=e95]:
+                - list [ref=e96]:
+                  - listitem [ref=e97]:
+                    - link "Projects" [ref=e98] [cursor=pointer]:
+                      - /url: /projects
+                    - text: /
+                  - listitem [ref=e99]:
+                    - link "ukda_test" [ref=e100] [cursor=pointer]:
+                      - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/overview
+                    - text: /
+                  - listitem [ref=e101]:
+                    - link "Documents" [ref=e102] [cursor=pointer]:
+                      - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents
+                    - text: /
+                  - listitem [ref=e103]:
+                    - generic [ref=e104]: Import
+            - link "Back to documents" [ref=e106] [cursor=pointer]:
+              - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents
+          - main [ref=e108]:
+            - generic [ref=e109]:
+              - paragraph [ref=e110]: Documents / Import
+              - heading "Controlled upload pipeline" [level=2] [ref=e111]
+              - paragraph [ref=e112]: Upload is validated server-side, stored in controlled raw storage, scanned, and then handed to document processing.
+            - generic [ref=e113]:
+              - heading "Workflow steps" [level=3] [ref=e114]
+              - list "Import steps" [ref=e115]:
+                - listitem [ref=e116]: 1. Select files
+                - listitem [ref=e117]: 2. Confirm metadata and destination project
+                - listitem [ref=e118]: 3. Upload and status
+            - generic [ref=e147]:
+              - 'heading "Step 3: Upload and status" [level=3] [ref=e148]'
+              - generic [ref=e149]:
+                - generic [ref=e150]: COMPLETED
+                - generic [ref=e151]: QUEUED
+                - generic [ref=e152]: QUEUED
+              - paragraph [ref=e153]: Upload assembled and queued for scanner handoff.
+              - paragraph [ref=e154]: Transferred 344.5 KB of 344.5 KB (100%).
+              - generic [ref=e155]:
+                - button "Cancel" [disabled] [ref=e156]
+                - link "Back to documents" [ref=e157] [cursor=pointer]:
+                  - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents
+  - alert [ref=e87]

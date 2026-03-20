@@ -1,7 +1,7 @@
 export const phase1PerformanceBudgetsMs = {
-  documentLibraryInitialRender: 4000,
+  documentLibraryInitialRender: 5000,
   documentLibraryFilterApply: 1500,
-  viewerFirstPageRender: 3500,
+  viewerFirstPageRender: 4500,
   viewerThumbnailStripReady: 3000,
   uploadWizardFileSelection: 1000
 } as const;

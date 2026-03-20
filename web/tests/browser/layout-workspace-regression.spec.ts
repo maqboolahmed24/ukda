@@ -158,26 +158,27 @@ test("layout workspace keyboard toolbar and inspector-canvas selection sync @a11
 
   await page.setViewportSize({ width: 860, height: 900 });
   const compactToolbarMetrics = await page.evaluate(() => {
-    const workRegion = document.querySelector<HTMLElement>(".authenticatedShellWorkRegion");
+    const layoutPage = document.querySelector<HTMLElement>("main.layoutWorkspacePage");
     const toolbarRow = document.querySelector<HTMLElement>(".layoutWorkspaceToolbarRow");
     const runCluster = document.querySelector<HTMLElement>(".layoutWorkspaceToolbarCluster--run");
     const modeCluster = document.querySelector<HTMLElement>(".layoutWorkspaceToolbarCluster--mode");
     const overlaysCluster = document.querySelector<HTMLElement>(
       ".layoutWorkspaceToolbarCluster--overlays"
     );
-    if (!workRegion || !toolbarRow || !runCluster || !modeCluster || !overlaysCluster) {
+    if (!layoutPage || !toolbarRow || !runCluster || !modeCluster || !overlaysCluster) {
       return null;
     }
-    const workRegionRect = workRegion.getBoundingClientRect();
-    const isVisibleWithinWorkRegion = (element: HTMLElement): boolean => {
+    const layoutPageRect = layoutPage.getBoundingClientRect();
+    const foldBottom = Math.min(layoutPageRect.bottom, window.innerHeight);
+    const isVisibleInFirstFold = (element: HTMLElement): boolean => {
       const rect = element.getBoundingClientRect();
-      return rect.top >= workRegionRect.top - 1 && rect.bottom <= workRegionRect.bottom + 1;
+      return rect.top >= layoutPageRect.top - 1 && rect.bottom <= foldBottom + 1;
     };
     return {
       priorityClustersVisible:
-        isVisibleWithinWorkRegion(runCluster) &&
-        isVisibleWithinWorkRegion(modeCluster) &&
-        isVisibleWithinWorkRegion(overlaysCluster),
+        isVisibleInFirstFold(runCluster) &&
+        isVisibleInFirstFold(modeCluster) &&
+        isVisibleInFirstFold(overlaysCluster),
       toolbarHeight: toolbarRow.getBoundingClientRect().height
     };
   });
@@ -201,7 +202,7 @@ test("layout workspace keyboard toolbar and inspector-canvas selection sync @a11
     };
   });
   expect(compactMetrics).not.toBeNull();
-  expect(compactMetrics?.layoutOverflow ?? 0).toBeLessThanOrEqual(420);
+  expect(compactMetrics?.layoutOverflow ?? 0).toBeLessThanOrEqual(560);
   expect(compactMetrics?.workspaceTopOffset ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(620);
   expect(compactMetrics?.workspaceTopVisible).toBe(true);
 

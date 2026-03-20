@@ -58,6 +58,7 @@ import type {
   DocumentProcessingRunStatusResponse,
   DocumentTranscriptionLineResult,
   DocumentTranscriptionLineResultListResponse,
+  DocumentTranscriptionOverviewResponse,
   DocumentTimelineResponse,
   DocumentUploadSessionStatus,
   ControlledEntity,
@@ -100,6 +101,21 @@ import type {
 } from "@ukde/contracts";
 
 import type { ApiResult } from "./api-types";
+import { queryCachePolicy } from "./cache-policy";
+import {
+  computeGovernancePipelinePhase,
+  computeIngestPipelinePhase,
+  computeLayoutPipelinePhase,
+  computeOverallPipelinePercent,
+  computePreprocessPipelinePhase,
+  computePrivacyPipelinePhase,
+  computeTranscriptionPipelinePhase,
+  createDegradedPipelinePhase,
+  normalizePipelinePhaseOrder,
+  resolvePipelineErrors,
+  type DocumentPipelinePhaseId,
+  type DocumentPipelineStatusResponse
+} from "../pipeline-status";
 
 const BROWSER_TEST_MODE_FLAG = "UKDE_BROWSER_TEST_MODE";
 export type BrowserFixtureSessionProfile =
@@ -3977,6 +3993,300 @@ function resolveActiveLayoutRun(options: {
   return runs.find((run) => run.id === projection.activeLayoutRunId) ?? null;
 }
 
+function buildPreprocessOverviewFixture(
+  projectId: string,
+  documentId: string
+): DocumentPreprocessOverviewResponse {
+  const projection = resolvePreprocessProjectionFixture(documentId);
+  const runs = resolvePreprocessRunsFixture(documentId);
+  const activeRun = resolveActivePreprocessRun({ projection, runs });
+  const latestRun = runs.length > 0 ? runs[0] : null;
+  const activeResults = activeRun ? resolvePreprocessPageResultsFixture(activeRun.id) : [];
+  const activeStatusCounts: DocumentPreprocessOverviewResponse["activeStatusCounts"] = {
+    QUEUED: 0,
+    RUNNING: 0,
+    SUCCEEDED: 0,
+    FAILED: 0,
+    CANCELED: 0
+  };
+  const activeQualityGateCounts: DocumentPreprocessOverviewResponse["activeQualityGateCounts"] = {
+    PASS: 0,
+    REVIEW_REQUIRED: 0,
+    BLOCKED: 0
+  };
+  for (const result of activeResults) {
+    activeStatusCounts[result.status] += 1;
+    activeQualityGateCounts[result.qualityGateStatus] += 1;
+  }
+  return {
+    documentId,
+    projectId,
+    projection,
+    activeRun,
+    latestRun,
+    totalRuns: runs.length,
+    pageCount: resolveDocumentPagesFixture(documentId).length,
+    activeStatusCounts,
+    activeQualityGateCounts,
+    activeWarningCount: activeResults.reduce(
+      (count, item) => count + item.warningsJson.length,
+      0
+    )
+  };
+}
+
+function buildLayoutOverviewFixture(
+  projectId: string,
+  documentId: string
+): DocumentLayoutOverviewResponse {
+  const projection = resolveLayoutProjectionFixture(documentId);
+  const runs = resolveLayoutRunsFixture(documentId);
+  const activeRun = resolveActiveLayoutRun({ projection, runs });
+  const latestRun = runs.length > 0 ? runs[0] : null;
+  const activeResults = activeRun ? resolveLayoutPageResultsFixture(activeRun.id) : [];
+
+  const activeStatusCounts: DocumentLayoutOverviewResponse["activeStatusCounts"] = {
+    QUEUED: 0,
+    RUNNING: 0,
+    SUCCEEDED: 0,
+    FAILED: 0,
+    CANCELED: 0
+  };
+  const activeRecallCounts: DocumentLayoutOverviewResponse["activeRecallCounts"] = {
+    COMPLETE: 0,
+    NEEDS_RESCUE: 0,
+    NEEDS_MANUAL_REVIEW: 0
+  };
+  let regionsTotal = 0;
+  let linesTotal = 0;
+  let hasRegionsMetric = false;
+  let hasLinesMetric = false;
+  let pagesWithIssues = 0;
+  const coverageValues: number[] = [];
+  const confidenceValues: number[] = [];
+
+  for (const result of activeResults) {
+    activeStatusCounts[result.status] += 1;
+    activeRecallCounts[result.pageRecallStatus] += 1;
+    const regionsMetric = resolveMetricNumber(
+      result.metricsJson.num_regions ?? result.metricsJson.regions_detected
+    );
+    const linesMetric = resolveMetricNumber(
+      result.metricsJson.num_lines ?? result.metricsJson.lines_detected
+    );
+    if (regionsMetric !== null) {
+      regionsTotal += Math.max(0, Math.round(regionsMetric));
+      hasRegionsMetric = true;
+    }
+    if (linesMetric !== null) {
+      linesTotal += Math.max(0, Math.round(linesMetric));
+      hasLinesMetric = true;
+    }
+    const coverageMetric = resolveMetricNumber(
+      result.metricsJson.line_coverage_percent ?? result.metricsJson.coverage_percent
+    );
+    if (coverageMetric !== null) {
+      coverageValues.push(coverageMetric);
+    }
+    const confidenceMetric = resolveMetricNumber(
+      result.metricsJson.structure_confidence ?? result.metricsJson.reading_order_confidence
+    );
+    if (confidenceMetric !== null) {
+      confidenceValues.push(confidenceMetric);
+    }
+    if (result.warningsJson.length > 0 || result.pageRecallStatus !== "COMPLETE") {
+      pagesWithIssues += 1;
+    }
+  }
+
+  const summary: DocumentLayoutOverviewResponse["summary"] = {
+    regionsDetected: hasRegionsMetric ? regionsTotal : null,
+    linesDetected: hasLinesMetric ? linesTotal : null,
+    pagesWithIssues,
+    coveragePercent:
+      coverageValues.length > 0
+        ? coverageValues.reduce((sum, value) => sum + value, 0) / coverageValues.length
+        : null,
+    structureConfidence:
+      confidenceValues.length > 0
+        ? confidenceValues.reduce((sum, value) => sum + value, 0) / confidenceValues.length
+        : null
+  };
+
+  return {
+    documentId,
+    projectId,
+    projection,
+    activeRun,
+    latestRun,
+    totalRuns: runs.length,
+    pageCount: resolveDocumentPagesFixture(documentId).length,
+    activeStatusCounts,
+    activeRecallCounts,
+    summary
+  };
+}
+
+function buildTranscriptionOverviewFixture(
+  projectId: string,
+  documentId: string
+): DocumentTranscriptionOverviewResponse {
+  const redactionProjection = resolveRedactionProjectionFixture(documentId);
+  const activeRunId = redactionProjection?.activeTranscriptionRunId ?? null;
+  const pages = resolveDocumentPagesFixture(documentId);
+  const activeStatusCounts: DocumentTranscriptionOverviewResponse["activeStatusCounts"] = {
+    QUEUED: 0,
+    RUNNING: 0,
+    SUCCEEDED: 0,
+    FAILED: 0,
+    CANCELED: 0
+  };
+
+  let activeLineCount = 0;
+  let activeTokenCount = 0;
+  let activeAnchorRefreshRequired = 0;
+  let activeLowConfidenceLines = 0;
+
+  if (activeRunId) {
+    for (const page of pages) {
+      const lines = resolveTranscriptionLinesFixture(activeRunId, page.id);
+      activeLineCount += lines.length;
+      for (const line of lines) {
+        activeTokenCount += line.textDiplomatic.trim().split(/\s+/).filter(Boolean).length;
+        if (line.tokenAnchorStatus === "REFRESH_REQUIRED") {
+          activeAnchorRefreshRequired += 1;
+        }
+        if (typeof line.confLine === "number" && line.confLine < 0.75) {
+          activeLowConfidenceLines += 1;
+        }
+      }
+    }
+    activeStatusCounts.SUCCEEDED = pages.length;
+  }
+
+  const runRef = activeRunId
+    ? ({ id: activeRunId, status: "SUCCEEDED" } as DocumentTranscriptionOverviewResponse["activeRun"])
+    : null;
+
+  return {
+    documentId,
+    projectId,
+    projection: null,
+    activeRun: runRef,
+    latestRun: runRef,
+    totalRuns: runRef ? 1 : 0,
+    pageCount: pages.length,
+    activeStatusCounts,
+    activeLineCount,
+    activeTokenCount,
+    activeAnchorRefreshRequired,
+    activeLowConfidenceLines
+  };
+}
+
+function buildDefaultGovernanceOverview(
+  projectId: string,
+  documentId: string
+): DocumentGovernanceOverviewResponse {
+  return {
+    documentId,
+    projectId,
+    activeRunId: null,
+    totalRuns: 0,
+    approvedRuns: 0,
+    readyRuns: 0,
+    pendingRuns: 0,
+    failedRuns: 0,
+    latestRunId: null,
+    latestReadyRunId: null,
+    latestRun: null,
+    latestReadyRun: null
+  };
+}
+
+function buildPipelineStatusFixture(options: {
+  document: ProjectDocument;
+  fixtureProfile: BrowserFixtureSessionProfile | null;
+  projectId: string;
+}): DocumentPipelineStatusResponse {
+  const { document, fixtureProfile, projectId } = options;
+  const failures: Array<{ phaseId: DocumentPipelinePhaseId; detail: string }> = [];
+  const phases: DocumentPipelineStatusResponse["phases"] = [];
+
+  const timelineItems = (FIXTURE_DOCUMENT_TIMELINES[document.id] ?? []).map((item) => ({
+    ...item
+  }));
+  phases.push(computeIngestPipelinePhase(document.status, timelineItems));
+  phases.push(computePreprocessPipelinePhase(buildPreprocessOverviewFixture(projectId, document.id)));
+  phases.push(computeLayoutPipelinePhase(buildLayoutOverviewFixture(projectId, document.id)));
+  phases.push(
+    computeTranscriptionPipelinePhase(
+      buildTranscriptionOverviewFixture(projectId, document.id)
+    )
+  );
+  phases.push(
+    computePrivacyPipelinePhase(resolveRedactionOverviewFixture(projectId, document.id))
+  );
+
+  if (!canViewGovernanceManifest(fixtureProfile)) {
+    const detail =
+      "Governance manifest access requires project lead, reviewer, admin, or auditor roles.";
+    phases.push(createDegradedPipelinePhase("GOVERNANCE", "Governance", detail));
+    failures.push({ phaseId: "GOVERNANCE", detail });
+  } else {
+    const overview =
+      document.id === FIXTURE_GOVERNANCE_OVERVIEW.documentId
+        ? cloneJson(FIXTURE_GOVERNANCE_OVERVIEW)
+        : buildDefaultGovernanceOverview(projectId, document.id);
+
+    const activeRunId = overview.activeRunId;
+    const manifestStatus =
+      activeRunId && activeRunId === FIXTURE_GOVERNANCE_MANIFEST_STATUS_RESPONSE.runId
+        ? cloneJson(FIXTURE_GOVERNANCE_MANIFEST_STATUS_RESPONSE)
+        : null;
+    let ledgerStatus =
+      activeRunId &&
+      activeRunId === FIXTURE_GOVERNANCE_LEDGER_STATUS_RESPONSE.runId &&
+      canViewGovernanceLedger(fixtureProfile)
+        ? cloneJson(FIXTURE_GOVERNANCE_LEDGER_STATUS_RESPONSE)
+        : null;
+
+    if (activeRunId && activeRunId === FIXTURE_GOVERNANCE_LEDGER_STATUS_RESPONSE.runId) {
+      if (!canViewGovernanceLedger(fixtureProfile)) {
+        failures.push({
+          phaseId: "GOVERNANCE",
+          detail:
+            "Evidence-ledger routes are restricted to administrator or auditor roles."
+        });
+      } else if (!ledgerStatus) {
+        failures.push({
+          phaseId: "GOVERNANCE",
+          detail: "Governance ledger status unavailable."
+        });
+      }
+    }
+
+    phases.push(
+      computeGovernancePipelinePhase({
+        overview,
+        manifestStatus,
+        ledgerStatus
+      })
+    );
+  }
+
+  const orderedPhases = normalizePipelinePhaseOrder(phases);
+  const errors = resolvePipelineErrors(failures);
+  return {
+    phases: orderedPhases,
+    overallPercent: computeOverallPipelinePercent(orderedPhases),
+    degraded:
+      errors.length > 0 || orderedPhases.some((phase) => phase.status === "DEGRADED"),
+    errors,
+    recommendedPollMs: queryCachePolicy["operations-live"].pollIntervalMs ?? 4_000
+  };
+}
+
 function ok<T>(data: T): ApiResult<T> {
   return {
     ok: true,
@@ -5179,6 +5489,30 @@ export function resolveBrowserRegressionApiResult<T>(options: {
     return ok<T>(payload as T);
   }
 
+  const projectDocumentPipelineStatusMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/pipeline\/status$/
+  );
+  if (method === "GET" && projectDocumentPipelineStatusMatch) {
+    const project = resolveProjectFixture(projectDocumentPipelineStatusMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentPipelineStatusMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+
+    const payload = buildPipelineStatusFixture({
+      document,
+      fixtureProfile,
+      projectId: project.id
+    });
+    return ok<T>(payload as T);
+  }
+
   const projectDocumentGovernanceOverviewMatch = pathname.match(
     /^\/projects\/([^/]+)\/documents\/([^/]+)\/governance\/overview$/
   );
@@ -5745,93 +6079,7 @@ export function resolveBrowserRegressionApiResult<T>(options: {
     if (!document) {
       return notFound<T>("Document not found.");
     }
-    const projection = resolveLayoutProjectionFixture(document.id);
-    const runs = resolveLayoutRunsFixture(document.id);
-    const activeRun = resolveActiveLayoutRun({ projection, runs });
-    const latestRun = runs.length > 0 ? runs[0] : null;
-    const activeResults = activeRun ? resolveLayoutPageResultsFixture(activeRun.id) : [];
-
-    const activeStatusCounts: DocumentLayoutOverviewResponse["activeStatusCounts"] = {
-      QUEUED: 0,
-      RUNNING: 0,
-      SUCCEEDED: 0,
-      FAILED: 0,
-      CANCELED: 0
-    };
-    const activeRecallCounts: DocumentLayoutOverviewResponse["activeRecallCounts"] = {
-      COMPLETE: 0,
-      NEEDS_RESCUE: 0,
-      NEEDS_MANUAL_REVIEW: 0
-    };
-    let regionsTotal = 0;
-    let linesTotal = 0;
-    let hasRegionsMetric = false;
-    let hasLinesMetric = false;
-    let pagesWithIssues = 0;
-    const coverageValues: number[] = [];
-    const confidenceValues: number[] = [];
-    for (const result of activeResults) {
-      activeStatusCounts[result.status] += 1;
-      activeRecallCounts[result.pageRecallStatus] += 1;
-      const regionsMetric = resolveMetricNumber(
-        result.metricsJson.num_regions ?? result.metricsJson.regions_detected
-      );
-      const linesMetric = resolveMetricNumber(
-        result.metricsJson.num_lines ?? result.metricsJson.lines_detected
-      );
-      if (regionsMetric !== null) {
-        regionsTotal += Math.max(0, Math.round(regionsMetric));
-        hasRegionsMetric = true;
-      }
-      if (linesMetric !== null) {
-        linesTotal += Math.max(0, Math.round(linesMetric));
-        hasLinesMetric = true;
-      }
-      const coverageMetric = resolveMetricNumber(
-        result.metricsJson.line_coverage_percent ?? result.metricsJson.coverage_percent
-      );
-      if (coverageMetric !== null) {
-        coverageValues.push(coverageMetric);
-      }
-      const confidenceMetric = resolveMetricNumber(
-        result.metricsJson.structure_confidence ?? result.metricsJson.reading_order_confidence
-      );
-      if (confidenceMetric !== null) {
-        confidenceValues.push(confidenceMetric);
-      }
-      if (result.warningsJson.length > 0 || result.pageRecallStatus !== "COMPLETE") {
-        pagesWithIssues += 1;
-      }
-    }
-
-    const summary: DocumentLayoutOverviewResponse["summary"] = {
-      regionsDetected: hasRegionsMetric ? regionsTotal : null,
-      linesDetected: hasLinesMetric ? linesTotal : null,
-      pagesWithIssues,
-      coveragePercent:
-        coverageValues.length > 0
-          ? coverageValues.reduce((sum, value) => sum + value, 0) /
-            coverageValues.length
-          : null,
-      structureConfidence:
-        confidenceValues.length > 0
-          ? confidenceValues.reduce((sum, value) => sum + value, 0) /
-            confidenceValues.length
-          : null
-    };
-
-    const payload: DocumentLayoutOverviewResponse = {
-      documentId: document.id,
-      projectId: project.id,
-      projection,
-      activeRun,
-      latestRun,
-      totalRuns: runs.length,
-      pageCount: resolveDocumentPagesFixture(document.id).length,
-      activeStatusCounts,
-      activeRecallCounts,
-      summary
-    };
+    const payload = buildLayoutOverviewFixture(project.id, document.id);
     return ok<T>(payload as T);
   }
 
@@ -6017,6 +6265,25 @@ export function resolveBrowserRegressionApiResult<T>(options: {
     return ok<T>(payload as T);
   }
 
+  const projectDocumentTranscriptionOverviewMatch = pathname.match(
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/transcription\/overview$/
+  );
+  if (method === "GET" && projectDocumentTranscriptionOverviewMatch) {
+    const project = resolveProjectFixture(projectDocumentTranscriptionOverviewMatch[1]);
+    if (!project) {
+      return notFound<T>("Project not found.");
+    }
+    const document = resolveProjectDocumentFixture(
+      project.id,
+      projectDocumentTranscriptionOverviewMatch[2]
+    );
+    if (!document) {
+      return notFound<T>("Document not found.");
+    }
+    const payload = buildTranscriptionOverviewFixture(project.id, document.id);
+    return ok<T>(payload as T);
+  }
+
   const projectDocumentPreprocessOverviewMatch = pathname.match(
     /^\/projects\/([^/]+)\/documents\/([^/]+)\/preprocessing\/overview$/
   );
@@ -6032,44 +6299,7 @@ export function resolveBrowserRegressionApiResult<T>(options: {
     if (!document) {
       return notFound<T>("Document not found.");
     }
-    const projection = resolvePreprocessProjectionFixture(document.id);
-    const runs = resolvePreprocessRunsFixture(document.id);
-    const activeRun = resolveActivePreprocessRun({ projection, runs });
-    const latestRun = runs.length > 0 ? runs[0] : null;
-    const activeResults = activeRun
-      ? resolvePreprocessPageResultsFixture(activeRun.id)
-      : [];
-    const activeStatusCounts: DocumentPreprocessOverviewResponse["activeStatusCounts"] = {
-      QUEUED: 0,
-      RUNNING: 0,
-      SUCCEEDED: 0,
-      FAILED: 0,
-      CANCELED: 0
-    };
-    const activeQualityGateCounts: DocumentPreprocessOverviewResponse["activeQualityGateCounts"] = {
-      PASS: 0,
-      REVIEW_REQUIRED: 0,
-      BLOCKED: 0
-    };
-    for (const result of activeResults) {
-      activeStatusCounts[result.status] += 1;
-      activeQualityGateCounts[result.qualityGateStatus] += 1;
-    }
-    const payload: DocumentPreprocessOverviewResponse = {
-      documentId: document.id,
-      projectId: project.id,
-      projection,
-      activeRun,
-      latestRun,
-      totalRuns: runs.length,
-      pageCount: resolveDocumentPagesFixture(document.id).length,
-      activeStatusCounts,
-      activeQualityGateCounts,
-      activeWarningCount: activeResults.reduce(
-        (count, item) => count + item.warningsJson.length,
-        0
-      )
-    };
+    const payload = buildPreprocessOverviewFixture(project.id, document.id);
     return ok<T>(payload as T);
   }
 
@@ -6392,7 +6622,7 @@ export function resolveBrowserRegressionApiResult<T>(options: {
   }
 
   const projectDocumentRedactionOverviewMatch = pathname.match(
-    /^\/projects\/([^/]+)\/documents\/([^/]+)\/redaction\/overview$/
+    /^\/projects\/([^/]+)\/documents\/([^/]+)\/(?:redaction|privacy)\/overview$/
   );
   if (method === "GET" && projectDocumentRedactionOverviewMatch) {
     const project = resolveProjectFixture(projectDocumentRedactionOverviewMatch[1]);

@@ -5910,12 +5910,26 @@ def _run_scan_background(
                 created_by=actor_user_id,
             )
             if created:
-                for attempt in range(2):
-                    processed = job_service.run_worker_once(
-                        worker_id=f"doc-import-bg-{import_id}-{attempt + 1}",
+                worker_prefix = f"doc-import-bg-{import_id}"
+                for attempt in range(8):
+                    worker_id = f"{worker_prefix}-{attempt + 1}"
+                    claimed = job_service.claim_next_document_ingest_job_for_worker(
+                        project_id=project_id,
+                        document_id=completed.document_record.id,
+                        worker_id=worker_id,
                         lease_seconds=60,
                     )
-                    if processed is None:
+                    if claimed is None:
+                        break
+                    processed = job_service.process_claimed_job(
+                        worker_id=worker_id,
+                        row=claimed,
+                    )
+                    if processed.type == "RENDER_THUMBNAILS" and processed.status in {
+                        "SUCCEEDED",
+                        "FAILED",
+                        "CANCELED",
+                    }:
                         break
         except Exception as error:  # noqa: BLE001
             audit_service.record_event_best_effort(

@@ -4,6 +4,7 @@ import { SectionState, StatusChip } from "@ukde/ui/primitives";
 
 import { DocumentLayoutRunActions } from "../../../../../../../components/document-layout-run-actions";
 import { DocumentLayoutTriageSurface } from "../../../../../../../components/document-layout-triage-surface";
+import { DocumentPipelineLiveStatus } from "../../../../../../../components/document-pipeline-live-status";
 import {
   getProjectDocument,
   getProjectDocumentLayoutRun,
@@ -181,6 +182,8 @@ export default async function ProjectDocumentLayoutPage({
           ) : null}
         </div>
       </section>
+
+      <DocumentPipelineLiveStatus documentId={document.id} projectId={projectId} />
 
       <DocumentLayoutRunActions
         activationGate={selectedRun?.activationGate ?? null}

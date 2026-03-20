@@ -226,6 +226,85 @@ ul {
   background: color-mix(in srgb, var(--ukde-surface-strong) 82%, transparent);
 }
 
+.documentPipelineLiveStatus {
+  gap: var(--ukde-space-3);
+}
+
+.documentPipelineOverall {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.documentPipelineOverallPercent,
+.documentPipelinePhasePercent {
+  font-variant-numeric: tabular-nums;
+}
+
+.documentPipelinePhaseList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.documentPipelinePhase {
+  display: grid;
+  gap: 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 88%, transparent);
+  border-radius: calc(var(--ukde-radius-md) + 0.05rem);
+  padding: 0.65rem 0.75rem;
+  background: color-mix(in srgb, var(--ukde-surface-strong) 87%, transparent);
+}
+
+.documentPipelinePhaseMeta {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.documentPipelineProgressTrack {
+  position: relative;
+  inline-size: 100%;
+  block-size: 0.62rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--ukde-border) 82%, transparent);
+}
+
+.documentPipelineProgressFill {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ukde-accent) 78%, transparent),
+    color-mix(in srgb, var(--ukde-accent) 48%, white)
+  );
+  transition: inline-size var(--ukde-transition);
+}
+
+.documentPipelineProgressFill--indeterminate {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: -45%;
+  inline-size: 45%;
+  animation: documentPipelineIndeterminate 1.25s ease-in-out infinite;
+}
+
+@keyframes documentPipelineIndeterminate {
+  0% {
+    inset-inline-start: -45%;
+  }
+  100% {
+    inset-inline-start: 100%;
+  }
+}
+
+.documentPipelineProgressFill--reduced-motion {
+  transition: none;
+  animation: none;
+}
+
 .loginShell {
   display: grid;
   place-items: center;
@@ -644,6 +723,17 @@ ul {
   background: color-mix(in srgb, var(--ukde-surface-strong) 85%, transparent);
 }
 
+@media (min-width: 1440px) {
+  .projectContextBar {
+    overflow-x: hidden;
+  }
+
+  .projectContextBar .authenticatedShellContextList {
+    flex-wrap: wrap;
+    row-gap: 0.35rem;
+  }
+}
+
 .authenticatedShellWorkRegion {
   min-height: 0;
   overflow: auto;
@@ -666,6 +756,50 @@ ul {
   display: grid;
   gap: 0.65rem;
   align-content: start;
+}
+
+.adaptiveSidePanelTabs {
+  position: sticky;
+  top: -0.15rem;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding-block: 0.1rem 0.5rem;
+  background: color-mix(in srgb, var(--ukde-surface-strong) 92%, transparent);
+}
+
+.adaptiveSidePanelTabs .secondaryButton[aria-selected="true"] {
+  border-color: color-mix(in srgb, var(--ukde-accent) 56%, var(--ukde-border));
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--ukde-accent) 28%, transparent);
+}
+
+.adaptiveSidePanelBody {
+  min-height: 0;
+  display: grid;
+  gap: 0.65rem;
+  align-content: start;
+}
+
+.authenticatedShellContextDrawerPanel {
+  min-height: 0;
+  max-height: min(72vh, 44rem);
+  overflow: auto;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.adminConsoleDrawerToggleRow {
+  margin-bottom: 0.55rem;
+}
+
+.adminConsoleDrawerPanel {
+  min-height: 0;
+  max-height: min(74vh, 44rem);
+  overflow: auto;
+  display: grid;
+  gap: 0.65rem;
 }
 
 .pageHeader {
@@ -1985,6 +2119,7 @@ ul {
 
 .qualityDetailsPreviewGrid img {
   width: 100%;
+  height: 10rem;
   max-height: 10rem;
   object-fit: contain;
   border-radius: calc(var(--ukde-radius-md) - 2px);
@@ -2346,6 +2481,20 @@ ul {
   border-left: 1px solid color-mix(in srgb, var(--ukde-border) 78%, transparent);
   padding-left: 0.5rem;
   gap: 0.8rem;
+}
+
+.transcriptionInspectorSection {
+  border: 1px solid color-mix(in srgb, var(--ukde-border) 84%, transparent);
+  border-radius: var(--ukde-radius-sm);
+  background: color-mix(in srgb, var(--ukde-surface) 90%, transparent);
+  padding: 0.55rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.transcriptionInspectorSection h3,
+.transcriptionInspectorSection h4 {
+  margin: 0;
 }
 
 .transcriptionVariantToggle .secondaryButton[aria-pressed="true"] {
@@ -3278,8 +3427,15 @@ ul {
   .layoutWorkspaceOverlayLayer marker,
   .layoutWorkspaceOverlayLayer polygon,
   .layoutWorkspaceOverlayLayer polyline,
-  .transcriptionOverlayLine {
+  .transcriptionOverlayLine,
+  .documentPipelineProgressFill {
     transition: none;
+  }
+
+  .documentPipelineProgressFill--indeterminate {
+    animation: none;
+    inset-inline-start: 0;
+    inline-size: 100%;
   }
 }
 
@@ -3766,6 +3922,11 @@ ul {
   max-height: min(68vh, 44rem);
 }
 
+.authenticatedShell[data-shell-state="Compact"] .privacyWorkspaceShell,
+.authenticatedShell[data-shell-state="Focus"] .privacyWorkspaceShell {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .privacyWorkspaceRail,
 .privacyWorkspaceInspector,
 .privacyWorkspaceCanvas {
@@ -3816,6 +3977,14 @@ ul {
 .privacyWorkspaceInspector {
   display: grid;
   align-content: start;
+  gap: 0.7rem;
+}
+
+.privacyWorkspaceDrawerPanel {
+  min-height: 0;
+  max-height: min(74vh, 44rem);
+  overflow: auto;
+  display: grid;
   gap: 0.7rem;
 }
 

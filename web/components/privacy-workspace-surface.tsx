@@ -8,15 +8,21 @@ import type {
   DocumentRedactionPreviewStatusResponse,
   DocumentRedactionRunPage,
   DocumentRedactionTimelineEvent,
-  DocumentTranscriptionLineResult
+  DocumentTranscriptionLineResult,
+  ShellState
 } from "@ukde/contracts";
 import {
+  DetailsDrawer,
   ModalDialog,
   SectionState,
   StatusChip,
   Toolbar
 } from "@ukde/ui/primitives";
 
+import {
+  useAdaptiveSidePanelState,
+  type SidePanelSection
+} from "../lib/adaptive-side-panel";
 import {
   projectDocumentPrivacyPreviewPath,
   projectDocumentPrivacyWorkspacePath
@@ -33,6 +39,7 @@ type WorkspaceServerAction = (formData: FormData) => void | Promise<void>;
 interface PrivacyWorkspaceSurfaceProps {
   canMutate: boolean;
   documentId: string;
+  initialPanelSection?: SidePanelSection;
   lineLoadError: string | null;
   lines: DocumentTranscriptionLineResult[];
   mode: PrivacyWorkspaceMode;
@@ -60,6 +67,17 @@ interface PrivacyWorkspaceSurfaceProps {
   findingsError: string | null;
   onPatchFindingAction: WorkspaceServerAction;
   onPatchPageReviewAction: WorkspaceServerAction;
+}
+
+const SHELL_STATES: readonly ShellState[] = [
+  "Expanded",
+  "Balanced",
+  "Compact",
+  "Focus"
+];
+
+function isShellState(value: string | null): value is ShellState {
+  return SHELL_STATES.includes(value as ShellState);
 }
 
 function resolveFindingHighlightColor(anchorKind: string): {
@@ -337,6 +355,7 @@ export function PrivacyWorkspaceSurface({
   documentId,
   findings,
   findingsError,
+  initialPanelSection,
   lineLoadError,
   lines,
   mode,
@@ -364,6 +383,8 @@ export function PrivacyWorkspaceSurface({
   showHighlights
 }: PrivacyWorkspaceSurfaceProps) {
   const router = useRouter();
+  const [shellState, setShellState] = useState<ShellState>("Expanded");
+  const [pageRailDrawerOpen, setPageRailDrawerOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogStatus, setDialogStatus] =
     useState<FindingDecisionMutationStatus>("OVERRIDDEN");
@@ -373,7 +394,26 @@ export function PrivacyWorkspaceSurface({
   >(null);
   const [localNotice, setLocalNotice] = useState<string | null>(null);
   const dialogReturnFocusRef = useRef<HTMLElement | null>(null);
+  const pageRailDrawerReturnFocusRef = useRef<HTMLElement | null>(null);
+  const pageRailDrawerWasOpenRef = useRef(false);
+  const inspectorDrawerReturnFocusRef = useRef<HTMLElement | null>(null);
+  const inspectorDrawerWasOpenRef = useRef(false);
   const lineButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const {
+    closeDrawer: closeInspectorDrawer,
+    drawerOpen: inspectorDrawerOpen,
+    openDrawer: openInspectorDrawer,
+    panelSection: inspectorPanelSection,
+    setPanelSection: setInspectorPanelSection,
+    showAside: showInspectorAside,
+    showDrawerToggle: showInspectorDrawerToggle
+  } = useAdaptiveSidePanelState({
+    shellState,
+    storageSurface: "privacy-inspector",
+    projectId,
+    documentId,
+    initialSection: initialPanelSection
+  });
 
   const selectedFinding = useMemo(() => {
     if (selectedFindingId) {
@@ -430,10 +470,58 @@ export function PrivacyWorkspaceSurface({
     target.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [focusLineId]);
 
+  useEffect(() => {
+    const shellElement = document.querySelector<HTMLElement>(".authenticatedShell");
+    if (!shellElement) {
+      return;
+    }
+    const syncShellState = () => {
+      const raw = shellElement.getAttribute("data-shell-state");
+      if (isShellState(raw)) {
+        setShellState(raw);
+      }
+    };
+    syncShellState();
+    const observer = new MutationObserver(syncShellState);
+    observer.observe(shellElement, {
+      attributes: true,
+      attributeFilter: ["data-shell-state"]
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  const showPageRailAside = shellState === "Expanded" || shellState === "Balanced";
+
+  useEffect(() => {
+    if (showPageRailAside) {
+      setPageRailDrawerOpen(false);
+    }
+    if (showInspectorAside) {
+      closeInspectorDrawer();
+    }
+  }, [closeInspectorDrawer, showInspectorAside, showPageRailAside]);
+
+  useEffect(() => {
+    if (pageRailDrawerWasOpenRef.current && !pageRailDrawerOpen) {
+      pageRailDrawerReturnFocusRef.current?.focus({ preventScroll: true });
+      pageRailDrawerReturnFocusRef.current = null;
+    }
+    pageRailDrawerWasOpenRef.current = pageRailDrawerOpen;
+  }, [pageRailDrawerOpen]);
+
+  useEffect(() => {
+    if (inspectorDrawerWasOpenRef.current && !inspectorDrawerOpen) {
+      inspectorDrawerReturnFocusRef.current?.focus({ preventScroll: true });
+      inspectorDrawerReturnFocusRef.current = null;
+    }
+    inspectorDrawerWasOpenRef.current = inspectorDrawerOpen;
+  }, [inspectorDrawerOpen]);
+
   const navigate = (options: {
     findingId?: string | null;
     lineId?: string | null;
     mode?: PrivacyWorkspaceMode;
+    panel?: SidePanelSection;
     page?: number;
     showHighlights?: boolean;
     tokenId?: string | null;
@@ -459,6 +547,7 @@ export function PrivacyWorkspaceSurface({
       findingId: nextFindingId,
       lineId: nextLineId,
       mode: nextMode,
+      panel: options.panel ?? inspectorPanelSection,
       tokenId: nextTokenId
     });
     router.push(nextShowHighlights ? path : `${path}&highlights=off`, {
@@ -555,7 +644,13 @@ export function PrivacyWorkspaceSurface({
           setLocalNotice("No unresolved findings remain.");
           return;
         }
-        router.push(nextUnresolvedHref, { scroll: false });
+        const nextUrl = new URL(nextUnresolvedHref, window.location.origin);
+        if (inspectorPanelSection === "context") {
+          nextUrl.searchParams.delete("panel");
+        } else {
+          nextUrl.searchParams.set("panel", inspectorPanelSection);
+        }
+        router.push(`${nextUrl.pathname}${nextUrl.search}`, { scroll: false });
       }
     },
     {
@@ -571,6 +666,527 @@ export function PrivacyWorkspaceSurface({
       }
     }
   ];
+  const openPageRailPanelDrawer = (trigger: HTMLElement | null) => {
+    pageRailDrawerReturnFocusRef.current =
+      trigger ??
+      (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    setPageRailDrawerOpen(true);
+  };
+  const openInspectorPanelDrawer = (trigger: HTMLElement | null) => {
+    inspectorDrawerReturnFocusRef.current =
+      trigger ??
+      (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    openInspectorDrawer();
+  };
+  const handleInspectorPanelSectionChange = (nextSection: SidePanelSection) => {
+    if (nextSection === inspectorPanelSection) {
+      return;
+    }
+    setInspectorPanelSection(nextSection);
+    navigate({ panel: nextSection });
+  };
+  const pageQueuePanel = (
+    <>
+      <h3>Pages</h3>
+      <ul className="timelineList">
+        {pages.map((page) => {
+          const isCurrent = page.pageId === selectedPage.pageId;
+          return (
+            <li key={page.pageId}>
+              <div className="auditIntegrityRow">
+                <span>Page {page.pageIndex + 1}</span>
+                <StatusChip tone={resolveReviewTone(page.reviewStatus)}>
+                  {page.reviewStatus}
+                </StatusChip>
+              </div>
+              <p className="ukde-muted">
+                Findings {page.findingCount} · Unresolved {page.unresolvedCount}
+              </p>
+              <div className="buttonRow">
+                <button
+                  className="secondaryButton"
+                  data-active={isCurrent ? "true" : undefined}
+                  onClick={() => {
+                    navigate({
+                      page: page.pageIndex + 1,
+                      findingId: null,
+                      lineId: null,
+                      tokenId: null
+                    });
+                    setPageRailDrawerOpen(false);
+                  }}
+                  type="button"
+                >
+                  {isCurrent ? "Current page" : "Open page"}
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+  const inspectorContextPanel = (
+    <div className="adaptiveSidePanelBody">
+      <div className="privacyWorkspaceSection">
+        <h4>Finding actions</h4>
+        {!selectedFinding ? (
+          <p className="ukde-muted">
+            Select a finding to apply approve, override, or false-positive actions.
+          </p>
+        ) : (
+          <>
+            <ul className="projectMetaList">
+              <li>
+                <span>Finding</span>
+                <strong>{selectedFinding.id}</strong>
+              </li>
+              <li>
+                <span>Status</span>
+                <strong>{selectedFinding.decisionStatus}</strong>
+              </li>
+              <li>
+                <span>Decision etag</span>
+                <strong>{selectedFinding.decisionEtag}</strong>
+              </li>
+              <li>
+                <span>Anchor</span>
+                <strong>{selectedFinding.geometry.anchorKind}</strong>
+              </li>
+              <li>
+                <span>Line</span>
+                <strong>{selectedFindingLineId ?? "None"}</strong>
+              </li>
+              <li>
+                <span>Token</span>
+                <strong>{selectedFindingTokenId ?? "None"}</strong>
+              </li>
+            </ul>
+            {!canMutate ? (
+              <p className="ukde-muted">
+                Read-only role: finding decisions are restricted to REVIEWER, PROJECT_LEAD, or ADMIN.
+              </p>
+            ) : null}
+            <div className="buttonRow">
+              <form action={onPatchFindingAction}>
+                <input name="runId" type="hidden" value={runId} />
+                <input name="pageNumber" type="hidden" value={String(pageNumber)} />
+                <input name="mode" type="hidden" value={mode} />
+                <input name="panel" type="hidden" value={inspectorPanelSection} />
+                <input name="highlights" type="hidden" value={showHighlights ? "on" : "off"} />
+                <input name="findingId" type="hidden" value={selectedFinding.id} />
+                <input name="decisionStatus" type="hidden" value="APPROVED" />
+                <input name="decisionEtag" type="hidden" value={selectedFinding.decisionEtag} />
+                <input name="returnLineId" type="hidden" value={selectedFindingLineId ?? ""} />
+                <input name="returnTokenId" type="hidden" value={selectedFindingTokenId ?? ""} />
+                <button className="secondaryButton" disabled={!canMutate} type="submit">
+                  Approve finding
+                </button>
+              </form>
+              <button
+                className="secondaryButton"
+                disabled={!canMutate}
+                onClick={(event) => {
+                  dialogReturnFocusRef.current = event.currentTarget;
+                  setDialogStatus("OVERRIDDEN");
+                  setDialogReason("");
+                  setDialogValidationError(null);
+                  setDialogOpen(true);
+                }}
+                type="button"
+              >
+                Override
+              </button>
+              <button
+                className="secondaryButton"
+                disabled={!canMutate}
+                onClick={(event) => {
+                  dialogReturnFocusRef.current = event.currentTarget;
+                  setDialogStatus("FALSE_POSITIVE");
+                  setDialogReason("");
+                  setDialogValidationError(null);
+                  setDialogOpen(true);
+                }}
+                type="button"
+              >
+                False positive
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+      <div className="privacyWorkspaceSection">
+        <div className="auditIntegrityRow">
+          <h4>Page approval</h4>
+          <StatusChip tone={resolveReviewTone(selectedPage.reviewStatus)}>
+            {selectedPage.reviewStatus}
+          </StatusChip>
+        </div>
+        {pageReviewError ? (
+          <SectionState
+            kind="degraded"
+            title="Page review unavailable"
+            description={pageReviewError}
+          />
+        ) : pageReview ? (
+          <>
+            <ul className="projectMetaList">
+              <li>
+                <span>Review etag</span>
+                <strong>{pageReview.reviewEtag}</strong>
+              </li>
+              <li>
+                <span>First reviewed by</span>
+                <strong>{pageReview.firstReviewedBy ?? "Not reviewed"}</strong>
+              </li>
+              <li>
+                <span>Second review</span>
+                <strong>{pageReview.secondReviewStatus}</strong>
+              </li>
+              <li>
+                <span>Requires second review</span>
+                <strong>{pageReview.requiresSecondReview ? "Yes" : "No"}</strong>
+              </li>
+            </ul>
+            <form action={onPatchPageReviewAction}>
+              <input name="runId" type="hidden" value={runId} />
+              <input name="pageId" type="hidden" value={selectedPage.pageId} />
+              <input name="pageNumber" type="hidden" value={String(pageNumber)} />
+              <input name="mode" type="hidden" value={mode} />
+              <input name="panel" type="hidden" value={inspectorPanelSection} />
+              <input name="highlights" type="hidden" value={showHighlights ? "on" : "off"} />
+              <input name="returnFindingId" type="hidden" value={selectedFinding?.id ?? ""} />
+              <input
+                name="returnLineId"
+                type="hidden"
+                value={selectedLineId ?? selectedFindingLineId ?? ""}
+              />
+              <input
+                name="returnTokenId"
+                type="hidden"
+                value={selectedTokenId ?? selectedFindingTokenId ?? ""}
+              />
+              <input name="reviewStatus" type="hidden" value="APPROVED" />
+              <input name="reviewEtag" type="hidden" value={pageReview.reviewEtag} />
+              <button className="secondaryButton" disabled={approvePageDisabled} type="submit">
+                Approve page
+              </button>
+            </form>
+            {approvePageDisabled ? (
+              <p className="ukde-muted">
+                {canMutate
+                  ? unresolvedCount > 0
+                    ? "Approve page is disabled until unresolved count reaches 0."
+                    : "Page review projection unavailable."
+                  : "Read-only role cannot approve page reviews."}
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <p className="ukde-muted">Page review projection unavailable.</p>
+        )}
+      </div>
+    </div>
+  );
+  const inspectorInsightsPanel = (
+    <div className="adaptiveSidePanelBody">
+      <div className="privacyWorkspaceSection">
+        <h4>Transcript</h4>
+        {lineLoadError ? (
+          <SectionState
+            kind="degraded"
+            title="Transcript context unavailable"
+            description={lineLoadError}
+          />
+        ) : lines.length === 0 ? (
+          <p className="ukde-muted">No transcription lines available.</p>
+        ) : (
+          <ul className="timelineList privacyWorkspaceTranscriptList" aria-label="Transcript lines">
+            {lines.map((line) => {
+              const isFocused = focusLineId === line.lineId;
+              return (
+                <li key={line.lineId}>
+                  <button
+                    aria-pressed={isFocused}
+                    className="privacyWorkspaceListButton"
+                    data-selected={isFocused ? "true" : undefined}
+                    onClick={() => {
+                      navigate({
+                        findingId: null,
+                        lineId: line.lineId,
+                        tokenId: null
+                      });
+                    }}
+                    ref={(element) => {
+                      if (element) {
+                        lineButtonRefs.current.set(line.lineId, element);
+                      } else {
+                        lineButtonRefs.current.delete(line.lineId);
+                      }
+                    }}
+                    type="button"
+                  >
+                    <span className="privacyWorkspaceListTitle">{line.lineId}</span>
+                    <span className="ukde-muted">{line.textDiplomatic || "(empty line)"}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+      <div className="privacyWorkspaceSection">
+        <h4>Findings</h4>
+        {findingsError ? (
+          <SectionState kind="degraded" title="Findings unavailable" description={findingsError} />
+        ) : findings.length === 0 ? (
+          <p className="ukde-muted">No findings for this page.</p>
+        ) : (
+          <ul className="timelineList privacyWorkspaceFindingList" aria-label="Findings list">
+            {findings.map((finding) => {
+              const isSelected = finding.id === selectedFinding?.id;
+              const assistSummary = parseAssistSummary(finding);
+              const generalizationExplanation = parseGeneralizationExplanation(finding);
+              const generalizationGranularity = parseGeneralizationGranularity(finding);
+              const findingHighRiskSignals = resolveHighRiskSignals({
+                finding,
+                policySnapshotJson,
+                targetStatus: "OVERRIDDEN"
+              });
+              return (
+                <li key={finding.id}>
+                  <button
+                    aria-pressed={isSelected}
+                    className="privacyWorkspaceListButton"
+                    data-selected={isSelected ? "true" : undefined}
+                    onClick={() => {
+                      navigate({
+                        findingId: finding.id,
+                        lineId: resolveFindingLineId(finding),
+                        tokenId: resolveFindingTokenId(finding)
+                      });
+                    }}
+                    type="button"
+                  >
+                    <span className="privacyWorkspaceListTitle">{finding.category}</span>
+                    <span className="ukde-muted">
+                      {finding.id} · {finding.decisionStatus} · Anchor {finding.geometry.anchorKind}
+                    </span>
+                  </button>
+                  <div className="buttonRow">
+                    <button
+                      className="secondaryButton"
+                      onClick={() => {
+                        navigate({
+                          findingId: finding.id,
+                          lineId: resolveFindingLineId(finding),
+                          tokenId: resolveFindingTokenId(finding)
+                        });
+                      }}
+                      type="button"
+                    >
+                      Open finding
+                    </button>
+                    <button
+                      className="secondaryButton"
+                      disabled={!resolveFindingLineId(finding)}
+                      onClick={() => {
+                        navigate({
+                          findingId: null,
+                          lineId: resolveFindingLineId(finding),
+                          tokenId: null
+                        });
+                      }}
+                      type="button"
+                    >
+                      Open line
+                    </button>
+                    <button
+                      className="secondaryButton"
+                      disabled={!resolveFindingTokenId(finding)}
+                      onClick={() => {
+                        navigate({
+                          findingId: null,
+                          lineId: resolveFindingLineId(finding),
+                          tokenId: resolveFindingTokenId(finding)
+                        });
+                      }}
+                      type="button"
+                    >
+                      Open token
+                    </button>
+                  </div>
+                  {assistSummary ? (
+                    <p className="ukde-muted">Assist summary (non-authoritative): {assistSummary}</p>
+                  ) : null}
+                  {generalizationExplanation ? (
+                    <p className="ukde-muted">Generalization rationale: {generalizationExplanation}</p>
+                  ) : null}
+                  {generalizationGranularity ? (
+                    <p className="ukde-muted">Policy granularity: {generalizationGranularity}</p>
+                  ) : null}
+                  {findingHighRiskSignals.length > 0 ? (
+                    <p className="ukde-muted">
+                      High-risk override signals present. Second review will be required later.
+                    </p>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+      <div className="privacyWorkspaceSection">
+        <h4>Page timeline</h4>
+        {pageEvents.length === 0 ? (
+          <p className="ukde-muted">No page events yet.</p>
+        ) : (
+          <ul className="timelineList">
+            {pageEvents.map((event) => (
+              <li key={`${event.sourceTable}:${event.eventId}`}>
+                <p>
+                  <strong>{event.eventType}</strong>
+                </p>
+                <p className="ukde-muted">
+                  {toShortIso(event.createdAt)} · {event.actorUserId}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+  const inspectorActionsPanel = (
+    <div className="adaptiveSidePanelBody">
+      <div className="privacyWorkspaceSection">
+        <h4>Deep-link context</h4>
+        <ul className="projectMetaList">
+          <li>
+            <span>Run</span>
+            <strong>{runId}</strong>
+          </li>
+          <li>
+            <span>Page</span>
+            <strong>{pageNumber}</strong>
+          </li>
+          <li>
+            <span>Finding</span>
+            <strong>{selectedFinding?.id ?? "None"}</strong>
+          </li>
+          <li>
+            <span>Line</span>
+            <strong>{focusLineId ?? "None"}</strong>
+          </li>
+          <li>
+            <span>Token</span>
+            <strong>{selectedTokenId ?? "None"}</strong>
+          </li>
+          <li>
+            <span>Highlights</span>
+            <strong>{showHighlights ? "Shown" : "Hidden"}</strong>
+          </li>
+          <li>
+            <span>Mode</span>
+            <strong>{mode === "controlled" ? "Controlled view" : "Safeguarded preview"}</strong>
+          </li>
+        </ul>
+      </div>
+      <div className="privacyWorkspaceSection">
+        <h4>Quick actions</h4>
+        <div className="buttonRow">
+          <button
+            className="secondaryButton"
+            disabled={pageNumber <= 1}
+            onClick={() =>
+              navigate({
+                page: Math.max(1, pageNumber - 1),
+                findingId: null,
+                lineId: null,
+                tokenId: null
+              })
+            }
+            type="button"
+          >
+            Previous page
+          </button>
+          <button
+            className="secondaryButton"
+            disabled={pageNumber >= pages.length}
+            onClick={() =>
+              navigate({
+                page: Math.min(pages.length, pageNumber + 1),
+                findingId: null,
+                lineId: null,
+                tokenId: null
+              })
+            }
+            type="button"
+          >
+            Next page
+          </button>
+          <button
+            className="secondaryButton"
+            disabled={!nextUnresolvedHref}
+            onClick={() => {
+              if (!nextUnresolvedHref) {
+                return;
+              }
+              const nextUrl = new URL(nextUnresolvedHref, window.location.origin);
+              if (inspectorPanelSection === "context") {
+                nextUrl.searchParams.delete("panel");
+              } else {
+                nextUrl.searchParams.set("panel", inspectorPanelSection);
+              }
+              router.push(`${nextUrl.pathname}${nextUrl.search}`, { scroll: false });
+            }}
+            type="button"
+          >
+            Next unresolved
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+  const inspectorPanel = (
+    <>
+      <h3>Transcript and findings</h3>
+      <div className="adaptiveSidePanelTabs" role="tablist" aria-label="Privacy inspector sections">
+        <button
+          aria-selected={inspectorPanelSection === "context"}
+          className="secondaryButton"
+          onClick={() => handleInspectorPanelSectionChange("context")}
+          role="tab"
+          type="button"
+        >
+          Context
+        </button>
+        <button
+          aria-selected={inspectorPanelSection === "insights"}
+          className="secondaryButton"
+          onClick={() => handleInspectorPanelSectionChange("insights")}
+          role="tab"
+          type="button"
+        >
+          Insights
+        </button>
+        <button
+          aria-selected={inspectorPanelSection === "actions"}
+          className="secondaryButton"
+          onClick={() => handleInspectorPanelSectionChange("actions")}
+          role="tab"
+          type="button"
+        >
+          Actions
+        </button>
+      </div>
+      {inspectorPanelSection === "context"
+        ? inspectorContextPanel
+        : inspectorPanelSection === "insights"
+          ? inspectorInsightsPanel
+          : inspectorActionsPanel}
+    </>
+  );
 
   return (
     <>
@@ -599,6 +1215,24 @@ export function PrivacyWorkspaceSurface({
         <h3>Workspace toolbar</h3>
         <Toolbar actions={toolbarActions} label="Privacy review controls" />
         <div className="buttonRow privacyWorkspaceToolbarSupport">
+          {!showPageRailAside ? (
+            <button
+              className="secondaryButton"
+              onClick={(event) => openPageRailPanelDrawer(event.currentTarget)}
+              type="button"
+            >
+              {pageRailDrawerOpen ? "Page queue open" : "Open page queue"}
+            </button>
+          ) : null}
+          {showInspectorDrawerToggle ? (
+            <button
+              className="secondaryButton"
+              onClick={(event) => openInspectorPanelDrawer(event.currentTarget)}
+              type="button"
+            >
+              {inspectorDrawerOpen ? "Inspector open" : "Open inspector"}
+            </button>
+          ) : null}
           {mode === "safeguarded" && previewStatus?.status === "READY" ? (
             <a className="secondaryButton" href={previewImagePath}>
               Open preview asset
@@ -614,46 +1248,12 @@ export function PrivacyWorkspaceSurface({
       </section>
 
       <section className="sectionCard ukde-panel privacyWorkspaceShellCard">
-        <div className="privacyWorkspaceShell">
-          <aside className="privacyWorkspaceRail" aria-label="Page queue">
-            <h3>Pages</h3>
-            <ul className="timelineList">
-              {pages.map((page) => {
-                const isCurrent = page.pageId === selectedPage.pageId;
-                return (
-                  <li key={page.pageId}>
-                    <div className="auditIntegrityRow">
-                      <span>Page {page.pageIndex + 1}</span>
-                      <StatusChip tone={resolveReviewTone(page.reviewStatus)}>
-                        {page.reviewStatus}
-                      </StatusChip>
-                    </div>
-                    <p className="ukde-muted">
-                      Findings {page.findingCount} · Unresolved{" "}
-                      {page.unresolvedCount}
-                    </p>
-                    <div className="buttonRow">
-                      <button
-                        className="secondaryButton"
-                        data-active={isCurrent ? "true" : undefined}
-                        onClick={() => {
-                          navigate({
-                            page: page.pageIndex + 1,
-                            findingId: null,
-                            lineId: null,
-                            tokenId: null
-                          });
-                        }}
-                        type="button"
-                      >
-                        {isCurrent ? "Current page" : "Open page"}
-                      </button>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </aside>
+        <div className="privacyWorkspaceShell" data-workspace-state={shellState}>
+          {showPageRailAside ? (
+            <aside className="privacyWorkspaceRail" aria-label="Page queue">
+              {pageQueuePanel}
+            </aside>
+          ) : null}
 
           <div className="privacyWorkspaceCanvas" aria-label="Page canvas">
             <h3>Canvas</h3>
@@ -682,9 +1282,7 @@ export function PrivacyWorkspaceSurface({
                 )
               ) : (
                 <div className="privacyWorkspaceControlledPanel">
-                  <p className="ukde-muted">
-                    Controlled transcript source for page {pageNumber}
-                  </p>
+                  <p className="ukde-muted">Controlled transcript source for page {pageNumber}</p>
                   {lineLoadError ? (
                     <SectionState
                       kind="degraded"
@@ -692,9 +1290,7 @@ export function PrivacyWorkspaceSurface({
                       description={lineLoadError}
                     />
                   ) : lines.length === 0 ? (
-                    <p className="ukde-muted">
-                      No transcription lines available.
-                    </p>
+                    <p className="ukde-muted">No transcription lines available.</p>
                   ) : (
                     <ul className="timelineList">
                       {lines.map((line) => (
@@ -702,9 +1298,7 @@ export function PrivacyWorkspaceSurface({
                           <p>
                             <strong>{line.lineId}</strong>
                           </p>
-                          <p className="ukde-muted">
-                            {line.textDiplomatic || "(empty line)"}
-                          </p>
+                          <p className="ukde-muted">{line.textDiplomatic || "(empty line)"}</p>
                         </li>
                       ))}
                     </ul>
@@ -714,9 +1308,7 @@ export function PrivacyWorkspaceSurface({
               {mode === "safeguarded" && showHighlights
                 ? findingsForOverlay.flatMap((finding) =>
                     finding.geometry.boxes.map((box, index) => {
-                      const palette = resolveFindingHighlightColor(
-                        finding.geometry.anchorKind
-                      );
+                      const palette = resolveFindingHighlightColor(finding.geometry.anchorKind);
                       return (
                         <div
                           key={`${finding.id}:${index}:${box.x}:${box.y}`}
@@ -739,468 +1331,31 @@ export function PrivacyWorkspaceSurface({
             </div>
           </div>
 
-          <aside
-            className="privacyWorkspaceInspector"
-            aria-label="Transcript and findings"
-          >
-            <h3>Transcript and findings</h3>
-            <div className="privacyWorkspaceSection">
-              <h4>Finding actions</h4>
-              {!selectedFinding ? (
-                <p className="ukde-muted">
-                  Select a finding to apply approve, override, or false-positive
-                  actions.
-                </p>
-              ) : (
-                <>
-                  <ul className="projectMetaList">
-                    <li>
-                      <span>Finding</span>
-                      <strong>{selectedFinding.id}</strong>
-                    </li>
-                    <li>
-                      <span>Status</span>
-                      <strong>{selectedFinding.decisionStatus}</strong>
-                    </li>
-                    <li>
-                      <span>Decision etag</span>
-                      <strong>{selectedFinding.decisionEtag}</strong>
-                    </li>
-                    <li>
-                      <span>Anchor</span>
-                      <strong>{selectedFinding.geometry.anchorKind}</strong>
-                    </li>
-                    <li>
-                      <span>Line</span>
-                      <strong>{selectedFindingLineId ?? "None"}</strong>
-                    </li>
-                    <li>
-                      <span>Token</span>
-                      <strong>{selectedFindingTokenId ?? "None"}</strong>
-                    </li>
-                  </ul>
-                  {!canMutate ? (
-                    <p className="ukde-muted">
-                      Read-only role: finding decisions are restricted to
-                      REVIEWER, PROJECT_LEAD, or ADMIN.
-                    </p>
-                  ) : null}
-                  <div className="buttonRow">
-                    <form action={onPatchFindingAction}>
-                      <input name="runId" type="hidden" value={runId} />
-                      <input
-                        name="pageNumber"
-                        type="hidden"
-                        value={String(pageNumber)}
-                      />
-                      <input name="mode" type="hidden" value={mode} />
-                      <input
-                        name="highlights"
-                        type="hidden"
-                        value={showHighlights ? "on" : "off"}
-                      />
-                      <input
-                        name="findingId"
-                        type="hidden"
-                        value={selectedFinding.id}
-                      />
-                      <input
-                        name="decisionStatus"
-                        type="hidden"
-                        value="APPROVED"
-                      />
-                      <input
-                        name="decisionEtag"
-                        type="hidden"
-                        value={selectedFinding.decisionEtag}
-                      />
-                      <input
-                        name="returnLineId"
-                        type="hidden"
-                        value={selectedFindingLineId ?? ""}
-                      />
-                      <input
-                        name="returnTokenId"
-                        type="hidden"
-                        value={selectedFindingTokenId ?? ""}
-                      />
-                      <button
-                        className="secondaryButton"
-                        disabled={!canMutate}
-                        type="submit"
-                      >
-                        Approve finding
-                      </button>
-                    </form>
-                    <button
-                      className="secondaryButton"
-                      disabled={!canMutate}
-                      onClick={(event) => {
-                        dialogReturnFocusRef.current = event.currentTarget;
-                        setDialogStatus("OVERRIDDEN");
-                        setDialogReason("");
-                        setDialogValidationError(null);
-                        setDialogOpen(true);
-                      }}
-                      type="button"
-                    >
-                      Override
-                    </button>
-                    <button
-                      className="secondaryButton"
-                      disabled={!canMutate}
-                      onClick={(event) => {
-                        dialogReturnFocusRef.current = event.currentTarget;
-                        setDialogStatus("FALSE_POSITIVE");
-                        setDialogReason("");
-                        setDialogValidationError(null);
-                        setDialogOpen(true);
-                      }}
-                      type="button"
-                    >
-                      False positive
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="privacyWorkspaceSection">
-              <div className="auditIntegrityRow">
-                <h4>Page approval</h4>
-                <StatusChip tone={resolveReviewTone(selectedPage.reviewStatus)}>
-                  {selectedPage.reviewStatus}
-                </StatusChip>
-              </div>
-              {pageReviewError ? (
-                <SectionState
-                  kind="degraded"
-                  title="Page review unavailable"
-                  description={pageReviewError}
-                />
-              ) : pageReview ? (
-                <>
-                  <ul className="projectMetaList">
-                    <li>
-                      <span>Review etag</span>
-                      <strong>{pageReview.reviewEtag}</strong>
-                    </li>
-                    <li>
-                      <span>First reviewed by</span>
-                      <strong>
-                        {pageReview.firstReviewedBy ?? "Not reviewed"}
-                      </strong>
-                    </li>
-                    <li>
-                      <span>Second review</span>
-                      <strong>{pageReview.secondReviewStatus}</strong>
-                    </li>
-                    <li>
-                      <span>Requires second review</span>
-                      <strong>
-                        {pageReview.requiresSecondReview ? "Yes" : "No"}
-                      </strong>
-                    </li>
-                  </ul>
-                  <form action={onPatchPageReviewAction}>
-                    <input name="runId" type="hidden" value={runId} />
-                    <input
-                      name="pageId"
-                      type="hidden"
-                      value={selectedPage.pageId}
-                    />
-                    <input
-                      name="pageNumber"
-                      type="hidden"
-                      value={String(pageNumber)}
-                    />
-                    <input name="mode" type="hidden" value={mode} />
-                    <input
-                      name="highlights"
-                      type="hidden"
-                      value={showHighlights ? "on" : "off"}
-                    />
-                    <input
-                      name="returnFindingId"
-                      type="hidden"
-                      value={selectedFinding?.id ?? ""}
-                    />
-                    <input
-                      name="returnLineId"
-                      type="hidden"
-                      value={selectedLineId ?? selectedFindingLineId ?? ""}
-                    />
-                    <input
-                      name="returnTokenId"
-                      type="hidden"
-                      value={selectedTokenId ?? selectedFindingTokenId ?? ""}
-                    />
-                    <input name="reviewStatus" type="hidden" value="APPROVED" />
-                    <input
-                      name="reviewEtag"
-                      type="hidden"
-                      value={pageReview.reviewEtag}
-                    />
-                    <button
-                      className="secondaryButton"
-                      disabled={approvePageDisabled}
-                      type="submit"
-                    >
-                      Approve page
-                    </button>
-                  </form>
-                  {approvePageDisabled ? (
-                    <p className="ukde-muted">
-                      {canMutate
-                        ? unresolvedCount > 0
-                          ? "Approve page is disabled until unresolved count reaches 0."
-                          : "Page review projection unavailable."
-                        : "Read-only role cannot approve page reviews."}
-                    </p>
-                  ) : null}
-                </>
-              ) : (
-                <p className="ukde-muted">
-                  Page review projection unavailable.
-                </p>
-              )}
-            </div>
-
-            <div className="privacyWorkspaceSection">
-              <h4>Transcript</h4>
-              {lineLoadError ? (
-                <SectionState
-                  kind="degraded"
-                  title="Transcript context unavailable"
-                  description={lineLoadError}
-                />
-              ) : lines.length === 0 ? (
-                <p className="ukde-muted">No transcription lines available.</p>
-              ) : (
-                <ul
-                  className="timelineList privacyWorkspaceTranscriptList"
-                  aria-label="Transcript lines"
-                >
-                  {lines.map((line) => {
-                    const isFocused = focusLineId === line.lineId;
-                    return (
-                      <li key={line.lineId}>
-                        <button
-                          aria-pressed={isFocused}
-                          className="privacyWorkspaceListButton"
-                          data-selected={isFocused ? "true" : undefined}
-                          onClick={() => {
-                            navigate({
-                              findingId: null,
-                              lineId: line.lineId,
-                              tokenId: null
-                            });
-                          }}
-                          ref={(element) => {
-                            if (element) {
-                              lineButtonRefs.current.set(line.lineId, element);
-                            } else {
-                              lineButtonRefs.current.delete(line.lineId);
-                            }
-                          }}
-                          type="button"
-                        >
-                          <span className="privacyWorkspaceListTitle">
-                            {line.lineId}
-                          </span>
-                          <span className="ukde-muted">
-                            {line.textDiplomatic || "(empty line)"}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-
-            <div className="privacyWorkspaceSection">
-              <h4>Findings</h4>
-              {findingsError ? (
-                <SectionState
-                  kind="degraded"
-                  title="Findings unavailable"
-                  description={findingsError}
-                />
-              ) : findings.length === 0 ? (
-                <p className="ukde-muted">No findings for this page.</p>
-              ) : (
-                <ul
-                  className="timelineList privacyWorkspaceFindingList"
-                  aria-label="Findings list"
-                >
-                  {findings.map((finding) => {
-                    const isSelected = finding.id === selectedFinding?.id;
-                    const assistSummary = parseAssistSummary(finding);
-                    const generalizationExplanation =
-                      parseGeneralizationExplanation(finding);
-                    const generalizationGranularity =
-                      parseGeneralizationGranularity(finding);
-                    const findingHighRiskSignals = resolveHighRiskSignals({
-                      finding,
-                      policySnapshotJson,
-                      targetStatus: "OVERRIDDEN"
-                    });
-                    return (
-                      <li key={finding.id}>
-                        <button
-                          aria-pressed={isSelected}
-                          className="privacyWorkspaceListButton"
-                          data-selected={isSelected ? "true" : undefined}
-                          onClick={() => {
-                            navigate({
-                              findingId: finding.id,
-                              lineId: resolveFindingLineId(finding),
-                              tokenId: resolveFindingTokenId(finding)
-                            });
-                          }}
-                          type="button"
-                        >
-                          <span className="privacyWorkspaceListTitle">
-                            {finding.category}
-                          </span>
-                          <span className="ukde-muted">
-                            {finding.id} · {finding.decisionStatus} · Anchor{" "}
-                            {finding.geometry.anchorKind}
-                          </span>
-                        </button>
-                        <div className="buttonRow">
-                          <button
-                            className="secondaryButton"
-                            onClick={() => {
-                              navigate({
-                                findingId: finding.id,
-                                lineId: resolveFindingLineId(finding),
-                                tokenId: resolveFindingTokenId(finding)
-                              });
-                            }}
-                            type="button"
-                          >
-                            Open finding
-                          </button>
-                          <button
-                            className="secondaryButton"
-                            disabled={!resolveFindingLineId(finding)}
-                            onClick={() => {
-                              navigate({
-                                findingId: null,
-                                lineId: resolveFindingLineId(finding),
-                                tokenId: null
-                              });
-                            }}
-                            type="button"
-                          >
-                            Open line
-                          </button>
-                          <button
-                            className="secondaryButton"
-                            disabled={!resolveFindingTokenId(finding)}
-                            onClick={() => {
-                              navigate({
-                                findingId: null,
-                                lineId: resolveFindingLineId(finding),
-                                tokenId: resolveFindingTokenId(finding)
-                              });
-                            }}
-                            type="button"
-                          >
-                            Open token
-                          </button>
-                        </div>
-                        {assistSummary ? (
-                          <p className="ukde-muted">
-                            Assist summary (non-authoritative): {assistSummary}
-                          </p>
-                        ) : null}
-                        {generalizationExplanation ? (
-                          <p className="ukde-muted">
-                            Generalization rationale:{" "}
-                            {generalizationExplanation}
-                          </p>
-                        ) : null}
-                        {generalizationGranularity ? (
-                          <p className="ukde-muted">
-                            Policy granularity: {generalizationGranularity}
-                          </p>
-                        ) : null}
-                        {findingHighRiskSignals.length > 0 ? (
-                          <p className="ukde-muted">
-                            High-risk override signals present. Second review
-                            will be required later.
-                          </p>
-                        ) : null}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-
-            <div className="privacyWorkspaceSection">
-              <h4>Page timeline</h4>
-              {pageEvents.length === 0 ? (
-                <p className="ukde-muted">No page events yet.</p>
-              ) : (
-                <ul className="timelineList">
-                  {pageEvents.map((event) => (
-                    <li key={`${event.sourceTable}:${event.eventId}`}>
-                      <p>
-                        <strong>{event.eventType}</strong>
-                      </p>
-                      <p className="ukde-muted">
-                        {toShortIso(event.createdAt)} · {event.actorUserId}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div className="privacyWorkspaceSection">
-              <h4>Deep-link context</h4>
-              <ul className="projectMetaList">
-                <li>
-                  <span>Run</span>
-                  <strong>{runId}</strong>
-                </li>
-                <li>
-                  <span>Page</span>
-                  <strong>{pageNumber}</strong>
-                </li>
-                <li>
-                  <span>Finding</span>
-                  <strong>{selectedFinding?.id ?? "None"}</strong>
-                </li>
-                <li>
-                  <span>Line</span>
-                  <strong>{focusLineId ?? "None"}</strong>
-                </li>
-                <li>
-                  <span>Token</span>
-                  <strong>{selectedTokenId ?? "None"}</strong>
-                </li>
-                <li>
-                  <span>Highlights</span>
-                  <strong>{showHighlights ? "Shown" : "Hidden"}</strong>
-                </li>
-                <li>
-                  <span>Mode</span>
-                  <strong>
-                    {mode === "controlled"
-                      ? "Controlled view"
-                      : "Safeguarded preview"}
-                  </strong>
-                </li>
-              </ul>
-            </div>
-          </aside>
+          {showInspectorAside ? (
+            <aside className="privacyWorkspaceInspector" aria-label="Transcript and findings">
+              {inspectorPanel}
+            </aside>
+          ) : null}
         </div>
       </section>
+
+      <DetailsDrawer
+        description="Page queue drawer"
+        open={pageRailDrawerOpen}
+        onClose={() => setPageRailDrawerOpen(false)}
+        title="Page queue"
+      >
+        <div className="privacyWorkspaceDrawerPanel">{pageQueuePanel}</div>
+      </DetailsDrawer>
+
+      <DetailsDrawer
+        description="Transcript and findings drawer"
+        open={inspectorDrawerOpen}
+        onClose={closeInspectorDrawer}
+        title="Inspector"
+      >
+        <div className="privacyWorkspaceDrawerPanel">{inspectorPanel}</div>
+      </DetailsDrawer>
 
       <ModalDialog
         description={
@@ -1262,6 +1417,7 @@ export function PrivacyWorkspaceSurface({
             <input name="runId" type="hidden" value={runId} />
             <input name="pageNumber" type="hidden" value={String(pageNumber)} />
             <input name="mode" type="hidden" value={mode} />
+            <input name="panel" type="hidden" value={inspectorPanelSection} />
             <input
               name="highlights"
               type="hidden"

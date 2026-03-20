@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { SectionState } from "@ukde/ui/primitives";
 
 import { ProjectDocumentLayoutWorkspaceShell } from "../../../../../../../../components/project-document-layout-workspace-shell";
+import { normalizePanelSectionParam } from "../../../../../../../../lib/panel-sections";
 import {
   getProjectDocument,
   getProjectDocumentLayoutPageOverlay,
@@ -12,7 +13,10 @@ import {
   listProjectDocumentLayoutRuns
 } from "../../../../../../../../lib/documents";
 import { getProjectWorkspace } from "../../../../../../../../lib/projects";
-import { projectsPath } from "../../../../../../../../lib/routes";
+import {
+  projectDocumentLayoutWorkspacePath,
+  projectsPath
+} from "../../../../../../../../lib/routes";
 
 export const dynamic = "force-dynamic";
 
@@ -32,15 +36,26 @@ export default async function ProjectDocumentLayoutWorkspacePage({
   searchParams
 }: Readonly<{
   params: Promise<{ projectId: string; documentId: string }>;
-  searchParams: Promise<{ page?: string; runId?: string }>;
+  searchParams: Promise<{ page?: string; panel?: string; runId?: string }>;
 }>) {
   const { projectId, documentId } = await params;
   const query = await searchParams;
   const requestedPage = toPage(query.page);
+  const panelParam = normalizePanelSectionParam(query.panel);
   const requestedRunId =
     typeof query.runId === "string" && query.runId.trim().length > 0
       ? query.runId.trim()
       : null;
+
+  if (panelParam.shouldRedirect) {
+    redirect(
+      projectDocumentLayoutWorkspacePath(projectId, documentId, {
+        page: requestedPage,
+        panel: panelParam.value,
+        runId: requestedRunId
+      })
+    );
+  }
 
   const [documentResult, overviewResult, runsResult, workspaceResult] = await Promise.all([
     getProjectDocument(projectId, documentId),
@@ -189,6 +204,7 @@ export default async function ProjectDocumentLayoutWorkspacePage({
         canEditReadingOrder={Boolean(canEditReadingOrder)}
         documentId={document.id}
         documentName={document.originalFilename}
+        initialPanelSection={panelParam.value ?? "context"}
         overlayError={overlayError}
         overlayNotReady={overlayNotReady}
         overlayPayload={overlayPayload}

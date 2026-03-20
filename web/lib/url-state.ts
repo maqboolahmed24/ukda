@@ -1,3 +1,9 @@
+import {
+  normalizePanelSectionParam,
+  resolvePanelSectionValue,
+  type SidePanelSection
+} from "./panel-sections";
+
 interface IntegerNormalizationOptions {
   defaultValue: number;
   minimum?: number;
@@ -18,6 +24,7 @@ export interface NormalizedViewerZoomParam {
 
 export interface NormalizedViewerUrlState {
   mode: ViewerMode;
+  panel: SidePanelSection;
   page: number;
   comparePair: ViewerComparePair;
   runId: string | undefined;
@@ -141,6 +148,7 @@ export function normalizeViewerZoomParam(
 export function normalizeViewerUrlState(params: {
   comparePair?: string;
   mode?: string;
+  panel?: string;
   page?: string;
   runId?: string;
   zoom?: string;
@@ -150,10 +158,12 @@ export function normalizeViewerUrlState(params: {
   const mode = normalizeViewerModeParam(params.mode);
   const comparePair = normalizeViewerComparePairParam(params.comparePair);
   const runId = normalizeViewerRunIdParam(params.runId);
+  const panel = normalizePanelSectionParam(params.panel);
   const canonicalRunId =
     mode.value === "original" ? undefined : runId.value;
   return {
     mode: mode.value,
+    panel: resolvePanelSectionValue(params.panel),
     page: page.value,
     comparePair: mode.value === "compare" ? comparePair.value : "original_gray",
     runId: canonicalRunId,
@@ -164,10 +174,14 @@ export function normalizeViewerUrlState(params: {
       mode.shouldRedirect ||
       comparePair.shouldRedirect ||
       runId.shouldRedirect ||
+      panel.shouldRedirect ||
       (mode.value === "original" && typeof runId.value === "string") ||
       (mode.value !== "compare" && typeof params.comparePair === "string")
   };
 }
+
+export { normalizePanelSectionParam, resolvePanelSectionValue };
+export type { SidePanelSection };
 
 export function normalizeViewerModeParam(
   raw: string | undefined

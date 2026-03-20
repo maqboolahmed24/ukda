@@ -18,6 +18,7 @@ export type TranscriptionTab = "overview" | "triage" | "runs" | "artefacts";
 export type PrivacyTab = "overview" | "triage" | "runs";
 export type GovernanceTab = "overview" | "runs" | "manifest" | "ledger";
 export type PrivacyWorkspaceMode = "controlled" | "safeguarded";
+export type PanelSection = "context" | "insights" | "actions";
 export type TranscriptionSourceKind =
   | "LINE"
   | "RESCUE_CANDIDATE"
@@ -289,6 +290,7 @@ export function projectDocumentLayoutWorkspacePath(
   projectId: string,
   documentId: string,
   options?: {
+    panel?: PanelSection | null;
     page?: number | null;
     runId?: string | null;
   }
@@ -298,6 +300,10 @@ export function projectDocumentLayoutWorkspacePath(
       ? Math.max(1, Math.round(options.page))
       : undefined;
   return withQuery(`${projectDocumentPath(projectId, documentId)}/layout/workspace`, {
+    panel:
+      options?.panel && options.panel !== "context"
+        ? options.panel
+        : undefined,
     page,
     runId:
       options?.runId && options.runId.trim().length > 0
@@ -335,6 +341,7 @@ export function projectDocumentTranscriptionWorkspacePath(
   options?: {
     lineId?: string | null;
     mode?: TranscriptionWorkspaceMode | null;
+    panel?: PanelSection | null;
     page?: number | null;
     runId?: string | null;
     sourceKind?: TranscriptionSourceKind | null;
@@ -347,6 +354,10 @@ export function projectDocumentTranscriptionWorkspacePath(
       ? Math.max(1, Math.round(options.page))
       : undefined;
   return withQuery(`${projectDocumentPath(projectId, documentId)}/transcription/workspace`, {
+    panel:
+      options?.panel && options.panel !== "context"
+        ? options.panel
+        : undefined,
     page,
     runId:
       options?.runId && options.runId.trim().length > 0
@@ -443,6 +454,7 @@ export function projectDocumentPrivacyWorkspacePath(
     findingId?: string | null;
     lineId?: string | null;
     mode?: PrivacyWorkspaceMode | null;
+    panel?: PanelSection | null;
     page?: number | null;
     runId?: string | null;
     tokenId?: string | null;
@@ -454,6 +466,10 @@ export function projectDocumentPrivacyWorkspacePath(
       : undefined;
   return withQuery(`${projectDocumentPath(projectId, documentId)}/privacy/workspace`, {
     page,
+    panel:
+      options?.panel && options.panel !== "context"
+        ? options.panel
+        : undefined,
     runId:
       options?.runId && options.runId.trim().length > 0
         ? options.runId.trim()
@@ -583,6 +599,7 @@ export function projectDocumentViewerPath(
   documentId: string,
   page: number,
   options?: {
+    panel?: PanelSection | null;
     zoom?: number | null;
     mode?: ViewerMode | null;
     comparePair?: ViewerComparePair | null;
@@ -591,6 +608,10 @@ export function projectDocumentViewerPath(
 ): string {
   const zoom = normalizeViewerZoom(options?.zoom);
   return withQuery(`${projectDocumentPath(projectId, documentId)}/viewer`, {
+    panel:
+      options?.panel && options.panel !== "context"
+        ? options.panel
+        : undefined,
     page,
     mode:
       options?.mode && options.mode !== "original" ? options.mode : undefined,

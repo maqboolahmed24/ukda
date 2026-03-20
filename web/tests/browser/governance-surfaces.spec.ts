@@ -65,7 +65,10 @@ test("admin can inspect ledger timeline + verification history and trigger re-ve
   ).toBeVisible();
 
   await page.getByRole("link", { name: "List view" }).click();
-  await expect(page).toHaveURL(/view=list/);
+  await expect(page.getByRole("link", { name: "List view" })).toHaveAttribute(
+    "aria-current",
+    "page"
+  );
 
   await page.getByRole("button", { name: "Trigger re-verification" }).click();
   await expect(page).toHaveURL(/notice=verify_requested/);

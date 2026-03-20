@@ -53,6 +53,7 @@ import {
   projectDocumentPreprocessingPath,
   projectDocumentPreprocessingQualityPath,
   projectDocumentPreprocessingRunPath,
+  projectDocumentPrivacyWorkspacePath,
   projectDocumentTranscriptionComparePath,
   projectDocumentTranscriptionPath,
   projectDocumentTranscriptionRunPath,
@@ -152,6 +153,23 @@ describe("projectDocumentViewerPath", () => {
     ).toBe(
       "/projects/project-1/documents/doc-1/viewer?comparePair=original_binary&mode=compare&page=4&runId=run-2"
     );
+  });
+
+  test("adds non-default panel section when provided", () => {
+    expect(
+      projectDocumentViewerPath("project-1", "doc-1", 4, {
+        mode: "compare",
+        panel: "insights",
+        runId: "run-2"
+      })
+    ).toBe(
+      "/projects/project-1/documents/doc-1/viewer?mode=compare&page=4&panel=insights&runId=run-2"
+    );
+    expect(
+      projectDocumentViewerPath("project-1", "doc-1", 4, {
+        panel: "context"
+      })
+    ).toBe("/projects/project-1/documents/doc-1/viewer?page=4");
   });
 });
 
@@ -299,6 +317,15 @@ describe("projectDocumentLayoutWorkspacePath", () => {
     ).toBe(
       "/projects/project-1/documents/doc-1/layout/workspace?page=1&runId=layout-run-2"
     );
+    expect(
+      projectDocumentLayoutWorkspacePath("project-1", "doc-1", {
+        panel: "actions",
+        page: 2,
+        runId: "layout-run-2"
+      })
+    ).toBe(
+      "/projects/project-1/documents/doc-1/layout/workspace?page=2&panel=actions&runId=layout-run-2"
+    );
   });
 });
 
@@ -359,11 +386,12 @@ describe("projectDocumentTranscriptionWorkspacePath", () => {
     expect(
       projectDocumentTranscriptionWorkspacePath("project-1", "doc-1", {
         mode: "as-on-page",
+        panel: "insights",
         page: 3,
         runId: "transcription-run-2"
       })
     ).toBe(
-      "/projects/project-1/documents/doc-1/transcription/workspace?mode=as-on-page&page=3&runId=transcription-run-2"
+      "/projects/project-1/documents/doc-1/transcription/workspace?mode=as-on-page&page=3&panel=insights&runId=transcription-run-2"
     );
   });
 });
@@ -387,6 +415,27 @@ describe("projectDocumentTranscriptionComparePath", () => {
       )
     ).toBe(
       "/projects/project-1/documents/doc-1/transcription/compare?baseRunId=transcription-run-1&candidateRunId=transcription-run-2&lineId=line-3&page=2&tokenId=token-17"
+    );
+  });
+});
+
+describe("projectDocumentPrivacyWorkspacePath", () => {
+  test("builds deep-link-safe workspace paths with optional panel state", () => {
+    expect(projectDocumentPrivacyWorkspacePath("project-1", "doc-1")).toBe(
+      "/projects/project-1/documents/doc-1/privacy/workspace"
+    );
+    expect(
+      projectDocumentPrivacyWorkspacePath("project-1", "doc-1", {
+        findingId: "finding-7",
+        lineId: "line-9",
+        mode: "safeguarded",
+        panel: "actions",
+        page: 3,
+        runId: "redaction-run-2",
+        tokenId: "token-4"
+      })
+    ).toBe(
+      "/projects/project-1/documents/doc-1/privacy/workspace?findingId=finding-7&lineId=line-9&mode=safeguarded&page=3&panel=actions&runId=redaction-run-2&tokenId=token-4"
     );
   });
 });

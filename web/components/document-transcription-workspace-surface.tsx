@@ -11,6 +11,7 @@ import type {
   DocumentTranscriptionRun,
   DocumentTranscriptionTokenResult,
   RecordTranscriptVariantSuggestionDecisionResponse,
+  ShellState,
   TranscriptVariantLayer,
   TranscriptVariantSuggestion,
   TranscriptVariantSuggestionDecision,
@@ -18,6 +19,10 @@ import type {
 } from "@ukde/contracts";
 import { DetailsDrawer, SectionState, StatusChip } from "@ukde/ui/primitives";
 
+import {
+  useAdaptiveSidePanelState,
+  type SidePanelSection
+} from "../lib/adaptive-side-panel";
 import { requestBrowserApi } from "../lib/data/browser-api-client";
 import { projectDocumentPageImagePath } from "../lib/document-page-image";
 import {
@@ -25,7 +30,6 @@ import {
   type TranscriptionWorkspaceMode
 } from "../lib/routes";
 
-type ShellState = "Expanded" | "Balanced" | "Compact" | "Focus";
 type VariantViewMode = "DIPLOMATIC" | "NORMALISED";
 
 interface DocumentTranscriptionWorkspaceSurfaceProps {
@@ -36,6 +40,7 @@ interface DocumentTranscriptionWorkspaceSurfaceProps {
   initialMode: TranscriptionWorkspaceMode;
   initialOverlay: DocumentLayoutPageOverlay | null;
   initialOverlayError: string | null;
+  initialPanelSection?: SidePanelSection;
   initialTokenId: string | null;
   initialVariantLayers: TranscriptVariantLayer[];
   lines: DocumentTranscriptionLineResult[];
@@ -288,6 +293,7 @@ export function DocumentTranscriptionWorkspaceSurface({
   initialMode,
   initialOverlay,
   initialOverlayError,
+  initialPanelSection,
   initialTokenId,
   initialVariantLayers,
   lines,
@@ -308,9 +314,10 @@ export function DocumentTranscriptionWorkspaceSurface({
   const router = useRouter();
   const rootRef = useRef<HTMLElement | null>(null);
   const lineListRef = useRef<HTMLDivElement | null>(null);
+  const editorDrawerReturnFocusRef = useRef<HTMLElement | null>(null);
+  const editorDrawerWasOpenRef = useRef(false);
   const [shellState, setShellState] = useState<ShellState>("Expanded");
   const [filmstripDrawerOpen, setFilmstripDrawerOpen] = useState(false);
-  const [editorDrawerOpen, setEditorDrawerOpen] = useState(false);
   const [mode, setMode] = useState<TranscriptionWorkspaceMode>(initialMode);
   const [lineRows, setLineRows] = useState<DocumentTranscriptionLineResult[]>(lines);
   const [tokenRows, setTokenRows] = useState<DocumentTranscriptionTokenResult[]>(tokens);
@@ -338,6 +345,21 @@ export function DocumentTranscriptionWorkspaceSurface({
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [lineHistory, setLineHistory] =
     useState<DocumentTranscriptionLineVersionHistoryResponse | null>(null);
+  const {
+    closeDrawer: closeEditorDrawer,
+    drawerOpen: editorDrawerOpen,
+    openDrawer: openEditorDrawer,
+    panelSection: inspectorPanelSection,
+    setPanelSection: setInspectorPanelSection,
+    showAside: showEditorAside,
+    showDrawerToggle: showEditorDrawerToggle
+  } = useAdaptiveSidePanelState({
+    shellState,
+    storageSurface: "transcription-inspector",
+    projectId,
+    documentId,
+    initialSection: initialPanelSection
+  });
 
   const lineById = useMemo(
     () => new Map(lineRows.map((line) => [line.lineId, line])),
@@ -416,10 +438,18 @@ export function DocumentTranscriptionWorkspaceSurface({
     if (shellState !== "Focus") {
       setFilmstripDrawerOpen(false);
     }
-    if (shellState === "Expanded" || shellState === "Balanced") {
-      setEditorDrawerOpen(false);
+    if (showEditorAside) {
+      closeEditorDrawer();
     }
-  }, [shellState]);
+  }, [closeEditorDrawer, shellState, showEditorAside]);
+
+  useEffect(() => {
+    if (editorDrawerWasOpenRef.current && !editorDrawerOpen) {
+      editorDrawerReturnFocusRef.current?.focus({ preventScroll: true });
+      editorDrawerReturnFocusRef.current = null;
+    }
+    editorDrawerWasOpenRef.current = editorDrawerOpen;
+  }, [editorDrawerOpen]);
 
   useEffect(() => {
     const element = lineListRef.current;
@@ -674,6 +704,7 @@ export function DocumentTranscriptionWorkspaceSurface({
     (options: {
       lineId?: string | null;
       mode?: TranscriptionWorkspaceMode;
+      panel?: SidePanelSection;
       page?: number;
       runId?: string;
       sourceKind?: TranscriptionTokenSourceKind;
@@ -691,6 +722,7 @@ export function DocumentTranscriptionWorkspaceSurface({
       const path = projectDocumentTranscriptionWorkspacePath(projectId, documentId, {
         lineId: nextLineId,
         mode: options.mode ?? mode,
+        panel: options.panel ?? inspectorPanelSection,
         page: options.page ?? pageNumber,
         runId: options.runId ?? runId,
         sourceKind: options.sourceKind ?? currentSourceContext.sourceKind,
@@ -706,6 +738,7 @@ export function DocumentTranscriptionWorkspaceSurface({
       currentSourceContext.sourceKind,
       currentSourceContext.sourceRefId,
       documentId,
+      inspectorPanelSection,
       mode,
       pageNumber,
       projectId,
@@ -1128,7 +1161,6 @@ export function DocumentTranscriptionWorkspaceSurface({
     ? overlayLineShapes.get(selectedLine.lineId) ?? null
     : null;
   const selectedTokenBox = selectedToken ? parseTokenBoundingBox(selectedToken) : null;
-  const showEditorAside = shellState === "Expanded" || shellState === "Balanced";
   const showFilmstripAside = shellState !== "Focus";
 
   const saveStatus = useMemo(() => {
@@ -1152,6 +1184,448 @@ export function DocumentTranscriptionWorkspaceSurface({
   }, [conflict, dirtyLineIds.length, savingLineIds]);
 
   const modeLabel = mode === "as-on-page" ? "As on page" : "Reading order";
+  const handleInspectorPanelSectionChange = (nextSection: SidePanelSection) => {
+    if (nextSection === inspectorPanelSection) {
+      return;
+    }
+    setInspectorPanelSection(nextSection);
+    updateRoute({ panel: nextSection });
+  };
+  const openEditorPanelDrawer = (trigger: HTMLElement | null) => {
+    editorDrawerReturnFocusRef.current =
+      trigger ??
+      (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    openEditorDrawer();
+  };
+  const transcriptionInspectorTabs = (
+    <div className="adaptiveSidePanelTabs" role="tablist" aria-label="Transcript panel sections">
+      <button
+        aria-selected={inspectorPanelSection === "context"}
+        className="secondaryButton"
+        onClick={() => handleInspectorPanelSectionChange("context")}
+        role="tab"
+        type="button"
+      >
+        Context
+      </button>
+      <button
+        aria-selected={inspectorPanelSection === "insights"}
+        className="secondaryButton"
+        onClick={() => handleInspectorPanelSectionChange("insights")}
+        role="tab"
+        type="button"
+      >
+        Insights
+      </button>
+      <button
+        aria-selected={inspectorPanelSection === "actions"}
+        className="secondaryButton"
+        onClick={() => handleInspectorPanelSectionChange("actions")}
+        role="tab"
+        type="button"
+      >
+        Actions
+      </button>
+    </div>
+  );
+  const transcriptionContextPanel = (
+    <div className="adaptiveSidePanelBody">
+      <div className="buttonRow transcriptionVariantToggle">
+        <button
+          className="secondaryButton"
+          type="button"
+          aria-pressed={variantView === "DIPLOMATIC"}
+          onClick={() => setVariantView("DIPLOMATIC")}
+        >
+          Diplomatic
+        </button>
+        <button
+          className="secondaryButton"
+          type="button"
+          aria-pressed={variantView === "NORMALISED"}
+          onClick={() => setVariantView("NORMALISED")}
+          disabled={allSuggestions.length === 0}
+        >
+          Normalised
+        </button>
+      </div>
+      {variantView === "NORMALISED" ? (
+        <p className="ukde-muted transcriptionModeHint">
+          Normalised view is read-only and stays separate from diplomatic edits.
+        </p>
+      ) : null}
+      <div
+        className="transcriptionLineList"
+        ref={lineListRef}
+        onScroll={(event) => {
+          setLineListScrollTop((event.target as HTMLDivElement).scrollTop);
+        }}
+      >
+        <div style={{ height: `${virtualWindow.topPadding}px` }} />
+        {virtualWindow.visible.map((line) => {
+          const lineText = draftByLineId[line.lineId] ?? line.textDiplomatic;
+          const lowConfidence = isLowConfidenceLine(line, reviewConfidenceThreshold);
+          const dirty = draftByLineId[line.lineId] !== undefined;
+          const selected = selectedLine?.lineId === line.lineId;
+          const suggestion = suggestionByLineId.get(line.lineId);
+          const normalisedText = suggestion?.suggestionText ?? line.textDiplomatic;
+          return (
+            <article
+              className="transcriptionLineRow"
+              data-dirty={dirty ? "true" : undefined}
+              data-low={highlightLowConfidence && lowConfidence ? "true" : undefined}
+              data-selected={selected ? "true" : undefined}
+              key={line.lineId}
+              style={{ minHeight: `${VIRTUAL_ROW_HEIGHT - 4}px` }}
+            >
+              <div className="transcriptionLineRowHeader">
+                <button
+                  className="secondaryButton"
+                  type="button"
+                  onClick={() => openLine(line.lineId)}
+                >
+                  {line.lineId}
+                </button>
+                <div className="buttonRow">
+                  <StatusChip tone={resolveTone(line.tokenAnchorStatus)}>
+                    {line.tokenAnchorStatus}
+                  </StatusChip>
+                  <StatusChip tone={lowConfidence ? "warning" : "success"}>
+                    {line.confidenceBand}
+                  </StatusChip>
+                  <StatusChip tone="neutral">{formatConfidence(line.confLine)}</StatusChip>
+                  {dirty ? (
+                    <StatusChip tone="warning">Edited</StatusChip>
+                  ) : savedAtByLineId[line.lineId] ? (
+                    <StatusChip tone="success">Saved</StatusChip>
+                  ) : null}
+                </div>
+              </div>
+              {variantView === "NORMALISED" ? (
+                <p className="transcriptionLineReadOnly">{normalisedText}</p>
+              ) : (
+                <textarea
+                  className="transcriptionLineDraft"
+                  value={lineText}
+                  onFocus={() => {
+                    if (selectedLine?.lineId !== line.lineId) {
+                      openLine(line.lineId);
+                    }
+                  }}
+                  onChange={(event) => setLineDraft(line.lineId, event.target.value, true)}
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" &&
+                      !event.shiftKey &&
+                      !event.ctrlKey &&
+                      !event.metaKey &&
+                      !event.altKey
+                    ) {
+                      event.preventDefault();
+                      void saveLine(line.lineId, true);
+                    }
+                  }}
+                  rows={2}
+                />
+              )}
+              <div className="buttonRow transcriptionLineRowActions">
+                <button
+                  className="secondaryButton"
+                  type="button"
+                  onClick={() => void saveLine(line.lineId, false)}
+                  disabled={
+                    !canEdit ||
+                    variantView !== "DIPLOMATIC" ||
+                    !dirty ||
+                    Boolean(savingLineIds[line.lineId])
+                  }
+                >
+                  {savingLineIds[line.lineId] ? "Saving..." : "Save"}
+                </button>
+                <button
+                  className="secondaryButton"
+                  type="button"
+                  onClick={() => discardLineDraft(line.lineId)}
+                  disabled={!dirty}
+                >
+                  Discard
+                </button>
+                <button
+                  className="secondaryButton"
+                  type="button"
+                  onClick={() => {
+                    void openLineHistory(line.lineId);
+                  }}
+                >
+                  History
+                </button>
+              </div>
+            </article>
+          );
+        })}
+        <div style={{ height: `${virtualWindow.bottomPadding}px` }} />
+      </div>
+      <div className="buttonRow transcriptionEditorFooter">
+        <button
+          className="secondaryButton"
+          type="button"
+          onClick={() => {
+            setDraftByLineId({});
+            setHistoryByLineId({});
+            setNotice("All local drafts discarded.");
+          }}
+          disabled={dirtyLineIds.length === 0}
+        >
+          Discard all drafts
+        </button>
+      </div>
+    </div>
+  );
+  const transcriptionInsightsPanel = (
+    <div className="adaptiveSidePanelBody">
+      <section className="transcriptionInspectorSection">
+        <h3>Selected line confidence</h3>
+        {selectedLine ? (
+          <>
+            <ul className="projectMetaList">
+              <li>
+                <span>Line ID</span>
+                <strong>{selectedLine.lineId}</strong>
+              </li>
+              <li>
+                <span>Confidence</span>
+                <strong>{formatConfidence(selectedLine.confLine)}</strong>
+              </li>
+              <li>
+                <span>Band</span>
+                <strong>{selectedLine.confidenceBand}</strong>
+              </li>
+              <li>
+                <span>Basis</span>
+                <strong>{selectedLine.confidenceBasis}</strong>
+              </li>
+              <li>
+                <span>Char-box payload</span>
+                <strong>{selectedLine.charBoxesKey ?? "Unavailable for this line"}</strong>
+              </li>
+            </ul>
+            <h4>Per-character confidence cues</h4>
+            {(() => {
+              const cues = parseCharCuePreview(selectedLine);
+              if (cues.length === 0) {
+                return (
+                  <p className="ukde-muted">
+                    {selectedLine.charBoxesKey
+                      ? "Character confidence payload exists, but preview cues are unavailable in this response."
+                      : "Character confidence cues unavailable for this line."}
+                  </p>
+                );
+              }
+              return (
+                <p aria-label="Character confidence cues">
+                  {cues.map((cue, index) => (
+                    <span
+                      key={`${cue.char}-${index}`}
+                      style={{
+                        display: "inline-block",
+                        marginRight: "0.12rem",
+                        padding: "0.05rem 0.12rem",
+                        borderRadius: "0.2rem",
+                        backgroundColor:
+                          cue.confidence === null
+                            ? "rgba(126, 126, 126, 0.2)"
+                            : cue.confidence < reviewConfidenceThreshold
+                              ? "rgba(220, 142, 52, 0.25)"
+                              : "rgba(76, 166, 87, 0.25)"
+                      }}
+                    >
+                      {cue.char}
+                    </span>
+                  ))}
+                </p>
+              );
+            })()}
+          </>
+        ) : (
+          <p className="ukde-muted">No line is selected. Source-only token context is active.</p>
+        )}
+      </section>
+      <section className="transcriptionInspectorSection">
+        <h3>Line crop preview</h3>
+        {selectedLine && selectedLineShape && overlay ? (
+          <div className="transcriptionLineCropPreview">
+            <svg
+              className="transcriptionLineCropSvg"
+              viewBox={`${Math.max(0, selectedLineShape.bbox.x - 20)} ${Math.max(
+                0,
+                selectedLineShape.bbox.y - 16
+              )} ${selectedLineShape.bbox.width + 40} ${selectedLineShape.bbox.height + 32}`}
+            >
+              <image
+                href={pageImagePath}
+                x={0}
+                y={0}
+                width={overlay.page.width}
+                height={overlay.page.height}
+                preserveAspectRatio="none"
+              />
+              <path
+                className="transcriptionLineCropOutline"
+                d={pointsToSvgPath(selectedLineShape.points)}
+              />
+            </svg>
+          </div>
+        ) : (
+          <p className="ukde-muted">Line geometry unavailable for this page/run context.</p>
+        )}
+      </section>
+      <section className="transcriptionInspectorSection">
+        <h3>Token anchors</h3>
+        {selectedTokens.length === 0 ? (
+          <p className="ukde-muted">No tokens available for the current selection.</p>
+        ) : (
+          <ul className="timelineList">
+            {selectedTokens.map((token) => (
+              <li key={token.tokenId}>
+                <div className="auditIntegrityRow">
+                  <button
+                    className="secondaryButton"
+                    type="button"
+                    onClick={() => openToken(token)}
+                  >
+                    {token.tokenText}
+                  </button>
+                  <div className="buttonRow">
+                    <StatusChip tone="neutral">{token.sourceKind}</StatusChip>
+                    <StatusChip tone="neutral">{formatConfidence(token.tokenConfidence)}</StatusChip>
+                  </div>
+                </div>
+                <p className="ukde-muted">
+                  tokenId {token.tokenId} · sourceRef {token.sourceRefId}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+  const transcriptionActionsPanel = (
+    <div className="adaptiveSidePanelBody">
+      <section className="transcriptionInspectorSection transcriptionAssistSection">
+        <div className="auditIntegrityRow">
+          <h3>Assist panel</h3>
+          <button
+            className="secondaryButton"
+            type="button"
+            onClick={() => setAssistCollapsed((value) => !value)}
+          >
+            {assistCollapsed ? "Expand assist" : "Collapse assist"}
+          </button>
+        </div>
+        {assistCollapsed ? null : variantLayersUnavailableReason ? (
+          <SectionState
+            kind="degraded"
+            title="Assist unavailable"
+            description={variantLayersUnavailableReason}
+          />
+        ) : allSuggestions.length === 0 ? (
+          <SectionState
+            kind="empty"
+            title="No assist suggestions"
+            description="Normalised variant suggestions are not available for this page."
+          />
+        ) : (
+          <ul className="timelineList">
+            {allSuggestions.map((suggestion) => (
+              <li key={suggestion.id}>
+                <div className="auditIntegrityRow">
+                  <strong>{suggestion.lineId ?? "Page-level suggestion"}</strong>
+                  <div className="buttonRow">
+                    <StatusChip tone="neutral">{suggestion.status}</StatusChip>
+                    <StatusChip tone="neutral">
+                      {formatConfidence(suggestion.confidence)}
+                    </StatusChip>
+                  </div>
+                </div>
+                <p>{suggestion.suggestionText}</p>
+                <p className="ukde-muted">
+                  {typeof suggestion.metadataJson.reason === "string" &&
+                  suggestion.metadataJson.reason.trim().length > 0
+                    ? suggestion.metadataJson.reason
+                    : "No explicit reason provided."}
+                </p>
+                <div className="buttonRow">
+                  <button
+                    className="secondaryButton"
+                    type="button"
+                    disabled={!canAssistDecide || suggestion.status !== "PENDING"}
+                    onClick={() => {
+                      void recordSuggestionDecision(suggestion.id, "ACCEPT");
+                    }}
+                  >
+                    Accept
+                  </button>
+                  <button
+                    className="secondaryButton"
+                    type="button"
+                    disabled={!canAssistDecide || suggestion.status !== "PENDING"}
+                    onClick={() => {
+                      void recordSuggestionDecision(suggestion.id, "REJECT");
+                    }}
+                  >
+                    Reject
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="transcriptionInspectorSection">
+        <h3>Quick actions</h3>
+        <div className="buttonRow">
+          <button
+            className="secondaryButton"
+            type="button"
+            onClick={() => {
+              const nextMode: TranscriptionWorkspaceMode =
+                mode === "reading-order" ? "as-on-page" : "reading-order";
+              setMode(nextMode);
+              updateRoute({
+                lineId: selectedLine?.lineId ?? null,
+                mode: nextMode,
+                sourceKind: currentSourceContext.sourceKind,
+                sourceRefId: currentSourceContext.sourceRefId,
+                tokenId: selectedToken?.tokenId ?? null
+              });
+            }}
+          >
+            Toggle line order
+          </button>
+          <button
+            className="secondaryButton"
+            type="button"
+            onClick={moveToNextLowConfidenceLine}
+            disabled={lowConfidenceLineIds.length === 0}
+          >
+            Next issue
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+  const transcriptionInspectorPanel = (
+    <>
+      <h2>Transcript panel</h2>
+      {transcriptionInspectorTabs}
+      {inspectorPanelSection === "context"
+        ? transcriptionContextPanel
+        : inspectorPanelSection === "insights"
+          ? transcriptionInsightsPanel
+          : transcriptionActionsPanel}
+    </>
+  );
 
   return (
     <section className="transcriptionWorkspaceRoot" ref={rootRef}>
@@ -1280,13 +1754,13 @@ export function DocumentTranscriptionWorkspaceSurface({
               Open filmstrip
             </button>
           ) : null}
-          {!showEditorAside ? (
+          {showEditorDrawerToggle ? (
             <button
               className="secondaryButton"
               type="button"
-              onClick={() => setEditorDrawerOpen(true)}
+              onClick={(event) => openEditorPanelDrawer(event.currentTarget)}
             >
-              Open transcript panel
+              {editorDrawerOpen ? "Transcript panel open" : "Open transcript panel"}
             </button>
           ) : null}
         </div>
@@ -1470,366 +1944,10 @@ export function DocumentTranscriptionWorkspaceSurface({
 
         {showEditorAside ? (
           <aside className="documentViewerInspector transcriptionEditor" aria-label="Transcript editor">
-            <h2>Transcript panel</h2>
-            <div className="buttonRow transcriptionVariantToggle">
-              <button
-                className="secondaryButton"
-                type="button"
-                aria-pressed={variantView === "DIPLOMATIC"}
-                onClick={() => setVariantView("DIPLOMATIC")}
-              >
-                Diplomatic
-              </button>
-              <button
-                className="secondaryButton"
-                type="button"
-                aria-pressed={variantView === "NORMALISED"}
-                onClick={() => setVariantView("NORMALISED")}
-                disabled={allSuggestions.length === 0}
-              >
-                Normalised
-              </button>
-            </div>
-            {variantView === "NORMALISED" ? (
-              <p className="ukde-muted transcriptionModeHint">
-                Normalised view is read-only and stays separate from diplomatic edits.
-              </p>
-            ) : null}
-            <div
-              className="transcriptionLineList"
-              ref={lineListRef}
-              onScroll={(event) => {
-                setLineListScrollTop((event.target as HTMLDivElement).scrollTop);
-              }}
-            >
-              <div style={{ height: `${virtualWindow.topPadding}px` }} />
-              {virtualWindow.visible.map((line) => {
-                const lineText = draftByLineId[line.lineId] ?? line.textDiplomatic;
-                const lowConfidence = isLowConfidenceLine(line, reviewConfidenceThreshold);
-                const dirty = draftByLineId[line.lineId] !== undefined;
-                const selected = selectedLine?.lineId === line.lineId;
-                const suggestion = suggestionByLineId.get(line.lineId);
-                const normalisedText = suggestion?.suggestionText ?? line.textDiplomatic;
-                return (
-                  <article
-                    className="transcriptionLineRow"
-                    data-dirty={dirty ? "true" : undefined}
-                    data-low={highlightLowConfidence && lowConfidence ? "true" : undefined}
-                    data-selected={selected ? "true" : undefined}
-                    key={line.lineId}
-                    style={{ minHeight: `${VIRTUAL_ROW_HEIGHT - 4}px` }}
-                  >
-                    <div className="transcriptionLineRowHeader">
-                      <button
-                        className="secondaryButton"
-                        type="button"
-                        onClick={() => openLine(line.lineId)}
-                      >
-                        {line.lineId}
-                      </button>
-                      <div className="buttonRow">
-                        <StatusChip tone={resolveTone(line.tokenAnchorStatus)}>
-                          {line.tokenAnchorStatus}
-                        </StatusChip>
-                        <StatusChip tone={lowConfidence ? "warning" : "success"}>
-                          {line.confidenceBand}
-                        </StatusChip>
-                        <StatusChip tone="neutral">{formatConfidence(line.confLine)}</StatusChip>
-                        {dirty ? (
-                          <StatusChip tone="warning">Edited</StatusChip>
-                        ) : savedAtByLineId[line.lineId] ? (
-                          <StatusChip tone="success">Saved</StatusChip>
-                        ) : null}
-                      </div>
-                    </div>
-                    {variantView === "NORMALISED" ? (
-                      <p className="transcriptionLineReadOnly">{normalisedText}</p>
-                    ) : (
-                      <textarea
-                        className="transcriptionLineDraft"
-                        value={lineText}
-                        onFocus={() => {
-                          if (selectedLine?.lineId !== line.lineId) {
-                            openLine(line.lineId);
-                          }
-                        }}
-                        onChange={(event) =>
-                          setLineDraft(line.lineId, event.target.value, true)
-                        }
-                        onKeyDown={(event) => {
-                          if (
-                            event.key === "Enter" &&
-                            !event.shiftKey &&
-                            !event.ctrlKey &&
-                            !event.metaKey &&
-                            !event.altKey
-                          ) {
-                            event.preventDefault();
-                            void saveLine(line.lineId, true);
-                          }
-                        }}
-                        rows={2}
-                      />
-                    )}
-                    <div className="buttonRow transcriptionLineRowActions">
-                      <button
-                        className="secondaryButton"
-                        type="button"
-                        onClick={() => void saveLine(line.lineId, false)}
-                        disabled={
-                          !canEdit ||
-                          variantView !== "DIPLOMATIC" ||
-                          !dirty ||
-                          Boolean(savingLineIds[line.lineId])
-                        }
-                      >
-                        {savingLineIds[line.lineId] ? "Saving..." : "Save"}
-                      </button>
-                      <button
-                        className="secondaryButton"
-                        type="button"
-                        onClick={() => discardLineDraft(line.lineId)}
-                        disabled={!dirty}
-                      >
-                        Discard
-                      </button>
-                      <button
-                        className="secondaryButton"
-                        type="button"
-                        onClick={() => {
-                          void openLineHistory(line.lineId);
-                        }}
-                      >
-                        History
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
-              <div style={{ height: `${virtualWindow.bottomPadding}px` }} />
-            </div>
-            <div className="buttonRow transcriptionEditorFooter">
-              <button
-                className="secondaryButton"
-                type="button"
-                onClick={() => {
-                  setDraftByLineId({});
-                  setHistoryByLineId({});
-                  setNotice("All local drafts discarded.");
-                }}
-                disabled={dirtyLineIds.length === 0}
-              >
-                Discard all drafts
-              </button>
-            </div>
+            {transcriptionInspectorPanel}
           </aside>
         ) : null}
       </div>
-
-      <section className="sectionCard ukde-panel transcriptionInspectorGrid">
-        <div>
-          <h3>Selected line confidence</h3>
-          {selectedLine ? (
-            <>
-              <ul className="projectMetaList">
-                <li>
-                  <span>Line ID</span>
-                  <strong>{selectedLine.lineId}</strong>
-                </li>
-                <li>
-                  <span>Confidence</span>
-                  <strong>{formatConfidence(selectedLine.confLine)}</strong>
-                </li>
-                <li>
-                  <span>Band</span>
-                  <strong>{selectedLine.confidenceBand}</strong>
-                </li>
-                <li>
-                  <span>Basis</span>
-                  <strong>{selectedLine.confidenceBasis}</strong>
-                </li>
-                <li>
-                  <span>Char-box payload</span>
-                  <strong>{selectedLine.charBoxesKey ?? "Unavailable for this line"}</strong>
-                </li>
-              </ul>
-              <h4>Per-character confidence cues</h4>
-              {(() => {
-                const cues = parseCharCuePreview(selectedLine);
-                if (cues.length === 0) {
-                  return (
-                    <p className="ukde-muted">
-                      {selectedLine.charBoxesKey
-                        ? "Character confidence payload exists, but preview cues are unavailable in this response."
-                        : "Character confidence cues unavailable for this line."}
-                    </p>
-                  );
-                }
-                return (
-                  <p aria-label="Character confidence cues">
-                    {cues.map((cue, index) => (
-                      <span
-                        key={`${cue.char}-${index}`}
-                        style={{
-                          display: "inline-block",
-                          marginRight: "0.12rem",
-                          padding: "0.05rem 0.12rem",
-                          borderRadius: "0.2rem",
-                          backgroundColor:
-                            cue.confidence === null
-                              ? "rgba(126, 126, 126, 0.2)"
-                              : cue.confidence < reviewConfidenceThreshold
-                                ? "rgba(220, 142, 52, 0.25)"
-                                : "rgba(76, 166, 87, 0.25)"
-                        }}
-                      >
-                        {cue.char}
-                      </span>
-                    ))}
-                  </p>
-                );
-              })()}
-            </>
-          ) : (
-            <p className="ukde-muted">
-              No line is selected. Source-only token context is active.
-            </p>
-          )}
-        </div>
-
-        <div>
-          <h3>Line crop preview</h3>
-          {selectedLine && selectedLineShape && overlay ? (
-            <div className="transcriptionLineCropPreview">
-              <svg
-                className="transcriptionLineCropSvg"
-                viewBox={`${Math.max(0, selectedLineShape.bbox.x - 20)} ${Math.max(
-                  0,
-                  selectedLineShape.bbox.y - 16
-                )} ${selectedLineShape.bbox.width + 40} ${selectedLineShape.bbox.height + 32}`}
-              >
-                <image
-                  href={pageImagePath}
-                  x={0}
-                  y={0}
-                  width={overlay.page.width}
-                  height={overlay.page.height}
-                  preserveAspectRatio="none"
-                />
-                <path
-                  className="transcriptionLineCropOutline"
-                  d={pointsToSvgPath(selectedLineShape.points)}
-                />
-              </svg>
-            </div>
-          ) : (
-            <p className="ukde-muted">
-              Line geometry unavailable for this page/run context.
-            </p>
-          )}
-        </div>
-      </section>
-
-      <section className="sectionCard ukde-panel">
-        <h3>Token anchors</h3>
-        {selectedTokens.length === 0 ? (
-          <p className="ukde-muted">No tokens available for the current selection.</p>
-        ) : (
-          <ul className="timelineList">
-            {selectedTokens.map((token) => (
-              <li key={token.tokenId}>
-                <div className="auditIntegrityRow">
-                  <button
-                    className="secondaryButton"
-                    type="button"
-                    onClick={() => openToken(token)}
-                  >
-                    {token.tokenText}
-                  </button>
-                  <div className="buttonRow">
-                    <StatusChip tone="neutral">{token.sourceKind}</StatusChip>
-                    <StatusChip tone="neutral">{formatConfidence(token.tokenConfidence)}</StatusChip>
-                  </div>
-                </div>
-                <p className="ukde-muted">
-                  tokenId {token.tokenId} · sourceRef {token.sourceRefId}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="sectionCard ukde-panel transcriptionAssistSection">
-        <div className="auditIntegrityRow">
-          <h3>Assist panel</h3>
-          <button
-            className="secondaryButton"
-            type="button"
-            onClick={() => setAssistCollapsed((value) => !value)}
-          >
-            {assistCollapsed ? "Expand assist" : "Collapse assist"}
-          </button>
-        </div>
-        {assistCollapsed ? null : variantLayersUnavailableReason ? (
-          <SectionState
-            kind="degraded"
-            title="Assist unavailable"
-            description={variantLayersUnavailableReason}
-          />
-        ) : allSuggestions.length === 0 ? (
-          <SectionState
-            kind="empty"
-            title="No assist suggestions"
-            description="Normalised variant suggestions are not available for this page."
-          />
-        ) : (
-          <ul className="timelineList">
-            {allSuggestions.map((suggestion) => (
-              <li key={suggestion.id}>
-                <div className="auditIntegrityRow">
-                  <strong>{suggestion.lineId ?? "Page-level suggestion"}</strong>
-                  <div className="buttonRow">
-                    <StatusChip tone="neutral">{suggestion.status}</StatusChip>
-                    <StatusChip tone="neutral">
-                      {formatConfidence(suggestion.confidence)}
-                    </StatusChip>
-                  </div>
-                </div>
-                <p>{suggestion.suggestionText}</p>
-                <p className="ukde-muted">
-                  {typeof suggestion.metadataJson.reason === "string" &&
-                  suggestion.metadataJson.reason.trim().length > 0
-                    ? suggestion.metadataJson.reason
-                    : "No explicit reason provided."}
-                </p>
-                <div className="buttonRow">
-                  <button
-                    className="secondaryButton"
-                    type="button"
-                    disabled={!canAssistDecide || suggestion.status !== "PENDING"}
-                    onClick={() => {
-                      void recordSuggestionDecision(suggestion.id, "ACCEPT");
-                    }}
-                  >
-                    Accept
-                  </button>
-                  <button
-                    className="secondaryButton"
-                    type="button"
-                    disabled={!canAssistDecide || suggestion.status !== "PENDING"}
-                    onClick={() => {
-                      void recordSuggestionDecision(suggestion.id, "REJECT");
-                    }}
-                  >
-                    Reject
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
 
       <DetailsDrawer
         description="Filmstrip drawer"
@@ -1866,55 +1984,10 @@ export function DocumentTranscriptionWorkspaceSurface({
       <DetailsDrawer
         description="Transcript editor drawer"
         open={editorDrawerOpen}
-        onClose={() => setEditorDrawerOpen(false)}
+        onClose={closeEditorDrawer}
         title="Transcript panel"
       >
-        {selectedLine ? (
-          <div className="transcriptionDrawerEditor">
-            <p className="ukde-muted">
-              {selectedLine.lineId} · {formatConfidence(selectedLine.confLine)} ·{" "}
-              {selectedLine.confidenceBand}
-            </p>
-            {variantView === "NORMALISED" ? (
-              <p className="transcriptionLineReadOnly">
-                {suggestionByLineId.get(selectedLine.lineId)?.suggestionText ??
-                  selectedLine.textDiplomatic}
-              </p>
-            ) : (
-              <textarea
-                className="transcriptionLineDraft"
-                value={draftByLineId[selectedLine.lineId] ?? selectedLine.textDiplomatic}
-                rows={4}
-                onChange={(event) =>
-                  setLineDraft(selectedLine.lineId, event.target.value, true)
-                }
-              />
-            )}
-            <div className="buttonRow">
-              <button
-                className="secondaryButton"
-                type="button"
-                onClick={() => void saveLine(selectedLine.lineId, false)}
-                disabled={!canEdit || variantView !== "DIPLOMATIC"}
-              >
-                Save
-              </button>
-              <button
-                className="secondaryButton"
-                type="button"
-                onClick={() => setEditorDrawerOpen(false)}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        ) : (
-          <SectionState
-            kind="empty"
-            title="No selected line"
-            description="Select a line from the list or overlay."
-          />
-        )}
+        <div className="transcriptionDrawerEditor">{transcriptionInspectorPanel}</div>
       </DetailsDrawer>
 
       <DetailsDrawer

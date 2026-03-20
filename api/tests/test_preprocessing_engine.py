@@ -104,8 +104,8 @@ def test_profile_registry_definitions_are_versioned_and_hash_stable() -> None:
     ]
     assert all(entry.profile_version == "v1" for entry in definitions)
     assert all(entry.profile_revision == 2 for entry in definitions)
-    assert all(entry.supersedes_profile_id is not None for entry in definitions)
-    assert all(entry.supersedes_profile_revision == 1 for entry in definitions)
+    assert all(entry.supersedes_profile_id is None for entry in definitions)
+    assert all(entry.supersedes_profile_revision is None for entry in definitions)
     assert all(len(entry.params_hash) == 64 for entry in definitions)
 
     aggressive = get_preprocess_profile_definition("aggressive")

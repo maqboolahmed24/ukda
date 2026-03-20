@@ -4,6 +4,7 @@ import {
   normalizeCursorParam,
   normalizeOptionalDateParam,
   normalizeOptionalEnumParam,
+  normalizePanelSectionParam,
   normalizeOptionalTextParam,
   normalizeViewerComparePairParam,
   normalizeViewerModeParam,
@@ -65,6 +66,7 @@ describe("normalizeViewerUrlState", () => {
     expect(normalizeViewerUrlState({ page: undefined, zoom: undefined })).toEqual({
       comparePair: "original_gray",
       mode: "original",
+      panel: "context",
       page: 1,
       runId: undefined,
       zoom: 100,
@@ -73,6 +75,7 @@ describe("normalizeViewerUrlState", () => {
     expect(normalizeViewerUrlState({ page: "0002", zoom: "100" })).toEqual({
       comparePair: "original_gray",
       mode: "original",
+      panel: "context",
       page: 2,
       runId: undefined,
       zoom: 100,
@@ -87,11 +90,13 @@ describe("normalizeViewerUrlState", () => {
         zoom: "125",
         mode: "compare",
         comparePair: "gray_binary",
+        panel: "insights",
         runId: "run-2"
       })
     ).toEqual({
       comparePair: "gray_binary",
       mode: "compare",
+      panel: "insights",
       page: 3,
       runId: "run-2",
       zoom: 125,
@@ -155,6 +160,31 @@ describe("normalizeViewerComparePairParam", () => {
     expect(normalizeViewerComparePairParam("ORIGINAL-BINARY")).toEqual({
       value: "original_binary",
       canonicalValue: "original_binary",
+      shouldRedirect: true
+    });
+  });
+});
+
+describe("normalizePanelSectionParam", () => {
+  test("normalizes panel sections and strips default context", () => {
+    expect(normalizePanelSectionParam(undefined)).toEqual({
+      value: undefined,
+      canonicalValue: undefined,
+      shouldRedirect: false
+    });
+    expect(normalizePanelSectionParam("context")).toEqual({
+      value: "context",
+      canonicalValue: undefined,
+      shouldRedirect: true
+    });
+    expect(normalizePanelSectionParam("INSIGHTS")).toEqual({
+      value: "insights",
+      canonicalValue: "insights",
+      shouldRedirect: true
+    });
+    expect(normalizePanelSectionParam("invalid")).toEqual({
+      value: undefined,
+      canonicalValue: undefined,
       shouldRedirect: true
     });
   });

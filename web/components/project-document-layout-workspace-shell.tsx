@@ -33,6 +33,10 @@ import {
 import { projectDocumentPageImagePath } from "../lib/document-page-image";
 import { requestBrowserApi } from "../lib/data/browser-api-client";
 import {
+  useAdaptiveSidePanelState,
+  type SidePanelSection
+} from "../lib/adaptive-side-panel";
+import {
   projectDocumentLayoutPath,
   projectDocumentLayoutWorkspacePath
 } from "../lib/routes";
@@ -42,6 +46,7 @@ interface ProjectDocumentLayoutWorkspaceShellProps {
   canEditReadingOrder: boolean;
   documentId: string;
   documentName: string;
+  initialPanelSection: SidePanelSection;
   overlayError: string | null;
   overlayNotReady: boolean;
   overlayPayload: DocumentLayoutPageOverlay | null;
@@ -480,6 +485,7 @@ export function ProjectDocumentLayoutWorkspaceShell({
   canEditReadingOrder,
   documentId,
   documentName,
+  initialPanelSection,
   overlayError,
   overlayNotReady,
   overlayPayload,
@@ -508,7 +514,6 @@ export function ProjectDocumentLayoutWorkspaceShell({
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [filmstripCollapsed, setFilmstripCollapsed] = useState(false);
   const [filmstripDrawerOpen, setFilmstripDrawerOpen] = useState(false);
-  const [inspectorDrawerOpen, setInspectorDrawerOpen] = useState(false);
   const [zoomPercent, setZoomPercent] = useState(100);
   const [pageImageState, setPageImageState] = useState<{
     retryAttempt: number;
@@ -626,8 +631,20 @@ export function ProjectDocumentLayoutWorkspaceShell({
     height: `${Math.round(canvasHeight * scale)}px`
   };
   const overlayStyle = { opacity: overlayOpacityPercent / 100 };
-
-  const showInspectorAside = shellState === "Expanded" || shellState === "Balanced";
+  const {
+    closeDrawer: closeInspectorDrawer,
+    drawerOpen: inspectorDrawerOpen,
+    openDrawer: openInspectorDrawer,
+    panelSection: inspectorPanelSection,
+    setPanelSection: setInspectorPanelSection,
+    showAside: showInspectorAside
+  } = useAdaptiveSidePanelState({
+    shellState,
+    storageSurface: "layout-inspector",
+    projectId,
+    documentId,
+    initialSection: initialPanelSection
+  });
   const showFilmstripAside = shellState !== "Focus" && !filmstripCollapsed;
   const canUseCanvas = Boolean(workspaceOverlay && selectedPage);
   const imagePath =
@@ -672,12 +689,12 @@ export function ProjectDocumentLayoutWorkspaceShell({
 
   useEffect(() => {
     if (showInspectorAside) {
-      setInspectorDrawerOpen(false);
+      closeInspectorDrawer();
     }
     if (shellState !== "Focus") {
       setFilmstripDrawerOpen(false);
     }
-  }, [shellState, showInspectorAside]);
+  }, [closeInspectorDrawer, shellState, showInspectorAside]);
 
   useEffect(() => {
     setHoveredElementId(null);
@@ -936,6 +953,7 @@ export function ProjectDocumentLayoutWorkspaceShell({
 
   const navigateToWorkspace = (page: number, runId: string): void => {
     const href = projectDocumentLayoutWorkspacePath(projectId, documentId, {
+      panel: inspectorPanelSection,
       page,
       runId
     });
@@ -1841,6 +1859,25 @@ export function ProjectDocumentLayoutWorkspaceShell({
     executeTransitionAction(action);
   };
 
+  const handleInspectorPanelSectionChange = (
+    nextSection: SidePanelSection
+  ): void => {
+    if (nextSection === inspectorPanelSection) {
+      return;
+    }
+    setInspectorPanelSection(nextSection);
+    startTransition(() => {
+      router.replace(
+        projectDocumentLayoutWorkspacePath(projectId, documentId, {
+          page: selectedPageNumber,
+          panel: nextSection,
+          runId: selectedRunId
+        }),
+        { scroll: false }
+      );
+    });
+  };
+
   const cancelPendingTransition = (): void => {
     setPendingTransitionAction(null);
   };
@@ -2309,7 +2346,7 @@ export function ProjectDocumentLayoutWorkspaceShell({
     </>
   );
 
-  const inspectorPanel = (
+  const inspectorPanelContext = (
     <>
       <h2>Inspector</h2>
       {!selectedPage ? (
@@ -2755,6 +2792,196 @@ export function ProjectDocumentLayoutWorkspaceShell({
       )}
     </>
   );
+  const pageNumbers = pages
+    .map((page) => page.pageIndex + 1)
+    .sort((left, right) => left - right);
+  const selectedPagePosition = pageNumbers.indexOf(selectedPageNumber);
+  const previousPageNumber =
+    selectedPagePosition > 0 ? pageNumbers[selectedPagePosition - 1] : null;
+  const nextPageNumber =
+    selectedPagePosition >= 0 && selectedPagePosition < pageNumbers.length - 1
+      ? pageNumbers[selectedPagePosition + 1]
+      : null;
+  const inspectorInsightsPanel = (
+    <>
+      <ul className="projectMetaList">
+        <li>
+          <span>Workspace mode</span>
+          <strong>
+            {workspaceMode === "EDIT"
+              ? "Edit"
+              : workspaceMode === "READING_ORDER"
+                ? "Reading order"
+                : "Inspect"}
+          </strong>
+        </li>
+        <li>
+          <span>Run</span>
+          <strong>{selectedRunId}</strong>
+        </li>
+        <li>
+          <span>Page</span>
+          <strong>{selectedPage ? selectedPage.pageIndex + 1 : "N/A"}</strong>
+        </li>
+        <li>
+          <span>Regions</span>
+          <strong>{workspaceOverlay ? regions.length : 0}</strong>
+        </li>
+        <li>
+          <span>Lines</span>
+          <strong>{workspaceOverlay ? lines.length : 0}</strong>
+        </li>
+        <li>
+          <span>Reading edges</span>
+          <strong>{workspaceOverlay ? workspaceOverlay.readingOrder.length : 0}</strong>
+        </li>
+        <li>
+          <span>Rescue candidates</span>
+          <strong>{rescueCandidates.length}</strong>
+        </li>
+      </ul>
+      <div className="buttonRow">
+        {selectedRun ? (
+          <StatusChip tone={resolveRunTone(selectedRun.status)}>
+            Run {selectedRun.status}
+          </StatusChip>
+        ) : null}
+        {hasUnsavedChanges ? (
+          <StatusChip tone="warning">
+            {resolveUnsavedSummary({
+              layoutEditHasChanges,
+              layoutOperationCount: layoutEditOperationCount,
+              readingOrderHasChanges
+            })}
+          </StatusChip>
+        ) : (
+          <StatusChip tone="neutral">No unsaved changes</StatusChip>
+        )}
+      </div>
+    </>
+  );
+  const inspectorActionsPanel = (
+    <div className="buttonRow">
+      <button
+        className="secondaryButton"
+        onClick={() =>
+          requestTransitionAction({
+            kind: "OPEN_TRIAGE"
+          })
+        }
+        type="button"
+      >
+        Open triage
+      </button>
+      <button
+        className="secondaryButton"
+        disabled={!previousPageNumber}
+        onClick={() =>
+          previousPageNumber
+            ? requestTransitionAction({
+                kind: "NAVIGATE",
+                page: previousPageNumber,
+                runId: selectedRunId
+              })
+            : undefined
+        }
+        type="button"
+      >
+        Previous page
+      </button>
+      <button
+        className="secondaryButton"
+        disabled={!nextPageNumber}
+        onClick={() =>
+          nextPageNumber
+            ? requestTransitionAction({
+                kind: "NAVIGATE",
+                page: nextPageNumber,
+                runId: selectedRunId
+              })
+            : undefined
+        }
+        type="button"
+      >
+        Next page
+      </button>
+      <button
+        className="secondaryButton"
+        onClick={() =>
+          requestTransitionAction({
+            kind: "SET_MODE",
+            mode: "INSPECT"
+          })
+        }
+        type="button"
+      >
+        Inspect mode
+      </button>
+      <button
+        className="secondaryButton"
+        onClick={() =>
+          requestTransitionAction({
+            kind: "SET_MODE",
+            mode: "READING_ORDER"
+          })
+        }
+        type="button"
+      >
+        Reading-order mode
+      </button>
+      <button
+        className="secondaryButton"
+        disabled={!canEditLayout || !workspaceOverlay}
+        onClick={() =>
+          requestTransitionAction({
+            kind: "SET_MODE",
+            mode: "EDIT"
+          })
+        }
+        type="button"
+      >
+        Edit mode
+      </button>
+    </div>
+  );
+  const inspectorPanel = (
+    <>
+      <div className="adaptiveSidePanelTabs" role="tablist" aria-label="Inspector sections">
+        <button
+          aria-selected={inspectorPanelSection === "context"}
+          className="secondaryButton"
+          onClick={() => handleInspectorPanelSectionChange("context")}
+          role="tab"
+          type="button"
+        >
+          Context
+        </button>
+        <button
+          aria-selected={inspectorPanelSection === "insights"}
+          className="secondaryButton"
+          onClick={() => handleInspectorPanelSectionChange("insights")}
+          role="tab"
+          type="button"
+        >
+          Insights
+        </button>
+        <button
+          aria-selected={inspectorPanelSection === "actions"}
+          className="secondaryButton"
+          onClick={() => handleInspectorPanelSectionChange("actions")}
+          role="tab"
+          type="button"
+        >
+          Actions
+        </button>
+      </div>
+      {inspectorPanelSection === "context"
+        ? inspectorPanelContext
+        : inspectorPanelSection === "insights"
+          ? inspectorInsightsPanel
+          : inspectorActionsPanel}
+    </>
+  );
 
   return (
     <>
@@ -2989,7 +3216,11 @@ export function ProjectDocumentLayoutWorkspaceShell({
                   {!showInspectorAside ? (
                     <button
                       className="secondaryButton"
-                      onClick={() => setInspectorDrawerOpen((open) => !open)}
+                      onClick={() =>
+                        inspectorDrawerOpen
+                          ? closeInspectorDrawer()
+                          : openInspectorDrawer()
+                      }
                       type="button"
                     >
                       {inspectorDrawerOpen ? "Close inspector" : "Inspector drawer"}
@@ -3501,7 +3732,7 @@ export function ProjectDocumentLayoutWorkspaceShell({
       </Drawer>
       <DetailsDrawer
         description="Inspector drawer path for compact and focus workspace states."
-        onClose={() => setInspectorDrawerOpen(false)}
+        onClose={closeInspectorDrawer}
         open={inspectorDrawerOpen}
         title="Layout inspector"
       >

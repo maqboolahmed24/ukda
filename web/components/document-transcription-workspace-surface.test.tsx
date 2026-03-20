@@ -582,6 +582,7 @@ describe("transcription workspace interactions", () => {
     renderSurface();
 
     await user.click(screen.getByRole("button", { name: "line-2" }));
+    await user.click(screen.getByRole("tab", { name: "Insights" }));
 
     expect(screen.getByText("Selected line confidence")).toBeTruthy();
     expect(screen.getByText("READ_AGREEMENT")).toBeTruthy();

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { SectionState, StatusChip } from "@ukde/ui/primitives";
 
+import { DocumentPipelineLiveStatus } from "../../../../../../../components/document-pipeline-live-status";
 import {
   createProjectDocumentRedactionRun,
   getProjectDocument,
@@ -273,6 +274,11 @@ export default async function ProjectDocumentPrivacyPage({
           ) : null}
         </div>
       </section>
+
+      <DocumentPipelineLiveStatus
+        documentId={resolvedDocument.id}
+        projectId={projectId}
+      />
 
       {query.notice === "run_created" ? (
         <section className="sectionCard ukde-panel">

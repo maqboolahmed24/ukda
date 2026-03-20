@@ -113,6 +113,10 @@ test("privacy workspace next-unresolved navigation is deterministic and deep-lin
 
   await page.reload();
   await expect(page).toHaveURL(/findingId=red-find-1/);
+  await page
+    .getByLabel("Transcript and findings", { exact: true })
+    .getByRole("tab", { name: "Insights" })
+    .click();
   await expect(page.locator(".privacyWorkspaceTranscriptList")).toContainText("line-privacy-001");
 });
 

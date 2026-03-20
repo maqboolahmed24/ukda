@@ -111,7 +111,10 @@ def create_rate_limit_middleware(settings: Settings):
             return response
 
         client_host = request.client.host if request.client else "unknown"
-        decision = limiter.evaluate(key=client_host, rule=rule)
+        # Keep counters independent per concrete route so high-volume calls on one
+        # endpoint do not starve unrelated protected endpoints for the same client.
+        route_key = f"{request.method}:{request.url.path}"
+        decision = limiter.evaluate(key=f"{client_host}:{route_key}", rule=rule)
         if not decision.allowed:
             response = JSONResponse(
                 status_code=429,
@@ -133,4 +136,3 @@ def create_rate_limit_middleware(settings: Settings):
         return response
 
     return _middleware
-

@@ -1,0 +1,205 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - link "Skip to work region" [ref=e3] [cursor=pointer]:
+      - /url: "#ukde-shell-work-region"
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - paragraph [ref=e6]: Victorian Parish Registers
+        - paragraph [ref=e7]: Project workspace
+      - generic [ref=e8]:
+        - group "Global command controls" [ref=e9]:
+          - button "Project switcher" [ref=e10] [cursor=pointer]
+          - button "Command bar" [ref=e11] [cursor=pointer]:
+            - generic [ref=e12]: Command bar
+            - generic [ref=e13]: ⌘/Ctrl + K
+        - 'button "Theme preference: System (Dark). Click to switch to Dark." [ref=e15] [cursor=pointer]':
+          - img [ref=e17]
+        - link "Help" [ref=e19] [cursor=pointer]:
+          - /url: /health
+        - generic [ref=e20]:
+          - generic [ref=e21]: Env Test
+          - generic [ref=e22]: Tier Controlled
+          - generic [ref=e23]: Expanded
+        - group [ref=e24]:
+          - generic "User menu" [ref=e25] [cursor=pointer]: Fixture Admin
+    - generic [ref=e26]:
+      - complementary [ref=e27]:
+        - paragraph [ref=e28]: Navigation
+        - navigation "Primary navigation" [ref=e29]:
+          - list [ref=e30]:
+            - listitem [ref=e31]:
+              - link "Projects" [ref=e32] [cursor=pointer]:
+                - /url: /projects
+                - generic [ref=e33]: Projects
+            - listitem [ref=e34]:
+              - link "My activity" [ref=e35] [cursor=pointer]:
+                - /url: /activity
+                - generic [ref=e36]: My activity
+            - listitem [ref=e37]:
+              - link "Approved models" [ref=e38] [cursor=pointer]:
+                - /url: /approved-models
+                - generic [ref=e39]: Approved models
+            - listitem [ref=e40]:
+              - link "Admin" [ref=e41] [cursor=pointer]:
+                - /url: /admin
+                - generic [ref=e42]: Admin
+      - generic [ref=e43]:
+        - navigation "Project context" [ref=e44]:
+          - list [ref=e45]:
+            - listitem [ref=e46]:
+              - link "Overview" [ref=e47] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/overview
+            - listitem [ref=e48]:
+              - link "Documents" [ref=e49] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/documents
+            - listitem [ref=e50]:
+              - link "Model assignments" [ref=e51] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/model-assignments
+            - listitem [ref=e52]:
+              - link "Search" [ref=e53] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/search
+            - listitem [ref=e54]:
+              - link "Entities" [ref=e55] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/entities
+            - listitem [ref=e56]:
+              - link "Derivatives" [ref=e57] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/derivatives
+            - listitem [ref=e58]:
+              - link "Indexes" [ref=e59] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/indexes
+            - listitem [ref=e60]:
+              - link "Policies" [ref=e61] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/policies
+            - listitem [ref=e62]:
+              - link "Pseudonym registry" [ref=e63] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/pseudonym-registry
+            - listitem [ref=e64]:
+              - link "Jobs" [ref=e65] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/jobs
+            - listitem [ref=e66]:
+              - link "Export candidates" [ref=e67] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/export-candidates
+            - listitem [ref=e68]:
+              - link "Export requests" [ref=e69] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/export-requests
+            - listitem [ref=e70]:
+              - link "Export review" [ref=e71] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/export-review
+            - listitem [ref=e72]:
+              - link "Activity" [ref=e73] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/activity
+            - listitem [ref=e74]:
+              - link "Settings" [ref=e75] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/settings
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - generic [ref=e79]:
+              - paragraph [ref=e80]: Projects / Victorian Parish Registers
+              - heading "Preprocessing compare" [level=1] [ref=e81]
+              - paragraph [ref=e82]: Canonical diagnostics surface for before/after run comparison and warning deltas.
+              - navigation "Breadcrumb" [ref=e84]:
+                - list [ref=e85]:
+                  - listitem [ref=e86]:
+                    - link "Projects" [ref=e87] [cursor=pointer]:
+                      - /url: /projects
+                    - text: /
+                  - listitem [ref=e88]:
+                    - link "Victorian Parish Registers" [ref=e89] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/overview
+                    - text: /
+                  - listitem [ref=e90]:
+                    - link "Documents" [ref=e91] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents
+                    - text: /
+                  - listitem [ref=e92]:
+                    - link "Document" [ref=e93] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents/doc-fixture-002
+                    - text: /
+                  - listitem [ref=e94]:
+                    - link "Preprocessing" [ref=e95] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing
+                    - text: /
+                  - listitem [ref=e96]:
+                    - generic [ref=e97]: Compare
+            - generic [ref=e98]:
+              - link "Open viewer" [ref=e99] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/viewer?page=2
+              - link "Document detail" [ref=e100] [cursor=pointer]:
+                - /url: /projects/project-fixture-alpha/documents/doc-fixture-002
+          - main [ref=e102]:
+            - generic [ref=e103]:
+              - paragraph [ref=e104]: Preprocessing compare
+              - heading "register-volume-04.pdf" [level=2] [ref=e105]
+              - paragraph [ref=e106]: Canonical preprocessing diagnostics surface for run-level before/after analysis.
+              - generic [ref=e107]:
+                - link "Back to preprocessing" [ref=e108] [cursor=pointer]:
+                  - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing
+                - link "Open quality table" [ref=e109] [cursor=pointer]:
+                  - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/quality?runId=pre-run-fixture-002
+                - link "Back to viewer" [ref=e110] [cursor=pointer]:
+                  - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/viewer?comparePair=gray_binary&mode=compare&page=2&runId=pre-run-fixture-002
+                - link "Keep this compare context" [ref=e111] [cursor=pointer]:
+                  - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/compare?baseRunId=pre-run-fixture-001&candidateRunId=pre-run-fixture-002&page=2&viewerComparePair=gray_binary&viewerMode=compare&viewerRunId=pre-run-fixture-002
+            - generic [ref=e112]:
+              - heading "Run comparison summary" [level=3] [ref=e113]
+              - list [ref=e114]:
+                - listitem [ref=e115]:
+                  - generic [ref=e116]: Base run
+                  - strong [ref=e117]:
+                    - link "pre-run-fixture-001" [ref=e118] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/runs/pre-run-fixture-001
+                - listitem [ref=e119]:
+                  - generic [ref=e120]: Candidate run
+                  - strong [ref=e121]:
+                    - link "pre-run-fixture-002" [ref=e122] [cursor=pointer]:
+                      - /url: /projects/project-fixture-alpha/documents/doc-fixture-002/preprocessing/runs/pre-run-fixture-002
+                - listitem [ref=e123]:
+                  - generic [ref=e124]: Base blocked pages
+                  - strong [ref=e125]: "0"
+                - listitem [ref=e126]:
+                  - generic [ref=e127]: Candidate blocked pages
+                  - strong [ref=e128]: "0"
+                - listitem [ref=e129]:
+                  - generic [ref=e130]: Base warning count
+                  - strong [ref=e131]: "2"
+                - listitem [ref=e132]:
+                  - generic [ref=e133]: Candidate warning count
+                  - strong [ref=e134]: "1"
+            - generic [ref=e135]:
+              - heading "Page diagnostics" [level=3] [ref=e136]
+              - list [ref=e137]:
+                - listitem [ref=e138]:
+                  - generic [ref=e139]:
+                    - generic [ref=e140]: Page 1
+                    - generic [ref=e141]: Base PASS
+                    - generic [ref=e142]: Candidate PASS
+                  - paragraph [ref=e143]: Δ warnings +0 · Base warnings none · Candidate warnings none · Candidate gray available
+                - listitem [ref=e144]:
+                  - generic [ref=e145]:
+                    - generic [ref=e146]: Page 2
+                    - generic [ref=e147]: Base REVIEW_REQUIRED
+                    - generic [ref=e148]: Candidate PASS
+                  - paragraph [ref=e149]: Δ warnings -1 · Base warnings LOW_DPI, BLUR_HIGH · Candidate warnings LOW_DPI · Candidate gray available
+      - complementary [ref=e150]:
+        - paragraph [ref=e151]: Adaptive state
+        - heading "Expanded" [level=2] [ref=e152]
+        - paragraph [ref=e153]: Rail, workspace, and inspector remain visible for dense review work.
+        - list [ref=e154]:
+          - listitem [ref=e155]:
+            - generic [ref=e156]: Task context
+            - strong [ref=e157]: standard
+          - listitem [ref=e158]:
+            - generic [ref=e159]: Focus override
+            - strong [ref=e160]: "off"
+          - listitem [ref=e161]:
+            - generic [ref=e162]: Role mode
+            - strong [ref=e163]: ADMIN
+        - paragraph [ref=e164]:
+          - text: "Keyboard path:"
+          - generic [ref=e165]: Tab
+          - text: through rail, context bar, then work region.
+  - alert [ref=e166]
+```

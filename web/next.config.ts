@@ -24,7 +24,30 @@ const nextConfig: NextConfig = {
   output: "standalone",
   reactStrictMode: true,
   devIndicators: false,
+  allowedDevOrigins: ["127.0.0.1", "::1"],
   transpilePackages: ["@ukde/contracts", "@ukde/ui"],
+  webpack(config, { dev }) {
+    if (dev) {
+      const existingIgnored = config.watchOptions?.ignored;
+      const ignored = Array.isArray(existingIgnored)
+        ? existingIgnored
+        : typeof existingIgnored === "string"
+          ? [existingIgnored]
+          : [];
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: [
+          ...ignored,
+          "**/.playwright-cli/**",
+          "**/.ukde-storage/**",
+          "**/output/**",
+          "**/playwright-report/**",
+          "**/test-results/**"
+        ]
+      };
+    }
+    return config;
+  },
   async headers() {
     return [
       {

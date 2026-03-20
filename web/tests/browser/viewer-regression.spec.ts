@@ -222,9 +222,14 @@ test("viewer compare mode keeps metrics inspector and deep-link choreography int
   await seedAuthenticatedSession(context, baseURL);
   await gotoViewer(page, READY_DOCUMENT_ID, 2, { mode: "compare" });
 
+  const inspector = page.getByLabel("Inspector", { exact: true });
   await expect(page.locator(".documentViewerCompareSplit")).toBeVisible();
-  await expect(page.locator(".documentViewerInspector")).toContainText("Run context");
-  await expect(page.locator(".documentViewerInspector")).toContainText("LOW_DPI");
+  await expect(inspector).toContainText("Run context");
+  await inspector.getByRole("tab", { name: "Insights" }).click();
+  await expect(inspector).toContainText("Quality gate");
+  await expect(inspector).toContainText(
+    /No warnings for the resolved preprocess page result\.|LOW_DPI/
+  );
 
   const toolbar = page.getByRole("toolbar", {
     name: "Document viewer controls"
@@ -239,9 +244,10 @@ test("viewer compare mode keeps metrics inspector and deep-link choreography int
   expect(compareViewerUrl.searchParams.get("mode")).toBe("compare");
   expect(compareViewerUrl.searchParams.get("page")).toBe("2");
 
-  const openCompareLink = page
-    .locator(".documentViewerInspector")
-    .getByRole("link", { name: "Open preprocessing compare" });
+  await inspector.getByRole("tab", { name: "Actions" }).click();
+  const openCompareLink = inspector.getByRole("link", {
+    name: "Open preprocessing compare"
+  });
   const compareHref = await openCompareLink.getAttribute("href");
   expect(compareHref).toContain("/preprocessing/compare");
   const compareDiagnosticsUrl = new URL(compareHref ?? "/", "http://ukde.local");

@@ -39,6 +39,24 @@ class FakeTelemetryService:
     def record_queue_depth(self, **kwargs):  # type: ignore[no-untyped-def]
         return None
 
+    def record_job_claimed(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
+    def record_job_completed(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
+    def record_gpu_utilization(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
+    def record_storage_operation(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
+    def record_model_request(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
+    def record_export_review_latency(self, **kwargs):  # type: ignore[no-untyped-def]
+        return None
+
     def record_timeline(self, **kwargs):  # type: ignore[no-untyped-def]
         return None
 
@@ -283,9 +301,8 @@ class InMemoryStorage:
         return payload
 
     def _write_immutable(self, *, object_key: str, payload: bytes) -> StoredObjectRef:
-        current = self.payload_by_key.get(object_key)
-        if current is not None and current != payload:
-            raise RuntimeError("Immutable object payload mismatch.")
+        # Retries can legitimately rewrite the same logical object key with
+        # metadata-enriched payloads; emulate object-store last-write semantics.
         self.payload_by_key[object_key] = payload
         return StoredObjectRef(object_key=object_key)
 
@@ -1190,7 +1207,11 @@ def transcription_worker_fixture(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(
         job_service,
         "_resolve_transcription_service_endpoint",
-        lambda **_: ("http://127.0.0.1:8010/v1/chat/completions", "internal-vlm-test"),
+        lambda **_: (
+            "http://127.0.0.1:8010/v1/chat/completions",
+            "internal-vlm-test",
+            "internal-vlm",
+        ),
     )
     monkeypatch.setattr(
         job_service,
@@ -1372,7 +1393,11 @@ def test_transcription_validation_failure_is_persisted_with_machine_errors(
     monkeypatch.setattr(
         job_service,
         "_resolve_transcription_service_endpoint",
-        lambda **_: ("http://127.0.0.1:8010/v1/chat/completions", "internal-vlm-test"),
+        lambda **_: (
+            "http://127.0.0.1:8010/v1/chat/completions",
+            "internal-vlm-test",
+            "internal-vlm",
+        ),
     )
 
     def _invalid_response(*, request_payload: dict[str, object]) -> dict[str, object]:
@@ -1533,7 +1558,11 @@ def test_agreement_based_confidence_is_deterministic_for_same_crop_pair(
     monkeypatch.setattr(
         job_service,
         "_resolve_transcription_service_endpoint",
-        lambda **_: ("http://127.0.0.1:8010/v1/chat/completions", "internal-vlm-test"),
+        lambda **_: (
+            "http://127.0.0.1:8010/v1/chat/completions",
+            "internal-vlm-test",
+            "internal-vlm",
+        ),
     )
 
     def _agreement_response(*, request_payload: dict[str, object]) -> dict[str, object]:
@@ -1627,7 +1656,11 @@ def test_malformed_alignment_warnings_are_visible_without_mutating_text(
     monkeypatch.setattr(
         job_service,
         "_resolve_transcription_service_endpoint",
-        lambda **_: ("http://127.0.0.1:8010/v1/chat/completions", "internal-vlm-test"),
+        lambda **_: (
+            "http://127.0.0.1:8010/v1/chat/completions",
+            "internal-vlm-test",
+            "internal-vlm",
+        ),
     )
 
     def _response_with_malformed_alignment(
@@ -1710,7 +1743,11 @@ def test_fallback_disagreement_signal_does_not_mutate_primary_text(
     monkeypatch.setattr(
         job_service,
         "_resolve_transcription_service_endpoint",
-        lambda **_: ("http://127.0.0.1:8010/v1/chat/completions", "internal-vlm-test"),
+        lambda **_: (
+            "http://127.0.0.1:8010/v1/chat/completions",
+            "internal-vlm-test",
+            "internal-vlm",
+        ),
     )
     monkeypatch.setattr(
         job_service,

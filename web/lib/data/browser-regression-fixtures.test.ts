@@ -28,6 +28,7 @@ import {
   getBrowserFixtureSessionToken,
   resolveBrowserRegressionApiResult
 } from "./browser-regression-fixtures";
+import type { DocumentPipelineStatusResponse } from "../pipeline-status";
 
 const MODE_FLAG = "UKDE_BROWSER_TEST_MODE";
 
@@ -296,6 +297,31 @@ describe("browser regression fixtures document page patch support", () => {
     expect(adminCancelResult).not.toBeNull();
     expect(adminCancelResult?.ok).toBe(true);
     expect(adminCancelResult?.data?.attempt.status).toBe("CANCELED");
+  });
+
+  it("serves aggregate pipeline status payload with deterministic phase shape", () => {
+    process.env[MODE_FLAG] = "1";
+    const authToken = getBrowserFixtureSessionToken();
+    const result = resolveBrowserRegressionApiResult<DocumentPipelineStatusResponse>({
+      authToken,
+      method: "GET",
+      path: "/projects/project-fixture-alpha/documents/doc-fixture-002/pipeline/status"
+    });
+
+    expect(result).not.toBeNull();
+    expect(result?.ok).toBe(true);
+    expect(result?.data?.phases).toHaveLength(6);
+    expect(result?.data?.phases.map((phase) => phase.phaseId)).toEqual([
+      "INGEST",
+      "PREPROCESS",
+      "LAYOUT",
+      "TRANSCRIPTION",
+      "PRIVACY",
+      "GOVERNANCE"
+    ]);
+    expect(result?.data?.phases.every((phase) => typeof phase.label === "string")).toBe(true);
+    expect(result?.data?.recommendedPollMs).toBeGreaterThan(0);
+    expect(result?.data?.overallPercent).not.toBeNull();
   });
 
   it("serves project search hits from active index and blocks auditor profile", () => {

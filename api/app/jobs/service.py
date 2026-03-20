@@ -786,6 +786,54 @@ class JobService:
         )
         return row
 
+    def claim_next_document_ingest_job_for_worker(
+        self,
+        *,
+        project_id: str,
+        document_id: str,
+        worker_id: str,
+        lease_seconds: int,
+    ) -> JobRecord | None:
+        row = self._store.claim_next_document_ingest_job(
+            project_id=project_id,
+            document_id=document_id,
+            worker_id=worker_id,
+            lease_seconds=lease_seconds,
+        )
+        self._refresh_queue_depth()
+        if row is None:
+            return None
+        self._telemetry_service.record_job_claimed(enqueued_at=row.created_at)
+        self._refresh_worker_gpu_utilization()
+        self._audit_service.record_event_best_effort(
+            event_type="JOB_RUN_STARTED",
+            actor_user_id=None,
+            project_id=row.project_id,
+            object_type="job",
+            object_id=row.id,
+            metadata={
+                "job_type": row.type,
+                "status": row.status,
+                "attempt_number": row.attempt_number,
+                "worker_id": worker_id,
+            },
+            request_id=f"worker:{worker_id}:{row.id}",
+        )
+        self._telemetry_service.record_timeline(
+            scope="worker",
+            severity="INFO",
+            message="Worker claimed a queued document-ingest job.",
+            request_id=None,
+            trace_id=current_trace_id(),
+            details={
+                "job_id": row.id,
+                "project_id": row.project_id,
+                "document_id": document_id,
+                "worker_id": worker_id,
+            },
+        )
+        return row
+
     def heartbeat_running_job(
         self,
         *,

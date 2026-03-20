@@ -47,6 +47,10 @@ import {
   VIEWER_ZOOM_MAX,
   VIEWER_ZOOM_MIN
 } from "../lib/url-state";
+import {
+  useAdaptiveSidePanelState,
+  type SidePanelSection
+} from "../lib/adaptive-side-panel";
 
 const ZOOM_STEP_PERCENT = 10;
 const FILMSTRIP_SCROLL_STORAGE_PREFIX = "ukde.viewer.filmstrip-scroll";
@@ -124,6 +128,7 @@ interface ProjectDocumentViewerShellProps {
   documentName: string;
   documentStatus: DocumentStatus;
   initialComparePair: ViewerComparePair;
+  initialPanelSection: SidePanelSection;
   initialRunId?: string;
   initialViewerMode: ViewerMode;
   initialZoomPercent: number;
@@ -299,6 +304,7 @@ export function ProjectDocumentViewerShell({
   documentName,
   documentStatus,
   initialComparePair,
+  initialPanelSection,
   initialRunId,
   initialViewerMode,
   initialZoomPercent,
@@ -316,7 +322,6 @@ export function ProjectDocumentViewerShell({
     initialRunId ?? activePreprocessRunId
   );
   const [shellState, setShellState] = useState<ShellState>("Expanded");
-  const [inspectorOpen, setInspectorOpen] = useState(false);
   const [filmstripDrawerOpen, setFilmstripDrawerOpen] = useState(false);
   const [pageDetail, setPageDetail] =
     useState<ProjectDocumentPageDetail | null>(currentPageDetail);
@@ -525,6 +530,21 @@ export function ProjectDocumentViewerShell({
     (maxPanX > 0.5 || maxPanY > 0.5);
   const filmstripScrollStorageKey = `${FILMSTRIP_SCROLL_STORAGE_PREFIX}:${projectId}:${documentId}`;
   const panelPresetStorageKey = `${PANEL_PRESET_STORAGE_PREFIX}:${projectId}`;
+  const {
+    closeDrawer: closeInspectorDrawer,
+    drawerOpen: inspectorDrawerOpen,
+    openDrawer: openInspectorDrawer,
+    panelSection: inspectorPanelSection,
+    setPanelSection: setInspectorPanelSection,
+    showAside: showInspectorAside,
+    showDrawerToggle: showInspectorDrawerToggle
+  } = useAdaptiveSidePanelState({
+    shellState,
+    storageSurface: "viewer-inspector",
+    projectId,
+    documentId,
+    initialSection: initialPanelSection
+  });
 
   const currentViewerPath = projectDocumentViewerPath(
     projectId,
@@ -533,6 +553,7 @@ export function ProjectDocumentViewerShell({
     {
       comparePair: viewerMode === "compare" ? comparePair : undefined,
       mode: viewerMode,
+      panel: inspectorPanelSection,
       runId: resolvedRunId ?? undefined,
       zoom: zoomPercent
     }
@@ -571,8 +592,6 @@ export function ProjectDocumentViewerShell({
     currentComparePath || preprocessingComparePath || currentPreprocessingPath;
   const backToDocumentsPath = projectDocumentsPath(projectId);
   const showFilmstripAside = shellState !== "Focus";
-  const showInspectorAside =
-    shellState === "Expanded" || shellState === "Balanced";
   const filmstripWidth = resolvePanelWidth(
     shellState,
     filmstripPreset,
@@ -698,12 +717,12 @@ export function ProjectDocumentViewerShell({
 
   useEffect(() => {
     if (showInspectorAside) {
-      setInspectorOpen(false);
+      closeInspectorDrawer();
     }
     if (shellState !== "Focus") {
       setFilmstripDrawerOpen(false);
     }
-  }, [shellState, showInspectorAside]);
+  }, [closeInspectorDrawer, shellState, showInspectorAside]);
 
   useEffect(() => {
     setPageJumpValue(String(currentPage));
@@ -895,6 +914,7 @@ export function ProjectDocumentViewerShell({
         projectDocumentViewerPath(projectId, documentId, bounded, {
           comparePair: viewerMode === "compare" ? comparePair : undefined,
           mode: viewerMode,
+          panel: inspectorPanelSection,
           runId: resolvedRunId ?? undefined,
           zoom: zoomPercent
         }),
@@ -919,6 +939,7 @@ export function ProjectDocumentViewerShell({
         projectDocumentViewerPath(projectId, documentId, currentPage, {
           comparePair: viewerMode === "compare" ? comparePair : undefined,
           mode: viewerMode,
+          panel: inspectorPanelSection,
           runId: resolvedRunId ?? undefined,
           zoom: bounded
         }),
@@ -985,13 +1006,16 @@ export function ProjectDocumentViewerShell({
     mode: ViewerMode,
     runId: string | null,
     zoom: number,
-    nextComparePair: ViewerComparePair
+    nextComparePair: ViewerComparePair,
+    panel?: SidePanelSection
   ) => {
+    const resolvedPanel = panel ?? inspectorPanelSection;
     startTransition(() => {
       router.replace(
         projectDocumentViewerPath(projectId, documentId, currentPage, {
           comparePair: mode === "compare" ? nextComparePair : undefined,
           mode,
+          panel: resolvedPanel,
           runId: runId ?? undefined,
           zoom
         }),
@@ -1028,6 +1052,20 @@ export function ProjectDocumentViewerShell({
     }
     setComparePair(nextPair);
     syncViewerUrlState(viewerMode, selectedRunId, zoomPercent, nextPair);
+  };
+
+  const handleInspectorPanelSectionChange = (nextSection: SidePanelSection) => {
+    if (nextSection === inspectorPanelSection) {
+      return;
+    }
+    setInspectorPanelSection(nextSection);
+    syncViewerUrlState(
+      viewerMode,
+      selectedRunId,
+      zoomPercent,
+      comparePair,
+      nextSection
+    );
   };
 
   const toolbarActions = useMemo(
@@ -1086,26 +1124,27 @@ export function ProjectDocumentViewerShell({
         id: "toggle-inspector",
         label: showInspectorAside
           ? "Inspector visible"
-          : inspectorOpen
+          : inspectorDrawerOpen
             ? "Close inspector"
             : "Inspector drawer",
-        disabled: showInspectorAside,
-        onAction: () => setInspectorOpen((open) => !open),
-        pressed: showInspectorAside ? undefined : inspectorOpen
+        disabled: !showInspectorDrawerToggle,
+        onAction: () =>
+          inspectorDrawerOpen ? closeInspectorDrawer() : openInspectorDrawer(),
+        pressed: showInspectorAside ? undefined : inspectorDrawerOpen
       }
     ],
     [
+      closeInspectorDrawer,
       currentPage,
       filmstripDrawerOpen,
-      inspectorOpen,
+      inspectorDrawerOpen,
+      openInspectorDrawer,
       pageDetail,
       rotationSaving,
       shellState,
+      showInspectorDrawerToggle,
       showInspectorAside,
       totalPages,
-      resolvedRunId,
-      comparePair,
-      viewerMode,
       zoomPercent
     ]
   );
@@ -1212,10 +1251,51 @@ export function ProjectDocumentViewerShell({
     8
   );
   const warningChips = preprocessedGrayVariant?.warningsJson ?? [];
+  const viewerModeLabel =
+    viewerMode === "original"
+      ? "Original"
+      : viewerMode === "preprocessed"
+        ? "Preprocessed"
+        : "Compare";
   const inspectorRunLabel =
     resolvedRunId ??
     (viewerMode === "original" ? "Original-only mode" : "No run resolved");
-  const inspectorContent = (
+  const inspectorSectionTabs = (
+    <div
+      className="adaptiveSidePanelTabs"
+      role="tablist"
+      aria-label="Inspector sections"
+    >
+      <button
+        aria-selected={inspectorPanelSection === "context"}
+        className="secondaryButton"
+        onClick={() => handleInspectorPanelSectionChange("context")}
+        role="tab"
+        type="button"
+      >
+        Context
+      </button>
+      <button
+        aria-selected={inspectorPanelSection === "insights"}
+        className="secondaryButton"
+        onClick={() => handleInspectorPanelSectionChange("insights")}
+        role="tab"
+        type="button"
+      >
+        Insights
+      </button>
+      <button
+        aria-selected={inspectorPanelSection === "actions"}
+        className="secondaryButton"
+        onClick={() => handleInspectorPanelSectionChange("actions")}
+        role="tab"
+        type="button"
+      >
+        Actions
+      </button>
+    </div>
+  );
+  const inspectorContextContent = (
     <>
       <ul className="projectMetaList">
         <li>
@@ -1232,33 +1312,11 @@ export function ProjectDocumentViewerShell({
         </li>
         <li>
           <span>Viewer mode</span>
-          <strong>
-            {viewerMode === "original"
-              ? "Original"
-              : viewerMode === "preprocessed"
-                ? "Preprocessed"
-                : "Compare"}
-          </strong>
+          <strong>{viewerModeLabel}</strong>
         </li>
         <li>
           <span>Run context</span>
           <strong>{inspectorRunLabel}</strong>
-        </li>
-        <li>
-          <span>Variant status</span>
-          <strong>
-            {viewerMode === "original"
-              ? "N/A"
-              : preprocessedGrayVariant?.resultStatus ?? "Unavailable"}
-          </strong>
-        </li>
-        <li>
-          <span>Quality gate</span>
-          <strong>
-            {viewerMode === "original"
-              ? "N/A"
-              : preprocessedGrayVariant?.qualityGateStatus ?? "Unavailable"}
-          </strong>
         </li>
         <li>
           <span>Page status</span>
@@ -1284,6 +1342,28 @@ export function ProjectDocumentViewerShell({
           {documentStatus}
         </StatusChip>
       </div>
+    </>
+  );
+  const inspectorInsightsContent = (
+    <>
+      <ul className="projectMetaList">
+        <li>
+          <span>Variant status</span>
+          <strong>
+            {viewerMode === "original"
+              ? "N/A"
+              : preprocessedGrayVariant?.resultStatus ?? "Unavailable"}
+          </strong>
+        </li>
+        <li>
+          <span>Quality gate</span>
+          <strong>
+            {viewerMode === "original"
+              ? "N/A"
+              : preprocessedGrayVariant?.qualityGateStatus ?? "Unavailable"}
+          </strong>
+        </li>
+      </ul>
       {warningChips.length > 0 ? (
         <div className="documentViewerWarningChips" aria-label="Page warning chips">
           {warningChips.map((warning) => (
@@ -1309,22 +1389,46 @@ export function ProjectDocumentViewerShell({
           Metrics become visible once a preprocess run result is available for this page.
         </p>
       )}
-      <div className="buttonRow">
-        <Link className="secondaryButton" href={currentQualityPath}>
-          Open quality table
-        </Link>
-        {viewerMode === "compare" ? (
-          <Link className="secondaryButton" href={preferredComparePath}>
-            Open preprocessing compare
-          </Link>
-        ) : null}
-      </div>
       {viewerMode === "compare" ? (
         <p className="ukde-muted">
           Viewer compare is an in-context reading aid. Full run diagnostics remain on the
           canonical preprocessing compare route.
         </p>
       ) : null}
+    </>
+  );
+  const inspectorActionsContent = (
+    <div className="buttonRow">
+      <Link className="secondaryButton" href={currentQualityPath}>
+        Open quality table
+      </Link>
+      {viewerMode === "compare" ? (
+        <Link className="secondaryButton" href={preferredComparePath}>
+          Open preprocessing compare
+        </Link>
+      ) : null}
+      <Link className="secondaryButton" href={currentDocumentPath}>
+        Open document
+      </Link>
+      <Link className="secondaryButton" href={currentIngestStatusPath}>
+        View ingest status
+      </Link>
+      <Link className="secondaryButton" href={currentPreprocessingPath}>
+        Open preprocessing
+      </Link>
+      <Link className="secondaryButton" href={backToDocumentsPath}>
+        Back to documents
+      </Link>
+    </div>
+  );
+  const inspectorContent = (
+    <>
+      {inspectorSectionTabs}
+      {inspectorPanelSection === "context"
+        ? inspectorContextContent
+        : inspectorPanelSection === "insights"
+          ? inspectorInsightsContent
+          : inspectorActionsContent}
     </>
   );
 
@@ -1573,6 +1677,7 @@ export function ProjectDocumentViewerShell({
                           comparePair:
                             viewerMode === "compare" ? comparePair : undefined,
                           mode: viewerMode,
+                          panel: inspectorPanelSection,
                           runId: resolvedRunId ?? undefined,
                           zoom: zoomPercent
                         }
@@ -1708,22 +1813,11 @@ export function ProjectDocumentViewerShell({
 
       <DetailsDrawer
         description="Inspector drawer path for compact and focus work regions."
-        onClose={() => setInspectorOpen(false)}
-        open={inspectorOpen}
+        onClose={closeInspectorDrawer}
+        open={inspectorDrawerOpen}
         title="Viewer inspector"
       >
         {inspectorContent}
-        <div className="buttonRow">
-          <Link className="secondaryButton" href={currentDocumentPath}>
-            Open document
-          </Link>
-          <Link className="secondaryButton" href={currentIngestStatusPath}>
-            View ingest status
-          </Link>
-          <Link className="secondaryButton" href={backToDocumentsPath}>
-            Back to documents
-          </Link>
-        </div>
       </DetailsDrawer>
 
       <Drawer
@@ -1765,6 +1859,7 @@ export function ProjectDocumentViewerShell({
                         comparePair:
                           viewerMode === "compare" ? comparePair : undefined,
                         mode: viewerMode,
+                        panel: inspectorPanelSection,
                         runId: resolvedRunId ?? undefined,
                         zoom: zoomPercent
                       }

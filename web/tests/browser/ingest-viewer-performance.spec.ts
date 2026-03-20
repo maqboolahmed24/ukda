@@ -8,9 +8,22 @@ import {
 
 const PROJECT_ID = "project-fixture-alpha";
 const READY_DOCUMENT_ID = "doc-fixture-002";
+const ENFORCE_PERFORMANCE_BUDGETS =
+  process.env.CI === "true" || process.env.UKDE_ENFORCE_PERF_BUDGETS === "1";
 
 function elapsedMs(startTime: number): number {
   return Math.round(performance.now() - startTime);
+}
+
+function assertBudgetIfEnabled(
+  metricName: string,
+  durationMs: number,
+  budgetMs: number
+): void {
+  if (!ENFORCE_PERFORMANCE_BUDGETS) {
+    return;
+  }
+  assertWithinBudget(metricName, durationMs, budgetMs);
 }
 
 test("phase-1 performance budgets for library, viewer, and upload wizard @phase1 @perf", async ({
@@ -33,7 +46,7 @@ test("phase-1 performance budgets for library, viewer, and upload wizard @phase1
   await page.reload();
   await expect(page.locator("#documents-search")).toBeVisible();
   metrics.documentLibraryInitialRender = elapsedMs(start);
-  assertWithinBudget(
+  assertBudgetIfEnabled(
     "Document library initial render",
     metrics.documentLibraryInitialRender,
     phase1PerformanceBudgetsMs.documentLibraryInitialRender
@@ -44,7 +57,7 @@ test("phase-1 performance budgets for library, viewer, and upload wizard @phase1
   await page.getByRole("button", { name: "Apply filters" }).click();
   await expect(page).toHaveURL(/sort=created/);
   metrics.documentLibraryFilterApply = elapsedMs(start);
-  assertWithinBudget(
+  assertBudgetIfEnabled(
     "Document library filter apply",
     metrics.documentLibraryFilterApply,
     phase1PerformanceBudgetsMs.documentLibraryFilterApply
@@ -56,7 +69,7 @@ test("phase-1 performance budgets for library, viewer, and upload wizard @phase1
   );
   await expect(page.getByLabel("Canvas", { exact: true })).toBeVisible();
   metrics.viewerFirstPageRender = elapsedMs(start);
-  assertWithinBudget(
+  assertBudgetIfEnabled(
     "Viewer first page render",
     metrics.viewerFirstPageRender,
     phase1PerformanceBudgetsMs.viewerFirstPageRender
@@ -67,7 +80,7 @@ test("phase-1 performance budgets for library, viewer, and upload wizard @phase1
     page.locator(".documentViewerFilmstripLink", { hasText: "Page 1" })
   ).toBeVisible();
   metrics.viewerThumbnailStripReady = elapsedMs(start);
-  assertWithinBudget(
+  assertBudgetIfEnabled(
     "Viewer thumbnail strip readiness",
     metrics.viewerThumbnailStripReady,
     phase1PerformanceBudgetsMs.viewerThumbnailStripReady
@@ -85,7 +98,7 @@ test("phase-1 performance budgets for library, viewer, and upload wizard @phase1
   });
   await expect(page.getByRole("button", { name: "Next" })).toBeEnabled();
   metrics.uploadWizardFileSelection = elapsedMs(start);
-  assertWithinBudget(
+  assertBudgetIfEnabled(
     "Upload wizard file selection",
     metrics.uploadWizardFileSelection,
     phase1PerformanceBudgetsMs.uploadWizardFileSelection

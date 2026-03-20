@@ -1,0 +1,304 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - link "Skip to work region" [ref=e3] [cursor=pointer]:
+      - /url: "#ukde-shell-work-region"
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - paragraph [ref=e6]: ukda_test
+        - paragraph [ref=e7]: Project workspace
+      - generic [ref=e8]:
+        - group "Global command controls" [ref=e9]:
+          - button "Project switcher" [ref=e10] [cursor=pointer]
+          - button "Command bar" [ref=e11] [cursor=pointer]:
+            - generic [ref=e12]: Command bar
+            - generic [ref=e13]: ⌘/Ctrl + K
+        - 'button "Theme preference: System (Light). Click to switch to Dark." [ref=e15] [cursor=pointer]':
+          - img [ref=e17]
+        - link "Help" [ref=e19] [cursor=pointer]:
+          - /url: /health
+        - generic [ref=e20]:
+          - generic [ref=e21]: Env Development
+          - generic [ref=e22]: Tier Controlled
+          - generic [ref=e23]: Compact
+        - group [ref=e24]:
+          - generic "User menu" [ref=e25] [cursor=pointer]: Dev Admin
+    - generic [ref=e26]:
+      - complementary [ref=e27]:
+        - paragraph [ref=e28]: Navigation
+        - navigation "Primary navigation" [ref=e29]:
+          - list [ref=e30]:
+            - listitem [ref=e31]:
+              - link [ref=e32] [cursor=pointer]:
+                - /url: /projects
+                - generic [ref=e33]: P
+            - listitem [ref=e34]:
+              - link [ref=e35] [cursor=pointer]:
+                - /url: /activity
+                - generic [ref=e36]: M
+            - listitem [ref=e37]:
+              - link [ref=e38] [cursor=pointer]:
+                - /url: /approved-models
+                - generic [ref=e39]: A
+            - listitem [ref=e40]:
+              - link [ref=e41] [cursor=pointer]:
+                - /url: /admin
+                - generic [ref=e42]: A
+      - generic [ref=e43]:
+        - navigation "Project context" [ref=e44]:
+          - list [ref=e45]:
+            - listitem [ref=e46]:
+              - link "Overview" [ref=e47] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/overview
+            - listitem [ref=e48]:
+              - link "Documents" [ref=e49] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents
+            - listitem [ref=e50]:
+              - link "Model assignments" [ref=e51] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/model-assignments
+            - listitem [ref=e52]:
+              - link "Search" [ref=e53] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/search
+            - listitem [ref=e54]:
+              - link "Entities" [ref=e55] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/entities
+            - listitem [ref=e56]:
+              - link "Derivatives" [ref=e57] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/derivatives
+            - listitem [ref=e58]:
+              - link "Indexes" [ref=e59] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/indexes
+            - listitem [ref=e60]:
+              - link "Policies" [ref=e61] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/policies
+            - listitem [ref=e62]:
+              - link "Pseudonym registry" [ref=e63] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/pseudonym-registry
+            - listitem [ref=e64]:
+              - link "Jobs" [ref=e65] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/jobs
+            - listitem [ref=e66]:
+              - link "Export candidates" [ref=e67] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/export-candidates
+            - listitem [ref=e68]:
+              - link "Export requests" [ref=e69] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/export-requests
+            - listitem [ref=e70]:
+              - link "Export review" [ref=e71] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/export-review
+            - listitem [ref=e72]:
+              - link "Activity" [ref=e73] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/activity
+            - listitem [ref=e74]:
+              - link "Settings" [ref=e75] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/settings
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - generic [ref=e79]:
+              - paragraph [ref=e80]: Projects / ukda_test
+              - heading "Document 813ebcfd-6909-4edf-9063-ce7214acef10" [level=1] [ref=e81]
+              - paragraph [ref=e82]: Stable document detail anchor for metadata, run history, and viewer access.
+              - navigation "Breadcrumb" [ref=e84]:
+                - list [ref=e85]:
+                  - listitem [ref=e86]:
+                    - link "Projects" [ref=e87] [cursor=pointer]:
+                      - /url: /projects
+                    - text: /
+                  - listitem [ref=e88]:
+                    - link "ukda_test" [ref=e89] [cursor=pointer]:
+                      - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/overview
+                    - text: /
+                  - listitem [ref=e90]:
+                    - link "Documents" [ref=e91] [cursor=pointer]:
+                      - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents
+                    - text: /
+                  - listitem [ref=e92]:
+                    - generic [ref=e93]: Document
+            - link "Open viewer" [ref=e95] [cursor=pointer]:
+              - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents/813ebcfd-6909-4edf-9063-ce7214acef10/viewer?page=1
+          - main [ref=e97]:
+            - generic [ref=e98]:
+              - paragraph [ref=e99]: Document metadata
+              - heading "UK_Bank_statement_20-Jan-26.pdf" [level=2] [ref=e100]
+              - paragraph [ref=e101]: Document pages are available for viewer handoff.
+            - generic [ref=e102]:
+              - paragraph [ref=e103]: Live pipeline
+              - heading "End-to-end status" [level=3] [ref=e104]
+              - generic [ref=e105]:
+                - generic [ref=e106]:
+                  - generic [ref=e107]: Not started
+                  - strong [ref=e108]: 25%
+                - paragraph [ref=e109]: Awaiting phase activity.
+              - list [ref=e110]:
+                - listitem [ref=e111]:
+                  - generic [ref=e112]:
+                    - generic [ref=e113]:
+                      - strong [ref=e114]: Ingest
+                      - generic [ref=e115]: Succeeded
+                    - generic [ref=e116]:
+                      - generic [ref=e117]: 4/4
+                      - strong [ref=e118]: 100%
+                  - progressbar "Ingest progress" [ref=e119]
+                  - paragraph [ref=e121]: Upload, scan, extraction, and thumbnail stages are complete.
+                - listitem [ref=e122]:
+                  - generic [ref=e123]:
+                    - generic [ref=e124]:
+                      - strong [ref=e125]: Preprocess
+                      - generic [ref=e126]: Not started
+                    - generic [ref=e127]:
+                      - generic [ref=e128]: 0/3
+                      - strong [ref=e129]: 0%
+                  - progressbar "Preprocess progress" [ref=e130]
+                  - paragraph [ref=e131]: Preprocess has no recorded run yet.
+                - listitem [ref=e132]:
+                  - generic [ref=e133]:
+                    - generic [ref=e134]:
+                      - strong [ref=e135]: Layout
+                      - generic [ref=e136]: Not started
+                    - generic [ref=e137]:
+                      - generic [ref=e138]: 0/3
+                      - strong [ref=e139]: 0%
+                  - progressbar "Layout progress" [ref=e140]
+                  - paragraph [ref=e141]: Layout has no recorded run yet.
+                - listitem [ref=e142]:
+                  - generic [ref=e143]:
+                    - generic [ref=e144]:
+                      - strong [ref=e145]: Transcription
+                      - generic [ref=e146]: Not started
+                    - generic [ref=e147]:
+                      - generic [ref=e148]: 0/3
+                      - strong [ref=e149]: 0%
+                  - progressbar "Transcription progress" [ref=e150]
+                  - paragraph [ref=e151]: Transcription has no recorded run yet.
+                - listitem [ref=e152]:
+                  - generic [ref=e153]:
+                    - generic [ref=e154]:
+                      - strong [ref=e155]: Privacy
+                      - generic [ref=e156]: Not started
+                    - generic [ref=e158]: 0/0
+                  - progressbar "Privacy progress" [ref=e159]
+                  - paragraph [ref=e161]: Privacy has no recorded run yet.
+                - listitem [ref=e162]:
+                  - generic [ref=e163]:
+                    - generic [ref=e164]:
+                      - strong [ref=e165]: Governance
+                      - generic [ref=e166]: Not started
+                    - generic [ref=e168]: 0/3
+                  - progressbar "Governance progress" [ref=e169]
+                  - paragraph [ref=e171]: Governance has no run history yet.
+              - paragraph [ref=e172]: Polling every 4s using live operations policy.
+            - generic [ref=e173]:
+              - heading "Metadata" [level=3] [ref=e174]
+              - list [ref=e175]:
+                - listitem [ref=e176]:
+                  - generic [ref=e177]: Original filename
+                  - strong [ref=e178]: UK_Bank_statement_20-Jan-26.pdf
+                - listitem [ref=e179]:
+                  - generic [ref=e180]: Uploaded by
+                  - strong [ref=e181]: 81d2d9bb-ed6b-56ff-ab35-8b5701fe2d06
+                - listitem [ref=e182]:
+                  - generic [ref=e183]: Detected type
+                  - strong [ref=e184]: application/pdf
+                - listitem [ref=e185]:
+                  - generic [ref=e186]: Source size
+                  - strong [ref=e187]: 344.5 KB
+                - listitem [ref=e188]:
+                  - generic [ref=e189]: SHA-256
+                  - strong [ref=e190]: e10d1b1c49a8511f34adbdb0dd08208079051619b0145a170eed66ed000ee50b
+                - listitem [ref=e191]:
+                  - generic [ref=e192]: Pages
+                  - strong [ref=e193]: "3"
+                - listitem [ref=e194]:
+                  - generic [ref=e195]: Uploaded at
+                  - strong [ref=e196]: 2026-03-19T23:30:59.992Z
+                - listitem [ref=e197]:
+                  - generic [ref=e198]: Last status update
+                  - strong [ref=e199]: 2026-03-19T23:31:02.125Z
+            - generic [ref=e200]:
+              - heading "Derived page readiness" [level=3] [ref=e201]
+              - list [ref=e202]:
+                - listitem [ref=e203]:
+                  - generic [ref=e204]: Total pages
+                  - strong [ref=e205]: "3"
+                - listitem [ref=e206]:
+                  - generic [ref=e207]: Ready
+                  - strong [ref=e208]: "3"
+                - listitem [ref=e209]:
+                  - generic [ref=e210]: Pending
+                  - strong [ref=e211]: "0"
+                - listitem [ref=e212]:
+                  - generic [ref=e213]: Failed or canceled
+                  - strong [ref=e214]: "0"
+            - generic [ref=e215]:
+              - heading "Current ingest status" [level=3] [ref=e216]
+              - generic [ref=e218]: READY
+              - paragraph [ref=e219]: Document pages are available for viewer handoff.
+            - generic [ref=e220]:
+              - heading "Actions" [level=3] [ref=e221]
+              - generic [ref=e222]:
+                - link "Open document" [ref=e223] [cursor=pointer]:
+                  - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents/813ebcfd-6909-4edf-9063-ce7214acef10/viewer?page=1
+                - link "View ingest status" [ref=e224] [cursor=pointer]:
+                  - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents/813ebcfd-6909-4edf-9063-ce7214acef10/ingest-status?page=1
+                - link "Open preprocessing" [ref=e225] [cursor=pointer]:
+                  - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents/813ebcfd-6909-4edf-9063-ce7214acef10/preprocessing
+                - link "Open layout" [ref=e226] [cursor=pointer]:
+                  - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents/813ebcfd-6909-4edf-9063-ce7214acef10/layout
+                - link "Open transcription" [ref=e227] [cursor=pointer]:
+                  - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents/813ebcfd-6909-4edf-9063-ce7214acef10/transcription
+                - link "Open privacy" [ref=e228] [cursor=pointer]:
+                  - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents/813ebcfd-6909-4edf-9063-ce7214acef10/privacy
+                - link "Open governance" [ref=e229] [cursor=pointer]:
+                  - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents/813ebcfd-6909-4edf-9063-ce7214acef10/governance
+                - link "Back to documents" [ref=e230] [cursor=pointer]:
+                  - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents
+            - generic [ref=e231]:
+              - heading "Timeline" [level=3] [ref=e232]
+              - generic [ref=e233]:
+                - list [ref=e234]:
+                  - listitem [ref=e235]:
+                    - generic [ref=e236]:
+                      - strong [ref=e237]: Upload
+                      - generic [ref=e238]: Succeeded
+                    - paragraph [ref=e239]: Latest attempt completed.
+                  - listitem [ref=e240]:
+                    - generic [ref=e241]:
+                      - strong [ref=e242]: Scan
+                      - generic [ref=e243]: Succeeded
+                    - paragraph [ref=e244]: Latest attempt completed.
+                  - listitem [ref=e245]:
+                    - generic [ref=e246]:
+                      - strong [ref=e247]: Extraction
+                      - generic [ref=e248]: Succeeded
+                    - paragraph [ref=e249]: Latest attempt completed.
+                  - listitem [ref=e250]:
+                    - generic [ref=e251]:
+                      - strong [ref=e252]: Thumbnail rendering
+                      - generic [ref=e253]: Succeeded
+                    - paragraph [ref=e254]: Latest attempt completed.
+                - list [ref=e255]:
+                  - listitem [ref=e256]:
+                    - generic [ref=e257]:
+                      - generic [ref=e258]: Thumbnail rendering
+                      - generic [ref=e259]: 2026-03-19T23:31:02.131Z
+                    - paragraph [ref=e260]: "Status: SUCCEEDED"
+                    - paragraph [ref=e261]: "Attempt: 1"
+                  - listitem [ref=e262]:
+                    - generic [ref=e263]:
+                      - generic [ref=e264]: Extraction
+                      - generic [ref=e265]: 2026-03-19T23:31:02.008Z
+                    - paragraph [ref=e266]: "Status: SUCCEEDED"
+                    - paragraph [ref=e267]: "Attempt: 1"
+                  - listitem [ref=e268]:
+                    - generic [ref=e269]:
+                      - generic [ref=e270]: Scan
+                      - generic [ref=e271]: 2026-03-19T23:31:01.890Z
+                    - paragraph [ref=e272]: "Status: SUCCEEDED"
+                    - paragraph [ref=e273]: "Attempt: 1"
+                  - listitem [ref=e274]:
+                    - generic [ref=e275]:
+                      - generic [ref=e276]: Upload
+                      - generic [ref=e277]: 2026-03-19T23:31:01.466Z
+                    - paragraph [ref=e278]: "Status: SUCCEEDED"
+                    - paragraph [ref=e279]: "Attempt: 1"
+                - paragraph [ref=e280]: All current attempts are in a terminal state.
+  - alert [ref=e281]

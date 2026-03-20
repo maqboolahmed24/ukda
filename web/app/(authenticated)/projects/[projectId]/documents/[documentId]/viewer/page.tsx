@@ -26,6 +26,7 @@ export default async function ProjectDocumentViewerPage({
   searchParams: Promise<{
     comparePair?: string;
     mode?: string;
+    panel?: string;
     page?: string;
     runId?: string;
     zoom?: string;
@@ -36,6 +37,7 @@ export default async function ProjectDocumentViewerPage({
   const viewerState = normalizeViewerUrlState({
     comparePair: query.comparePair,
     mode: query.mode,
+    panel: query.panel,
     page: query.page,
     runId: query.runId,
     zoom: query.zoom
@@ -45,6 +47,7 @@ export default async function ProjectDocumentViewerPage({
       projectDocumentViewerPath(projectId, documentId, viewerState.page, {
         comparePair: viewerState.comparePair,
         mode: viewerState.mode,
+        panel: viewerState.panel,
         runId: viewerState.runId,
         zoom: viewerState.zoom
       })
@@ -140,6 +143,7 @@ export default async function ProjectDocumentViewerPage({
       projectDocumentViewerPath(projectId, document.id, inferredPageCount, {
         comparePair: viewerState.comparePair,
         mode: viewerState.mode,
+        panel: viewerState.panel,
         runId: viewerState.runId,
         zoom: viewerState.zoom
       })
@@ -179,6 +183,7 @@ export default async function ProjectDocumentViewerPage({
         documentName={document.originalFilename}
         documentStatus={document.status}
         initialComparePair={viewerState.comparePair}
+        initialPanelSection={viewerState.panel}
         initialRunId={viewerState.runId}
         initialViewerMode={viewerState.mode}
         initialZoomPercent={viewerState.zoom}

@@ -17,13 +17,14 @@ import {
   environmentLabels,
   shellStateNotes
 } from "@ukde/ui";
-import { StatusChip } from "@ukde/ui/primitives";
+import { DetailsDrawer, StatusChip } from "@ukde/ui/primitives";
 
 import {
   activityPath,
   adminPath,
   approvedModelsPath,
   projectDerivativesPath,
+  projectDocumentsPath,
   projectEntitiesPath,
   healthPath,
   projectIndexesPath,
@@ -33,6 +34,10 @@ import {
   projectSearchPath,
   projectsPath
 } from "../lib/routes";
+import {
+  useAdaptiveSidePanelState,
+  type SidePanelSection
+} from "../lib/adaptive-side-panel";
 import { GlobalCommandBar } from "./global-command-bar";
 import { ThemePreferenceControl } from "./theme-preference-control";
 
@@ -139,7 +144,12 @@ function resolveShellHeading(pathname: string): string {
 }
 
 function resolveTaskContext(pathname: string): "dense" | "standard" {
-  if (pathname.includes("/viewer")) {
+  if (
+    pathname.includes("/viewer") ||
+    pathname.includes("/layout/workspace") ||
+    pathname.includes("/transcription/workspace") ||
+    pathname.includes("/privacy/workspace")
+  ) {
     return "dense";
   }
   return "standard";
@@ -188,6 +198,8 @@ export function AuthenticatedShell({
   const searchParams = useSearchParams();
   const workRegionRef = useRef<HTMLDivElement | null>(null);
   const previousRouteKeyRef = useRef<string | null>(null);
+  const contextDrawerReturnFocusRef = useRef<HTMLElement | null>(null);
+  const contextDrawerWasOpenRef = useRef(false);
   const [shellState, setShellState] = useState<ShellState>("Expanded");
   const isAdmin = session.user.platformRoles.includes("ADMIN");
   const isAuditor = session.user.platformRoles.includes("AUDITOR");
@@ -210,6 +222,20 @@ export function AuthenticatedShell({
     }
     return projects.find((project) => project.id === pathSegments[1]) ?? null;
   }, [pathname, projects]);
+  const {
+    closeDrawer: closeContextDrawer,
+    drawerOpen: contextDrawerOpen,
+    openDrawer: openContextDrawer,
+    panelSection: contextPanelSection,
+    setPanelSection: setContextPanelSection,
+    showAside: showContextRegion,
+    showDrawerToggle: showContextDrawerToggle
+  } = useAdaptiveSidePanelState({
+    shellState,
+    storageSurface: "authenticated-shell-context",
+    projectId: currentProject?.id ?? null,
+    initialSection: "context"
+  });
 
   useEffect(() => {
     const syncShellState = () => {
@@ -302,6 +328,20 @@ export function AuthenticatedShell({
     };
   }, []);
 
+  useEffect(() => {
+    if (showContextRegion) {
+      closeContextDrawer();
+    }
+  }, [closeContextDrawer, showContextRegion]);
+
+  useEffect(() => {
+    if (contextDrawerWasOpenRef.current && !contextDrawerOpen) {
+      contextDrawerReturnFocusRef.current?.focus({ preventScroll: true });
+      contextDrawerReturnFocusRef.current = null;
+    }
+    contextDrawerWasOpenRef.current = contextDrawerOpen;
+  }, [contextDrawerOpen]);
+
   const globalNavLinks: NavLink[] = [...GLOBAL_NAV_LINKS];
   if (canViewApprovedModels) {
     globalNavLinks.push({ href: approvedModelsPath, label: "Approved models" });
@@ -325,9 +365,111 @@ export function AuthenticatedShell({
 
   const showProjectContext =
     pathname.startsWith("/projects/") && currentProject;
-  const showContextRegion =
-    shellState === "Expanded" || (shellState === "Balanced" && !forceFocus);
   const shellTitle = currentProject?.name ?? resolveShellHeading(pathname);
+  const taskContext = resolveTaskContext(pathname);
+  const handleContextPanelSectionChange = (nextSection: SidePanelSection) => {
+    if (nextSection === contextPanelSection) {
+      return;
+    }
+    setContextPanelSection(nextSection);
+  };
+  const openContextPanelDrawer = (trigger: HTMLElement | null) => {
+    contextDrawerReturnFocusRef.current =
+      trigger ??
+      (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+    openContextDrawer();
+  };
+  const contextPanel = (
+    <>
+      <p className="ukde-eyebrow">Adaptive state</p>
+      <h2>{shellState}</h2>
+      <div className="adaptiveSidePanelTabs" role="tablist" aria-label="Shell context sections">
+        <button
+          aria-selected={contextPanelSection === "context"}
+          className="secondaryButton"
+          onClick={() => handleContextPanelSectionChange("context")}
+          role="tab"
+          type="button"
+        >
+          Context
+        </button>
+        <button
+          aria-selected={contextPanelSection === "insights"}
+          className="secondaryButton"
+          onClick={() => handleContextPanelSectionChange("insights")}
+          role="tab"
+          type="button"
+        >
+          Insights
+        </button>
+        <button
+          aria-selected={contextPanelSection === "actions"}
+          className="secondaryButton"
+          onClick={() => handleContextPanelSectionChange("actions")}
+          role="tab"
+          type="button"
+        >
+          Actions
+        </button>
+      </div>
+      {contextPanelSection === "context" ? (
+        <div className="adaptiveSidePanelBody">
+          <p className="ukde-muted">{shellStateNotes[shellState]}</p>
+          <ul className="projectMetaList">
+            <li>
+              <span>Task context</span>
+              <strong>{taskContext}</strong>
+            </li>
+            <li>
+              <span>Focus override</span>
+              <strong>{forceFocus ? "enabled" : "off"}</strong>
+            </li>
+            <li>
+              <span>Role mode</span>
+              <strong>{roleModeLabel}</strong>
+            </li>
+          </ul>
+        </div>
+      ) : contextPanelSection === "insights" ? (
+        <div className="adaptiveSidePanelBody">
+          <ul className="projectMetaList">
+            <li>
+              <span>Project links</span>
+              <strong>{visibleProjectLinks.length}</strong>
+            </li>
+            <li>
+              <span>Global links</span>
+              <strong>{globalNavLinks.length}</strong>
+            </li>
+            <li>
+              <span>Current project</span>
+              <strong>{currentProject?.name ?? "None"}</strong>
+            </li>
+          </ul>
+          <p className="ukde-muted">
+            Keyboard path: <span className="ukde-kbd">Tab</span> through rail, context bar, then
+            work region.
+          </p>
+        </div>
+      ) : (
+        <div className="adaptiveSidePanelBody">
+          <div className="buttonRow">
+            <Link className="secondaryButton" href={healthPath}>
+              Open help
+            </Link>
+            <Link className="secondaryButton" href={activityPath}>
+              My activity
+            </Link>
+            {currentProject ? (
+              <Link className="secondaryButton" href={projectDocumentsPath(currentProject.id)}>
+                Project documents
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   return (
     <div className="authenticatedShell" data-shell-state={shellState}>
@@ -356,6 +498,16 @@ export function AuthenticatedShell({
           <Link className="workspaceHelpLink" href={healthPath}>
             Help
           </Link>
+
+          {showContextDrawerToggle ? (
+            <button
+              className="workspaceHelpLink"
+              onClick={(event) => openContextPanelDrawer(event.currentTarget)}
+              type="button"
+            >
+              {contextDrawerOpen ? "Context open" : "Context panel"}
+            </button>
+          ) : null}
 
           <div className="workspaceBadges">
             <StatusChip tone={resolveEnvironmentTone()}>
@@ -511,31 +663,18 @@ export function AuthenticatedShell({
         </section>
 
         {showContextRegion ? (
-          <aside className="authenticatedShellContext ukde-panel">
-            <p className="ukde-eyebrow">Adaptive state</p>
-            <h2>{shellState}</h2>
-            <p className="ukde-muted">{shellStateNotes[shellState]}</p>
-            <ul className="projectMetaList">
-              <li>
-                <span>Task context</span>
-                <strong>{resolveTaskContext(pathname)}</strong>
-              </li>
-              <li>
-                <span>Focus override</span>
-                <strong>{forceFocus ? "enabled" : "off"}</strong>
-              </li>
-              <li>
-                <span>Role mode</span>
-                <strong>{roleModeLabel}</strong>
-              </li>
-            </ul>
-            <p className="ukde-muted">
-              Keyboard path: <span className="ukde-kbd">Tab</span> through rail,
-              context bar, then work region.
-            </p>
-          </aside>
+          <aside className="authenticatedShellContext ukde-panel">{contextPanel}</aside>
         ) : null}
       </div>
+
+      <DetailsDrawer
+        description="Shell context drawer"
+        open={contextDrawerOpen}
+        onClose={closeContextDrawer}
+        title="Shell context"
+      >
+        <div className="authenticatedShellContextDrawerPanel">{contextPanel}</div>
+      </DetailsDrawer>
     </div>
   );
 }

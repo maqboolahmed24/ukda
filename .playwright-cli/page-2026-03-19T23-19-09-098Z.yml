@@ -1,0 +1,216 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - link "Skip to work region" [ref=e3] [cursor=pointer]:
+      - /url: "#ukde-shell-work-region"
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - paragraph [ref=e6]: ukda_test
+        - paragraph [ref=e7]: Project workspace
+      - generic [ref=e8]:
+        - group "Global command controls" [ref=e9]:
+          - button "Project switcher" [ref=e10] [cursor=pointer]
+          - button "Command bar" [ref=e11] [cursor=pointer]:
+            - generic [ref=e12]: Command bar
+            - generic [ref=e13]: ⌘/Ctrl + K
+        - 'button "Theme preference: System (Light). Click to switch to Dark." [ref=e15] [cursor=pointer]':
+          - img [ref=e17]
+        - link "Help" [ref=e19] [cursor=pointer]:
+          - /url: /health
+        - generic [ref=e20]:
+          - generic [ref=e21]: Env Development
+          - generic [ref=e22]: Tier Controlled
+          - generic [ref=e23]: Compact
+        - group [ref=e24]:
+          - generic "User menu" [ref=e25] [cursor=pointer]: Dev Admin
+    - generic [ref=e26]:
+      - complementary [ref=e27]:
+        - paragraph [ref=e28]: Navigation
+        - navigation "Primary navigation" [ref=e29]:
+          - list [ref=e30]:
+            - listitem [ref=e31]:
+              - link [ref=e32] [cursor=pointer]:
+                - /url: /projects
+                - generic [ref=e33]: P
+            - listitem [ref=e34]:
+              - link [ref=e35] [cursor=pointer]:
+                - /url: /activity
+                - generic [ref=e36]: M
+            - listitem [ref=e37]:
+              - link [ref=e38] [cursor=pointer]:
+                - /url: /approved-models
+                - generic [ref=e39]: A
+            - listitem [ref=e40]:
+              - link [ref=e41] [cursor=pointer]:
+                - /url: /admin
+                - generic [ref=e42]: A
+      - generic [ref=e43]:
+        - navigation "Project context" [ref=e44]:
+          - list [ref=e45]:
+            - listitem [ref=e46]:
+              - link "Overview" [ref=e47] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/overview
+            - listitem [ref=e48]:
+              - link "Documents" [ref=e49] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents
+            - listitem [ref=e50]:
+              - link "Model assignments" [ref=e51] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/model-assignments
+            - listitem [ref=e52]:
+              - link "Search" [ref=e53] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/search
+            - listitem [ref=e54]:
+              - link "Entities" [ref=e55] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/entities
+            - listitem [ref=e56]:
+              - link "Derivatives" [ref=e57] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/derivatives
+            - listitem [ref=e58]:
+              - link "Indexes" [ref=e59] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/indexes
+            - listitem [ref=e60]:
+              - link "Policies" [ref=e61] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/policies
+            - listitem [ref=e62]:
+              - link "Pseudonym registry" [ref=e63] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/pseudonym-registry
+            - listitem [ref=e64]:
+              - link "Jobs" [ref=e65] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/jobs
+            - listitem [ref=e66]:
+              - link "Export candidates" [ref=e67] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/export-candidates
+            - listitem [ref=e68]:
+              - link "Export requests" [ref=e69] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/export-requests
+            - listitem [ref=e70]:
+              - link "Export review" [ref=e71] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/export-review
+            - listitem [ref=e72]:
+              - link "Activity" [ref=e73] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/activity
+            - listitem [ref=e74]:
+              - link "Settings" [ref=e75] [cursor=pointer]:
+                - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/settings
+        - generic [ref=e77]:
+          - generic [ref=e78]:
+            - generic [ref=e79]:
+              - paragraph [ref=e80]: Projects / ukda_test
+              - heading "Document 267d0fd6-3aa9-4ba0-a90e-183eeb545c6b" [level=1] [ref=e81]
+              - paragraph [ref=e82]: Stable document detail anchor for metadata, run history, and viewer access.
+              - navigation "Breadcrumb" [ref=e84]:
+                - list [ref=e85]:
+                  - listitem [ref=e86]:
+                    - link "Projects" [ref=e87] [cursor=pointer]:
+                      - /url: /projects
+                    - text: /
+                  - listitem [ref=e88]:
+                    - link "ukda_test" [ref=e89] [cursor=pointer]:
+                      - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/overview
+                    - text: /
+                  - listitem [ref=e90]:
+                    - link "Documents" [ref=e91] [cursor=pointer]:
+                      - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents
+                    - text: /
+                  - listitem [ref=e92]:
+                    - generic [ref=e93]: Document
+            - link "Open viewer" [ref=e95] [cursor=pointer]:
+              - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents/267d0fd6-3aa9-4ba0-a90e-183eeb545c6b/viewer?page=1
+          - main [ref=e97]:
+            - generic [ref=e98]:
+              - paragraph [ref=e99]: Document metadata
+              - heading "UK_Bank_statement_20-Jan-26.pdf" [level=2] [ref=e100]
+              - paragraph [ref=e101]: Page extraction is running before viewer readiness.
+            - generic [ref=e102]:
+              - heading "Metadata" [level=3] [ref=e103]
+              - list [ref=e104]:
+                - listitem [ref=e105]:
+                  - generic [ref=e106]: Original filename
+                  - strong [ref=e107]: UK_Bank_statement_20-Jan-26.pdf
+                - listitem [ref=e108]:
+                  - generic [ref=e109]: Uploaded by
+                  - strong [ref=e110]: 81d2d9bb-ed6b-56ff-ab35-8b5701fe2d06
+                - listitem [ref=e111]:
+                  - generic [ref=e112]: Detected type
+                  - strong [ref=e113]: application/pdf
+                - listitem [ref=e114]:
+                  - generic [ref=e115]: Source size
+                  - strong [ref=e116]: 344.5 KB
+                - listitem [ref=e117]:
+                  - generic [ref=e118]: SHA-256
+                  - strong [ref=e119]: e10d1b1c49a8511f34adbdb0dd08208079051619b0145a170eed66ed000ee50b
+                - listitem [ref=e120]:
+                  - generic [ref=e121]: Pages
+                  - strong [ref=e122]: Not available yet
+                - listitem [ref=e123]:
+                  - generic [ref=e124]: Uploaded at
+                  - strong [ref=e125]: 2026-03-19T23:18:52.723Z
+                - listitem [ref=e126]:
+                  - generic [ref=e127]: Last status update
+                  - strong [ref=e128]: 2026-03-19T23:18:53.558Z
+            - generic [ref=e129]:
+              - heading "Derived page readiness" [level=3] [ref=e130]
+              - status [ref=e131]:
+                - heading "No page rows yet" [level=2] [ref=e133]
+                - paragraph [ref=e134]: Page extraction has not produced page records yet.
+            - generic [ref=e135]:
+              - heading "Current ingest status" [level=3] [ref=e136]
+              - generic [ref=e138]: EXTRACTING
+              - paragraph [ref=e139]: Page extraction is running before viewer readiness.
+            - generic [ref=e140]:
+              - heading "Actions" [level=3] [ref=e141]
+              - generic [ref=e142]:
+                - button "Open document" [disabled] [ref=e143]
+                - link "View ingest status" [ref=e144] [cursor=pointer]:
+                  - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents/267d0fd6-3aa9-4ba0-a90e-183eeb545c6b/ingest-status?page=1
+                - link "Open preprocessing" [ref=e145] [cursor=pointer]:
+                  - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents/267d0fd6-3aa9-4ba0-a90e-183eeb545c6b/preprocessing
+                - link "Open layout" [ref=e146] [cursor=pointer]:
+                  - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents/267d0fd6-3aa9-4ba0-a90e-183eeb545c6b/layout
+                - link "Open transcription" [ref=e147] [cursor=pointer]:
+                  - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents/267d0fd6-3aa9-4ba0-a90e-183eeb545c6b/transcription
+                - link "Open privacy" [ref=e148] [cursor=pointer]:
+                  - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents/267d0fd6-3aa9-4ba0-a90e-183eeb545c6b/privacy
+                - link "Open governance" [ref=e149] [cursor=pointer]:
+                  - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents/267d0fd6-3aa9-4ba0-a90e-183eeb545c6b/governance
+                - link "Back to documents" [ref=e150] [cursor=pointer]:
+                  - /url: /projects/6526e194-0df5-4beb-add7-50d8f0062df3/documents
+              - paragraph [ref=e151]: Viewer handoff is blocked until at least one page is ready.
+            - generic [ref=e152]:
+              - heading "Timeline" [level=3] [ref=e153]
+              - generic [ref=e154]:
+                - list [ref=e155]:
+                  - listitem [ref=e156]:
+                    - generic [ref=e157]:
+                      - strong [ref=e158]: Upload
+                      - generic [ref=e159]: Succeeded
+                    - paragraph [ref=e160]: Latest attempt completed.
+                  - listitem [ref=e161]:
+                    - generic [ref=e162]:
+                      - strong [ref=e163]: Scan
+                      - generic [ref=e164]: Succeeded
+                    - paragraph [ref=e165]: Latest attempt completed.
+                  - listitem [ref=e166]:
+                    - generic [ref=e167]:
+                      - strong [ref=e168]: Extraction
+                      - generic [ref=e169]: Not started
+                    - paragraph [ref=e170]: No attempt has been recorded yet.
+                  - listitem [ref=e171]:
+                    - generic [ref=e172]:
+                      - strong [ref=e173]: Thumbnail rendering
+                      - generic [ref=e174]: Not started
+                    - paragraph [ref=e175]: No attempt has been recorded yet.
+                - list [ref=e176]:
+                  - listitem [ref=e177]:
+                    - generic [ref=e178]:
+                      - generic [ref=e179]: Scan
+                      - generic [ref=e180]: 2026-03-19T23:18:53.577Z
+                    - paragraph [ref=e181]: "Status: SUCCEEDED"
+                    - paragraph [ref=e182]: "Attempt: 1"
+                  - listitem [ref=e183]:
+                    - generic [ref=e184]:
+                      - generic [ref=e185]: Upload
+                      - generic [ref=e186]: 2026-03-19T23:18:53.138Z
+                    - paragraph [ref=e187]: "Status: SUCCEEDED"
+                    - paragraph [ref=e188]: "Attempt: 1"
+                - paragraph [ref=e189]: No active attempts are currently running.
+  - alert [ref=e190]

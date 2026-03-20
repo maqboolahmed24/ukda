@@ -4,6 +4,7 @@ import type { DocumentRedactionFinding } from "@ukde/contracts";
 import { SectionState } from "@ukde/ui/primitives";
 
 import { PrivacyWorkspaceSurface } from "../../../../../../../../components/privacy-workspace-surface";
+import { normalizePanelSectionParam } from "../../../../../../../../lib/panel-sections";
 import {
   getProjectDocument,
   getProjectDocumentRedactionOverview,
@@ -24,7 +25,8 @@ import {
   projectDocumentPrivacyPath,
   projectDocumentPrivacyRunPath,
   projectDocumentPrivacyWorkspacePath,
-  projectsPath
+  projectsPath,
+  type PanelSection
 } from "../../../../../../../../lib/routes";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +40,7 @@ type WorkspaceSearchParams = {
   lineId?: string;
   mode?: string;
   notice?: string;
+  panel?: string;
   page?: string;
   runId?: string;
   tokenId?: string;
@@ -154,6 +157,7 @@ async function resolveNextUnresolvedHref(options: {
   documentId: string;
   findings: DocumentRedactionFinding[];
   mode: PrivacyWorkspaceMode;
+  panel: PanelSection;
   pages: Array<{ pageId: string; pageIndex: number; unresolvedCount: number }>;
   projectId: string;
   runId: string;
@@ -178,6 +182,7 @@ async function resolveNextUnresolvedHref(options: {
             findingId: nextFinding.id,
             lineId: resolveFindingLineId(nextFinding) ?? undefined,
             mode: options.mode,
+            panel: options.panel,
             tokenId: resolveFindingTokenId(nextFinding) ?? undefined
           }
         );
@@ -198,6 +203,7 @@ async function resolveNextUnresolvedHref(options: {
           findingId: nextFinding.id,
           lineId: resolveFindingLineId(nextFinding) ?? undefined,
           mode: options.mode,
+          panel: options.panel,
           tokenId: resolveFindingTokenId(nextFinding) ?? undefined
         }
       );
@@ -241,6 +247,7 @@ async function resolveNextUnresolvedHref(options: {
         findingId: unresolvedFinding.id,
         lineId: resolveFindingLineId(unresolvedFinding) ?? undefined,
         mode: options.mode,
+        panel: options.panel,
         tokenId: resolveFindingTokenId(unresolvedFinding) ?? undefined
       }
     );
@@ -268,7 +275,22 @@ export default async function ProjectDocumentPrivacyWorkspacePage({
   const selectedLineId = toOptionalToken(query.lineId);
   const selectedTokenId = toOptionalToken(query.tokenId);
   const workspaceMode = resolveWorkspaceMode(query.mode);
+  const panelParam = normalizePanelSectionParam(query.panel);
   const showHighlights = isHighlightsEnabled(query.highlights);
+
+  if (panelParam.shouldRedirect) {
+    redirect(
+      projectDocumentPrivacyWorkspacePath(projectId, documentId, {
+        findingId: selectedFindingId,
+        lineId: selectedLineId,
+        mode: workspaceMode,
+        panel: panelParam.value,
+        page: requestedPage,
+        runId: requestedRunId,
+        tokenId: selectedTokenId
+      })
+    );
+  }
 
   const [documentResult, overviewResult, runsResult, workspaceResult] = await Promise.all([
     getProjectDocument(projectId, documentId),
@@ -476,6 +498,7 @@ export default async function ProjectDocumentPrivacyWorkspacePage({
     documentId: resolvedDocument.id,
     runId: selectedRun.id,
     mode: workspaceMode,
+    panel: panelParam.value ?? "context",
     showHighlights,
     pages: pages.map((item) => ({
       pageId: item.pageId,
@@ -502,6 +525,9 @@ export default async function ProjectDocumentPrivacyWorkspacePage({
     const mode = resolveWorkspaceMode(String(formData.get("mode") ?? workspaceMode));
     const showHighlightsOnReturn =
       String(formData.get("highlights") ?? "on").trim().toLowerCase() !== "off";
+    const panel = normalizePanelSectionParam(String(formData.get("panel") ?? "")).value ??
+      panelParam.value ??
+      "context";
     const findingId = toOptionalToken(String(formData.get("findingId") ?? ""));
     const decisionStatus = toOptionalToken(String(formData.get("decisionStatus") ?? ""));
     const decisionEtag = toOptionalToken(String(formData.get("decisionEtag") ?? ""));
@@ -521,6 +547,7 @@ export default async function ProjectDocumentPrivacyWorkspacePage({
         findingId: options.findingId ?? findingId ?? undefined,
         lineId: returnLineId ?? undefined,
         mode,
+        panel,
         tokenId: returnTokenId ?? undefined
       });
       return appendWorkspaceSignals({
@@ -608,6 +635,9 @@ export default async function ProjectDocumentPrivacyWorkspacePage({
     const mode = resolveWorkspaceMode(String(formData.get("mode") ?? workspaceMode));
     const showHighlightsOnReturn =
       String(formData.get("highlights") ?? "on").trim().toLowerCase() !== "off";
+    const panel = normalizePanelSectionParam(String(formData.get("panel") ?? "")).value ??
+      panelParam.value ??
+      "context";
     const reviewStatus = toOptionalToken(String(formData.get("reviewStatus") ?? ""));
     const reviewEtag = toOptionalToken(String(formData.get("reviewEtag") ?? ""));
     const reason = toOptionalToken(String(formData.get("reason") ?? ""));
@@ -625,6 +655,7 @@ export default async function ProjectDocumentPrivacyWorkspacePage({
         findingId: returnFindingId ?? undefined,
         lineId: returnLineId ?? undefined,
         mode,
+        panel,
         tokenId: returnTokenId ?? undefined
       });
       return appendWorkspaceSignals({
@@ -714,6 +745,7 @@ export default async function ProjectDocumentPrivacyWorkspacePage({
         documentId={resolvedDocument.id}
         findings={findings}
         findingsError={findingsResult.ok ? null : findingsResult.detail ?? "Findings unavailable."}
+        initialPanelSection={panelParam.value ?? "context"}
         lineLoadError={linesResult.ok ? null : linesResult.detail ?? "Transcript context unavailable."}
         lines={lines}
         mode={workspaceMode}

@@ -1,0 +1,392 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - link "Skip to work region" [ref=e3] [cursor=pointer]:
+      - /url: "#ukde-shell-work-region"
+    - banner [ref=e4]:
+      - paragraph [ref=e6]: Projects
+      - generic [ref=e7]:
+        - group "Global command controls" [ref=e8]:
+          - button "Project switcher" [ref=e9] [cursor=pointer]
+          - button "Command bar" [ref=e10] [cursor=pointer]:
+            - generic [ref=e11]: Command bar
+            - generic [ref=e12]: ⌘/Ctrl + K
+        - 'button "Theme preference: System (Light). Click to switch to Dark." [ref=e14] [cursor=pointer]':
+          - img [ref=e16]
+        - link "Help" [ref=e18] [cursor=pointer]:
+          - /url: /health
+        - generic [ref=e19]:
+          - generic [ref=e20]: Env Development
+          - generic [ref=e21]: Tier CONTROLLED
+          - generic [ref=e22]: Compact
+        - group [ref=e23]:
+          - generic "User menu" [ref=e24] [cursor=pointer]: Dev Admin
+    - generic [ref=e25]:
+      - complementary [ref=e26]:
+        - paragraph [ref=e27]: Navigation
+        - navigation "Primary navigation" [ref=e28]:
+          - list [ref=e29]:
+            - listitem [ref=e30]:
+              - link [ref=e31] [cursor=pointer]:
+                - /url: /projects
+                - generic [ref=e32]: P
+            - listitem [ref=e33]:
+              - link [ref=e34] [cursor=pointer]:
+                - /url: /activity
+                - generic [ref=e35]: M
+            - listitem [ref=e36]:
+              - link [ref=e37] [cursor=pointer]:
+                - /url: /approved-models
+                - generic [ref=e38]: A
+            - listitem [ref=e39]:
+              - link [ref=e40] [cursor=pointer]:
+                - /url: /admin
+                - generic [ref=e41]: A
+      - main [ref=e44]:
+        - generic [ref=e46]:
+          - paragraph [ref=e47]: Projects
+          - heading "Projects workspace" [level=1] [ref=e48]
+          - paragraph [ref=e49]: Purpose-bound project workspaces with role and access-tier boundaries.
+          - generic [ref=e51]: 35 memberships
+        - alert [ref=e52]:
+          - strong [ref=e54]: Project access unavailable
+          - paragraph [ref=e55]: That project is not available for the current session. Choose a project from this list.
+        - generic [ref=e56]:
+          - article "My project workspaces" [ref=e57]:
+            - generic [ref=e58]:
+              - paragraph [ref=e59]: Memberships
+              - heading "My project workspaces" [level=2] [ref=e60]
+            - list [ref=e61]:
+              - listitem [ref=e62]:
+                - link "queue-loop-shared-ok-10-1773865834127 queue shared-storage stress validation Controlled Project lead" [ref=e63] [cursor=pointer]:
+                  - /url: /projects/72b128fe-ae68-4a56-bc5e-1cc715f9ace4/overview
+                  - generic [ref=e64]:
+                    - heading "queue-loop-shared-ok-10-1773865834127" [level=3] [ref=e65]
+                    - paragraph [ref=e66]: queue shared-storage stress validation
+                  - generic [ref=e67]:
+                    - generic [ref=e68]: Controlled
+                    - generic [ref=e69]: Project lead
+              - listitem [ref=e70]:
+                - link "queue-loop-shared-ok-9-1773865741493 queue shared-storage stress validation Controlled Project lead" [ref=e71] [cursor=pointer]:
+                  - /url: /projects/fa48f0d3-9e4d-4bc2-a712-212fedbc79f0/overview
+                  - generic [ref=e72]:
+                    - heading "queue-loop-shared-ok-9-1773865741493" [level=3] [ref=e73]
+                    - paragraph [ref=e74]: queue shared-storage stress validation
+                  - generic [ref=e75]:
+                    - generic [ref=e76]: Controlled
+                    - generic [ref=e77]: Project lead
+              - listitem [ref=e78]:
+                - link "queue-loop-shared-ok-8-1773865649208 queue shared-storage stress validation Controlled Project lead" [ref=e79] [cursor=pointer]:
+                  - /url: /projects/e05da37a-022f-41ad-b183-a8a4a49b4ebc/overview
+                  - generic [ref=e80]:
+                    - heading "queue-loop-shared-ok-8-1773865649208" [level=3] [ref=e81]
+                    - paragraph [ref=e82]: queue shared-storage stress validation
+                  - generic [ref=e83]:
+                    - generic [ref=e84]: Controlled
+                    - generic [ref=e85]: Project lead
+              - listitem [ref=e86]:
+                - link "shared-vol-mini-3-1773865611639 Shared volume mini loop validation for queue drain. Controlled Project lead" [ref=e87] [cursor=pointer]:
+                  - /url: /projects/a0cee086-9e03-40ed-a12d-10d1cd7d3b86/overview
+                  - generic [ref=e88]:
+                    - heading "shared-vol-mini-3-1773865611639" [level=3] [ref=e89]
+                    - paragraph [ref=e90]: Shared volume mini loop validation for queue drain.
+                  - generic [ref=e91]:
+                    - generic [ref=e92]: Controlled
+                    - generic [ref=e93]: Project lead
+              - listitem [ref=e94]:
+                - link "shared-vol-mini-2-1773865580613 Shared volume mini loop validation for queue drain. Controlled Project lead" [ref=e95] [cursor=pointer]:
+                  - /url: /projects/e4278186-ec30-488a-84b0-37a95b502e77/overview
+                  - generic [ref=e96]:
+                    - heading "shared-vol-mini-2-1773865580613" [level=3] [ref=e97]
+                    - paragraph [ref=e98]: Shared volume mini loop validation for queue drain.
+                  - generic [ref=e99]:
+                    - generic [ref=e100]: Controlled
+                    - generic [ref=e101]: Project lead
+              - listitem [ref=e102]:
+                - link "queue-loop-shared-ok-7-1773865556691 queue shared-storage stress validation Controlled Project lead" [ref=e103] [cursor=pointer]:
+                  - /url: /projects/b5baaf0a-4c1b-4c67-afa8-47bbf050586c/overview
+                  - generic [ref=e104]:
+                    - heading "queue-loop-shared-ok-7-1773865556691" [level=3] [ref=e105]
+                    - paragraph [ref=e106]: queue shared-storage stress validation
+                  - generic [ref=e107]:
+                    - generic [ref=e108]: Controlled
+                    - generic [ref=e109]: Project lead
+              - listitem [ref=e110]:
+                - link "shared-vol-mini-1-1773865549659 Shared volume mini loop validation for queue drain. Controlled Project lead" [ref=e111] [cursor=pointer]:
+                  - /url: /projects/99dd052e-78c6-4db3-a716-58bdba83b50e/overview
+                  - generic [ref=e112]:
+                    - heading "shared-vol-mini-1-1773865549659" [level=3] [ref=e113]
+                    - paragraph [ref=e114]: Shared volume mini loop validation for queue drain.
+                  - generic [ref=e115]:
+                    - generic [ref=e116]: Controlled
+                    - generic [ref=e117]: Project lead
+              - listitem [ref=e118]:
+                - link "queue-loop-shared-ok-6-1773865464699 queue shared-storage stress validation Controlled Project lead" [ref=e119] [cursor=pointer]:
+                  - /url: /projects/c08824f4-abae-445c-b515-413200a2c4a7/overview
+                  - generic [ref=e120]:
+                    - heading "queue-loop-shared-ok-6-1773865464699" [level=3] [ref=e121]
+                    - paragraph [ref=e122]: queue shared-storage stress validation
+                  - generic [ref=e123]:
+                    - generic [ref=e124]: Controlled
+                    - generic [ref=e125]: Project lead
+              - listitem [ref=e126]:
+                - link "queue-loop-shared-ok-5-1773865371495 queue shared-storage stress validation Controlled Project lead" [ref=e127] [cursor=pointer]:
+                  - /url: /projects/d38cd528-fc98-4c32-940c-f5b030fc9442/overview
+                  - generic [ref=e128]:
+                    - heading "queue-loop-shared-ok-5-1773865371495" [level=3] [ref=e129]
+                    - paragraph [ref=e130]: queue shared-storage stress validation
+                  - generic [ref=e131]:
+                    - generic [ref=e132]: Controlled
+                    - generic [ref=e133]: Project lead
+              - listitem [ref=e134]:
+                - link "queue-loop-shared-ok-4-1773865268938 queue shared-storage stress validation Controlled Project lead" [ref=e135] [cursor=pointer]:
+                  - /url: /projects/dafa1ee3-5eb3-4dd4-9c38-191874c71f7e/overview
+                  - generic [ref=e136]:
+                    - heading "queue-loop-shared-ok-4-1773865268938" [level=3] [ref=e137]
+                    - paragraph [ref=e138]: queue shared-storage stress validation
+                  - generic [ref=e139]:
+                    - generic [ref=e140]: Controlled
+                    - generic [ref=e141]: Project lead
+              - listitem [ref=e142]:
+                - link "queue-loop-shared-ok-3-1773865173257 queue shared-storage stress validation Controlled Project lead" [ref=e143] [cursor=pointer]:
+                  - /url: /projects/5b1a309f-eade-4cbe-a439-acbe21136428/overview
+                  - generic [ref=e144]:
+                    - heading "queue-loop-shared-ok-3-1773865173257" [level=3] [ref=e145]
+                    - paragraph [ref=e146]: queue shared-storage stress validation
+                  - generic [ref=e147]:
+                    - generic [ref=e148]: Controlled
+                    - generic [ref=e149]: Project lead
+              - listitem [ref=e150]:
+                - link "queue-loop-shared-ok-2-1773865079686 queue shared-storage stress validation Controlled Project lead" [ref=e151] [cursor=pointer]:
+                  - /url: /projects/063f6048-b235-448a-89f9-354d9254a881/overview
+                  - generic [ref=e152]:
+                    - heading "queue-loop-shared-ok-2-1773865079686" [level=3] [ref=e153]
+                    - paragraph [ref=e154]: queue shared-storage stress validation
+                  - generic [ref=e155]:
+                    - generic [ref=e156]: Controlled
+                    - generic [ref=e157]: Project lead
+              - listitem [ref=e158]:
+                - link "queue-loop-shared-ok-1-1773864984509 queue shared-storage stress validation Controlled Project lead" [ref=e159] [cursor=pointer]:
+                  - /url: /projects/80c1b64f-da47-43d6-a71d-b0968ec7b73f/overview
+                  - generic [ref=e160]:
+                    - heading "queue-loop-shared-ok-1-1773864984509" [level=3] [ref=e161]
+                    - paragraph [ref=e162]: queue shared-storage stress validation
+                  - generic [ref=e163]:
+                    - generic [ref=e164]: Controlled
+                    - generic [ref=e165]: Project lead
+              - listitem [ref=e166]:
+                - link "queue-loop-shared-ok-10-1773864928326 queue shared-storage stress validation Controlled Project lead" [ref=e167] [cursor=pointer]:
+                  - /url: /projects/276ce15c-c2e3-4f35-8555-a12874a6602f/overview
+                  - generic [ref=e168]:
+                    - heading "queue-loop-shared-ok-10-1773864928326" [level=3] [ref=e169]
+                    - paragraph [ref=e170]: queue shared-storage stress validation
+                  - generic [ref=e171]:
+                    - generic [ref=e172]: Controlled
+                    - generic [ref=e173]: Project lead
+              - listitem [ref=e174]:
+                - link "queue-loop-shared-ok-9-1773864928119 queue shared-storage stress validation Controlled Project lead" [ref=e175] [cursor=pointer]:
+                  - /url: /projects/a31e27a8-bc05-4208-ad67-78b03cca975b/overview
+                  - generic [ref=e176]:
+                    - heading "queue-loop-shared-ok-9-1773864928119" [level=3] [ref=e177]
+                    - paragraph [ref=e178]: queue shared-storage stress validation
+                  - generic [ref=e179]:
+                    - generic [ref=e180]: Controlled
+                    - generic [ref=e181]: Project lead
+              - listitem [ref=e182]:
+                - link "queue-loop-shared-ok-8-1773864927948 queue shared-storage stress validation Controlled Project lead" [ref=e183] [cursor=pointer]:
+                  - /url: /projects/875f5de2-2053-4802-ae64-2820172d37f1/overview
+                  - generic [ref=e184]:
+                    - heading "queue-loop-shared-ok-8-1773864927948" [level=3] [ref=e185]
+                    - paragraph [ref=e186]: queue shared-storage stress validation
+                  - generic [ref=e187]:
+                    - generic [ref=e188]: Controlled
+                    - generic [ref=e189]: Project lead
+              - listitem [ref=e190]:
+                - link "queue-loop-shared-ok-7-1773864927796 queue shared-storage stress validation Controlled Project lead" [ref=e191] [cursor=pointer]:
+                  - /url: /projects/baa3ad7f-f32d-4972-ba49-766c7344a7cc/overview
+                  - generic [ref=e192]:
+                    - heading "queue-loop-shared-ok-7-1773864927796" [level=3] [ref=e193]
+                    - paragraph [ref=e194]: queue shared-storage stress validation
+                  - generic [ref=e195]:
+                    - generic [ref=e196]: Controlled
+                    - generic [ref=e197]: Project lead
+              - listitem [ref=e198]:
+                - link "queue-loop-shared-ok-6-1773864927405 queue shared-storage stress validation Controlled Project lead" [ref=e199] [cursor=pointer]:
+                  - /url: /projects/1d69198e-9df0-45ea-85c5-e8238f79cc70/overview
+                  - generic [ref=e200]:
+                    - heading "queue-loop-shared-ok-6-1773864927405" [level=3] [ref=e201]
+                    - paragraph [ref=e202]: queue shared-storage stress validation
+                  - generic [ref=e203]:
+                    - generic [ref=e204]: Controlled
+                    - generic [ref=e205]: Project lead
+              - listitem [ref=e206]:
+                - link "queue-loop-shared-ok-5-1773864927148 queue shared-storage stress validation Controlled Project lead" [ref=e207] [cursor=pointer]:
+                  - /url: /projects/5248aa92-3ec6-40e4-8c5d-1c5a66b5e144/overview
+                  - generic [ref=e208]:
+                    - heading "queue-loop-shared-ok-5-1773864927148" [level=3] [ref=e209]
+                    - paragraph [ref=e210]: queue shared-storage stress validation
+                  - generic [ref=e211]:
+                    - generic [ref=e212]: Controlled
+                    - generic [ref=e213]: Project lead
+              - listitem [ref=e214]:
+                - link "queue-loop-shared-ok-4-1773864926894 queue shared-storage stress validation Controlled Project lead" [ref=e215] [cursor=pointer]:
+                  - /url: /projects/6180ba52-9347-4511-a183-b87a44cd76f4/overview
+                  - generic [ref=e216]:
+                    - heading "queue-loop-shared-ok-4-1773864926894" [level=3] [ref=e217]
+                    - paragraph [ref=e218]: queue shared-storage stress validation
+                  - generic [ref=e219]:
+                    - generic [ref=e220]: Controlled
+                    - generic [ref=e221]: Project lead
+              - listitem [ref=e222]:
+                - link "queue-loop-shared-ok-3-1773864926680 queue shared-storage stress validation Controlled Project lead" [ref=e223] [cursor=pointer]:
+                  - /url: /projects/c935a77a-0095-4457-a28f-e00a2a7fb7f9/overview
+                  - generic [ref=e224]:
+                    - heading "queue-loop-shared-ok-3-1773864926680" [level=3] [ref=e225]
+                    - paragraph [ref=e226]: queue shared-storage stress validation
+                  - generic [ref=e227]:
+                    - generic [ref=e228]: Controlled
+                    - generic [ref=e229]: Project lead
+              - listitem [ref=e230]:
+                - link "queue-loop-shared-ok-2-1773864926448 queue shared-storage stress validation Controlled Project lead" [ref=e231] [cursor=pointer]:
+                  - /url: /projects/883672cb-3bdf-4578-8589-917d8f44e253/overview
+                  - generic [ref=e232]:
+                    - heading "queue-loop-shared-ok-2-1773864926448" [level=3] [ref=e233]
+                    - paragraph [ref=e234]: queue shared-storage stress validation
+                  - generic [ref=e235]:
+                    - generic [ref=e236]: Controlled
+                    - generic [ref=e237]: Project lead
+              - listitem [ref=e238]:
+                - link "queue-loop-shared-ok-1-1773864926223 queue shared-storage stress validation Controlled Project lead" [ref=e239] [cursor=pointer]:
+                  - /url: /projects/30f147f4-cda7-4be7-b284-5fea3a24eb9a/overview
+                  - generic [ref=e240]:
+                    - heading "queue-loop-shared-ok-1-1773864926223" [level=3] [ref=e241]
+                    - paragraph [ref=e242]: queue shared-storage stress validation
+                  - generic [ref=e243]:
+                    - generic [ref=e244]: Controlled
+                    - generic [ref=e245]: Project lead
+              - listitem [ref=e246]:
+                - link "queue-loop-shared-10-1773864882879 queue shared-storage stress validation Controlled Project lead" [ref=e247] [cursor=pointer]:
+                  - /url: /projects/79179be1-f952-49ea-83fe-76db01cfc77d/overview
+                  - generic [ref=e248]:
+                    - heading "queue-loop-shared-10-1773864882879" [level=3] [ref=e249]
+                    - paragraph [ref=e250]: queue shared-storage stress validation
+                  - generic [ref=e251]:
+                    - generic [ref=e252]: Controlled
+                    - generic [ref=e253]: Project lead
+              - listitem [ref=e254]:
+                - link "queue-loop-shared-9-1773864882800 queue shared-storage stress validation Controlled Project lead" [ref=e255] [cursor=pointer]:
+                  - /url: /projects/4ca90119-5136-4d22-8645-2075d28e21bb/overview
+                  - generic [ref=e256]:
+                    - heading "queue-loop-shared-9-1773864882800" [level=3] [ref=e257]
+                    - paragraph [ref=e258]: queue shared-storage stress validation
+                  - generic [ref=e259]:
+                    - generic [ref=e260]: Controlled
+                    - generic [ref=e261]: Project lead
+              - listitem [ref=e262]:
+                - link "queue-loop-shared-8-1773864882721 queue shared-storage stress validation Controlled Project lead" [ref=e263] [cursor=pointer]:
+                  - /url: /projects/4e7e2253-e0ab-4113-b7c4-0b5d36c14543/overview
+                  - generic [ref=e264]:
+                    - heading "queue-loop-shared-8-1773864882721" [level=3] [ref=e265]
+                    - paragraph [ref=e266]: queue shared-storage stress validation
+                  - generic [ref=e267]:
+                    - generic [ref=e268]: Controlled
+                    - generic [ref=e269]: Project lead
+              - listitem [ref=e270]:
+                - link "queue-loop-shared-7-1773864882642 queue shared-storage stress validation Controlled Project lead" [ref=e271] [cursor=pointer]:
+                  - /url: /projects/ca70d0f8-45fc-420b-866c-0838db037479/overview
+                  - generic [ref=e272]:
+                    - heading "queue-loop-shared-7-1773864882642" [level=3] [ref=e273]
+                    - paragraph [ref=e274]: queue shared-storage stress validation
+                  - generic [ref=e275]:
+                    - generic [ref=e276]: Controlled
+                    - generic [ref=e277]: Project lead
+              - listitem [ref=e278]:
+                - link "queue-loop-shared-6-1773864882564 queue shared-storage stress validation Controlled Project lead" [ref=e279] [cursor=pointer]:
+                  - /url: /projects/e34ea0e1-d068-43c2-a009-90dc3586c288/overview
+                  - generic [ref=e280]:
+                    - heading "queue-loop-shared-6-1773864882564" [level=3] [ref=e281]
+                    - paragraph [ref=e282]: queue shared-storage stress validation
+                  - generic [ref=e283]:
+                    - generic [ref=e284]: Controlled
+                    - generic [ref=e285]: Project lead
+              - listitem [ref=e286]:
+                - link "queue-loop-shared-5-1773864882481 queue shared-storage stress validation Controlled Project lead" [ref=e287] [cursor=pointer]:
+                  - /url: /projects/47410274-7e77-449a-b46f-73cb4fa9e9f4/overview
+                  - generic [ref=e288]:
+                    - heading "queue-loop-shared-5-1773864882481" [level=3] [ref=e289]
+                    - paragraph [ref=e290]: queue shared-storage stress validation
+                  - generic [ref=e291]:
+                    - generic [ref=e292]: Controlled
+                    - generic [ref=e293]: Project lead
+              - listitem [ref=e294]:
+                - link "queue-loop-shared-4-1773864882401 queue shared-storage stress validation Controlled Project lead" [ref=e295] [cursor=pointer]:
+                  - /url: /projects/e06f357e-7b24-4c36-8976-b1ea313b3eed/overview
+                  - generic [ref=e296]:
+                    - heading "queue-loop-shared-4-1773864882401" [level=3] [ref=e297]
+                    - paragraph [ref=e298]: queue shared-storage stress validation
+                  - generic [ref=e299]:
+                    - generic [ref=e300]: Controlled
+                    - generic [ref=e301]: Project lead
+              - listitem [ref=e302]:
+                - link "queue-loop-shared-3-1773864882322 queue shared-storage stress validation Controlled Project lead" [ref=e303] [cursor=pointer]:
+                  - /url: /projects/aa7ec5e8-be5e-4c4c-b786-933eaa0b132f/overview
+                  - generic [ref=e304]:
+                    - heading "queue-loop-shared-3-1773864882322" [level=3] [ref=e305]
+                    - paragraph [ref=e306]: queue shared-storage stress validation
+                  - generic [ref=e307]:
+                    - generic [ref=e308]: Controlled
+                    - generic [ref=e309]: Project lead
+              - listitem [ref=e310]:
+                - link "queue-loop-shared-2-1773864882240 queue shared-storage stress validation Controlled Project lead" [ref=e311] [cursor=pointer]:
+                  - /url: /projects/270b4d2a-2140-46e2-8e13-d9d1f2f2ae66/overview
+                  - generic [ref=e312]:
+                    - heading "queue-loop-shared-2-1773864882240" [level=3] [ref=e313]
+                    - paragraph [ref=e314]: queue shared-storage stress validation
+                  - generic [ref=e315]:
+                    - generic [ref=e316]: Controlled
+                    - generic [ref=e317]: Project lead
+              - listitem [ref=e318]:
+                - link "queue-loop-shared-1-1773864882151 queue shared-storage stress validation Controlled Project lead" [ref=e319] [cursor=pointer]:
+                  - /url: /projects/eeccc749-2a0d-475a-8da3-61a0162e3291/overview
+                  - generic [ref=e320]:
+                    - heading "queue-loop-shared-1-1773864882151" [level=3] [ref=e321]
+                    - paragraph [ref=e322]: queue shared-storage stress validation
+                  - generic [ref=e323]:
+                    - generic [ref=e324]: Controlled
+                    - generic [ref=e325]: Project lead
+              - listitem [ref=e326]:
+                - link "Queue Drain Shared Storage 201006 Validate shared controlled storage prevents worker read failures Controlled Project lead" [ref=e327] [cursor=pointer]:
+                  - /url: /projects/8477beab-7e04-481a-a283-ef66c9e5cea6/overview
+                  - generic [ref=e328]:
+                    - heading "Queue Drain Shared Storage 201006" [level=3] [ref=e329]
+                    - paragraph [ref=e330]: Validate shared controlled storage prevents worker read failures
+                  - generic [ref=e331]:
+                    - generic [ref=e332]: Controlled
+                    - generic [ref=e333]: Project lead
+              - listitem [ref=e334]:
+                - link "Queue Drain E2E Mar 18 v2 End-to-end queue drain validation after worker/runtime hardening. Controlled Project lead" [ref=e335] [cursor=pointer]:
+                  - /url: /projects/b42d5a37-6b8e-4791-9574-63fcbfdb89c6/overview
+                  - generic [ref=e336]:
+                    - heading "Queue Drain E2E Mar 18 v2" [level=3] [ref=e337]
+                    - paragraph [ref=e338]: End-to-end queue drain validation after worker/runtime hardening.
+                  - generic [ref=e339]:
+                    - generic [ref=e340]: Controlled
+                    - generic [ref=e341]: Project lead
+          - article "Purpose-bound project workspace" [ref=e342]:
+            - generic [ref=e343]:
+              - paragraph [ref=e344]: Create project
+              - heading "Purpose-bound project workspace" [level=2] [ref=e345]
+              - paragraph [ref=e346]: Every project requires a clear purpose and intended access tier. New projects inherit the seeded baseline privacy policy snapshot.
+            - generic [ref=e347]:
+              - generic [ref=e348]: Project name
+              - textbox "Project name" [ref=e349]:
+                - /placeholder: Victorian Parish Records
+              - generic [ref=e350]: Purpose
+              - textbox "Purpose" [ref=e351]:
+                - /placeholder: Describe the research purpose and why this dataset is being processed.
+              - generic [ref=e352]: Intended access tier
+              - combobox "Intended access tier" [ref=e353]:
+                - option "Controlled" [selected]
+                - option "Safeguarded"
+                - option "Open"
+              - button "Create project" [ref=e354] [cursor=pointer]
+  - alert [ref=e355]

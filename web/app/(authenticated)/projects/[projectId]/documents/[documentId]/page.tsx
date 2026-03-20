@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import type { DocumentStatus } from "@ukde/contracts";
 import { SectionState, StatusChip } from "@ukde/ui/primitives";
 
+import { DocumentPipelineLiveStatus } from "../../../../../../components/document-pipeline-live-status";
 import { DocumentProcessingTimeline } from "../../../../../../components/document-processing-timeline";
 import {
   getProjectDocument,
@@ -143,6 +144,8 @@ export default async function ProjectDocumentDetailPage({
         <h2>{document.originalFilename}</h2>
         <p className="ukde-muted">{resolveStatusSummary(document.status)}</p>
       </section>
+
+      <DocumentPipelineLiveStatus documentId={document.id} projectId={projectId} />
 
       <section className="sectionCard ukde-panel">
         <h3>Metadata</h3>

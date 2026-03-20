@@ -4,6 +4,7 @@ import type { TranscriptionTokenSourceKind } from "@ukde/contracts";
 import { SectionState, StatusChip } from "@ukde/ui/primitives";
 
 import { DocumentTranscriptionWorkspaceSurface } from "../../../../../../../../components/document-transcription-workspace-surface";
+import { normalizePanelSectionParam } from "../../../../../../../../lib/panel-sections";
 import {
   getProjectDocument,
   getProjectDocumentLayoutPageOverlay,
@@ -19,6 +20,7 @@ import { getProjectWorkspace } from "../../../../../../../../lib/projects";
 import {
   projectDocumentTranscriptionComparePath,
   projectDocumentTranscriptionPath,
+  projectDocumentTranscriptionWorkspacePath,
   projectsPath,
   type TranscriptionWorkspaceMode
 } from "../../../../../../../../lib/routes";
@@ -81,6 +83,7 @@ export default async function ProjectDocumentTranscriptionWorkspacePage({
   searchParams: Promise<{
     lineId?: string;
     mode?: string;
+    panel?: string;
     page?: string;
     runId?: string;
     sourceKind?: string;
@@ -92,6 +95,7 @@ export default async function ProjectDocumentTranscriptionWorkspacePage({
   const query = await searchParams;
   const requestedPage = toPage(query.page);
   const requestedMode = toWorkspaceMode(query.mode);
+  const panelParam = normalizePanelSectionParam(query.panel);
   const requestedRunId =
     typeof query.runId === "string" && query.runId.trim().length > 0
       ? query.runId.trim()
@@ -109,6 +113,21 @@ export default async function ProjectDocumentTranscriptionWorkspacePage({
     typeof query.sourceRefId === "string" && query.sourceRefId.trim().length > 0
       ? query.sourceRefId.trim()
       : null;
+
+  if (panelParam.shouldRedirect) {
+    redirect(
+      projectDocumentTranscriptionWorkspacePath(projectId, documentId, {
+        lineId: requestedLineId,
+        mode: requestedMode,
+        panel: panelParam.value,
+        page: requestedPage,
+        runId: requestedRunId,
+        sourceKind: sourceKind ?? null,
+        sourceRefId,
+        tokenId: requestedTokenId
+      })
+    );
+  }
 
   const [documentResult, overviewResult, runsResult, workspaceResult] = await Promise.all([
     getProjectDocument(projectId, documentId),
@@ -430,6 +449,7 @@ export default async function ProjectDocumentTranscriptionWorkspacePage({
             initialMode={requestedMode}
             initialOverlay={overlayResult.ok ? overlayResult.data ?? null : null}
             initialOverlayError={overlayError}
+            initialPanelSection={panelParam.value ?? "context"}
             initialTokenId={selectedToken?.tokenId ?? requestedTokenId ?? null}
             initialVariantLayers={
               variantLayersResult.ok && variantLayersResult.data
