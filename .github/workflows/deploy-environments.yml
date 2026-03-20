@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -162,7 +162,7 @@ jobs:
     environment: ${{ inputs.target_environment }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Verify internal deploy tooling
         run: |
@@ -263,7 +263,7 @@ jobs:
     environment: ${{ inputs.target_environment }}
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Verify rollback input
         run: |
