@@ -141,7 +141,7 @@ jobs:
           IMAGE_TAG: ${{ inputs.image_tag }}
 
       - name: Upload release gate artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-gate-artifact
           path: |
@@ -246,7 +246,7 @@ jobs:
           PREV_REV: ${{ steps.prestate.outputs.previous_revision }}
 
       - name: Upload deployment record
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-deployment-record
           path: output/release-gates/latest/deployment-record.json
@@ -314,7 +314,7 @@ jobs:
           ROLLBACK_REVISION: ${{ inputs.rollback_revision }}
 
       - name: Upload rollback record
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-rollback-record
           path: output/release-gates/latest/rollback-record.json
